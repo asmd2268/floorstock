@@ -6,9 +6,11 @@ service cloud.firestore {
     function active() { return signedIn() && profile().active != false; }
     function pharmacy() { return active() && profile().role == 'pharmacy'; }
     function master() { return pharmacy() && profile().master == true; }
+    function controlledOfficer() { return active() && profile().role == 'controlled_pharmacy'; }
+    function warehouseOfficer() { return active() && profile().role == 'warehouse'; }
 
     match /users/{uid} {
-      allow read: if active() && (request.auth.uid == uid || pharmacy());
+      allow read: if active();
       allow create, update, delete: if false;
     }
 
@@ -18,16 +20,30 @@ service cloud.firestore {
     }
 
     match /floorstock_state/{docId} {
-      allow read, write: if active();
+      allow read: if active();
+
+      allow write: if
+        (docId == 'controlled_catalog' && controlledOfficer()) ||
+        (docId.matches('controlled_list_.*') && controlledOfficer()) ||
+        (docId.matches('controlled_stock_custody_.*') && controlledOfficer()) ||
+        (docId == 'controlled_stock_warehouse' && warehouseOfficer()) ||
+        (docId == 'controlled_moves' && (controlledOfficer() || warehouseOfficer())) ||
+        (docId.matches('controlled_settings_.*') && (controlledOfficer() || pharmacy())) ||
+        (!docId.matches('controlled_.*') && active() &&
+          profile().role != 'controlled_pharmacy' &&
+          profile().role != 'warehouse');
     }
 
     match /public_expiry/{deptId} {
       allow read: if true;
-      allow write: if active();
+      allow write: if active() &&
+        profile().role != 'controlled_pharmacy' &&
+        profile().role != 'warehouse';
     }
 
     match /{document=**} {
-      allow read, write: if active();
+      allow read: if active();
+      allow write: if false;
     }
   }
 }

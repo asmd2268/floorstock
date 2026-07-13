@@ -9,7 +9,7 @@ initializeApp();
 const db = getFirestore();
 const auth = getAuth();
 
-const ALLOWED_ROLES = new Set(['pharmacy', 'department', 'custodian', 'warehouse']);
+const ALLOWED_ROLES = new Set(['pharmacy', 'department', 'custodian', 'warehouse', 'controlled_pharmacy']);
 
 function cleanEmail(value) {
   return String(value || '').trim().toLowerCase();

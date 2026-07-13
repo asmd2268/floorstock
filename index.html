@@ -527,7 +527,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     </div>
     <div id="ctl-actions" class="card mb14"></div>
     <input type="file" id="ctl-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="ctlImportFile(this.files[0])">
-    <div class="card"><div class="tw"><table><thead><tr><th>#</th><th>Arabic medication name</th><th>Classification</th><th>Expiry</th><th>MOH code</th><th>NUPCO code</th><th>System balance</th><th>Outside-system balance</th><th></th></tr></thead><tbody id="ctl-table"></tbody></table></div></div>
+    <div class="card"><div class="tw"><table><thead><tr><th>#</th><th>Arabic medication name</th><th>Classification</th><th>Expiry</th><th>MOH code</th><th>NUPCO code</th><th>System balance</th><th>Outside-system balance</th><th>Other party stock (read only)</th><th></th></tr></thead><tbody id="ctl-table"></tbody></table></div></div>
     <div class="card" style="margin-top:14px"><div class="ch"><span class="ct">Pending receipts / الاستلامات المعلقة</span></div><div id="ctl-pending" class="cb"></div></div>
     <div class="card" style="margin-top:14px"><div class="ch"><span class="ct">Recent custody movements / آخر الحركات</span></div><div id="ctl-log" class="cb"></div></div>
   </div>
@@ -822,7 +822,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt">Add User / إضافة مستخدم</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
     <div class="fg"><label>Email</label><input type="email" id="nuname" placeholder="e.g. icu@example.com"></div>
     <div class="fg"><label>Password</label><input type="password" id="nupass" placeholder="At least 8 characters"></div>
-    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="department">Department user</option><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy">Pharmacy manager</option></select></div>
+    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="department">Department user</option><option value="custodian">Department controlled-custody viewer</option><option value="controlled_pharmacy">Pharmacy controlled & psychotropic medicines officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy">Pharmacy manager</option></select></div>
     <div class="fg" id="nudept-wrap"><label>Department</label><select id="nudept"></select></div>
     <div class="fg" id="numaster-wrap" style="display:none"><label style="display:flex;align-items:center;gap:8px;color:var(--tx);cursor:pointer"><input type="checkbox" id="numaster" style="width:auto;margin:0"> Grant Master access</label><div class="fhint">Only a current Master can grant this permission.</div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
@@ -1579,7 +1579,7 @@ async function doLogin(){
     if(!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
     var profile=profileSnapshot.data();
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(profile.role!=='pharmacy'&&profile.role!=='department'&&profile.role!=='warehouse')throw new Error('This account has an invalid role.');
+    if(profile.role!=='pharmacy'&&profile.role!=='department'&&profile.role!=='warehouse'&&profile.role!=='controlled_pharmacy')throw new Error('This account has an invalid role.');
     await S.init();seed();
     var deptId=profile.deptId||null;
     var dept=deptId?gd().find(function(d){return d.id===deptId}):null;
@@ -1607,12 +1607,15 @@ async function doLogout(){
 }
 function startApp(){
   el('auth').style.display='none';el('app').style.display='block';
-  el('tuser').textContent=CU.role==='pharmacy'?'👤 '+CU.username:'🏢 '+CU.deptName;
+  el('tuser').textContent=(CU.role==='pharmacy'||CU.role==='controlled_pharmacy')?'👤 '+CU.username:(CU.role==='warehouse'?'📦 '+CU.username:'🏢 '+CU.deptName);
   var rb=el('rbadge');
-  rb.innerHTML=CU.role==='pharmacy'?'&#x1F3E5; Pharmacy'+(CU.master===true?' · Master':''):'&#x1F3E2; '+CU.deptName;
-  rb.className='trole '+(CU.role==='pharmacy'?'rph':'rdp');
+  rb.innerHTML=CU.role==='pharmacy'?'&#x1F3E5; Pharmacy'+(CU.master===true?' · Master':'')
+    :CU.role==='controlled_pharmacy'?'&#x1F512; Controlled Medicines Pharmacy Officer'
+    :CU.role==='warehouse'?'&#x1F4E6; Warehouse Custody Officer'
+    :'&#x1F3E2; '+CU.deptName;
+  rb.className='trole '+((CU.role==='pharmacy'||CU.role==='controlled_pharmacy')?'rph':'rdp');
   buildNav();
-  showPg(CU.role==='pharmacy'?'pg-dash':CU.role==='warehouse'?'pg-controlled':'pg-newreq');
+  showPg(CU.role==='pharmacy'?'pg-dash':(CU.role==='warehouse'||CU.role==='controlled_pharmacy')?'pg-controlled':'pg-newreq');
   setTimeout(updateNotesBadge,200);
 }
 function buildNav(){
@@ -1620,6 +1623,8 @@ function buildNav(){
   var items=CU.role==='pharmacy'
     ?[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','&#x1F4DD; Notes'],['pg-schedule','&#x23F0; Schedule'],
       ['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','Users'],['pg-import','&#x2B07; Import'],['pg-controlled','🔒 Controlled custody']]
+    :CU.role==='controlled_pharmacy'
+    ?[['pg-controlled','🔒 Controlled & psychotropic medicines']]
     :CU.role==='warehouse'
     ?[['pg-controlled','🔒 Warehouse controlled custody']]
     :[['pg-newreq','New Request / \u0637\u0644\u0628 \u062C\u062F\u064A\u062F'],
@@ -2087,44 +2092,87 @@ function renderMyReqs(){
 // ── CONTROLLED MEDICINES CUSTODY (separate from Inventory) ────────────────
 function ctlCatalog(){return S.g('controlled_catalog')||[]}
 function ctlList(dept){return S.g('controlled_list_'+dept)||[]}
-function ctlSetList(dept,v){S.s('controlled_list_'+dept,v)}
+function ctlSetList(dept,v){return S.s('controlled_list_'+dept,v)}
 function ctlStock(owner){return S.g('controlled_stock_'+owner)||{}}
-function ctlSetStock(owner,v){S.s('controlled_stock_'+owner,v)}
+function ctlSetStock(owner,v){return S.s('controlled_stock_'+owner,v)}
 function ctlMoves(){return S.g('controlled_moves')||[]}
 function ctlMove(v){v.id='ctl_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);v.at=nowISO();v.by=CU.username;S.push('controlled_moves',v);return v}
+function ctlIsPharmacyOfficer(){return CU&&CU.role==='controlled_pharmacy'}
 function ctlOwner(dept){return CU.role==='warehouse'?'warehouse':'custody_'+dept}
-function ctlCanCorrect(dept){return CU.role==='warehouse'||(CU.role==='department'&&CU.controlledCustodian&&CU.deptId===dept)}
-function ctlCanManageList(dept){return CU.role==='department'&&CU.controlledCustodian&&CU.deptId===dept}
+function ctlCanCorrect(dept){return CU.role==='warehouse'||ctlIsPharmacyOfficer()}
+function ctlCanManageList(dept){return ctlIsPharmacyOfficer()}
+function ctlCanReceive(){return ctlIsPharmacyOfficer()}
 function ctlBalance(owner,id){var s=ctlStock(owner)[id]||{};return {system:+s.system||0,outside:+s.outside||0}}
-function ctlChange(owner,id,system,outside){var s=ctlStock(owner);s[id]={system:Math.max(0,+system||0),outside:Math.max(0,+outside||0)};ctlSetStock(owner,s)}
+function ctlChange(owner,id,system,outside){var s=Object.assign({},ctlStock(owner));s[id]={system:Math.max(0,+system||0),outside:Math.max(0,+outside||0)};return ctlSetStock(owner,s)}
 function ctlDept(){var x=el('ctl-dept');return x&&x.value?x.value:(CU.deptId||'')}
+function ctlOtherBalance(dept,id){
+  return CU.role==='warehouse'?ctlBalance('custody_'+dept,id):ctlBalance('warehouse',id);
+}
 function renderControlled(){
-  if(!CU)return;var sel=el('ctl-dept'),ds=gd(),current=sel.value;
-  if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+CU.deptName+'</option>';
-  else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  if(!CU)return;
+  var sel=el('ctl-dept'),ds=gd(),current=sel.value;
+  if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
+  else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
   if(current&&Array.from(sel.options).some(function(o){return o.value===current}))sel.value=current;
   var dept=ctlDept(), owner=ctlOwner(dept), ids=ctlList(dept), catalog=ctlCatalog();
-  el('ctl-sub').textContent=(gd().find(function(d){return d.id===dept})||{}).name||dept+' — controlled custody list, separate from Inventory';
-  var canCorrect=ctlCanCorrect(dept),canList=ctlCanManageList(dept),isPharmacy=CU.role==='pharmacy';
+  var deptName=(gd().find(function(d){return d.id===dept})||{}).name||dept;
+  var isOfficer=ctlIsPharmacyOfficer(),isWarehouse=CU.role==='warehouse',isManager=CU.role==='pharmacy';
+  el('ctl-sub').textContent=deptName+' — controlled and psychotropic medicines custody';
   var acts='';
-  if(canList)acts+='<div class="cb"><b>Custody officer controls this department list.</b><div class="fl g8" style="margin-top:10px;flex-wrap:wrap"><button class="btn bp bsm" onclick="ctlAddMedication()">+ Add medication</button><button class="btn bg bsm" onclick="document.getElementById(\'ctl-import-file\').click()">Import custody Excel</button><button class="btn bg bsm" onclick="ctlHandover()">Handover for leave</button></div><div class="fhint" style="margin-top:8px">Required column order: Code NO, Generic Name, Strength, Dosage Form, Std. Qty., Present, Exp. Date, Exp. Date, Exp. Date.</div></div>';
-  else if(CU.role==='warehouse')acts='<div class="cb"><b>Warehouse balance</b> — select a department, then send stock to its custody officer.</div>';
-  else if(isPharmacy)acts='<div class="cb"><b>Pharmacy manager</b> — read, print and dispense only; balance correction is disabled.</div>';
-  else acts='<div class="cb">This department has print-only access. Contact its controlled-custody officer for changes.</div>';
+  if(isOfficer){
+    acts='<div class="cb"><b>Controlled medicines pharmacy officer</b> — manages controlled/psychotropic lists for every department, corrects pharmacy custody balances, and accepts or rejects warehouse deliveries.'
+      +'<div class="fl g8" style="margin-top:10px;flex-wrap:wrap"><button class="btn bp bsm" onclick="ctlAddMedication()">+ Add medication</button><button class="btn bg bsm" onclick="document.getElementById(\'ctl-import-file\').click()">Import custody Excel</button></div>'
+      +'<div class="fhint" style="margin-top:8px">Warehouse stock is displayed read-only in the “Other party stock” column.</div></div>';
+  }else if(isWarehouse){
+    acts='<div class="cb"><b>Warehouse custody officer</b> — manages warehouse balance and sends stock to pharmacy. Pharmacy custody is visible read-only.</div>';
+  }else if(isManager){
+    acts='<div class="cb"><b>Pharmacy manager</b> — read and print access only. Editing is assigned to the controlled medicines pharmacy officer.</div>';
+  }else{
+    acts='<div class="cb"><b>Department view</b> — read and print access only. Pharmacy controlled-medicines officer manages the list and receipts.</div>';
+  }
   el('ctl-actions').innerHTML=acts;
-  el('ctl-table').innerHTML=ids.length?ids.map(function(id,i){var m=catalog.find(function(x){return x.id===id});if(!m)return '';var b=ctlBalance(owner,id);var action='';
-    if(CU.role==='warehouse')action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlWarehouseAdd(this.dataset.id)">+ Stock</button> <button class="btn bp bxs" data-id="'+id+'" onclick="ctlSend(this.dataset.id)">Send</button>';
-    else if(isPharmacy)action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlPharmacyDispense(this.dataset.id)">Dispense</button>';
-    else if(canCorrect)action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlCorrect(this.dataset.id)">Correct</button>';
-    return '<tr><td>'+ (i+1)+'</td><td style="font-weight:600">'+m.nameAr+'</td><td>'+m.classification+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+ (m.moh||'—')+'</td><td>'+ (m.nupco||'—')+'</td><td>'+b.system+'</td><td>'+b.outside+'</td><td>'+action+'</td></tr>';}).join(''):'<tr><td colspan="9" style="text-align:center;padding:22px;color:var(--tx2)">No controlled medicines assigned to this department.</td></tr>';
+  el('ctl-table').innerHTML=ids.length?ids.map(function(id,i){
+    var m=catalog.find(function(x){return x.id===id});if(!m)return '';
+    var b=ctlBalance(owner,id),other=ctlOtherBalance(dept,id),action='';
+    if(isWarehouse)action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlWarehouseAdd(this.dataset.id)">+ Stock</button> <button class="btn bp bxs" data-id="'+id+'" onclick="ctlSend(this.dataset.id)">Send to pharmacy</button>';
+    else if(isOfficer)action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlCorrect(this.dataset.id)">Correct pharmacy stock</button> <button class="btn bp bxs" data-id="'+id+'" onclick="ctlPharmacyDispense(this.dataset.id)">Dispense</button> <button class="btn bd2c bxs" data-id="'+id+'" onclick="ctlRemoveMedication(this.dataset.id)">Remove from list</button>';
+    return '<tr><td>'+(i+1)+'</td><td style="font-weight:600">'+esc(m.nameAr||'')+'</td><td>'+esc(m.classification||'')+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td>'+b.system+'</td><td>'+b.outside+'</td><td><span class="chip">'+other.system+' / '+other.outside+'</span></td><td>'+action+'</td></tr>';
+  }).join(''):'<tr><td colspan="10" style="text-align:center;padding:22px;color:var(--tx2)">No controlled medicines assigned to this department.</td></tr>';
   var pending=ctlMoves().filter(function(m){return m.type==='warehouse_send'&&m.to===dept&&m.status==='pending'});
-  el('ctl-pending').innerHTML=pending.length?pending.map(function(m){var med=catalog.find(function(x){return x.id===m.medId})||{};return '<div class="limit-row"><span>'+med.nameAr+' — System: '+m.system+', Outside: '+m.outside+'</span>'+(canCorrect?'<span><button class="btn bs bxs" data-id="'+m.id+'" onclick="ctlReceive(this.dataset.id,true)">Accept</button> <button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlReceive(this.dataset.id,false)">Reject</button></span>':'<span class="chip">Awaiting custody officer</span>')+'</div>';}).join(''):'<div style="color:var(--tx2)">No pending receipts.</div>';
-  var logs=ctlMoves().filter(function(m){return m.dept===dept||m.to===dept}).slice(-10).reverse();
-  el('ctl-log').innerHTML=logs.length?'<div class="tw"><table><thead><tr><th>Date</th><th>Action</th><th>Medication</th><th>By</th><th>Details</th></tr></thead><tbody>'+logs.map(function(m){var med=catalog.find(function(x){return x.id===m.medId})||{};return '<tr><td>'+fmtDateTime(m.at)+'</td><td>'+m.type+'</td><td>'+ (med.nameAr||'—')+'</td><td>'+m.by+'</td><td>'+ (m.note||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div style="color:var(--tx2)">No movements yet.</div>';
+  el('ctl-pending').innerHTML=pending.length?pending.map(function(m){
+    var med=catalog.find(function(x){return x.id===m.medId})||{};
+    return '<div class="limit-row"><span>'+esc(med.nameAr||'')+' — System: '+m.system+', Outside: '+m.outside+'</span>'
+      +(ctlCanReceive()?'<span><button class="btn bs bxs" data-id="'+m.id+'" onclick="ctlReceive(this.dataset.id,true)">Accept</button> <button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlReceive(this.dataset.id,false)">Reject</button></span>':'<span class="chip">Awaiting controlled medicines pharmacy officer</span>')+'</div>';
+  }).join(''):'<div style="color:var(--tx2)">No pending receipts.</div>';
+  var logs=ctlMoves().filter(function(m){return m.dept===dept||m.to===dept}).slice(-15).reverse();
+  el('ctl-log').innerHTML=logs.length?'<div class="tw"><table><thead><tr><th>Date</th><th>Action</th><th>Medication</th><th>By</th><th>Details</th></tr></thead><tbody>'+logs.map(function(m){var med=catalog.find(function(x){return x.id===m.medId})||{};return '<tr><td>'+fmtDateTime(m.at)+'</td><td>'+esc(m.type)+'</td><td>'+esc(med.nameAr||'—')+'</td><td>'+esc(m.by||'')+'</td><td>'+esc(m.note||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div style="color:var(--tx2)">No movements yet.</div>';
 }
-function ctlAddMedication(){var n=prompt('Arabic medication name / اسم الدواء بالعربي');if(!n)return;var expiry=prompt('Expiry date (YYYY-MM-DD)');if(!expiry)return;var cls=prompt('Classification: مقيد or نفسي','مقيد');if(cls!=='مقيد'&&cls!=='نفسي')return toast('Choose مقيد or نفسي','err');var moh=prompt('MOH code (optional)')||'',nupco=prompt('NUPCO code (optional)')||'';var id='cm_'+Date.now();var c=ctlCatalog();c.push({id:id,nameAr:n.trim(),expiry:expiry,classification:cls,moh:moh.trim(),nupco:nupco.trim()});S.s('controlled_catalog',c);var a=ctlList(CU.deptId);a.push(id);ctlSetList(CU.deptId,a);ctlChange('custody_'+CU.deptId,id,0,0);ctlMove({type:'list_add',dept:CU.deptId,medId:id,note:'Added to department controlled list'});renderControlled();}
+function ctlAddMedication(){
+  if(!ctlCanManageList(ctlDept()))return toast('Only the controlled medicines pharmacy officer may edit these lists.','err');
+  var n=prompt('Arabic medication name / اسم الدواء بالعربي');if(!n)return;
+  var expiry=prompt('Expiry date (YYYY-MM-DD)');if(!expiry)return;
+  var cls=prompt('Classification: مخدر or نفسي','مخدر');
+  if(cls!=='مخدر'&&cls!=='نفسي'&&cls!=='مقيد')return toast('Choose مخدر or نفسي','err');
+  if(cls==='مقيد')cls='مخدر';
+  var moh=prompt('MOH code (optional)')||'',nupco=prompt('NUPCO code (optional)')||'';
+  var id='cm_'+Date.now(),c=ctlCatalog().slice();
+  c.push({id:id,nameAr:n.trim(),expiry:expiry,classification:cls,moh:moh.trim(),nupco:nupco.trim()});
+  S.s('controlled_catalog',c);
+  var dept=ctlDept(),a=ctlList(dept).slice();a.push(id);ctlSetList(dept,a);
+  ctlChange('custody_'+dept,id,0,0);
+  ctlMove({type:'list_add',dept:dept,medId:id,note:'Added by controlled medicines pharmacy officer'});
+  renderControlled();
+}
+function ctlRemoveMedication(id){
+  if(!ctlCanManageList(ctlDept()))return toast('Only the controlled medicines pharmacy officer may edit these lists.','err');
+  if(!confirm('Remove this medicine from the selected department list? Stock history will remain in the movement log.'))return;
+  var dept=ctlDept();
+  ctlSetList(dept,ctlList(dept).filter(function(x){return x!==id}));
+  ctlMove({type:'list_remove',dept:dept,medId:id,note:'Removed from department controlled list'});
+  renderControlled();
+}
 function ctlImportFile(file){
-  if(!file||!ctlCanManageList(ctlDept()))return toast('Only this department custody officer may import the list.','err');
+  if(!file||!ctlCanManageList(ctlDept()))return toast('Only the controlled medicines pharmacy officer may import the list.','err');
   if(typeof XLSX==='undefined')return toast('Excel reader is unavailable. Reload and try again.','err');
   var reader=new FileReader();
   reader.onload=function(e){
@@ -2133,35 +2181,85 @@ function ctlImportFile(file){
       var ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
       var header=rows.findIndex(function(r){return String(r[0]).trim().toLowerCase()==='code no'});
       if(header<0)throw new Error('Could not find the Code NO header.');
-      var catalog=ctlCatalog().slice(),list=ctlList(ctlDept()).slice(),stock=ctlStock('custody_'+ctlDept()),added=0;
+      var dept=ctlDept(),catalog=ctlCatalog().slice(),list=ctlList(dept).slice(),stock=Object.assign({},ctlStock('custody_'+dept)),added=0;
       for(var i=header+1;i<rows.length;i++){
         var r=rows[i],code=String(r[0]||'').trim(),generic=String(r[1]||'').trim();
-        if(!code&&!generic)break;
-        if(!code||!generic)continue;
+        if(!code&&!generic)break;if(!code||!generic)continue;
         var strength=String(r[2]||'').trim(),form=String(r[3]||'').trim(),standard=+r[4]||0,present=+r[5]||0;
         var expiries=[r[6],r[7],r[8]].map(function(v){return String(v||'').replace(' 00:00:00','').trim();}).filter(Boolean).sort();
         var id='cm_'+code.replace(/[^a-zA-Z0-9]/g,'')+'_'+strength.replace(/[^a-zA-Z0-9]/g,'').slice(0,12);
         var med=catalog.find(function(x){return x.id===id});
-        if(!med){med={id:id,nameAr:generic+' '+strength,nameEn:generic,strength:strength,dosageForm:form,classification:'مقيد',moh:code,nupco:'',standardQty:standard,expiry:expiries[0]||'',expiryDates:expiries};catalog.push(med);added++;}
+        if(!med){med={id:id,nameAr:generic+' '+strength,nameEn:generic,strength:strength,dosageForm:form,classification:'مخدر',moh:code,nupco:'',standardQty:standard,expiry:expiries[0]||'',expiryDates:expiries};catalog.push(med);added++;}
         if(list.indexOf(id)<0)list.push(id);
         stock[id]={system:present,outside:(stock[id]&&stock[id].outside)||0};
       }
-      if(!added&&!list.length)throw new Error('No medication rows were found after the headers.');
-      S.s('controlled_catalog',catalog);ctlSetList(ctlDept(),list);ctlSetStock('custody_'+ctlDept(),stock);
-      ctlMove({type:'excel_import',dept:ctlDept(),note:'Imported '+(list.length)+' listed medications from '+file.name});
-      toast('Custody list imported and ordered ✓','succ');renderControlled();
+      S.s('controlled_catalog',catalog);ctlSetList(dept,list);ctlSetStock('custody_'+dept,stock);
+      ctlMove({type:'excel_import',dept:dept,note:'Imported '+list.length+' medicines from '+file.name});
+      toast('Controlled list imported ✓','succ');renderControlled();
     }catch(err){console.error(err);toast(err.message||'Could not import this Excel file.','err');}
     el('ctl-import-file').value='';
   };
   reader.readAsArrayBuffer(file);
 }
-function ctlCorrect(id){if(!ctlCanCorrect(ctlDept()))return toast('You cannot correct this balance','err');var owner=ctlOwner(ctlDept()),b=ctlBalance(owner,id),sys=prompt('New system balance',b.system),out=prompt('New outside-system balance',b.outside),reason=prompt('Correction reason (required)');if(sys===null||out===null||!reason)return;ctlChange(owner,id,+sys,+out);ctlMove({type:'balance_correction',dept:ctlDept(),medId:id,note:reason+' | Before: '+b.system+'/'+b.outside+' | After: '+sys+'/'+out});renderControlled();}
-function ctlWarehouseAdd(id){var b=ctlBalance('warehouse',id),sys=+prompt('System quantity to add','0'),out=+prompt('Outside-system quantity to add','0'),reason=prompt('Source / reason');if((!sys&&!out)||sys<0||out<0||!reason)return;ctlChange('warehouse',id,b.system+sys,b.outside+out);ctlMove({type:'warehouse_add',dept:ctlDept(),medId:id,note:reason+' | Added: '+sys+'/'+out});renderControlled();}
-function ctlSend(id){var dept=ctlDept(),b=ctlBalance('warehouse',id),sys=+prompt('System quantity to send','0'),out=+prompt('Outside-system quantity to send','0');if((!sys&&!out)||sys<0||out<0)return; if(sys>b.system||out>b.outside)return toast('Insufficient warehouse balance','err');ctlChange('warehouse',id,b.system-sys,b.outside-out);ctlMove({type:'warehouse_send',dept:dept,to:dept,medId:id,system:sys,outside:out,status:'pending',note:'Awaiting custody acceptance'});renderControlled();}
-function ctlReceive(id,accept){var moves=ctlMoves(),m=moves.find(function(x){return x.id===id});if(!m)return;if(accept){var b=ctlBalance('custody_'+m.to,m.medId);ctlChange('custody_'+m.to,m.medId,b.system+m.system,b.outside+m.outside);m.status='accepted';m.type='receipt_accepted';m.note='Received from warehouse';}else{var why=prompt('Reason for rejection')||'Rejected by custody officer',b2=ctlBalance('warehouse',m.medId);ctlChange('warehouse',m.medId,b2.system+m.system,b2.outside+m.outside);m.status='rejected';m.type='receipt_rejected';m.note=why;}S.s('controlled_moves',moves);renderControlled();}
-function ctlPharmacyDispense(id){var dept=ctlDept(),b=ctlBalance('custody_'+dept,id),sys=+prompt('System quantity to dispense','0'),out=+prompt('Outside-system quantity to dispense','0');if(sys>b.system||out>b.outside||sys<0||out<0||(!sys&&!out))return toast('Invalid quantity','err');var target=prompt('Department (optional)')||'',person=prompt('Person name for tablets (optional)')||'',ref=prompt('Outside-system reference no. (optional)')||'';ctlChange('custody_'+dept,id,b.system-sys,b.outside-out);ctlMove({type:'pharmacy_dispense',dept:dept,medId:id,system:sys,outside:out,note:'Department: '+target+' | Person: '+person+' | Ref: '+ref});renderControlled();}
-function ctlHandover(){var recipient=prompt('Receiving custody officer name');if(!recipient)return;var manifest=ctlList(CU.deptId).map(function(id){var m=ctlCatalog().find(function(x){return x.id===id})||{},b=ctlBalance('custody_'+CU.deptId,id);return (m.nameAr||id)+': '+b.system+'/'+b.outside;}).join('; ');ctlMove({type:'leave_handover',dept:CU.deptId,note:'To: '+recipient+' | Handover manifest: '+manifest});toast('Handover record created','succ');renderControlled();}
-function printControlledList(){if(!CU||CU.role!=='department')return toast('Only department users may print this controlled-custody list.','err');var dept=ctlDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,settings=S.g('controlled_settings_'+dept)||{},rows=ctlList(dept).map(function(id,i){var m=ctlCatalog().find(function(x){return x.id===id})||{},b=ctlBalance('custody_'+dept,id);return '<tr><td>'+ (i+1)+'</td><td>'+m.nameAr+'</td><td>'+m.classification+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+b.system+'</td><td>'+b.outside+'</td></tr>';}).join('');var qr='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent('Internal controlled custody list | '+name);var w=window.open('','_ctl_');w.document.write('<html><head><title>Controlled custody</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:6px;text-align:left}</style></head><body><h2>'+name+' — Controlled Medicines Custody</h2><p>Custody officer: '+(settings.custodyOfficer||'—')+' | Department supervisor: '+(settings.departmentSupervisor||'—')+' | Pharmacy manager: '+(settings.pharmacyManager||'—')+'</p><p>Internal list — authenticated access required | By Ali Abudahash</p><img src="'+qr+'" width="110"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>Expiry</th><th>System</th><th>Outside system</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.print()<\/script></body></html>');w.document.close();}
+function ctlCorrect(id){
+  if(!ctlCanCorrect(ctlDept()))return toast('You cannot correct this balance','err');
+  var owner=ctlOwner(ctlDept()),b=ctlBalance(owner,id),sys=prompt('New system balance',b.system),out=prompt('New outside-system balance',b.outside),reason=prompt('Correction reason (required)');
+  if(sys===null||out===null||!reason)return;
+  ctlChange(owner,id,+sys,+out);
+  ctlMove({type:CU.role==='warehouse'?'warehouse_balance_correction':'pharmacy_balance_correction',dept:ctlDept(),medId:id,note:reason+' | Before: '+b.system+'/'+b.outside+' | After: '+sys+'/'+out});
+  renderControlled();
+}
+function ctlWarehouseAdd(id){
+  if(CU.role!=='warehouse')return toast('Warehouse access required','err');
+  var b=ctlBalance('warehouse',id),sys=+prompt('System quantity to add','0'),out=+prompt('Outside-system quantity to add','0'),reason=prompt('Source / reason');
+  if((!sys&&!out)||sys<0||out<0||!reason)return;
+  ctlChange('warehouse',id,b.system+sys,b.outside+out);
+  ctlMove({type:'warehouse_add',dept:ctlDept(),medId:id,note:reason+' | Added: '+sys+'/'+out});
+  renderControlled();
+}
+function ctlSend(id){
+  if(CU.role!=='warehouse')return toast('Warehouse access required','err');
+  var dept=ctlDept(),b=ctlBalance('warehouse',id),sys=+prompt('System quantity to send','0'),out=+prompt('Outside-system quantity to send','0');
+  if((!sys&&!out)||sys<0||out<0)return;
+  if(sys>b.system||out>b.outside)return toast('Insufficient warehouse balance','err');
+  ctlChange('warehouse',id,b.system-sys,b.outside-out);
+  ctlMove({type:'warehouse_send',dept:dept,to:dept,medId:id,system:sys,outside:out,status:'pending',note:'Awaiting controlled medicines pharmacy officer acceptance'});
+  renderControlled();
+}
+function ctlReceive(id,accept){
+  if(!ctlCanReceive())return toast('Only the controlled medicines pharmacy officer may accept or reject receipts.','err');
+  var moves=ctlMoves().slice(),m=moves.find(function(x){return x.id===id});
+  if(!m||m.status!=='pending')return toast('This receipt is no longer pending.','err');
+  if(accept){
+    var b=ctlBalance('custody_'+m.to,m.medId);
+    ctlChange('custody_'+m.to,m.medId,b.system+m.system,b.outside+m.outside);
+    m.status='accepted';m.type='receipt_accepted';m.note='Accepted by controlled medicines pharmacy officer';
+  }else{
+    var why=prompt('Reason for rejection');if(!why)return;
+    var b2=ctlBalance('warehouse',m.medId);
+    ctlChange('warehouse',m.medId,b2.system+m.system,b2.outside+m.outside);
+    m.status='rejected';m.type='receipt_rejected';m.note=why;
+  }
+  S.s('controlled_moves',moves);renderControlled();
+}
+function ctlPharmacyDispense(id){
+  if(!ctlIsPharmacyOfficer())return toast('Only the controlled medicines pharmacy officer may dispense from this custody.','err');
+  var dept=ctlDept(),b=ctlBalance('custody_'+dept,id),sys=+prompt('System quantity to dispense','0'),out=+prompt('Outside-system quantity to dispense','0');
+  if(sys>b.system||out>b.outside||sys<0||out<0||(!sys&&!out))return toast('Invalid quantity','err');
+  var target=prompt('Receiving department')||'',person=prompt('Patient/person name when required (optional)')||'',ref=prompt('Reference number (optional)')||'';
+  ctlChange('custody_'+dept,id,b.system-sys,b.outside-out);
+  ctlMove({type:'pharmacy_dispense',dept:dept,medId:id,system:sys,outside:out,note:'Department: '+target+' | Person: '+person+' | Ref: '+ref});
+  renderControlled();
+}
+function ctlHandover(){return toast('Handover is managed by the controlled medicines pharmacy officer account.','info')}
+function printControlledList(){
+  if(!CU)return;
+  var dept=ctlDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,settings=S.g('controlled_settings_'+dept)||{},rows=ctlList(dept).map(function(id,i){var m=ctlCatalog().find(function(x){return x.id===id})||{},b=ctlBalance('custody_'+dept,id),w=ctlBalance('warehouse',id);return '<tr><td>'+(i+1)+'</td><td>'+esc(m.nameAr||'')+'</td><td>'+esc(m.classification||'')+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+b.system+'</td><td>'+b.outside+'</td><td>'+w.system+'/'+w.outside+'</td></tr>';}).join('');
+  var qr='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent('Internal controlled custody list | '+name);
+  var w=window.open('','_ctl_');
+  w.document.write('<html><head><title>Controlled custody</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:6px;text-align:left}</style></head><body><h2>'+esc(name)+' — Controlled & Psychotropic Medicines</h2><p>Controlled medicines pharmacy officer: '+esc(settings.pharmacyManager||'—')+'</p><p>Internal authenticated list | By Ali Abudahash</p><img src="'+qr+'" width="110"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>Expiry</th><th>Pharmacy system</th><th>Pharmacy outside</th><th>Warehouse read-only</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.print()<\/script></body></html>');
+  w.document.close();
+}
 
 // ── EXPIRY DATES ─────────────────────────────────────────
 function renderExpiry(){
@@ -2267,7 +2365,7 @@ function renderUsers(){
   el('utbl').innerHTML=us.length
     ?us.map(function(u){
       var d=ds.find(function(x){return x.id===u.deptId});
-      var roleLabel=u.role==='pharmacy'?'Pharmacy':(u.role==='warehouse'?'Warehouse':(u.controlledCustodian?'Custodian':'Department'));
+      var roleLabel=u.role==='pharmacy'?'Pharmacy':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':(u.controlledCustodian?'Controlled custody viewer':'Department')));
       var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
       var actions='';
       if(CU&&CU.master===true&&u.id!==CU.id){
@@ -2295,7 +2393,7 @@ function renderUsers(){
 }
 function updateUserRoleFields(){
   var role=el('nurole').value;
-  el('nudept-wrap').style.display=(role==='warehouse'||role==='pharmacy')?'none':'block';
+  el('nudept-wrap').style.display=(role==='warehouse'||role==='pharmacy'||role==='controlled_pharmacy')?'none':'block';
   el('numaster-wrap').style.display=(CU&&CU.master===true&&role==='pharmacy')?'block':'none';
   if(role!=='pharmacy')el('numaster').checked=false;
 }
