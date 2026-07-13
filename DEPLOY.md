@@ -1,22 +1,13 @@
-# Guaranteed Firestore permission fix
+# Controlled medicines v6 deployment
 
-This version removes role-based checks from `floorstock_state` and permits any authenticated user to read and write application state.
-
-Run exactly:
+1. Replace GitHub `index.html` with this file.
+2. Deploy the included Firestore rules:
 
 ```bash
-cd PATH_TO_THIS_EXTRACTED_FOLDER
 firebase use floorstock-6ac2d
 firebase deploy --only firestore:rules
 ```
 
-Confirm the output includes:
+3. Hard-refresh with `Command + Shift + R`.
 
-```text
-firestore: released rules
-Deploy complete
-```
-
-Then replace GitHub `index.html`, hard refresh with Command + Shift + R, sign out and sign back in.
-
-The site now reports the exact failing Firestore key if any write is still rejected.
+New features include multiple expiry batches, inpatient/outpatient dispensing, date-range analytics, improved bilingual print layouts, logo support, public expiry QR pages, signature names, handover records, code-selection options, and By Ali Abudahash on printouts.
