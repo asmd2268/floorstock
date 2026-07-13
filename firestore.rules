@@ -29,6 +29,7 @@ service cloud.firestore {
       return active() && profile().role == 'warehouse';
     }
 
+    // Master has all controlled-access rights of both officer and warehouse
     function controlledManager() {
       return isMaster() || isControlledOfficer();
     }
@@ -46,42 +47,43 @@ service cloud.firestore {
     match /floorstock_state/{docId} {
       allow read: if active();
 
-      // Shared controlled-medicine catalogue:
-      // Master and controlled pharmacy officer can fully manage it.
-      // Warehouse officer may add/update shared medicine details.
       allow write: if
+        // ── Master has full access to ALL keys (controlled + non-controlled) ──
+        isMaster() ||
+
+        // ── Shared controlled-medicine catalogue ──
         (docId == 'controlled_catalog' &&
-          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+          (isControlledOfficer() || isWarehouseOfficer())) ||
 
-        // Warehouse quantities and warehouse expiry dates.
+        // ── Warehouse quantities and expiry dates ──
         (docId == 'controlled_warehouse' &&
-          (isMaster() || isWarehouseOfficer())) ||
+          isWarehouseOfficer()) ||
 
-        // Pharmacy controlled-custody quantities and expiry dates.
+        // ── Pharmacy controlled-custody quantities and expiry dates ──
         (docId == 'controlled_pharmacy_stock' &&
-          controlledManager()) ||
+          isControlledOfficer()) ||
 
-        // Per-department controlled medicine lists.
+        // ── Per-department controlled medicine lists ──
         (docId.matches('controlled_dept_list_.*') &&
-          controlledManager()) ||
+          isControlledOfficer()) ||
 
-        // Controlled module settings, signatures and configurable alert period.
+        // ── Controlled module settings and signatures ──
         (docId.matches('controlled_settings_.*') &&
-          controlledManager()) ||
+          isControlledOfficer()) ||
         (docId == 'controlled_alert_days' &&
-          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+          (isControlledOfficer() || isWarehouseOfficer())) ||
 
-        // Shared movement and receipt log.
+        // ── Shared movement and receipt log ──
         (docId == 'controlled_moves' &&
-          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+          (isControlledOfficer() || isWarehouseOfficer())) ||
 
-        // One-time import/seed markers used by the current application.
+        // ── One-time import/seed markers ──
         (docId == 'controlled_department_seed_v2' &&
-          controlledManager()) ||
+          isControlledOfficer()) ||
         (docId == 'controlled_master_stock_seed_v4' &&
-          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+          (isControlledOfficer() || isWarehouseOfficer())) ||
 
-        // Existing non-controlled application data.
+        // ── All non-controlled application data (pharmacy + department users) ──
         (!docId.matches('controlled_.*') &&
           active() &&
           profile().role != 'controlled_pharmacy' &&
