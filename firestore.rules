@@ -6,35 +6,112 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function active() {
+      return signedIn() && profile().active != false;
+    }
+
+    function isPharmacy() {
+      return active() && profile().role == 'pharmacy';
+    }
+
+    // Master = pharmacy manager with master:true flag
+    function isMaster() {
+      return isPharmacy() && profile().master == true;
+    }
+
+    function isControlledOfficer() {
+      return active() && profile().role == 'controlled_pharmacy';
+    }
+
+    function isWarehouseOfficer() {
+      return active() && profile().role == 'warehouse';
+    }
+
+    function controlledManager() {
+      return isMaster() || isControlledOfficer();
+    }
+
+    // ── users collection ──────────────────────────────────
     match /users/{uid} {
-      allow read: if signedIn();
+      allow read: if active();
+      allow create, update, delete: if false;  // Cloud Functions only
+    }
+
+    // ── audit logs ────────────────────────────────────────
+    match /audit_logs/{logId} {
+      allow read: if isMaster();
       allow write: if false;
     }
 
-    // Operational application state.
-    // This intentionally allows any authenticated Floorstock user to read/write,
-    // removing role/profile mismatches that were blocking controlled-stock restore.
+    // ── main application state ────────────────────────────
     match /floorstock_state/{docId} {
-      allow read, write: if signedIn();
+      allow read: if active();
+
+      allow write: if
+        // ① Master has unrestricted write access to ALL keys
+        isMaster() ||
+
+        // ② Controlled catalogue — officer + warehouse can add/edit
+        (docId == 'controlled_catalog' &&
+          (isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // ③ Warehouse stock — warehouse officer only
+        (docId == 'controlled_warehouse' &&
+          isWarehouseOfficer()) ||
+
+        // ④ Pharmacy controlled custody — officer only
+        (docId == 'controlled_pharmacy_stock' &&
+          isControlledOfficer()) ||
+
+        // ⑤ Per-department controlled lists
+        (docId.matches('controlled_dept_list_.*') &&
+          isControlledOfficer()) ||
+
+        // ⑥ Controlled settings & signatures
+        (docId.matches('controlled_settings_.*') &&
+          isControlledOfficer()) ||
+
+        // ⑦ Global alert-days setting
+        (docId == 'controlled_alert_days' &&
+          (isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // ⑧ Shared movement log
+        (docId == 'controlled_moves' &&
+          (isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // ⑨ One-time seed/import flags
+        (docId == 'controlled_department_seed_v2' &&
+          isControlledOfficer()) ||
+        (docId == 'controlled_master_stock_seed_v4' &&
+          (isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // ⑩ All non-controlled keys (regular pharmacy + department users)
+        (!docId.matches('controlled_.*') &&
+          active() &&
+          profile().role != 'controlled_pharmacy' &&
+          profile().role != 'warehouse');
     }
 
+    // ── public expiry QR views ────────────────────────────
     match /public_expiry/{deptId} {
       allow read: if true;
-      allow write: if signedIn();
+      allow write: if active() &&
+        profile().role != 'controlled_pharmacy' &&
+        profile().role != 'warehouse';
     }
 
     match /public_controlled_expiry/{deptId} {
       allow read: if true;
-      allow write: if signedIn();
+      allow write: if controlledManager();
     }
 
-    match /audit_logs/{logId} {
-      allow read: if signedIn();
-      allow write: if false;
-    }
-
+    // ── catch-all: authenticated read, no write ───────────
     match /{document=**} {
-      allow read: if signedIn();
+      allow read: if active();
       allow write: if false;
     }
   }

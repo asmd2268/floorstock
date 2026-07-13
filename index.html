@@ -195,13 +195,44 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 .ctl-alert-row td{background:rgba(210,153,34,.055)!important}
 .ctl-critical-row td{background:rgba(218,54,51,.07)!important}
 
-/* Controlled stock ownership colours */
-.ctl-wh-head,.ctl-wh-cell{background:rgba(31,111,235,.10)!important}
-.ctl-wh-head{color:#58a6ff!important;border-bottom-color:#1f6feb!important}
-.ctl-ph-head,.ctl-ph-cell{background:rgba(46,160,67,.10)!important}
-.ctl-ph-head{color:#56d364!important;border-bottom-color:#2ea043!important}
-body.light .ctl-wh-head,body.light .ctl-wh-cell{background:rgba(9,105,218,.09)!important}
-body.light .ctl-ph-head,body.light .ctl-ph-cell{background:rgba(26,127,55,.09)!important}
+/* ── Controlled stock ownership colours ── */
+/* Warehouse = BLUE (left columns) */
+.ctl-wh-head{
+  background:rgba(31,111,235,.22)!important;
+  color:#79b8ff!important;
+  border-bottom:2px solid #1f6feb!important;
+  font-weight:700!important;
+  letter-spacing:.3px;
+}
+.ctl-wh-cell{
+  background:rgba(31,111,235,.08)!important;
+  border-left:2px solid rgba(31,111,235,.25)!important;
+  font-family:var(--mono);
+}
+/* Pharmacy = GREEN (right columns) */
+.ctl-ph-head{
+  background:rgba(46,160,67,.22)!important;
+  color:#56d364!important;
+  border-bottom:2px solid #2ea043!important;
+  font-weight:700!important;
+  letter-spacing:.3px;
+}
+.ctl-ph-cell{
+  background:rgba(46,160,67,.08)!important;
+  border-left:2px solid rgba(46,160,67,.25)!important;
+  font-family:var(--mono);
+}
+/* First WH col gets stronger left border = section separator */
+.ctl-wh-head:first-of-type,.ctl-wh-cell.ctl-sect-start{border-left:3px solid #1f6feb!important}
+.ctl-ph-head:first-of-type,.ctl-ph-cell.ctl-sect-start{border-left:3px solid #2ea043!important}
+/* Light mode */
+body.light .ctl-wh-head{background:rgba(9,105,218,.16)!important;color:#0550ae!important}
+body.light .ctl-wh-cell{background:rgba(9,105,218,.07)!important}
+body.light .ctl-ph-head{background:rgba(26,127,55,.16)!important;color:#116329!important}
+body.light .ctl-ph-cell{background:rgba(26,127,55,.07)!important}
+/* Section label badges in thead */
+.wh-section-badge{display:inline-block;background:#1f6feb;color:#fff;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;margin-right:4px;letter-spacing:.5px}
+.ph-section-badge{display:inline-block;background:#2ea043;color:#fff;border-radius:4px;padding:1px 7px;font-size:10px;font-weight:700;margin-right:4px;letter-spacing:.5px}
 </style>
 </head>
 <body>
@@ -567,11 +598,21 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         </div>
         <div id="ctl-global-alerts" class="cb" style="padding-bottom:0"></div>
         <div class="tw"><table>
-          <thead><tr>
-            <th>#</th><th>Medicine</th><th>Classification</th><th>Flags</th><th>Min / Max</th>
-            <th class="ctl-wh-head">Warehouse system</th><th class="ctl-wh-head">Warehouse outside</th><th class="ctl-wh-head">Warehouse expiry</th>
-            <th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th><th>Status</th><th></th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th rowspan="2">#</th>
+              <th class="ctl-wh-head" colspan="3" style="text-align:center"><span class="wh-section-badge">📦 WH</span>المستودع</th>
+              <th rowspan="2">الدواء / Medicine</th>
+              <th rowspan="2">التصنيف</th>
+              <th rowspan="2">Min / Max</th>
+              <th class="ctl-ph-head" colspan="2" style="text-align:center"><span class="ph-section-badge">💊 PH</span>مسؤول الصيدلية</th>
+              <th rowspan="2">الحالة</th><th rowspan="2"></th>
+            </tr>
+            <tr>
+              <th class="ctl-wh-head">نظام</th><th class="ctl-wh-head">خارج</th><th class="ctl-wh-head">انتهاء الصلاحية</th>
+              <th class="ctl-ph-head">الكمية</th><th class="ctl-ph-head">انتهاء الصلاحية</th>
+            </tr>
+          </thead>
           <tbody id="ctl-overview-table"></tbody>
         </table></div>
       </div>
@@ -585,11 +626,21 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
           <span class="badge brd" id="ctl-out-count">0</span>
         </div>
         <div class="tw"><table>
-          <thead><tr>
-            <th>#</th><th>Medicine</th><th>Classification</th><th>Min / Max</th>
-            <th class="ctl-wh-head">Warehouse system</th><th class="ctl-wh-head">Warehouse outside</th><th class="ctl-wh-head">Warehouse expiry</th>
-            <th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th><th>Missing from</th><th></th>
-          </tr></thead>
+          <thead>
+            <tr>
+              <th rowspan="2">#</th>
+              <th class="ctl-wh-head" colspan="3" style="text-align:center"><span class="wh-section-badge">📦 WH</span>المستودع</th>
+              <th rowspan="2">الدواء / Medicine</th>
+              <th rowspan="2">التصنيف</th>
+              <th rowspan="2">Min / Max</th>
+              <th class="ctl-ph-head" colspan="2" style="text-align:center"><span class="ph-section-badge">💊 PH</span>مسؤول الصيدلية</th>
+              <th rowspan="2">ناقص من</th><th rowspan="2"></th>
+            </tr>
+            <tr>
+              <th class="ctl-wh-head">نظام</th><th class="ctl-wh-head">خارج</th><th class="ctl-wh-head">انتهاء الصلاحية</th>
+              <th class="ctl-ph-head">الكمية</th><th class="ctl-ph-head">انتهاء الصلاحية</th>
+            </tr>
+          </thead>
           <tbody id="ctl-out-table"></tbody>
         </table></div>
       </div>
@@ -4394,12 +4445,28 @@ function renderCtlOverview(){
     :'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ No stock or expiry alerts within '+ctlAlertDays()+' days.</div>';
   body.innerHTML=rows.length?rows.map(function(x,i){
     var m=x.m,w=x.w,p=x.p,actions=[];
-    if(ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Warehouse</button>');
-    if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Pharmacy</button>');
-    if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>');
-    if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">Delete</button>');
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
-  }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected filter.</td></tr>';
+    if(ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">📦 مستودع</button>');
+    if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">إرسال →</button>');
+    if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">💊 صيدلية</button>');
+    if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">✏</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">✕</button>');
+    /* ORDER: # | WH system | WH outside | WH expiry | Medicine+codes | Classification | Min/Max | PH qty | PH expiry | Status | Actions */
+    return '<tr>'
+      +'<td style="text-align:center;font-weight:700;color:var(--tx3)">'+(i+1)+'</td>'
+      +'<td class="ctl-wh-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(w.system)+'</td>'
+      +'<td class="ctl-wh-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(w.outside)+'</td>'
+      +'<td class="ctl-wh-cell" style="font-size:12px">'+ctlBatchText(w.batches)+'</td>'
+      +'<td><b style="font-size:13px">'+esc(m.name)+'</b>'
+        +(m.moh?'<div class="fhint" style="margin-top:2px"><span style="color:var(--tx3);font-size:10px">MOH</span> <span style="font-family:var(--mono);font-size:11px">'+esc(m.moh)+'</span></div>':'')
+        +(m.nupco?'<div class="fhint"><span style="color:var(--tx3);font-size:10px">NUPCO</span> <span style="font-family:var(--mono);font-size:11px">'+esc(m.nupco)+'</span></div>':'')
+      +'</td>'
+      +'<td>'+ctlClassLabel(m.classification)+' '+ctlFlags(m)+'</td>'
+      +'<td style="text-align:center;font-family:var(--mono);font-size:12px">'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td>'
+      +'<td class="ctl-ph-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(p.qty)+'</td>'
+      +'<td class="ctl-ph-cell" style="font-size:12px">'+ctlBatchText(p.batches)+'</td>'
+      +'<td>'+x.status.html+'</td>'
+      +'<td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td>'
+      +'</tr>';
+  }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected filter.</td></tr>';
 }
 function renderCtlCatalog(){
   var q=(el('ctl-search')?el('ctl-search').value:'').toLowerCase(),rows=ctlCatalog().filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)});
@@ -4603,29 +4670,61 @@ function renderCtlOverview(){
   if(filter==='out')available=[];
 
   el('ctl-global-alerts').innerHTML=alerts.length
-    ?'<div class="alert-banner-y"><b>Attention:</b> '+alerts.length+' medicine(s) require review within '+ctlAlertDays()+' days. '+alerts.slice(0,8).map(function(x){return esc(x.m.name)+' — '+x.status.html}).join(' &nbsp; ')+'</div>'
-    :'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ No low-stock or expiry alerts within '+ctlAlertDays()+' days.</div>';
+    ?'<div class="alert-banner-y"><b>⚠ تنبيه:</b> '+alerts.length+' دواء يحتاج مراجعة. '+alerts.slice(0,8).map(function(x){return esc(x.m.name)+' — '+x.status.html}).join(' &nbsp; ')+'</div>'
+    :'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ لا توجد تنبيهات للمخزون أو انتهاء الصلاحية خلال '+ctlAlertDays()+' يوم.</div>';
+
+  function medCell(m){
+    return '<td><b style="font-size:13px">'+esc(m.name)+'</b>'
+      +(m.moh?'<div class="fhint" style="margin-top:2px"><span style="color:var(--tx3);font-size:10px">MOH</span> <span style="font-family:var(--mono);font-size:11px">'+esc(m.moh)+'</span></div>':'')
+      +(m.nupco?'<div class="fhint"><span style="color:var(--tx3);font-size:10px">NUPCO</span> <span style="font-family:var(--mono);font-size:11px">'+esc(m.nupco)+'</span></div>':'')
+      +'</td>';
+  }
 
   function actionsFor(m){
     var actions=[];
-    if(ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Warehouse</button>');
-    if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Pharmacy</button>');
-    if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>');
-    if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">Delete</button>');
+    if(ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">📦 مستودع</button>');
+    if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">إرسال →</button>');
+    if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">💊 صيدلية</button>');
+    if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">✏</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">✕</button>');
     return actions.join(' ')||'<span class="chip">Read only</span>';
   }
 
+  /* Column order: # | WH-system | WH-outside | WH-expiry | Medicine+codes | Class | Min/Max | PH-qty | PH-expiry | Status | Actions */
   body.innerHTML=available.length?available.map(function(x,i){
     var m=x.m,w=x.w,p=x.p;
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
-  }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No available medicines match the selected filter.</td></tr>';
+    return '<tr>'
+      +'<td style="text-align:center;font-weight:700;color:var(--tx3)">'+(i+1)+'</td>'
+      +'<td class="ctl-wh-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(w.system)+'</td>'
+      +'<td class="ctl-wh-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(w.outside)+'</td>'
+      +'<td class="ctl-wh-cell" style="font-size:12px">'+ctlBatchText(w.batches)+'</td>'
+      +medCell(m)
+      +'<td>'+ctlClassLabel(m.classification)+' '+ctlFlags(m)+'</td>'
+      +'<td style="text-align:center;font-family:var(--mono);font-size:12px">'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td>'
+      +'<td class="ctl-ph-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(p.qty)+'</td>'
+      +'<td class="ctl-ph-cell" style="font-size:12px">'+ctlBatchText(p.batches)+'</td>'
+      +'<td>'+x.status.html+'</td>'
+      +'<td style="white-space:nowrap">'+actionsFor(m)+'</td>'
+      +'</tr>';
+  }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">لا توجد أدوية تطابق الفلتر المحدد.</td></tr>';
 
   if(outBody){
     el('ctl-out-count').textContent=outRows.length;
     outBody.innerHTML=outRows.length?outRows.map(function(x,i){
       var m=x.m,w=x.w,p=x.p;
-      return '<tr class="ctl-critical-row"><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td><span class="badge brd">'+esc(x.outFrom)+'</span></td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
-    }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">No out-of-stock medicines.</td></tr>';
+      return '<tr class="ctl-critical-row">'
+        +'<td style="text-align:center;font-weight:700">'+(i+1)+'</td>'
+        +'<td class="ctl-wh-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(w.system)+'</td>'
+        +'<td class="ctl-wh-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(w.outside)+'</td>'
+        +'<td class="ctl-wh-cell" style="font-size:12px">'+ctlBatchText(w.batches)+'</td>'
+        +medCell(m)
+        +'<td>'+ctlClassLabel(m.classification)+'</td>'
+        +'<td style="text-align:center;font-family:var(--mono);font-size:12px">'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td>'
+        +'<td class="ctl-ph-cell" style="text-align:center;font-size:15px;font-weight:700">'+ctlNum(p.qty)+'</td>'
+        +'<td class="ctl-ph-cell" style="font-size:12px">'+ctlBatchText(p.batches)+'</td>'
+        +'<td><span class="badge brd">'+esc(x.outFrom)+'</span></td>'
+        +'<td style="white-space:nowrap">'+actionsFor(m)+'</td>'
+        +'</tr>';
+    }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">لا توجد أدوية نافدة.</td></tr>';
   }
 }
 
