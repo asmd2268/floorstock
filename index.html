@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PharmOrder</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0d1117;--s:#161b22;--s2:#1c2128;--s3:#222831;--bd:#30363d;--bd2:#3d444d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;--ac:#1f6feb;--acl:#388bfd;--gn:#2ea043;--gnl:#3fb950;--rd:#da3633;--rdl:#f85149;--yl:#d29922;--yll:#e3b341;--pu:#0ea5e9;--mono:'JetBrains Mono',monospace}
@@ -141,6 +142,31 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 /* public expiry page */
 #pub-exp{min-height:100vh;padding:24px 16px;max-width:900px;margin:0 auto}
 
+/* ── BARCODE SCANNER ── */
+#scan-modal-video{width:100%;border-radius:8px;background:#000;display:block}
+.scan-overlay{position:relative;overflow:hidden;border-radius:8px}
+.scan-line{position:absolute;left:0;right:0;height:2px;background:rgba(31,111,235,.8);box-shadow:0 0 8px var(--ac);animation:scanMove 2s linear infinite}
+@keyframes scanMove{0%{top:10%}50%{top:85%}100%{top:10%}}
+.scan-result-box{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px;font-size:13px;margin-top:10px;min-height:48px}
+.scan-field{background:var(--s3);border:1px solid var(--bd);border-radius:6px;padding:8px 10px;margin-bottom:8px;font-size:13px}
+.scan-field label{font-size:10px;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;display:block;margin-bottom:2px}
+.scan-field .val{font-weight:600;font-family:var(--mono)}
+.scanner-status{font-size:12px;color:var(--tx2);text-align:center;padding:6px}
+.scan-cam-sel{padding:6px 10px;border-radius:6px;font-size:12px;margin-bottom:10px;width:100%;background:var(--s2);border:1px solid var(--bd);color:var(--tx)}
+
+/* ── SCHEDULE ── */
+.day-chk{display:inline-flex;align-items:center;gap:4px;padding:3px 8px;border:1px solid var(--bd);border-radius:6px;cursor:pointer;font-size:12px;transition:all .15s}
+.day-chk:has(input:checked){background:var(--ac);border-color:var(--ac);color:#fff}
+.day-chk input{width:auto;margin:0;opacity:0;position:absolute}
+.win-card{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.win-card.inactive{opacity:.5}
+.win-time{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--acl)}
+.win-days{font-size:11px;color:var(--tx2)}
+.slot-badge{background:rgba(46,160,67,.12);border:1px solid var(--gn);color:var(--gnl);padding:2px 8px;border-radius:4px;font-size:12px;font-weight:600;font-family:var(--mono)}
+.limit-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--bd);gap:10px}
+.req-blocked-banner{background:rgba(218,54,51,.1);border:1px solid var(--rd);border-radius:10px;padding:16px;text-align:center;margin:16px}
+.next-window-info{background:rgba(31,111,235,.08);border:1px solid var(--ac);border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px}
+
 /* ── NOTES / FEEDBACK ── */
 .note-card{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px 14px;margin-bottom:10px;font-size:13px}
 .note-card.note-open{border-left:3px solid var(--yl)}
@@ -191,6 +217,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
     <div class="fl ic g8">
       <span style="font-size:12px;color:var(--tx2)" id="tuser"></span>
       <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle">&#x1F319;</button>
+      <button class="btn bg bsm" onclick="openLogoSettings()" title="Facility Logo">&#x1F3E5;</button>
       <button class="btn bg bsm" onclick="doLogout()">Sign Out</button>
     </div>
   </div>
@@ -215,24 +242,39 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
   </div>
 
   <div class="pg" id="pg-inv">
-    <div class="fl ic jb mb14">
+    <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
       <div><div class="stitle">Inventory</div><div class="ssub" style="margin:0">Per-department drug lists</div></div>
-      <div class="fl g8 ic">
+      <div class="fl g8 ic" style="flex-wrap:wrap">
         <select id="inv-dept-sel" class="psel" onchange="renderInv()"><option value="">Select Dept...</option></select>
-        <button class="btn bp" onclick="openAddDrug()">+ Add Medication</button>
+        <button class="btn bp" onclick="openAddDrug()">+ Add</button>
+        <button class="btn bg bsm" onclick="openManageCats()">&#x1F3F7; Categories</button>
       </div>
     </div>
     <!-- duplicate detection banner -->
     <div id="dup-banner" style="display:none" class="alert-banner-y">
       <div class="fl jb ic">
         <span id="dup-count-txt"></span>
-        <button class="btn bg bsm" onclick="showDupPanel()">&#x1F50D; View Duplicates</button>
+        <button class="btn bg bsm" onclick="showDupPanel()">&#x1F50D; Duplicates</button>
+      </div>
+    </div>
+    <!-- bulk action bar -->
+    <div id="bulk-bar" style="display:none;background:var(--s2);border:1px solid var(--ac);border-radius:8px;padding:10px 14px;margin-bottom:10px">
+      <div class="fl ic jb" style="flex-wrap:wrap;gap:8px">
+        <span id="bulk-count" style="font-size:13px;font-weight:600;color:var(--acl)">0 selected</span>
+        <div class="fl g8 ic" style="flex-wrap:wrap">
+          <select id="bulk-cat-sel" class="psel" style="min-width:160px">
+            <option value="">Change category to...</option>
+          </select>
+          <button class="btn bp bsm" onclick="bulkChangeCategory()">&#x1F3F7; Apply Category</button>
+          <button class="btn bd2c bsm" onclick="bulkDelete()">&#x1F5D1; Delete Selected</button>
+          <button class="btn bg bsm" onclick="clearInvSelection()">&#x2715; Clear</button>
+        </div>
       </div>
     </div>
     <div class="card">
-      <div class="ch">
+      <div class="ch" style="flex-wrap:wrap;gap:8px">
         <div class="sbr"><span class="sic">&#x1F50D;</span><input type="text" id="isrch" placeholder="Search..." oninput="renderInv()"></div>
-        <div class="fl g8 ic">
+        <div class="fl g8 ic" style="flex-wrap:wrap">
           <select id="icatf" class="psel" onchange="renderInv()"><option value="">All Categories</option></select>
           <select id="iclsf" class="psel" onchange="renderInv()">
             <option value="">All</option>
@@ -243,7 +285,12 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
         </div>
       </div>
       <div class="tw"><table>
-        <thead><tr><th>Medication</th><th>Category</th><th>Classification</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="text-align:center">Monthly</th><th></th></tr></thead>
+        <thead><tr>
+          <th style="width:36px"><input type="checkbox" id="inv-all-chk" onchange="toggleAllInv(this)" title="Select all"></th>
+          <th>Medication</th><th>Category</th><th>Classification</th>
+          <th style="text-align:center">Min</th><th style="text-align:center">Max</th>
+          <th style="text-align:center">Monthly</th><th></th>
+        </tr></thead>
         <tbody id="itbl"></tbody>
       </table></div>
     </div>
@@ -442,8 +489,6 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
   </div>
 
   <!-- ══ DEPARTMENT PAGES ══ -->
-    <!-- ══ DEPARTMENT PAGES ══ -->
-  <div class="pg" <!-- ══ DEPARTMENT PAGES ══ -->
   <div class="pg" id="pg-newreq">
     <div class="stitle">New Request / &#x637;&#x644;&#x628; &#x62C;&#x62F;&#x64A;&#x62F;</div>
     <div class="ssub" id="dnsub">Enter quantities needed</div>
@@ -498,7 +543,10 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
             <option value="soon">Expiring Soon / &#x642;&#x631;&#x64A;&#x628;&#x629;</option>
             <option value="ok">OK / &#x633;&#x627;&#x631;&#x64A;&#x629;</option>
           </select>
-          <button class="btn bp bsm" onclick="openAddExpiry()">+ Add Batch</button>
+          <div class="fl g8 ic">
+          <button class="btn bp bsm" onclick="openAddExpiry()">&#x270F; Manual</button>
+          <button class="btn bp bsm" onclick="openScanExpiry()">&#x1F4F7; Scan</button>
+        </div>
         </div>
       </div>
       <div class="tw"><table>
@@ -652,6 +700,50 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div id="pharm-notes-list"></div>
   </div>
 
+  <div class="pg" id="pg-schedule">
+    <div class="stitle">&#x23F0; Schedule &amp; Limits / &#x62C;&#x62F;&#x648;&#x644; &#x627;&#x644;&#x637;&#x644;&#x628;&#x64A;&#x627;&#x62A;</div>
+    <div class="ssub">Control when departments can submit requests and when pharmacy dispenses. Set monthly order limits per department.</div>
+
+    <!-- Request Windows -->
+    <div class="card mb14">
+      <div class="ch">
+        <span class="ct">&#x1F4E5; Request Windows / &#x623;&#x648;&#x642;&#x627;&#x62A; &#x642;&#x628;&#x648;&#x644; &#x627;&#x644;&#x637;&#x644;&#x628;&#x64A;&#x627;&#x62A;</span>
+        <button class="btn bp bsm" onclick="addReqWindow()">+ Add Window</button>
+      </div>
+      <div class="cb">
+        <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Departments can only submit requests during these time windows. Leave empty to allow anytime.</p>
+        <div id="req-windows-list"></div>
+      </div>
+    </div>
+
+    <!-- Dispense Slots -->
+    <div class="card mb14">
+      <div class="ch">
+        <span class="ct">&#x1F4E4; Dispense Slots / &#x645;&#x648;&#x627;&#x639;&#x64A;&#x62F; &#x627;&#x644;&#x635;&#x631;&#x641;</span>
+        <button class="btn bp bsm" onclick="addDispSlot()">+ Add Slot</button>
+      </div>
+      <div class="cb">
+        <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Pharmacy dispense rounds — shown to departments on their request page.</p>
+        <div id="disp-slots-list"></div>
+      </div>
+    </div>
+
+    <!-- Monthly Order Limits -->
+    <div class="card">
+      <div class="ch">
+        <span class="ct">&#x1F4CA; Monthly Order Limits / &#x627;&#x644;&#x62D;&#x62F; &#x627;&#x644;&#x634;&#x647;&#x631;&#x64A; &#x644;&#x644;&#x637;&#x644;&#x628;&#x64A;&#x627;&#x62A;</span>
+        <div class="fl g8 ic">
+          <button class="btn bg bsm" onclick="openBulkLimits()">&#x1F4CB; Bulk Edit</button>
+          <button class="btn bp bsm" onclick="saveAllLimits()">&#x2713; Save All</button>
+        </div>
+      </div>
+      <div class="cb">
+        <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Max number of requests each department can submit per calendar month.</p>
+        <div id="monthly-limits-list"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══ MODALS ══ -->
@@ -733,17 +825,72 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 </div>
 
 <div class="modal-bg" id="mexpiry">
-  <div class="modal">
-    <div class="mh"><span class="mt" id="mexpiry-title">Add Batch</span><button class="xbtn" onclick="CM('mexpiry')">&#x2715;</button></div>
-    <div class="fg"><label>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</label><select id="exp-med-sel" style="margin-bottom:14px"></select></div>
-    <div class="frow">
-      <div class="fg"><label>Batch / Lot No. (optional)</label><input type="text" id="exp-batch-inp" placeholder="e.g. LOT-2024-A"></div>
-      <div class="fg"><label>Expiry Date / &#x62A;&#x627;&#x631;&#x64A;&#x62E; &#x627;&#x644;&#x627;&#x646;&#x62A;&#x647;&#x627;&#x621;</label><input type="date" id="exp-date-inp"></div>
+  <div class="modal" style="width:620px">
+    <div class="mh">
+      <span class="mt" id="mexpiry-title">Add Batch / &#x625;&#x636;&#x627;&#x641;&#x629; &#x62F;&#x641;&#x639;&#x629;</span>
+      <button class="xbtn" onclick="stopScanner();CM('mexpiry')">&#x2715;</button>
     </div>
+
+    <!-- Scanner toggle tabs -->
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button class="btn bp bsm" id="tab-manual-btn" onclick="switchExpTab('manual')" style="flex:1">&#x270F; Manual Entry</button>
+      <button class="btn bg bsm" id="tab-scan-btn" onclick="switchExpTab('scan')" style="flex:1">&#x1F4F7; Scan Barcode</button>
+      <button class="btn bg bsm" id="tab-type-btn" onclick="switchExpTab('type')" style="flex:1">&#x2328; Type Barcode</button>
+    </div>
+
+    <!-- TAB: Manual -->
+    <div id="tab-manual">
+      <div class="fg"><label>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</label><select id="exp-med-sel" style="margin-bottom:14px"></select></div>
+      <div class="frow">
+        <div class="fg"><label>Batch / Lot No. (optional)</label><input type="text" id="exp-batch-inp" placeholder="e.g. LOT-2024-A"></div>
+        <div class="fg"><label>Expiry Date / &#x62A;&#x627;&#x631;&#x64A;&#x62E; &#x627;&#x644;&#x627;&#x646;&#x62A;&#x647;&#x627;&#x621;</label><input type="date" id="exp-date-inp"></div>
+      </div>
+    </div>
+
+    <!-- TAB: Scan with camera -->
+    <div id="tab-scan" style="display:none">
+      <select id="scan-cam-sel" class="scan-cam-sel" onchange="switchCamera(this.value)"><option>Loading cameras...</option></select>
+      <div class="scan-overlay">
+        <video id="scan-modal-video" autoplay playsinline muted></video>
+        <div class="scan-line" id="scan-line" style="display:none"></div>
+      </div>
+      <div class="scanner-status" id="scan-status">&#x23F3; Starting camera...</div>
+      <div id="scan-result-area" style="display:none">
+        <div class="scan-result-box" id="scan-raw-box">
+          <div style="font-size:11px;color:var(--tx2);margin-bottom:4px">Raw barcode / &#x627;&#x644;&#x628;&#x627;&#x631;&#x643;&#x648;&#x62F; &#x627;&#x644;&#x62E;&#x627;&#x645;</div>
+          <div id="scan-raw-val" style="font-family:var(--mono);word-break:break-all;font-size:12px"></div>
+        </div>
+        <div id="scan-parsed-fields" style="margin-top:10px"></div>
+        <div class="fg" style="margin-top:10px"><label>Match to Medication / &#x631;&#x628;&#x637; &#x628;&#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</label>
+          <select id="scan-med-sel" style="margin-bottom:10px"></select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn bg bsm" onclick="restartScanner()">&#x1F504; Scan Again</button>
+          <button class="btn bs" onclick="applyScanResult()">&#x2713; Use This Result</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB: Type barcode string -->
+    <div id="tab-type" style="display:none">
+      <div class="fg">
+        <label>Paste or type barcode string</label>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:7px">Works with GS1-128, HIBC, DataMatrix, QR text, or any barcode string</div>
+        <textarea id="type-barcode-inp" rows="4" style="font-family:var(--mono);font-size:12px;margin-bottom:8px;resize:vertical" placeholder="(01)03701234567890(17)251231(10)LOT001&#10;or&#10;EXP:2025-12-31 LOT:A123 Adrenaline 1mg"></textarea>
+        <button class="btn bp" onclick="parseTypedBarcode()">&#x1F50D; Parse</button>
+      </div>
+      <div id="type-parsed-fields" style="display:none;margin-top:10px"></div>
+      <div id="type-med-wrap" style="display:none">
+        <div class="fg"><label>Match to Medication</label><select id="type-med-sel" style="margin-bottom:10px"></select></div>
+        <button class="btn bs" onclick="applyTypedResult()">&#x2713; Use This Result</button>
+      </div>
+    </div>
+
     <input type="hidden" id="exp-edit-id">
+    <hr style="border:none;border-top:1px solid var(--bd);margin:14px 0">
     <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button class="btn bg" onclick="CM('mexpiry')">Cancel</button>
-      <button class="btn bp" onclick="saveExpiry()">Save Batch</button>
+      <button class="btn bg" onclick="stopScanner();CM('mexpiry')">Cancel</button>
+      <button class="btn bp" id="exp-save-btn" onclick="saveExpiry()">Save Batch</button>
     </div>
   </div>
 </div>
@@ -813,6 +960,142 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div style="display:flex;gap:8px;justify-content:flex-end">
       <button class="btn bg" onclick="CM('mnote-reply')">Cancel</button>
       <button class="btn bp" onclick="saveNoteReply()">Save Reply</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-bg" id="mcat-mgr">
+  <div class="modal" style="width:580px">
+    <div class="mh"><span class="mt">&#x1F3F7; Manage Categories / &#x625;&#x62F;&#x627;&#x631;&#x629; &#x627;&#x644;&#x62A;&#x635;&#x646;&#x64A;&#x641;&#x627;&#x62A;</span><button class="xbtn" onclick="CM('mcat-mgr')">&#x2715;</button></div>
+    <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Add, rename, or remove drug categories. Changes reflect in all lists — shelf assignments are unaffected.</p>
+    <div class="fl g8 mb14">
+      <input type="text" id="new-cat-inp" placeholder="New category name..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')addCategory()">
+      <button class="btn bp" onclick="addCategory()">Add</button>
+    </div>
+    <div id="cat-list" style="max-height:320px;overflow-y:auto"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn bg" onclick="CM('mcat-mgr')">Close</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="mlogo">
+  <div class="modal" style="width:500px">
+    <div class="mh"><span class="mt">&#x1F3E5; Facility Logo / &#x634;&#x639;&#x627;&#x631; &#x627;&#x644;&#x645;&#x646;&#x634;&#x623;&#x629;</span><button class="xbtn" onclick="CM('mlogo')">&#x2715;</button></div>
+    <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Logo appears in the header of every printed page.</p>
+    <div id="logo-preview-wrap" style="text-align:center;margin-bottom:14px;min-height:80px;display:flex;align-items:center;justify-content:center">
+      <img id="logo-preview-img" src="" style="max-height:80px;max-width:300px;display:none;border-radius:6px;border:1px solid var(--bd)">
+      <span id="logo-preview-none" style="color:var(--tx2);font-size:13px">No logo uploaded</span>
+    </div>
+    <div id="logo-drop" style="border:2px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:14px" onclick="el('logo-file-inp').click()" ondragover="event.preventDefault();this.style.borderColor='var(--ac)'" ondragleave="this.style.borderColor='var(--bd)'" ondrop="handleLogoDrop(event)">
+      <div style="font-size:24px;margin-bottom:6px">&#x1F4F7;</div>
+      <div style="font-size:13px;color:var(--tx2)">Click or drag &amp; drop image (PNG, JPG, SVG)</div>
+      <input type="file" id="logo-file-inp" accept="image/*" style="display:none" onchange="handleLogoFile(this.files[0])">
+    </div>
+    <div class="fg"><label>Facility Name / &#x627;&#x633;&#x645; &#x627;&#x644;&#x645;&#x646;&#x634;&#x623;&#x629; (appears in print header)</label>
+      <input type="text" id="facility-name-inp" placeholder="e.g. King Fahad Medical City">
+    </div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn bg bsm" onclick="clearLogo()">Remove Logo</button>
+      <button class="btn bg" onclick="CM('mlogo')">Cancel</button>
+      <button class="btn bp" onclick="saveLogo()">Save</button>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal-bg" id="mreq-window">
+  <div class="modal">
+    <div class="mh"><span class="mt" id="mreqwin-title">Add Request Window</span><button class="xbtn" onclick="CM('mreq-window')">&#x2715;</button></div>
+    <div class="frow">
+      <div class="fg"><label>Label / &#x627;&#x644;&#x648;&#x635;&#x641;</label><input id="rwin-label" placeholder="e.g. Morning Window, &#x646;&#x627;&#x641;&#x630;&#x629; &#x627;&#x644;&#x635;&#x628;&#x627;&#x62D;"></div>
+      <div class="fg"><label>Applies to / &#x644;&#x644;&#x642;&#x633;&#x645;</label>
+        <select id="rwin-dept" style="margin-bottom:14px">
+          <option value="all">All Departments / &#x62C;&#x645;&#x64A;&#x639; &#x627;&#x644;&#x623;&#x642;&#x633;&#x627;&#x645;</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Days / &#x627;&#x644;&#x623;&#x64A;&#x627;&#x645;</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:4px;margin-bottom:13px" id="rwin-days">
+          <label class="day-chk"><input type="checkbox" value="0"> Sun</label>
+          <label class="day-chk"><input type="checkbox" value="1"> Mon</label>
+          <label class="day-chk"><input type="checkbox" value="2"> Tue</label>
+          <label class="day-chk"><input type="checkbox" value="3"> Wed</label>
+          <label class="day-chk"><input type="checkbox" value="4"> Thu</label>
+          <label class="day-chk"><input type="checkbox" value="5"> Fri</label>
+          <label class="day-chk"><input type="checkbox" value="6"> Sat</label>
+        </div>
+      </div>
+      <div></div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>From / &#x645;&#x646;</label><input type="time" id="rwin-from" style="margin-bottom:14px"></div>
+      <div class="fg"><label>To / &#x625;&#x644;&#x649;</label><input type="time" id="rwin-to" style="margin-bottom:14px"></div>
+    </div>
+    <div class="fg">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;color:var(--tx);font-size:13px;margin:0">
+        <input type="checkbox" id="rwin-active" checked style="width:auto;margin:0"> Active / &#x645;&#x641;&#x639;&#x651;&#x644;
+      </label>
+    </div>
+    <input type="hidden" id="rwin-edit-id">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn bg" onclick="CM('mreq-window')">Cancel</button>
+      <button class="btn bp" onclick="saveReqWindow()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="mdisp-slot">
+  <div class="modal">
+    <div class="mh"><span class="mt" id="mdisp-title">Add Dispense Slot</span><button class="xbtn" onclick="CM('mdisp-slot')">&#x2715;</button></div>
+    <div class="frow">
+      <div class="fg"><label>Label / &#x627;&#x644;&#x648;&#x635;&#x641;</label><input id="dslot-label" placeholder="e.g. Morning Round, &#x62C;&#x648;&#x644;&#x629; &#x627;&#x644;&#x635;&#x628;&#x627;&#x62D;"></div>
+      <div class="fg"><label>Applies to / &#x644;&#x644;&#x642;&#x633;&#x645;</label>
+        <select id="dslot-dept" style="margin-bottom:14px">
+          <option value="all">All Departments</option>
+        </select>
+      </div>
+    </div>
+    <div class="frow">
+      <div class="fg"><label>Dispense Time / &#x648;&#x642;&#x62A; &#x627;&#x644;&#x635;&#x631;&#x641;</label><input type="time" id="dslot-time" style="margin-bottom:14px"></div>
+      <div class="fg"><label>Days / &#x627;&#x644;&#x623;&#x64A;&#x627;&#x645;</label>
+        <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px" id="dslot-days">
+          <label class="day-chk"><input type="checkbox" value="0"> Sun</label>
+          <label class="day-chk"><input type="checkbox" value="1"> Mon</label>
+          <label class="day-chk"><input type="checkbox" value="2"> Tue</label>
+          <label class="day-chk"><input type="checkbox" value="3"> Wed</label>
+          <label class="day-chk"><input type="checkbox" value="4"> Thu</label>
+          <label class="day-chk"><input type="checkbox" value="5"> Fri</label>
+          <label class="day-chk"><input type="checkbox" value="6"> Sat</label>
+        </div>
+      </div>
+    </div>
+    <div class="fg"><label>Notes (optional)</label><input id="dslot-notes" placeholder="e.g. Urgent orders only after hours"></div>
+    <input type="hidden" id="dslot-edit-id">
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn bg" onclick="CM('mdisp-slot')">Cancel</button>
+      <button class="btn bp" onclick="saveDispSlot()">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="mbulk-limits">
+  <div class="modal" style="width:580px">
+    <div class="mh"><span class="mt">&#x1F4CB; Bulk Set Monthly Limits</span><button class="xbtn" onclick="CM('mbulk-limits')">&#x2715;</button></div>
+    <div class="fg"><label>Set all departments to this limit</label>
+      <div class="fl g8 ic">
+        <input type="number" id="bulk-limit-val" placeholder="e.g. 10" min="1" style="width:120px;margin:0">
+        <button class="btn bp" onclick="applyBulkLimit()">Apply to All</button>
+      </div>
+      <div class="fhint">Leave empty to remove limit (unlimited)</div>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--bd);margin:14px 0">
+    <div id="bulk-limits-per-dept"></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
+      <button class="btn bg" onclick="CM('mbulk-limits')">Cancel</button>
+      <button class="btn bp" onclick="saveBulkLimits()">Save All</button>
     </div>
   </div>
 </div>
@@ -1065,8 +1348,8 @@ function seed(){
 function toast(msg,type){
   var t=document.getElementById('toast');
   t.innerHTML=msg;t.className='on t'+type;
-  clearTimeout(window._tt);window._tt=checkPublicView();
-setTimeout(function(){t.className=''},3200);
+  clearTimeout(window._tt);
+  window._tt=setTimeout(function(){t.className=''},3200);
 }
 function bdg(m){
   if(!m)return '';
@@ -1085,7 +1368,6 @@ function rowCls(m){
   return '';
 }
 function OM(id){document.getElementById(id).classList.add('on')}
-function CM(id){document.getElementById(id).classList.remove('on')}
 function el(id){return document.getElementById(id)}
 
 // ── STATE ────────────────────────────────────────────────
@@ -1160,7 +1442,7 @@ function startApp(){
 function buildNav(){
   var nav=el('mnav');nav.innerHTML='';
   var items=CU.role==='pharmacy'
-    ?[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','&#x1F4DD; Notes'],
+    ?[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','&#x1F4DD; Notes'],['pg-schedule','&#x23F0; Schedule'],
       ['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','Users'],['pg-import','&#x2B07; Import']]
     :[['pg-newreq','New Request / \u0637\u0644\u0628 \u062C\u062F\u064A\u062F'],
       ['pg-myreqs','My Requests / \u0637\u0644\u0628\u0627\u062A\u064A'],
@@ -1186,7 +1468,7 @@ function showPg(id){
     'pg-analytics':renderAn,'pg-users':renderUsers,'pg-newreq':renderReqForm,
     'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
     'pg-expiry':renderExpiry,'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
-    'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes
+    'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule
   };
   if(map[id])map[id]();
 }
@@ -1210,7 +1492,11 @@ function renderDash(){
   var totalMeds=ds.reduce(function(s,d){return s+getMeds(d.id).length},0);
   var tot=done.reduce(function(s,r){return s+(r.dispensed||[]).reduce(function(a,i){return a+(i.qty||0)},0)},0);
   // Per-dept med breakdown
-  var deptBreakdown=ds.map(function(d){return d.name+': '+getMeds(d.id).length}).join(' &nbsp;|&nbsp; ');
+  var deptBreakdown=ds.map(function(d){
+    var lim=getMonthlyLimit(d.id);
+    var used=lim!==null?getMonthlyReqCount(d.id):null;
+    return d.name+': '+getMeds(d.id).length+' meds'+(lim!==null?' ('+used+'/'+lim+' req)':'');
+  }).join(' &nbsp;|&nbsp; ');
   el('dstats').innerHTML=
     '<div class="sc"><div class="sl">Total Medications</div><div class="sv">'+totalMeds+'</div><div class="ss" style="font-size:10px">'+deptBreakdown+'</div></div>'+
     '<div class="sc"><div class="sl">Departments</div><div class="sv" style="color:var(--acl)">'+ds.length+'</div><div class="ss">Active</div></div>'+
@@ -1240,6 +1526,21 @@ function renderDash(){
   if(urgent.length)alertHtml+='<div class="alert-banner">&#x26A0; <b>'+urgent.length+' expiring within 7 days:</b> '+urgent.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
   if(soon.length)alertHtml+='<div class="alert-banner-y">&#x1F514; <b>'+soon.length+' expiring soon:</b> '+soon.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
   el('exp-alerts').innerHTML=alertHtml;
+  // Schedule summary on dashboard
+  var wins=getReqWindows().filter(function(w){return w.active});
+  var slots=getDispSlots();
+  if(wins.length||slots.length){
+    var schedHtml='<div style="background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:10px 14px;font-size:12px;margin-bottom:12px">'
+      +'<b>&#x23F0; Today\u2019s Schedule:</b>';
+    var today=new Date().getDay();
+    var todayWins=wins.filter(function(w){return (w.days||[]).indexOf(today)>-1});
+    var todaySlots=slots.filter(function(s){return (s.days||[]).indexOf(today)>-1}).sort(function(a,b){return timeToMins(a.time)-timeToMins(b.time)});
+    if(todayWins.length)schedHtml+=' Request windows: '+todayWins.map(function(w){return '<b>'+fmt12(w.from)+'&ndash;'+fmt12(w.to)+'</b>'+(w.dept!=='all'?' ('+((gd().find(function(d){return d.id===w.dept})||{name:w.dept}).name)+')':'')}).join(', ');
+    else schedHtml+=' <span style="color:var(--gnl)">Requests open all day</span>';
+    if(todaySlots.length)schedHtml+=' &nbsp;|&nbsp; Dispense: '+todaySlots.map(function(s){return '<b>'+fmt12(s.time)+'</b> '+s.label}).join(', ');
+    schedHtml+='</div>';
+    el('exp-alerts').innerHTML=el('exp-alerts').innerHTML+schedHtml;
+  }
   el('dptbl').innerHTML=pend.length
     ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDate(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">Fulfill</button></td></tr>'}).join('')
     :'<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:20px">No pending requests &#x2713;</td></tr>';
@@ -1259,78 +1560,93 @@ el('dact').innerHTML=rs.slice().reverse().slice(0,20).map(function(r){
 // ── INVENTORY (per dept) ──────────────────────────────────
 function renderInv(){
   populateInvDeptSel();
-  // Auto-select first dept if none selected
+  // Auto-select first valid dept
   var sel=el('inv-dept-sel');
-  if(sel&&!sel.value&&sel.options.length>1)sel.value=sel.options[1].value;
+  if(sel){
+    var existIds=gd().map(function(d){return d.id});
+    // If current value is for a deleted dept, clear it
+    if(sel.value && existIds.indexOf(sel.value)<0) sel.value='';
+    if(!sel.value && sel.options.length>1) sel.value=sel.options[1].value;
+  }
   var deptId=getInvDept();
   var ms=deptId?getMeds(deptId):[];
+
   var srch=(el('isrch')||{value:''}).value.toLowerCase();
   var catf=(el('icatf')||{value:''}).value;
   var clsf=(el('iclsf')||{value:''}).value;
-  // populate cat filter
+
+  // Populate category filter from both global cats + meds in dept
   var csel=el('icatf');
   if(csel){
-    var cats=ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i}).sort();
+    var allCats=getCategories();
+    var medCats=ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i});
+    // Merge
+    medCats.forEach(function(c){if(allCats.indexOf(c)<0)allCats.push(c)});
+    allCats.sort();
     var cur=csel.value;
-    csel.innerHTML='<option value="">All Categories</option>'+cats.map(function(c){return '<option value="'+c+'"'+(c===cur?' selected':'')+'>'+c+'</option>'}).join('');
+    csel.innerHTML='<option value="">All Categories</option>'+allCats.map(function(c){return '<option value="'+c+'"'+(c===cur?' selected':'')+'>'+c+'</option>'}).join('');
   }
-  // populate drug modal dept sel
+  // populate bulk cat selector
+  var bcs=el('bulk-cat-sel');
+  if(bcs){
+    var bc=getCategories().concat(ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i})).filter(function(v,i,a){return a.indexOf(v)===i}).sort();
+    bcs.innerHTML='<option value="">Change category to...</option>'+bc.map(function(c){return '<option value="'+c+'">'+c+'</option>'}).join('');
+  }
+  // Drug modal dept sel
   var ddsel=el('ddept-sel');
   if(ddsel){ddsel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'"'+(d.id===deptId?' selected':'')+'>'+d.name+'</option>'}).join('');}
+
   if(!deptId){
     var ds=gd();
-    if(!ds.length){
-      el('itbl').innerHTML='<tr><td colspan="7" style="text-align:center;padding:32px">'
-        +'<div style="font-size:32px;margin-bottom:12px">&#x1F3E2;</div>'
-        +'<div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div>'
-        +'<div style="color:var(--tx2);font-size:13px;margin-bottom:16px">Add your first department to get started</div>'
-        +'<button class="btn bp" onclick="showPg(&#x27;pg-users&#x27;)">&#x2B; Add Department</button>'
-        +'</td></tr>';
-    } else {
-      el('itbl').innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--tx2);padding:24px">&#x2190; Select a department to view its drug list</td></tr>';
-    }
+    el('itbl').innerHTML=!ds.length
+      ?'<tr><td colspan="8" style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">&#x1F3E2;</div><div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div><button class="btn bp" onclick="showPg(&#x27;pg-users&#x27;)">&#x2B; Add Department</button></td></tr>'
+      :'<tr><td colspan="8" style="text-align:center;color:var(--tx2);padding:24px">&#x2190; Select a department</td></tr>';
     el('dup-banner').style.display='none';
+    el('bulk-bar').style.display='none';
     return;
   }
+
   var fil=ms.filter(function(m){
     return(!srch||m.name.toLowerCase().indexOf(srch)>-1)&&(!catf||m.category===catf)&&(!clsf||m[clsf]);
   });
+
   // Duplicate detection
   var names=ms.map(function(m){return m.name.toLowerCase().trim()});
-  var dups=ms.filter(function(m){
-    var n=m.name.toLowerCase().trim();
-    return names.indexOf(n)!==names.lastIndexOf(n);
-  });
-  if(dups.length>0){
-    el('dup-banner').style.display='';
-    el('dup-count-txt').innerHTML='&#x26A0; <b>'+dups.length+'</b> possible duplicates detected in this department\'s list';
-  }else{
-    el('dup-banner').style.display='none';
-  }
+  var dups=ms.filter(function(m){var n=m.name.toLowerCase().trim();return names.indexOf(n)!==names.lastIndexOf(n)});
+  el('dup-banner').style.display=dups.length?'':'none';
+  if(dups.length) el('dup-count-txt').innerHTML='&#x26A0; <b>'+dups.length+'</b> possible duplicates';
+
   var grp={};
   fil.forEach(function(m){if(!grp[m.category])grp[m.category]=[];grp[m.category].push(m)});
   var html='';
-  if(!fil.length)html='<tr><td colspan="7" style="text-align:center;color:var(--tx2);padding:22px">No medications found</td></tr>';
+  if(!fil.length) html='<tr><td colspan="8" style="text-align:center;color:var(--tx2);padding:22px">No medications found</td></tr>';
   Object.keys(grp).sort().forEach(function(cat){
-    html+='<tr><td colspan="7" class="cath">&#x1F4C1; '+cat+' <span style="color:var(--tx3);font-size:10px">('+grp[cat].length+')</span></td></tr>';
+    html+='<tr><td colspan="8" class="cath">&#x1F4C1; '+cat+' <span style="color:var(--tx3);font-size:10px">('+grp[cat].length+')</span></td></tr>';
     grp[cat].forEach(function(m){
-      html+='<tr class="'+rowCls(m)+'">'
+      html+='<tr class="'+rowCls(m)+'" id="inv-row-'+m.id+'">'
+        +'<td style="padding:4px 8px"><input type="checkbox" class="inv-chk" data-id="'+m.id+'" onchange="onInvCheck()"></td>'
         +'<td style="font-weight:500">'+m.name+'</td>'
         +'<td><span class="chip">'+m.category+'</span></td>'
         +'<td>'+bdg(m)+'</td>'
         +'<td style="text-align:center;font-family:var(--mono)">'+m.min+'</td>'
         +'<td style="text-align:center;font-family:var(--mono)">'+m.max+'</td>'
         +'<td style="text-align:center;font-family:var(--mono)">'+(m.monthly||'&mdash;')+'</td>'
-        +'<td style="white-space:nowrap"><button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="openEditDrug(this.getAttribute(\'data-id\'),this.getAttribute(\'data-dept\'))">Edit</button> <button class="btn bd2c bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="delDrug(this.getAttribute(\'data-id\'),this.getAttribute(\'data-dept\'))">Del</button></td>'
-        +'</tr>';
+        +'<td style="white-space:nowrap">'
+          +'<button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="openEditDrug(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-dept&#x27;))">Edit</button> '
+          +'<button class="btn bd2c bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="delDrug(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-dept&#x27;))">Del</button>'
+        +'</td></tr>';
     });
   });
   el('itbl').innerHTML=html;
+  // Reset select-all checkbox
+  var allChk=el('inv-all-chk');if(allChk)allChk.checked=false;
+  el('bulk-bar').style.display='none';
 }
+
 function openAddDrug(){
   EDID=null;
   el('dmtitle').textContent='Add Medication';
-  el('dname').value='';el('dcat').value='Injections';
+  el('dname').value='';el('dcat').innerHTML=getCatOptions('Injections');
   el('dmin').value='1';el('dmax').value='10';el('dmly').value='';
   el('cha2').checked=false;el('chaz').checked=false;el('chls').checked=false;
   var ddsel=el('ddept-sel');
@@ -1341,7 +1657,7 @@ function openEditDrug(id,deptId){
   var m=getMeds(deptId).find(function(x){return x.id===id});if(!m)return;
   EDID=id;
   el('dmtitle').textContent='Edit Medication';
-  el('dname').value=m.name;el('dcat').value=m.category;
+  el('dname').value=m.name;el('dcat').innerHTML=getCatOptions(m.category);
   el('dmin').value=m.min;el('dmax').value=m.max;el('dmly').value=m.monthly||'';
   el('cha2').checked=!!m.high_alert;el('chaz').checked=!!m.hazard;el('chls').checked=!!m.lasa;
   var ddsel=el('ddept-sel');
@@ -1459,6 +1775,31 @@ function submitFulfill(){
 function renderReqForm(){
   if(!CU||CU.role!=='department')return;
   el('dnsub').textContent=CU.deptName+' — Enter quantities needed';
+  // Show window status
+  var winCheck=isRequestAllowed(CU.deptId);
+  var lim=getMonthlyLimit(CU.deptId);
+  var used=lim!==null?getMonthlyReqCount(CU.deptId):0;
+  var nextSlot=getNextDispSlot(CU.deptId);
+  var infoHtml='';
+  if(!winCheck.allowed){
+    var nextTxt=winCheck.next?(' Next window: <b>'+winCheck.next.day+' at '+winCheck.next.time+'</b>'):'';
+    infoHtml+='<div class="req-blocked-banner">&#x1F6AB; <b>Requests are currently closed.</b>'+nextTxt+'<br><span style="font-size:12px;color:var(--tx2)">You can still prepare your list below</span></div>';
+  } else {
+    infoHtml+='<div class="next-window-info">&#x1F7E2; <b>Request window is open.</b>';
+    if(winCheck.window)infoHtml+=' Closes at <b>'+fmt12(winCheck.window.to)+'</b>';
+    if(nextSlot)infoHtml+=' &nbsp;|&nbsp; &#x23F0; Next dispense: <b>'+nextSlot.day+' '+nextSlot.time+'</b>';
+    infoHtml+='</div>';
+  }
+  if(lim!==null){
+    var rem=Math.max(0,lim-used);
+    var remColor=rem===0?'var(--rdl)':rem<=2?'var(--yll)':'var(--gnl)';
+    infoHtml+='<div style="font-size:12px;color:var(--tx2);margin-bottom:12px;padding:8px 12px;background:var(--s2);border-radius:6px">Monthly requests: <b style="color:'+remColor+'">'+used+'/'+lim+'</b> &nbsp;|&nbsp; Remaining: <b style="color:'+remColor+'">'+rem+'</b></div>';
+  }
+  var rfb=el('rfbody');if(rfb&&rfb.previousElementSibling){
+    var infoEl=el('req-sched-info');
+    if(!infoEl){infoEl=document.createElement('div');infoEl.id='req-sched-info';rfb.parentNode.insertBefore(infoEl,rfb);}
+    infoEl.innerHTML=infoHtml;
+  }
   var srch=(el('rsrch')||{value:''}).value.toLowerCase();
   var ms=getMeds(CU.deptId).filter(function(m){return !srch||m.name.toLowerCase().indexOf(srch)>-1});
   var now=new Date(),ms0=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
@@ -1502,6 +1843,19 @@ function submitReq(){
   var items=Array.from(document.querySelectorAll('.rqi')).filter(function(i){return +i.value>0})
     .map(function(i){return{medId:i.dataset.mid,qty:+i.value}});
   if(!items.length)return toast('Enter at least one quantity','err');
+  // Check request window
+  var winCheck=isRequestAllowed(CU.deptId);
+  if(!winCheck.allowed){
+    var msg='&#x1F6AB; Requests are not allowed right now (outside window).';
+    if(winCheck.next)msg+='<br>Next window: <b>'+winCheck.next.day+' at '+winCheck.next.time+'</b>';
+    toast(msg,'err');return;
+  }
+  // Check monthly limit
+  var lim=getMonthlyLimit(CU.deptId);
+  if(lim!==null){
+    var used=getMonthlyReqCount(CU.deptId);
+    if(used>=lim)return toast('&#x1F6AB; Monthly request limit reached ('+lim+'/month). Contact pharmacy.','err');
+  }
   S.push('requests',{deptId:CU.deptId,deptName:CU.deptName,items:items,status:'pending',created:nowISO()});
   toast('Request submitted — '+items.length+' items &#x2713;','succ');renderReqForm();
 }
@@ -2159,8 +2513,8 @@ function doDeptPrint(){
   var deptName=CU.deptName;
   var userName=CU.username;
   // Build QR code using a free API (no external JS lib needed)
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data='+encodeURIComponent(SITE_URL);
-  var qrExpUrl='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data='+encodeURIComponent(SITE_URL+'?view=expiry&dept='+CU.deptId+'&token='+getPublicToken(CU.deptId));
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(SITE_URL);
+  var qrExpUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(SITE_URL+'?view=expiry&dept='+CU.deptId+'&token='+getPublicToken(CU.deptId));
   // Group meds
   var grp={};
   ms.forEach(function(m){if(!grp[m.category])grp[m.category]=[];grp[m.category].push(m)});
@@ -2673,6 +3027,733 @@ function updateNotesBadge(){
   }
 }
 
+
+// ── BARCODE SCANNER ──────────────────────────────────────
+var _scanReader = null;
+var _scanStream = null;
+var _parsedScan = {};   // holds parsed result from camera
+var _parsedType = {};   // holds parsed result from type tab
+
+// ── Tab switcher ──────────────────────────────────────────
+function switchExpTab(tab){
+  ['manual','scan','type'].forEach(function(t){
+    var d=el('tab-'+t); if(d) d.style.display = t===tab?'block':'none';
+    var b=el('tab-'+t+'-btn'); if(b){ b.className=t===tab?'btn bp bsm':'btn bg bsm'; b.style.flex='1'; }
+  });
+  if(tab==='scan') startScanner();
+  else stopScanner();
+}
+
+// ── GS1 / HIBC / General Barcode Parser ──────────────────
+function parseBarcode(raw){
+  var result={ lot:'', expiry:'', gtin:'', raw:raw, drug:'' };
+  if(!raw) return result;
+  var s = raw.trim();
+
+  // ── GS1-128 / GS1 DataMatrix: AIs ──────────────────────
+  // AI 01 = GTIN, AI 17 = Expiry YYMMDD, AI 10 = Lot/Batch
+  // Format: (01)GTIN(17)YYMMDD(10)LOT  — parens or FNC1 char
+  var gs1 = s.replace(/\((\d{2})\)/g, '\x1D$1');  // convert (AI) to GS1 FNC1 style
+  var aiMatches = gs1.match(/\x1D(\d{2})([^\x1D]*)/g) || [];
+  if(!aiMatches.length){
+    // Try without FNC1 — bare AIs like "011234567890(17)251231..."
+    gs1 = s.replace(/\((\d{2,3})\)/g, '\x1D$1');
+    aiMatches = gs1.match(/\x1D(\d{2,3})([^\x1D]*)/g) || [];
+  }
+  aiMatches.forEach(function(seg){
+    var ai = seg.slice(1,3); var val = seg.slice(3);
+    if(ai==='01'||ai==='02'){ result.gtin=val.replace(/\D/g,''); }
+    if(ai==='17'){ result.expiry = parseExpiryStr(val.trim()); }
+    if(ai==='10'){ result.lot=val.trim(); }
+    if(ai==='11'||ai==='13'||ai==='15'){ result.expiry = result.expiry||parseExpiryStr(val.trim()); }
+  });
+
+  // ── HIBC format: +LABELER$PRODUCT/YYMMDD$BATCH ──────────
+  if(!result.expiry && /^\+/.test(s)){
+    var hibcDate = s.match(/\/(\d{6,8})/);
+    if(hibcDate) result.expiry = parseExpiryStr(hibcDate[1]);
+    var hibcLot = s.match(/\$([A-Z0-9]+)$/i);
+    if(hibcLot) result.lot = hibcLot[1];
+  }
+
+  // ── Free-text / QR style: "EXP:2025-12 LOT:A123 DrugName" ──
+  if(!result.expiry){
+    var expPat = s.match(/(?:exp(?:iry)?|expdate|use before|bb)[:\s\/]?(\d{1,2}[-\/]\d{4}|\d{4}[-\/]\d{1,2}[-\/]\d{1,2}|\d{6,8})/i);
+    if(expPat) result.expiry = parseExpiryStr(expPat[1]);
+  }
+  if(!result.lot){
+    var lotPat = s.match(/(?:lot|batch|lot no|lot#)[:\s#]?([A-Z0-9\-]+)/i);
+    if(lotPat) result.lot = lotPat[1];
+  }
+
+  // ── Numeric-only: try as YYMMDD or MMYYYY ──
+  if(!result.expiry){
+    var numOnly = s.replace(/\D/g,'');
+    if(numOnly.length===6) result.expiry = parseExpiryStr(numOnly);
+  }
+
+  // ── Try to extract drug name from QR free text ──
+  if(!result.drug){
+    // Remove known fields, rest might be drug name
+    var cleaned = s
+      .replace(/\(?\d{2,3}\)?[\dA-Z]{6,14}/g,'')
+      .replace(/(?:exp|lot|batch)[:\s#][^\s,;]+/gi,'')
+      .replace(/\d{6,8}/g,'')
+      .replace(/[^\w\s\-\.\/\%]/g,' ')
+      .replace(/\s+/g,' ').trim();
+    if(cleaned.length > 3) result.drug = cleaned;
+  }
+
+  return result;
+}
+
+function parseExpiryStr(s){
+  // Normalize various date formats to YYYY-MM-DD
+  if(!s) return '';
+  s = s.toString().replace(/\s/g,'');
+
+  // YYMMDD → 20YY-MM-DD
+  if(/^\d{6}$/.test(s)){
+    var yy=s.slice(0,2), mm=s.slice(2,4), dd=s.slice(4,6);
+    var yyyy = +yy < 50 ? '20'+yy : '19'+yy;
+    var day = dd==='00' ? '01' : dd;  // GS1 day 00 means last day of month
+    return yyyy+'-'+mm+'-'+day;
+  }
+  // YYYYMMDD
+  if(/^\d{8}$/.test(s)){
+    return s.slice(0,4)+'-'+s.slice(4,6)+'-'+s.slice(6,8);
+  }
+  // MM/YYYY or MM-YYYY
+  if(/^\d{1,2}[-\/]\d{4}$/.test(s)){
+    var parts=s.split(/[-\/]/);
+    return parts[1]+'-'+parts[0].padStart(2,'0')+'-01';
+  }
+  // YYYY-MM-DD or YYYY/MM/DD
+  if(/^\d{4}[-\/]\d{1,2}([-\/]\d{1,2})?$/.test(s)){
+    return s.replace(/\//g,'-');
+  }
+  // MM/YY
+  if(/^\d{2}\/\d{2}$/.test(s)){
+    var p=s.split('/');
+    return '20'+p[1]+'-'+p[0]+'-01';
+  }
+  return '';
+}
+
+function formatParsedFields(parsed, prefix){
+  prefix = prefix||'scan';
+  var html='';
+  if(parsed.gtin)  html+='<div class="scan-field"><label>GTIN / Product Code</label><div class="val">'+parsed.gtin+'</div></div>';
+  if(parsed.lot)   html+='<div class="scan-field"><label>Lot / Batch</label><div class="val">'+parsed.lot+'</div></div>';
+  if(parsed.expiry)html+='<div class="scan-field" style="border-left:3px solid var(--gn)"><label>Expiry Date / &#x62A;&#x627;&#x631;&#x64A;&#x62E; &#x627;&#x644;&#x627;&#x646;&#x62A;&#x647;&#x627;&#x621;</label><div class="val" style="color:var(--gnl)">'+fmtDate(parsed.expiry)+' ('+parsed.expiry+')</div></div>';
+  if(parsed.drug)  html+='<div class="scan-field"><label>Detected Name / &#x627;&#x644;&#x627;&#x633;&#x645; &#x627;&#x644;&#x645;&#x643;&#x62A;&#x634;&#x641;</label><div class="val">'+parsed.drug+'</div></div>';
+  if(!parsed.expiry&&!parsed.lot&&!parsed.gtin) html='<div class="scan-field" style="border-left:3px solid var(--rd)"><label>No structured data detected</label><div class="val" style="color:var(--tx2)">Try typing the barcode or enter details manually</div></div>';
+  return html;
+}
+
+function getMedSelectOptions(defaultId){
+  if(!CU) return '';
+  return getMeds(CU.deptId).map(function(m){
+    return '<option value="'+m.id+'"'+(m.id===defaultId?' selected':'')+'>'+m.name+'</option>';
+  }).join('');
+}
+
+// ── Fuzzy match drug name from barcode to existing meds ──
+function fuzzyMatchMed(drug){
+  if(!drug||!CU) return null;
+  var ms=getMeds(CU.deptId);
+  var dl=drug.toLowerCase();
+  // Exact
+  var exact=ms.find(function(m){return m.name.toLowerCase()===dl});
+  if(exact) return exact.id;
+  // Contains
+  var contain=ms.find(function(m){return m.name.toLowerCase().includes(dl)||dl.includes(m.name.toLowerCase().slice(0,8))});
+  if(contain) return contain.id;
+  return null;
+}
+
+// ── Camera Scanner ────────────────────────────────────────
+function startScanner(){
+  stopScanner();
+  var video=el('scan-modal-video');
+  if(!video) return;
+  el('scan-status').textContent='&#x23F3; Requesting camera access...';
+  el('scan-result-area').style.display='none';
+  el('scan-line').style.display='block';
+  // Enumerate cameras first
+  navigator.mediaDevices.enumerateDevices().then(function(devices){
+    var cams=devices.filter(function(d){return d.kind==='videoinput'});
+    var sel=el('scan-cam-sel');
+    if(sel){
+      sel.innerHTML=cams.map(function(c,i){return '<option value="'+c.deviceId+'">'+(c.label||'Camera '+(i+1))+'</option>'}).join('');
+    }
+    var constraints={video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}};
+    if(cams.length>0 && sel && sel.value){
+      constraints.video={deviceId:{exact:sel.value},width:{ideal:1280},height:{ideal:720}};
+    }
+    return navigator.mediaDevices.getUserMedia(constraints);
+  }).then(function(stream){
+    _scanStream=stream;
+    video.srcObject=stream;
+    video.play();
+    el('scan-status').textContent='&#x1F7E2; Scanning — hold barcode steady...';
+    // Use ZXing
+    if(typeof ZXing!=='undefined'){
+      var hints=new Map();
+      var fmts=[
+        ZXing.BarcodeFormat.QR_CODE,ZXing.BarcodeFormat.DATA_MATRIX,
+        ZXing.BarcodeFormat.CODE_128,ZXing.BarcodeFormat.CODE_39,
+        ZXing.BarcodeFormat.EAN_13,ZXing.BarcodeFormat.EAN_8,
+        ZXing.BarcodeFormat.UPC_A,ZXing.BarcodeFormat.PDF_417,
+        ZXing.BarcodeFormat.AZTEC
+      ].filter(Boolean);
+      if(fmts.length) hints.set(ZXing.DecodeHintType&&ZXing.DecodeHintType.POSSIBLE_FORMATS, fmts);
+      _scanReader=new ZXing.BrowserMultiFormatReader(hints);
+      _scanReader.decodeFromStream(stream,video,function(result,err){
+        if(result){
+          onScanSuccess(result.getText());
+        }
+      });
+    } else {
+      // Fallback: ZXing not loaded, do manual capture
+      el('scan-status').innerHTML='&#x26A0; ZXing library loading... <button class="btn bg bxs" onclick="captureFrame()">&#x1F4F8; Capture Frame</button>';
+    }
+  }).catch(function(err){
+    el('scan-status').textContent='&#x274C; Camera error: '+err.message+' — use "Type Barcode" tab instead';
+    el('scan-line').style.display='none';
+  });
+}
+
+function switchCamera(deviceId){
+  stopScanner();
+  var video=el('scan-modal-video');
+  if(!video) return;
+  navigator.mediaDevices.getUserMedia({video:{deviceId:{exact:deviceId}}}).then(function(stream){
+    _scanStream=stream;video.srcObject=stream;video.play();
+    if(_scanReader) _scanReader.decodeFromStream(stream,video,function(r,e){if(r)onScanSuccess(r.getText())});
+  }).catch(function(e){el('scan-status').textContent='Camera error: '+e.message});
+}
+
+function stopScanner(){
+  if(_scanReader){try{_scanReader.reset();}catch(e){} _scanReader=null;}
+  if(_scanStream){_scanStream.getTracks().forEach(function(t){t.stop();});_scanStream=null;}
+  var line=el('scan-line');if(line)line.style.display='none';
+}
+
+function restartScanner(){
+  el('scan-result-area').style.display='none';
+  _parsedScan={};
+  startScanner();
+}
+
+function onScanSuccess(raw){
+  stopScanner();
+  el('scan-line').style.display='none';
+  el('scan-status').innerHTML='&#x2705; <b>Barcode detected!</b> <button class="btn bg bxs" onclick="restartScanner()">&#x1F504; Scan Again</button>';
+  el('scan-raw-val').textContent=raw;
+  _parsedScan=parseBarcode(raw);
+  el('scan-parsed-fields').innerHTML=formatParsedFields(_parsedScan,'scan');
+  var matchId=fuzzyMatchMed(_parsedScan.drug)||null;
+  el('scan-med-sel').innerHTML=getMedSelectOptions(matchId);
+  el('scan-result-area').style.display='block';
+}
+
+function applyScanResult(){
+  var medId=el('scan-med-sel').value;
+  if(!medId) return toast('Select a medication to link','err');
+  if(!_parsedScan.expiry) return toast('No expiry date detected — fill manually or scan again','err');
+  // Switch to manual tab and fill fields
+  switchExpTab('manual');
+  el('exp-med-sel').value=medId;
+  el('exp-batch-inp').value=_parsedScan.lot||'';
+  el('exp-date-inp').value=_parsedScan.expiry||'';
+  toast('Data filled — review and Save &#x2713;','succ');
+}
+
+// ── Type barcode ───────────────────────────────────────────
+function parseTypedBarcode(){
+  var raw=(el('type-barcode-inp')||{}).value||'';
+  if(!raw.trim()) return toast('Enter a barcode string','err');
+  _parsedType=parseBarcode(raw);
+  el('type-parsed-fields').innerHTML=formatParsedFields(_parsedType,'type');
+  el('type-parsed-fields').style.display='block';
+  var matchId=fuzzyMatchMed(_parsedType.drug)||null;
+  el('type-med-sel').innerHTML=getMedSelectOptions(matchId);
+  el('type-med-wrap').style.display='block';
+}
+function applyTypedResult(){
+  var medId=el('type-med-sel').value;
+  if(!medId) return toast('Select a medication','err');
+  if(!_parsedType.expiry) return toast('No expiry date found — check the barcode string','err');
+  switchExpTab('manual');
+  el('exp-med-sel').value=medId;
+  el('exp-batch-inp').value=_parsedType.lot||'';
+  el('exp-date-inp').value=_parsedType.expiry||'';
+  toast('Data filled &#x2713;','succ');
+}
+
+// ── Open expiry modal via scan shortcut ───────────────────
+function openScanExpiry(){
+  openAddExpiry();
+  setTimeout(function(){switchExpTab('scan');},100);
+}
+
+// ── Close scanner when modal closes ───────────────────────
+function CM(id){document.getElementById(id).classList.remove('on');if(id==='mexpiry')stopScanner();}
+
+
+// ── CATEGORIES (global custom list) ─────────────────────
+var DEFAULT_CATS=['Injections','Inhalers','Suppositories','Tablets','Syrups','Topical','Ointments & Drops','Solutions'];
+function getCategories(){
+  var saved=S.g('custom_categories');
+  return saved&&saved.length?saved:DEFAULT_CATS.slice();
+}
+function setCategories(arr){S.s('custom_categories',arr)}
+
+function openManageCats(){
+  renderCatList();
+  OM('mcat-mgr');
+}
+function renderCatList(){
+  var cats=getCategories();
+  el('cat-list').innerHTML=cats.map(function(c,i){
+    return '<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--bd)">'
+      +'<input class="cat-rename-inp" data-idx="'+i+'" value="'+c+'" style="flex:1;margin:0;padding:6px 8px" onkeydown="if(event.key===\'Enter\')renameCategory(this)">'
+      +'<button class="btn bp bxs" data-idx="'+i+'" onclick="renameCategory(this.previousElementSibling)">&#x2713;</button>'
+      +'<button class="btn bd2c bxs" data-idx="'+i+'" onclick="removeCategory('+i+')">&#x2715;</button>'
+      +'</div>';
+  }).join('')||'<div style="color:var(--tx2);text-align:center;padding:16px">No categories</div>';
+}
+function addCategory(){
+  var n=el('new-cat-inp').value.trim();
+  if(!n)return toast('Enter a category name','err');
+  var cats=getCategories();
+  if(cats.indexOf(n)>-1)return toast('Already exists','err');
+  cats.push(n);
+  setCategories(cats);
+  el('new-cat-inp').value='';
+  toast('"'+n+'" added ✓','succ');
+  renderCatList();
+  refreshCatSelectors();
+}
+function renameCategory(inp){
+  var idx=+inp.dataset.idx;
+  var newName=inp.value.trim();
+  if(!newName)return toast('Name cannot be empty','err');
+  var cats=getCategories();
+  var old=cats[idx];
+  if(old===newName)return;
+  cats[idx]=newName;
+  setCategories(cats);
+  // Update all meds in all depts that had the old category
+  gd().forEach(function(dept){
+    var ms=getMeds(dept.id);
+    var changed=false;
+    ms.forEach(function(m){if(m.category===old){m.category=newName;changed=true;}});
+    if(changed)setMeds(dept.id,ms);
+  });
+  toast('Renamed & updated all medications ✓','succ');
+  renderCatList();
+  refreshCatSelectors();
+}
+function removeCategory(idx){
+  var cats=getCategories();
+  var name=cats[idx];
+  if(!confirm('Remove category "'+name+'"?\n\nMedications in this category will not be affected.'))return;
+  cats.splice(idx,1);
+  setCategories(cats);
+  renderCatList();
+  refreshCatSelectors();
+  toast('Removed ✓','info');
+}
+function refreshCatSelectors(){
+  // Update all open category dropdowns
+  var cats=getCategories();
+  var opts=cats.map(function(c){return '<option>'+c+'</option>'}).join('');
+  ['dcat','imp-cat'].forEach(function(id){
+    var sel=el(id);
+    if(!sel)return;
+    var cur=sel.value;
+    if(id==='imp-cat'){
+      sel.innerHTML='<option value="auto">Auto-detect</option>'+cats.map(function(c){return '<option>'+c+'</option>'}).join('');
+    } else {
+      sel.innerHTML=opts;
+    }
+    sel.value=cats.indexOf(cur)>-1?cur:cats[0];
+  });
+  renderInv();
+}
+
+// ── INVENTORY BULK ACTIONS ───────────────────────────────
+function toggleAllInv(chk){
+  document.querySelectorAll('.inv-chk').forEach(function(c){c.checked=chk.checked});
+  onInvCheck();
+}
+function onInvCheck(){
+  var checked=document.querySelectorAll('.inv-chk:checked');
+  var total=document.querySelectorAll('.inv-chk');
+  el('bulk-bar').style.display=checked.length?'':'none';
+  el('bulk-count').textContent=checked.length+' selected';
+  // Update select-all state
+  var allChk=el('inv-all-chk');
+  if(allChk){allChk.checked=checked.length>0&&checked.length===total.length;allChk.indeterminate=checked.length>0&&checked.length<total.length;}
+}
+function clearInvSelection(){
+  document.querySelectorAll('.inv-chk').forEach(function(c){c.checked=false});
+  var allChk=el('inv-all-chk');if(allChk){allChk.checked=false;allChk.indeterminate=false;}
+  el('bulk-bar').style.display='none';
+}
+function getSelectedMedIds(){
+  return Array.from(document.querySelectorAll('.inv-chk:checked')).map(function(c){return c.dataset.id});
+}
+function bulkDelete(){
+  var ids=getSelectedMedIds();
+  if(!ids.length)return toast('Select medications first','err');
+  var deptId=getInvDept();
+  if(!confirm('Delete '+ids.length+' selected medications from this department?'))return;
+  ids.forEach(function(id){delMed(deptId,id)});
+  toast(ids.length+' medications deleted ✓','succ');
+  clearInvSelection();
+  renderInv();
+}
+function bulkChangeCategory(){
+  var ids=getSelectedMedIds();
+  var newCat=el('bulk-cat-sel').value;
+  if(!ids.length)return toast('Select medications first','err');
+  if(!newCat)return toast('Choose a category to apply','err');
+  var deptId=getInvDept();
+  ids.forEach(function(id){updMed(deptId,id,{category:newCat})});
+  toast(ids.length+' medications moved to "'+newCat+'" ✓','succ');
+  clearInvSelection();
+  renderInv();
+}
+
+// ── LOGO ────────────────────────────────────────────────
+function getLogo(){return S.g('facility_logo')||{img:'',name:''}}
+function setLogoData(obj){S.s('facility_logo',obj)}
+
+function openLogoSettings(){
+  var logo=getLogo();
+  var img=el('logo-preview-img');
+  var none=el('logo-preview-none');
+  if(logo.img){img.src=logo.img;img.style.display='';none.style.display='none';}
+  else{img.style.display='none';none.style.display='';}
+  el('facility-name-inp').value=logo.name||'';
+  OM('mlogo');
+}
+function handleLogoDrop(e){
+  e.preventDefault();
+  var f=e.dataTransfer.files[0];
+  if(f)handleLogoFile(f);
+}
+function handleLogoFile(file){
+  if(!file)return;
+  var reader=new FileReader();
+  reader.onload=function(e){
+    var img=el('logo-preview-img');
+    img.src=e.target.result;
+    img.style.display='';
+    el('logo-preview-none').style.display='none';
+    // Store temporarily in DOM
+    img.dataset.pending=e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function saveLogo(){
+  var img=el('logo-preview-img');
+  var logoData=img.dataset.pending||img.src||'';
+  var name=el('facility-name-inp').value.trim();
+  if(logoData&&!logoData.startsWith('data:')&&!logoData.startsWith('http'))logoData='';
+  setLogoData({img:logoData,name:name});
+  toast('Logo saved ✓','succ');
+  CM('mlogo');
+}
+function clearLogo(){
+  setLogoData({img:'',name:''});
+  var img=el('logo-preview-img');
+  img.src='';img.style.display='none';img.dataset.pending='';
+  el('logo-preview-none').style.display='';
+  toast('Logo removed','info');
+}
+
+// ── PRINT HEADER BUILDER (used in all print functions) ──
+function buildPrintHeader(deptName,today,extra){
+  var logo=getLogo();
+  var logoHtml=logo.img?'<img src="'+logo.img+'" style="max-height:55px;max-width:160px;object-fit:contain">':'';
+  var facName=logo.name||'';
+  return '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #000">'
+    +'<div style="display:flex;align-items:center;gap:12px">'
+      +(logoHtml?'<div>'+logoHtml+'</div>':'')
+      +'<div>'
+        +(facName?'<div style="font-size:8pt;color:#555;margin-bottom:2px">'+facName+'</div>':'')
+        +'<div style="font-size:13pt;font-weight:700">'+deptName+'</div>'
+        +'<div style="font-size:8pt;color:#333;margin-top:2px">Print Date: <b>'+today+'</b>'+(extra?' &nbsp;|&nbsp; '+extra:'')+'</div>'
+        +'<div style="font-size:6.5pt;color:#888;margin-top:2px">Developed by Ali Abudahash | PharmOrder</div>'
+      +'</div>'
+    +'</div>';
+}
+
+// ── PATCH CATEGORY SELECTORS to use getCategories() ──────
+function getCatOptions(selected){
+  var cats=getCategories();
+  return cats.map(function(c){return '<option value="'+c+'"'+(c===selected?' selected':'')+'>'+c+'</option>'}).join('');
+}
+
+// ════════════════════════════════════════════════════════
+// SCHEDULE & LIMITS
+// ════════════════════════════════════════════════════════
+var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+// ── Storage ──────────────────────────────────────────────
+function getReqWindows(){return S.g('req_windows')||[]}
+function setReqWindows(a){S.s('req_windows',a)}
+function getDispSlots(){return S.g('disp_slots')||[]}
+function setDispSlots(a){S.s('disp_slots',a)}
+function getMonthlyLimits(){return S.g('monthly_limits')||{}}   // {deptId: N}
+function setMonthlyLimits(o){S.s('monthly_limits',o)}
+
+// ── Helpers ───────────────────────────────────────────────
+function fmt12(t){
+  if(!t)return '';
+  var p=t.split(':');var h=+p[0],m=p[1]||'00';
+  var ampm=h>=12?'PM':'AM';h=h%12||12;
+  return h+':'+m+' '+ampm;
+}
+function dayBits(days){return days.map(function(d){return DAY_NAMES[d]}).join(', ')}
+
+// ── Check if request is currently allowed ─────────────────
+function isRequestAllowed(deptId){
+  var wins=getReqWindows().filter(function(w){return w.active&&(w.dept==='all'||w.dept===deptId)});
+  if(!wins.length)return{allowed:true,reason:''}; // no windows = always allowed
+  var now=new Date();
+  var dow=now.getDay(); // 0=Sun
+  var nowMins=now.getHours()*60+now.getMinutes();
+  for(var i=0;i<wins.length;i++){
+    var w=wins[i];
+    if(w.days.indexOf(dow)<0)continue;
+    var fromMins=timeToMins(w.from),toMins=timeToMins(w.to);
+    if(nowMins>=fromMins&&nowMins<=toMins)return{allowed:true,reason:'',window:w};
+  }
+  // Find next window
+  var next=findNextWindow(wins,now);
+  return{allowed:false,reason:'Outside request window',next:next};
+}
+function timeToMins(t){var p=(t||'00:00').split(':');return +p[0]*60+(+p[1]||0);}
+function findNextWindow(wins,now){
+  var best=null,bestDiff=Infinity;
+  var nowMins=now.getHours()*60+now.getMinutes();
+  for(var d=0;d<7;d++){
+    var dow=(now.getDay()+d)%7;
+    wins.forEach(function(w){
+      if(w.days.indexOf(dow)<0)return;
+      var fromMins=timeToMins(w.from);
+      var diff=d*1440+(fromMins-nowMins);
+      if(diff<=0&&d===0)diff+=1440;
+      if(diff>0&&diff<bestDiff){bestDiff=diff;best={window:w,day:DAY_NAMES[dow],time:fmt12(w.from),minsAway:diff};}
+    });
+  }
+  return best;
+}
+
+// ── Check monthly request count ───────────────────────────
+function getMonthlyReqCount(deptId){
+  var now=new Date();
+  var ms0=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
+  return gr().filter(function(r){return r.deptId===deptId&&r.created>=ms0}).length;
+}
+function getMonthlyLimit(deptId){
+  var lims=getMonthlyLimits();
+  return lims[deptId]||null; // null = no limit
+}
+
+// ── RENDER schedule page ──────────────────────────────────
+function renderSchedule(){
+  // Populate dept dropdowns in modals
+  var deptOpts='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  ['rwin-dept','dslot-dept'].forEach(function(id){var s=el(id);if(s)s.innerHTML=deptOpts;});
+
+  // Request windows
+  var wins=getReqWindows();
+  el('req-windows-list').innerHTML=wins.length
+    ?wins.map(function(w,i){
+      var deptName=w.dept==='all'?'All Departments':(gd().find(function(d){return d.id===w.dept})||{name:w.dept}).name;
+      return '<div class="win-card'+(w.active?'':' inactive')+'">'
+        +'<div>'
+          +'<div style="font-weight:600">'+w.label+'</div>'
+          +'<div class="win-days">'+deptName+' &nbsp;|&nbsp; '+dayBits(w.days||[])+'</div>'
+        +'</div>'
+        +'<div class="win-time">'+fmt12(w.from)+' &ndash; '+fmt12(w.to)+'</div>'
+        +'<div class="fl g8 ic">'
+          +'<button class="btn bg bxs" data-i="'+i+'" onclick="editReqWindow(+this.dataset.i)">&#x270F;</button>'
+          +'<button class="btn '+(w.active?'bg':'bp')+' bxs" data-i="'+i+'" onclick="toggleWindow(+this.dataset.i)">'+(w.active?'Pause':'Enable')+'</button>'
+          +'<button class="btn bd2c bxs" data-i="'+i+'" onclick="delWindow(+this.dataset.i)">&#x2715;</button>'
+        +'</div></div>';
+    }).join('')
+    :'<div style="color:var(--tx2);font-size:13px;padding:12px 0">No windows set — requests allowed anytime</div>';
+
+  // Dispense slots
+  var slots=getDispSlots();
+  el('disp-slots-list').innerHTML=slots.length
+    ?slots.map(function(s,i){
+      var deptName=s.dept==='all'?'All Departments':(gd().find(function(d){return d.id===s.dept})||{name:s.dept}).name;
+      return '<div class="win-card">'
+        +'<div>'
+          +'<div style="font-weight:600">'+s.label+'</div>'
+          +'<div class="win-days">'+deptName+' &nbsp;|&nbsp; '+dayBits(s.days||[])+(s.notes?' &nbsp;|&nbsp; <i>'+s.notes+'</i>':'')+'</div>'
+        +'</div>'
+        +'<span class="slot-badge">&#x23F0; '+fmt12(s.time)+'</span>'
+        +'<div class="fl g8 ic">'
+          +'<button class="btn bg bxs" data-i="'+i+'" onclick="editDispSlot(+this.dataset.i)">&#x270F;</button>'
+          +'<button class="btn bd2c bxs" data-i="'+i+'" onclick="delSlot(+this.dataset.i)">&#x2715;</button>'
+        +'</div></div>';
+    }).join('')
+    :'<div style="color:var(--tx2);font-size:13px;padding:12px 0">No dispense slots defined</div>';
+
+  // Monthly limits
+  var lims=getMonthlyLimits();
+  el('monthly-limits-list').innerHTML='<div class="tw"><table><thead><tr><th>Department</th><th>Monthly Limit</th><th>Used This Month</th><th>Remaining</th></tr></thead><tbody>'
+    +gd().map(function(d){
+      var lim=lims[d.id]||null;
+      var used=getMonthlyReqCount(d.id);
+      var remaining=lim?Math.max(0,lim-used):'&#x221E;';
+      var remColor=lim&&remaining===0?'var(--rdl)':lim&&+remaining<=2?'var(--yll)':'var(--gnl)';
+      return '<tr>'
+        +'<td style="font-weight:600">'+d.name+'</td>'
+        +'<td><div class="fl ic g8"><input type="number" class="monthly-lim-inp" data-dept="'+d.id+'" value="'+(lim||'')+'" min="1" placeholder="&#x221E; No limit" style="width:110px;margin:0;padding:6px 8px"> <span style="font-size:11px;color:var(--tx2)">requests/mo</span></div></td>'
+        +'<td style="font-family:var(--mono)">'+used+'</td>'
+        +'<td style="font-family:var(--mono);font-weight:700;color:'+remColor+'">'+remaining+'</td>'
+        +'</tr>';
+    }).join('')
+    +'</tbody></table></div>';
+}
+
+// ── Request Window CRUD ───────────────────────────────────
+function addReqWindow(){
+  el('mreqwin-title').textContent='Add Request Window';
+  el('rwin-label').value='';el('rwin-from').value='08:00';el('rwin-to').value='12:00';
+  el('rwin-edit-id').value='';el('rwin-active').checked=true;
+  el('rwin-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  el('rwin-dept').value='all';
+  el('rwin-days').querySelectorAll('input').forEach(function(c){c.checked=[1,2,3,4,0].indexOf(+c.value)>-1}); // Sun-Thu default
+  OM('mreq-window');
+}
+function editReqWindow(i){
+  var w=getReqWindows()[i];if(!w)return;
+  el('mreqwin-title').textContent='Edit Window';
+  el('rwin-label').value=w.label||'';el('rwin-from').value=w.from||'';el('rwin-to').value=w.to||'';
+  el('rwin-edit-id').value=i;el('rwin-active').checked=w.active!==false;
+  el('rwin-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  el('rwin-dept').value=w.dept||'all';
+  el('rwin-days').querySelectorAll('input').forEach(function(c){c.checked=(w.days||[]).indexOf(+c.value)>-1});
+  OM('mreq-window');
+}
+function saveReqWindow(){
+  var label=el('rwin-label').value.trim();
+  if(!label)return toast('Enter a label','err');
+  var from=el('rwin-from').value,to=el('rwin-to').value;
+  if(!from||!to)return toast('Set start and end time','err');
+  var days=Array.from(el('rwin-days').querySelectorAll('input:checked')).map(function(c){return +c.value});
+  if(!days.length)return toast('Select at least one day','err');
+  var w={label:label,dept:el('rwin-dept').value,from:from,to:to,days:days,active:el('rwin-active').checked};
+  var wins=getReqWindows();
+  var editIdx=el('rwin-edit-id').value;
+  if(editIdx!=='')wins[+editIdx]=w; else wins.push(w);
+  setReqWindows(wins);
+  toast('Saved ✓','succ');CM('mreq-window');renderSchedule();
+}
+function toggleWindow(i){var wins=getReqWindows();if(!wins[i])return;wins[i].active=!wins[i].active;setReqWindows(wins);renderSchedule();}
+function delWindow(i){if(!confirm('Delete this window?'))return;var wins=getReqWindows();wins.splice(i,1);setReqWindows(wins);renderSchedule();}
+
+// ── Dispense Slot CRUD ────────────────────────────────────
+function addDispSlot(){
+  el('mdisp-title').textContent='Add Dispense Slot';
+  el('dslot-label').value='';el('dslot-time').value='10:00';el('dslot-notes').value='';
+  el('dslot-edit-id').value='';
+  el('dslot-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  el('dslot-dept').value='all';
+  el('dslot-days').querySelectorAll('input').forEach(function(c){c.checked=[0,1,2,3,4].indexOf(+c.value)>-1});
+  OM('mdisp-slot');
+}
+function editDispSlot(i){
+  var s=getDispSlots()[i];if(!s)return;
+  el('mdisp-title').textContent='Edit Dispense Slot';
+  el('dslot-label').value=s.label||'';el('dslot-time').value=s.time||'';el('dslot-notes').value=s.notes||'';
+  el('dslot-edit-id').value=i;
+  el('dslot-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  el('dslot-dept').value=s.dept||'all';
+  el('dslot-days').querySelectorAll('input').forEach(function(c){c.checked=(s.days||[]).indexOf(+c.value)>-1});
+  OM('mdisp-slot');
+}
+function saveDispSlot(){
+  var label=el('dslot-label').value.trim();
+  if(!label)return toast('Enter a label','err');
+  var time=el('dslot-time').value;if(!time)return toast('Set dispense time','err');
+  var days=Array.from(el('dslot-days').querySelectorAll('input:checked')).map(function(c){return +c.value});
+  if(!days.length)return toast('Select at least one day','err');
+  var s={label:label,dept:el('dslot-dept').value,time:time,days:days,notes:el('dslot-notes').value.trim()};
+  var slots=getDispSlots();
+  var editIdx=el('dslot-edit-id').value;
+  if(editIdx!=='')slots[+editIdx]=s; else slots.push(s);
+  setDispSlots(slots);
+  toast('Saved ✓','succ');CM('mdisp-slot');renderSchedule();
+}
+function delSlot(i){if(!confirm('Delete?'))return;var s=getDispSlots();s.splice(i,1);setDispSlots(s);renderSchedule();}
+
+// ── Monthly Limits ────────────────────────────────────────
+function saveAllLimits(){
+  var lims=getMonthlyLimits();
+  document.querySelectorAll('.monthly-lim-inp').forEach(function(inp){
+    var v=inp.value.trim();
+    if(v&&+v>0)lims[inp.dataset.dept]=+v;
+    else delete lims[inp.dataset.dept];
+  });
+  setMonthlyLimits(lims);
+  toast('Limits saved ✓','succ');renderSchedule();
+}
+function openBulkLimits(){
+  var lims=getMonthlyLimits();
+  el('bulk-limit-val').value='';
+  el('bulk-limits-per-dept').innerHTML='<div class="tw"><table><thead><tr><th>Department</th><th>Current Limit</th><th>New Limit</th></tr></thead><tbody>'
+    +gd().map(function(d){
+      return '<tr><td>'+d.name+'</td><td style="font-family:var(--mono)">'+(lims[d.id]||'—')+'</td>'
+        +'<td><input type="number" class="blim-inp" data-dept="'+d.id+'" value="'+(lims[d.id]||'')+'" min="1" placeholder="No limit" style="width:110px;margin:0;padding:6px 8px"></td></tr>';
+    }).join('')+'</tbody></table></div>';
+  OM('mbulk-limits');
+}
+function applyBulkLimit(){
+  var v=+el('bulk-limit-val').value;
+  document.querySelectorAll('.blim-inp').forEach(function(inp){inp.value=v||'';});
+}
+function saveBulkLimits(){
+  var lims=getMonthlyLimits();
+  document.querySelectorAll('.blim-inp').forEach(function(inp){
+    var v=inp.value.trim();
+    if(v&&+v>0)lims[inp.dataset.dept]=+v;
+    else delete lims[inp.dataset.dept];
+  });
+  setMonthlyLimits(lims);
+  toast('All limits saved ✓','succ');CM('mbulk-limits');renderSchedule();
+}
+
+// ── DEPT: Show window info + block if outside window ──────
+function getNextDispSlot(deptId){
+  var now=new Date();
+  var slots=getDispSlots().filter(function(s){return s.dept==='all'||s.dept===deptId});
+  if(!slots.length)return null;
+  var nowMins=now.getHours()*60+now.getMinutes();var dow=now.getDay();
+  var best=null,bestDiff=Infinity;
+  for(var d=0;d<7;d++){
+    var day=(dow+d)%7;
+    slots.forEach(function(s){
+      if((s.days||[]).indexOf(day)<0)return;
+      var sm=timeToMins(s.time);
+      var diff=d*1440+(sm-nowMins);
+      if(diff<=0&&d===0)diff+=1440;
+      if(diff>0&&diff<bestDiff){bestDiff=diff;best={slot:s,day:DAY_NAMES[day],time:fmt12(s.time),minsAway:diff};}
+    });
+  }
+  return best;
+}
 // ── BOOT ─────────────────────────────────────────────────
 seed();fillDS();applyTheme();
 // Expiry check on load — alert if any dept has expiring meds
