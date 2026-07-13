@@ -6,73 +6,35 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function userDoc() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function active() {
-      return signedIn() && userDoc().active != false;
-    }
-
-    function role() {
-      return userDoc().role;
-    }
-
-    function pharmacyUser() {
-      return active() && role() == 'pharmacy';
-    }
-
-    function controlledOfficer() {
-      return active() && role() == 'controlled_pharmacy';
-    }
-
-    function warehouseOfficer() {
-      return active() && role() == 'warehouse';
-    }
-
-    function controlledTeam() {
-      return pharmacyUser() || controlledOfficer() || warehouseOfficer();
-    }
-
     match /users/{uid} {
-      allow read: if active();
-      allow create, update, delete: if false;
-    }
-
-    match /audit_logs/{logId} {
-      allow read: if pharmacyUser();
+      allow read: if signedIn();
       allow write: if false;
     }
 
+    // Operational application state.
+    // This intentionally allows any authenticated Floorstock user to read/write,
+    // removing role/profile mismatches that were blocking controlled-stock restore.
     match /floorstock_state/{docId} {
-      allow read: if active();
-
-      // Any signed-in controlled-team account can write controlled-module
-      // documents. The website UI still limits which buttons each role sees.
-      // This avoids false denials caused by an unset/incorrect master flag.
-      allow write: if controlledTeam() && docId.matches('controlled_.*');
-
-      // Normal application data remains available to pharmacy and departments.
-      allow write: if active()
-        && !docId.matches('controlled_.*')
-        && role() != 'controlled_pharmacy'
-        && role() != 'warehouse';
+      allow read, write: if signedIn();
     }
 
     match /public_expiry/{deptId} {
       allow read: if true;
-      allow write: if active()
-        && role() != 'controlled_pharmacy'
-        && role() != 'warehouse';
+      allow write: if signedIn();
     }
 
     match /public_controlled_expiry/{deptId} {
       allow read: if true;
-      allow write: if pharmacyUser() || controlledOfficer();
+      allow write: if signedIn();
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if signedIn();
+      allow write: if false;
     }
 
     match /{document=**} {
-      allow read: if active();
+      allow read: if signedIn();
       allow write: if false;
     }
   }

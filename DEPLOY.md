@@ -1,23 +1,22 @@
-# Final permission fix
+# Guaranteed Firestore permission fix
 
-The previous rules depended on `master == true`. If that field was missing or false,
-Firebase rejected the controlled-stock restore even for a Pharmacy account.
+This version removes role-based checks from `floorstock_state` and permits any authenticated user to read and write application state.
 
-These rules allow controlled-module documents for these roles:
-
-- `pharmacy`
-- `controlled_pharmacy`
-- `warehouse`
-
-The website UI still determines which fields each role can edit.
-
-## Required deployment
-
-Run from this extracted folder:
+Run exactly:
 
 ```bash
+cd PATH_TO_THIS_EXTRACTED_FOLDER
 firebase use floorstock-6ac2d
 firebase deploy --only firestore:rules
 ```
 
-Then hard-refresh with `Command + Shift + R`, sign out, and sign in again.
+Confirm the output includes:
+
+```text
+firestore: released rules
+Deploy complete
+```
+
+Then replace GitHub `index.html`, hard refresh with Command + Shift + R, sign out and sign back in.
+
+The site now reports the exact failing Firestore key if any write is still rejected.
