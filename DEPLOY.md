@@ -1,15 +1,17 @@
 # Deployment
 
-1. Replace your GitHub `index.html` with this file.
-2. From this folder run:
+1. Replace the current GitHub `index.html` with the file in this folder.
+2. No Cloud Functions change is required for this update if the controlled-pharmacy role was already deployed.
+3. Open the site and perform a hard refresh: `Command + Shift + R`.
+4. Sign in as the Master account or the controlled-medicines pharmacy officer.
+5. Open **Controlled & Psychotropic Medicines**.
+6. The inpatient department lists from the attached workbook are imported automatically once.
 
-```bash
-firebase use floorstock-6ac2d
-firebase deploy --only functions,firestore:rules
-```
-
-3. Hard refresh with Command + Shift + R.
-4. Create the role **Pharmacy controlled & psychotropic medicines officer** from Users.
-5. Open Controlled & Psychotropic Medicines and import `narcotic.xlsx`.
-
-The Excel mapping is A MOH, B NUPCO, C name, D warehouse system balance, E warehouse outside-system balance, F first warehouse expiry, G second batch quantity, H second batch expiry, I min, J max, L pharmacy quantity, M pharmacy expiry.
+## New capabilities
+- Unified warehouse and pharmacy stock table.
+- Configurable expiry alert period shared by both parties.
+- Out-of-stock, below-minimum, expired and expiring-soon filters.
+- Narcotic/Psychotropic classification.
+- High Alert red badge and LASA blue badge.
+- Add, edit and delete catalogue medicines.
+- Department lists editable only by Master or the controlled-medicines pharmacy officer.
