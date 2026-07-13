@@ -1,22 +1,41 @@
-# Deploy Floorstock secure user management
+# نشر نسخة Blaze
 
-Run these commands from the folder containing `firebase.json`:
+المشروع: `floorstock-6ac2d`
+
+## 1) تأكد من مستخدم Master
+في Firestore يجب أن يكون المستند:
+
+`users/wFfPz93UmENhuStee7PkxAi0NOI3`
+
+ويحتوي:
+
+- `active: true` (Boolean)
+- `email: "almftres@hotmail.com"` (String)
+- `master: true` (Boolean)
+- `role: "pharmacy"` (String)
+
+ويجب أن يطابق اسم المستند UID الموجود في Firebase Authentication.
+
+## 2) تثبيت الاعتمادات والنشر
+من Terminal، داخل هذا المجلد:
 
 ```bash
-npm install -g firebase-tools
 firebase login
 firebase use floorstock-6ac2d
-cd functions && npm install && cd ..
+cd functions
+npm install
+cd ..
 firebase deploy --only functions,firestore:rules
 ```
 
-After deployment, upload the updated `index.html` to the repository root and deploy the web app as usual.
+انتظر ظهور `Deploy complete!`.
 
-The first Master profile must already exist at:
-`users/wFfPz93UmENhuStee7PkxAi0NOI3`
+## 3) رفع ملفات الواجهة
+استبدل ملفات المستودع بهذه النسخة، بما فيها مجلد `functions`، ثم ارفعها إلى GitHub.
 
-Required fields:
-- `role`: `pharmacy`
-- `active`: `true`
-- `master`: `true`
-- `email`: `almftres@hotmail.com`
+## 4) التحقق
+سجل خروجًا ثم دخولًا بحساب `almftres@hotmail.com`، واعمل تحديثًا قويًا للصفحة (`Command + Shift + R`). يجب أن يظهر أعلى الصفحة:
+
+`Pharmacy · Master`
+
+ومن صفحة Users تستطيع إنشاء المستخدمين. الحذف النهائي ومنح Master يظهران للـMaster فقط.

@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0d1117;--s:#161b22;--s2:#1c2128;--s3:#222831;--bd:#30363d;--bd2:#3d444d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;--ac:#1f6feb;--acl:#388bfd;--gn:#2ea043;--gnl:#3fb950;--rd:#da3633;--rdl:#f85149;--yl:#d29922;--yll:#e3b341;--pu:#0ea5e9;--mono:'JetBrains Mono',monospace}
@@ -316,7 +317,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
   <div class="pg" id="pg-users">
     <div class="fl ic jb mb14">
       <div><div class="stitle">User Management</div><div class="ssub" style="margin:0">Departments &amp; access control</div></div>
-      <button class="btn bg" onclick="openAddUser()">Firebase Console Instructions</button>
+      <button class="btn bp" onclick="openAddUser()">+ Add User</button>
     </div>
 
     <!-- ADD DEPARTMENT — prominent card at top -->
@@ -818,20 +819,16 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 
 <div class="modal-bg" id="muser">
   <div class="modal">
-    <div class="mh"><span class="mt">Manage Users in Firebase Console</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
-    <div class="alert-banner-y">User creation, permanent deletion, and Master access are intentionally handled only in Firebase Console. This avoids Cloud Functions and keeps the project on the Spark plan.</div>
-    <div style="font-size:13px;color:var(--tx2);line-height:1.9">
-      <b style="color:var(--tx)">Create a user:</b><br>
-      1. Firebase Console → Authentication → Users → Add user.<br>
-      2. Copy the new user UID.<br>
-      3. Firestore Database → users → create document using that UID.<br><br>
-      <b style="color:var(--tx)">Required fields:</b><br>
-      <code>email</code> (string), <code>role</code> (string), <code>active</code> (boolean), <code>master</code> (boolean).<br>
-      Add <code>deptId</code> for department users and <code>controlledCustodian: true</code> for custody officers.<br><br>
-      <b style="color:var(--tx)">Delete permanently:</b><br>
-      Delete the account from Authentication, then delete its matching <code>users/{UID}</code> document.
+    <div class="mh"><span class="mt">Add User / إضافة مستخدم</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
+    <div class="fg"><label>Email</label><input type="email" id="nuname" placeholder="e.g. icu@example.com"></div>
+    <div class="fg"><label>Password</label><input type="password" id="nupass" placeholder="At least 8 characters"></div>
+    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option><option value="department">Department user (print only)</option><option value="pharmacy">Pharmacy manager</option></select></div>
+    <div class="fg" id="nudept-wrap"><label>Department</label><select id="nudept"></select></div>
+    <div class="fg" id="numaster-wrap" style="display:none"><label style="display:flex;align-items:center;gap:8px;color:var(--tx);cursor:pointer"><input type="checkbox" id="numaster" style="width:auto;margin:0"> Grant Master access</label><div class="fhint">Only a current Master can grant this permission.</div></div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+      <button class="btn bg" onclick="CM('muser')">Cancel</button>
+      <button class="btn bs" onclick="saveUser()">Create User</button>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn bp" onclick="CM('muser')">Done</button></div>
   </div>
 </div>
 
@@ -1144,11 +1141,11 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
 var FIREBASE_CONFIG={apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
-var FB_APP=null,FB_AUTH=null,FB_DB=null;
+var FB_APP=null,FB_AUTH=null,FB_DB=null,FB_FUNCTIONS=null;
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
-  FB_AUTH=firebase.auth();FB_DB=firebase.firestore();
+  FB_AUTH=firebase.auth();FB_DB=firebase.firestore();FB_FUNCTIONS=firebase.functions();
 }
 
 // Firestore is the only operational data store. Memory is a short-lived UI cache, never persistent storage.
@@ -1545,7 +1542,7 @@ function startApp(){
   el('auth').style.display='none';el('app').style.display='block';
   el('tuser').textContent=CU.role==='pharmacy'?'👤 '+CU.username:'🏢 '+CU.deptName;
   var rb=el('rbadge');
-  rb.innerHTML=CU.role==='pharmacy'?'&#x1F3E5; Pharmacy':'&#x1F3E2; '+CU.deptName;
+  rb.innerHTML=CU.role==='pharmacy'?'&#x1F3E5; Pharmacy'+(CU.master===true?' · Master':''):'&#x1F3E2; '+CU.deptName;
   rb.className='trole '+(CU.role==='pharmacy'?'rph':'rdp');
   buildNav();
   showPg(CU.role==='pharmacy'?'pg-dash':CU.role==='warehouse'?'pg-controlled':'pg-newreq');
@@ -2171,7 +2168,12 @@ function renderUsers(){
       var d=ds.find(function(x){return x.id===u.deptId});
       var roleLabel=u.role==='pharmacy'?'Pharmacy':(u.role==='warehouse'?'Warehouse':(u.controlledCustodian?'Custodian':'Department'));
       var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
-      var actions=u.id===CU.id?'<span style="font-size:11px;color:var(--tx2)">Current user</span>':'<span style="font-size:11px;color:var(--tx2)">Manage in Firebase Console</span>';
+      var actions='';
+      if(CU&&CU.master===true&&u.id!==CU.id){
+        actions+='<button class="btn bg bxs" data-id="'+u.id+'" data-master="'+(u.master===true?'1':'0')+'" onclick="toggleMasterUser(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-master&#x27;)==&#x27;1&#x27;)">'+(u.master===true?'Remove Master':'Grant Master')+'</button> ';
+        actions+='<button class="btn bd2c bxs" data-id="'+u.id+'" onclick="delUser(this.getAttribute(&#x27;data-id&#x27;))">Delete permanently</button>';
+      }else if(u.id===CU.id){actions='<span style="font-size:11px;color:var(--tx2)">Current user</span>';}
+      else{actions='<span style="font-size:11px;color:var(--tx2)">Master only</span>';}
       return '<tr><td style="font-family:var(--mono)">'+esc(u.email||'')+'</td>'
         +'<td>'+roleLabel+masterBadge+(d?' — '+esc(d.name):'')+'</td>'
         +'<td><span class="badge '+(u.active===false?'brd':'bgn')+'">'+(u.active===false?'Inactive':'Active')+'</span></td>'
@@ -2188,8 +2190,47 @@ function renderUsers(){
     }).join(''):'<div style="text-align:center;padding:24px;color:var(--tx2)">No departments yet — add one above</div>';
   var ndcopy=el('ndcopy');
   if(ndcopy){var curVal=ndcopy.value;ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option><option value="default">Default list (all medications)</option><optgroup label="Copy from existing dept:">'+ds.map(function(d){return '<option value="'+d.id+'">Copy from: '+esc(d.name)+' ('+getMeds(d.id).length+' meds)</option>'}).join('')+'</optgroup>';if(curVal)ndcopy.value=curVal;}
+  el('nudept').innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
 }
-function openAddUser(){OM('muser')}
+function updateUserRoleFields(){
+  var role=el('nurole').value;
+  el('nudept-wrap').style.display=(role==='warehouse'||role==='pharmacy')?'none':'block';
+  el('numaster-wrap').style.display=(CU&&CU.master===true&&role==='pharmacy')?'block':'none';
+  if(role!=='pharmacy')el('numaster').checked=false;
+}
+function openAddUser(){
+  if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
+  el('nuname').value='';el('nupass').value='';el('nurole').value='custodian';el('numaster').checked=false;renderUsers();updateUserRoleFields();OM('muser');
+}
+async function saveUser(){
+  if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
+  var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value,requestedRole=el('nurole').value,grantMaster=el('numaster').checked===true;
+  if(!email||!password)return toast('Fill all fields','err');
+  if(password.length<8)return toast('Password must be at least 8 characters','err');
+  if((requestedRole==='department'||requestedRole==='custodian')&&!did)return toast('Add a department first','err');
+  if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
+  try{
+    var call=FB_FUNCTIONS.httpsCallable('createManagedUser');
+    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='custodian')?did:null,master:grantMaster});
+    var profile=result.data.user;
+    var users=gu().filter(function(u){return u.id!==profile.id});users.push(profile);S.s('users',users);
+    toast('Firebase user created securely ✓','succ');CM('muser');renderUsers();
+  }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}
+}
+async function delUser(id){
+  if(!CU||CU.master!==true)return toast('Only Master can permanently delete users.','err');
+  if(id===CU.id)return toast('You cannot delete your own account.','err');
+  if(!confirm('Permanently delete this user from Firebase Authentication and Firestore?\n\nThis cannot be undone.'))return;
+  try{var call=FB_FUNCTIONS.httpsCallable('deleteManagedUser');await call({uid:id});S.s('users',gu().filter(function(u){return u.id!==id}));toast('User permanently deleted','info');renderUsers();}
+  catch(err){console.error(err);toast((err&&err.message)||'Could not delete user','err');}
+}
+async function toggleMasterUser(id,isMaster){
+  if(!CU||CU.master!==true)return toast('Only Master can change Master access.','err');
+  var action=isMaster?'remove Master access from':'grant Master access to';
+  if(!confirm('Are you sure you want to '+action+' this user?'))return;
+  try{var call=FB_FUNCTIONS.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});S.upd('users',id,{master:!isMaster});toast('Master access updated ✓','succ');renderUsers();}
+  catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
+}
 
 function addDept(){
   var n=el('ndname').value.trim();if(!n)return toast('Enter department name','err');
