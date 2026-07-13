@@ -461,6 +461,88 @@ body.light .fridge-icon{
   .fridge-glyph{width:7px!important;height:10px!important}
 }
 
+
+.request-cold-marker{
+  display:inline-flex;
+  align-items:center;
+  gap:3px;
+  margin-inline-start:4px;
+  padding:1px 5px;
+  border:1px solid #7e22ce;
+  border-radius:4px;
+  background:rgba(126,34,206,.14);
+  color:#d8b4fe;
+  font-size:9px;
+  font-weight:700;
+  line-height:1.1;
+  vertical-align:middle;
+  white-space:nowrap;
+}
+body.light .request-cold-marker{
+  background:rgba(147,51,234,.10);
+  color:#6b21a8;
+  border-color:#9333ea;
+}
+.request-cold-marker .mini-fridge{
+  display:inline-block;
+  position:relative;
+  width:8px;
+  height:11px;
+  border:1.4px solid currentColor;
+  border-radius:1.5px;
+}
+.request-cold-marker .mini-fridge:before{
+  content:"";
+  position:absolute;
+  left:-1.4px;
+  right:-1.4px;
+  top:4px;
+  border-top:1.4px solid currentColor;
+}
+@media print{
+  .request-cold-marker{
+    color:#000!important;
+    background:none!important;
+    border:1px solid #000!important;
+    padding:1px 3px!important;
+    font-size:7pt!important;
+  }
+  .request-cold-marker .mini-fridge{
+    width:7px!important;
+    height:9px!important;
+  }
+}
+
+
+.request-snow-marker{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:21px;
+  height:21px;
+  margin-inline-start:5px;
+  border-radius:50%;
+  border:1px solid #7e22ce;
+  background:rgba(126,34,206,.16);
+  font-size:13px;
+  line-height:1;
+  vertical-align:middle;
+}
+body.light .request-snow-marker{
+  border-color:#9333ea;
+  background:rgba(147,51,234,.10);
+}
+@media print{
+  .request-snow-marker{
+    width:auto!important;
+    height:auto!important;
+    margin-inline-start:3px!important;
+    border:none!important;
+    background:none!important;
+    font-size:10pt!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1237,6 +1319,11 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0"><input type="checkbox" id="cha2" style="width:auto;margin:0"> <span class="badge brd">&#x1F534; High Alert</span></label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0"><input type="checkbox" id="chaz" style="width:auto;margin:0"> <span class="badge byl">&#x26A0; Hazard</span></label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0"><input type="checkbox" id="chls" style="width:auto;margin:0"> <span class="badge bpu">&#x1F535; LASA</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0">
+          <input type="checkbox" id="chcool" style="width:auto;margin:0">
+          <span class="fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>
+          <span style="font-size:12px">Refrigerated</span>
+        </label>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
@@ -2288,7 +2375,7 @@ function openAddDrug(){
   el('dmtitle').textContent='Add Medication';
   el('dname').value='';el('dcat').innerHTML=getCatOptions('Injections');
   el('dmin').value='1';el('dmax').value='10';el('dmly').value='';
-  el('cha2').checked=false;el('chaz').checked=false;el('chls').checked=false;
+  el('cha2').checked=false;el('chaz').checked=false;el('chls').checked=false;if(el('chcool'))el('chcool').checked=false;
   var ddsel=el('ddept-sel');
   if(ddsel)ddsel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
   OM('mdrug');
@@ -2299,7 +2386,7 @@ function openEditDrug(id,deptId){
   el('dmtitle').textContent='Edit Medication';
   el('dname').value=m.name;el('dcat').innerHTML=getCatOptions(m.category);
   el('dmin').value=m.min;el('dmax').value=m.max;el('dmly').value=m.monthly||'';
-  el('cha2').checked=!!m.high_alert;el('chaz').checked=!!m.hazard;el('chls').checked=!!m.lasa;
+  el('cha2').checked=!!m.high_alert;el('chaz').checked=!!m.hazard;el('chls').checked=!!m.lasa;if(el('chcool'))el('chcool').checked=!!m.refrigerated;
   var ddsel=el('ddept-sel');
   if(ddsel){ddsel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'"'+(d.id===deptId?' selected':'')+'>'+d.name+'</option>'}).join('');}
   OM('mdrug');
@@ -2309,7 +2396,8 @@ async function saveDrug(){
   var deptId=el('ddept-sel').value;if(!deptId)return toast('Select a department','err');
   var data={name:n,category:el('dcat').value,min:+(el('dmin').value)||0,max:+(el('dmax').value)||1,
     monthly:el('dmly').value?+(el('dmly').value):null,
-    high_alert:el('cha2').checked,hazard:el('chaz').checked,lasa:el('chls').checked};
+    high_alert:el('cha2').checked,hazard:el('chaz').checked,lasa:el('chls').checked,
+    refrigerated:!!(el('chcool')&&el('chcool').checked)};
   try{
     if(EDID){await updMed(deptId,EDID,data);toast('Updated &#x2713;','succ');}
     else{pushMed(deptId,Object.assign({},data,{created:nowISO()}));toast('Added &#x2713;','succ');}
@@ -4742,7 +4830,7 @@ function ctlPromptMed(existing){
   var lasa=confirm('Mark as LASA? (Blue badge)');
   var refrigerated=confirm('Does this medicine require refrigerator storage (2–8°C)?');
   var min=ctlNum(prompt('Minimum quantity',e.min||0)),max=ctlNum(prompt('Maximum quantity',e.max||0));
-  return {name:name.trim(),moh:moh.trim(),nupco:nupco.trim(),classification:cls,highAlert:highAlert,lasa:lasa,refrigerated:refrigerated,min:min,max:max};
+  return {name:name.trim(),moh:moh.trim(),nupco:nupco.trim(),classification:cls,highAlert:highAlert,lasa:lasa,refrigerated:parseRefrigeratedValue(row.refrigerated||row.fridge||row.cold||row['مبرد']),refrigerated:refrigerated,min:min,max:max};
 }
 async function ctlAddCatalogMedicine(){
   if(!ctlCanAddCatalog())return toast('No add permission','err');
@@ -5301,6 +5389,68 @@ function renderCtlDepartments(){
   }
   ctlRefreshDeptBulkBar();
 }
+
+
+function inventoryFridgeIcon(m){
+  return m&&m.refrigerated?ctlFridgeIcon(m):'';
+}
+
+
+function parseRefrigeratedValue(v){
+  var s=String(v==null?'':v).trim().toLowerCase();
+  return ['1','true','yes','y','refrigerated','fridge','cold','cold chain','مبرد','ثلاجة'].includes(s);
+}
+function ensureMedicationRefrigeratedDefaults(){
+  if(!S.ready)return;
+  gd().forEach(function(d){
+    var meds=getMeds(d.id),changed=false;
+    var next=meds.map(function(m){
+      if(typeof m.refrigerated==='undefined'){
+        changed=true;
+        return Object.assign({},m,{refrigerated:false});
+      }
+      return m;
+    });
+    if(changed)setMeds(d.id,next);
+  });
+  var cat=ctlCatalog(),catChanged=false;
+  var nextCat=cat.map(function(m){
+    if(typeof m.refrigerated==='undefined'){
+      catChanged=true;
+      return Object.assign({},m,{refrigerated:false});
+    }
+    return m;
+  });
+  if(catChanged)ctlSetCatalog(nextCat);
+}
+
+
+function addFridgeIconsEverywhere(){
+  document.querySelectorAll('[data-med-id]').forEach(function(node){
+    var id=node.dataset.medId;
+    var med=null;
+    gd().some(function(d){
+      med=getMeds(d.id).find(function(m){return m.id===id});
+      return !!med;
+    });
+    if(!med)med=ctlMedicine(id);
+    if(med&&med.refrigerated&&!node.querySelector('.fridge-icon')){
+      node.insertAdjacentHTML('beforeend',requestColdMarker(med));
+    }
+  });
+}
+document.addEventListener('DOMContentLoaded',function(){
+  var obs=new MutationObserver(addFridgeIconsEverywhere);
+  obs.observe(document.body,{childList:true,subtree:true});
+});
+
+
+function requestColdMarker(m){
+  return m&&m.refrigerated
+    ?'<span class="request-snow-marker" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine">❄️</span>'
+    :'';
+}
+
 
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
