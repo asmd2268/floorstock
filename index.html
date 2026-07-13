@@ -1455,6 +1455,14 @@ function rowCls(m){
 }
 function OM(id){document.getElementById(id).classList.add('on')}
 function el(id){return document.getElementById(id)}
+function esc(value){
+  return String(value==null?'':value)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
 
 // ── STATE ────────────────────────────────────────────────
 var CU=null,RFS='all',EDID=null,FRID=null,IROWS=[],SROLE='pharmacy';
