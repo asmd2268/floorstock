@@ -43,6 +43,7 @@ select option{background:var(--s2)}
 nav{display:flex;gap:2px;padding:0 14px;background:var(--s);border-bottom:1px solid var(--bd);overflow-x:auto}
 .nb{padding:10px 13px;font-size:12px;font-weight:500;color:var(--tx2);background:none;border:none;cursor:pointer;border-bottom:2px solid transparent;font-family:inherit;white-space:nowrap;transition:all .15s}
 .nb:hover{color:var(--tx)}.nb.on{color:var(--acl);border-bottom-color:var(--ac)}
+.app-attribution{max-width:1400px;margin:0 auto;padding:10px 18px 0;color:var(--tx3);font-size:11px;text-align:end}
 .pg{display:none;padding:22px 18px;max-width:1400px;margin:0 auto}.pg.on{display:block}
 .card{background:var(--s);border:1px solid var(--bd);border-radius:12px;overflow:hidden;margin-bottom:14px}
 .ch{padding:13px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
@@ -118,7 +119,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 ::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd2);border-radius:3px}
 @media print{
   body{background:#fff!important;color:#000!important}
-  #auth,.topbar,nav,.np,#toast{display:none!important}
+  #auth,.topbar,nav,.np,#toast,.app-attribution{display:none!important}
   #app{display:block!important}
   .pg{display:none!important}
   #parea{display:block!important}
@@ -222,6 +223,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
     </div>
   </div>
   <nav id="mnav"></nav>
+  <div class="app-attribution">By Ali Abudahash</div>
 
   <!-- ══ PHARMACY PAGES ══ -->
   <div class="pg" id="pg-dash">
@@ -1442,7 +1444,7 @@ function doLogout(){
 }
 function startApp(){
   el('auth').style.display='none';el('app').style.display='block';
-  el('tuser').textContent=CU.role==='pharmacy'?'&#x1F464; '+CU.username:'&#x1F3E2; '+CU.deptName;
+  el('tuser').textContent=CU.role==='pharmacy'?'👤 '+CU.username:'🏢 '+CU.deptName;
   var rb=el('rbadge');
   rb.innerHTML=CU.role==='pharmacy'?'&#x1F3E5; Pharmacy':'&#x1F3E2; '+CU.deptName;
   rb.className='trole '+(CU.role==='pharmacy'?'rph':'rdp');
@@ -1939,7 +1941,7 @@ function saveAlertSettings(){
   toast('Settings saved &#x2713;','succ');renderExpiry();
 }
 function openAddExpiry(){
-  el('mexpiry-title').textContent='Add Batch / &#x625;&#x636;&#x627;&#x641;&#x629; &#x62F;&#x641;&#x639;&#x629;';
+  el('mexpiry-title').textContent='Add Batch / إضافة دفعة';
   var ms=getMeds(CU.deptId);
   el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+m.id+'">'+m.name+'</option>'}).join('');
   el('exp-batch-inp').value='';
@@ -1948,7 +1950,7 @@ function openAddExpiry(){
   OM('mexpiry');
 }
 function openEditExpiry(btn){
-  el('mexpiry-title').textContent='Edit Batch / &#x62A;&#x639;&#x62F;&#x64A;&#x644; &#x62F;&#x641;&#x639;&#x629;';
+  el('mexpiry-title').textContent='Edit Batch / تعديل دفعة';
   var ms=getMeds(CU.deptId);
   el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+m.id+'"'+(m.id===btn.dataset.mid?' selected':'')+'>'+m.name+'</option>'}).join('');
   el('exp-batch-inp').value=btn.dataset.batch||'';
@@ -2193,7 +2195,7 @@ function handleXlsxFile(file){
   if(!file)return;
   var ext=file.name.split('.').pop().toLowerCase();
   var dz=el('xlsx-drop-zone');
-  if(dz){var h2=dz.querySelector('.upload-status');if(!h2){h2=document.createElement('div');h2.className='upload-status';h2.style.cssText='font-size:12px;color:var(--acl);margin-top:8px';dz.appendChild(h2);}h2.textContent='&#x23F3; Reading: '+file.name;}
+  if(dz){var h2=dz.querySelector('.upload-status');if(!h2){h2=document.createElement('div');h2.className='upload-status';h2.style.cssText='font-size:12px;color:var(--acl);margin-top:8px';dz.appendChild(h2);}h2.textContent='⏳ Reading: '+file.name;}
   var reader=new FileReader();
   reader.onload=function(ev){
     try{
@@ -2649,12 +2651,12 @@ function getShelfName(shelfId){
   return s?s.name:'?';
 }
 function openAddShelf(){
-  el('mshelf-title').textContent='Add Shelf / &#x625;&#x636;&#x627;&#x641;&#x629; &#x631;&#x641;';
+  el('mshelf-title').textContent='Add Shelf / إضافة رف';
   el('shelf-name-inp').value='';el('shelf-desc-inp').value='';el('shelf-edit-id').value='';
   OM('mshelf');
 }
 function openEditShelf(btn){
-  el('mshelf-title').textContent='Edit Shelf / &#x62A;&#x639;&#x62F;&#x64A;&#x644; &#x631;&#x641;';
+  el('mshelf-title').textContent='Edit Shelf / تعديل رف';
   el('shelf-name-inp').value=btn.dataset.name||'';
   el('shelf-desc-inp').value=btn.dataset.desc||'';
   el('shelf-edit-id').value=btn.dataset.sid||'';
@@ -2794,9 +2796,10 @@ function checkPublicView(){
   applyTheme();
   var dept=gd().find(function(d){return d.id===deptId});
   var deptName=dept?dept.name:deptId;
-  el('pub-title').textContent=deptName+' — Expiry Monitor / &#x645;&#x631;&#x627;&#x642;&#x628;&#x629; &#x627;&#x644;&#x635;&#x644;&#x627;&#x62D;&#x64A;&#x629;';
+  el('pub-title').textContent=deptName+' — Expiry Monitor / مراقبة الصلاحية';
   el('pub-sub').innerHTML='Last updated: '+fmtDate(nowISO())+' &nbsp;|&nbsp; Read-only / &#x642;&#x631;&#x627;&#x621;&#x629; &#x641;&#x642;&#x637;';
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data='+encodeURIComponent(window.location.href);
+  var publicUrl=getPublicExpiryUrl(deptId);
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data='+encodeURIComponent(publicUrl);
   el('pub-qr').src=qrUrl;
   // Render expiry data
   var ms=getMeds(deptId);
@@ -2832,7 +2835,7 @@ function checkPublicView(){
   if(el('pub-exp')){
     var shareDiv=document.createElement('div');
     shareDiv.style.cssText='margin-top:16px;padding:12px;background:var(--s2);border-radius:8px;font-size:12px';
-    shareDiv.innerHTML='<b>Share this page:</b><br><code style="font-size:11px;word-break:break-all">'+window.location.href+'</code>';
+    shareDiv.innerHTML='<b>Public expiry link / رابط متابعة الصلاحية</b><br><a href="'+publicUrl+'" style="color:var(--acl);display:inline-block;margin:5px 0">Open expiry monitor / فتح صفحة الصلاحية</a><br><code style="font-size:11px;word-break:break-all">'+publicUrl+'</code>';
     el('pub-exp').appendChild(shareDiv);
   }
 }
@@ -3179,7 +3182,7 @@ function startScanner(){
   stopScanner();
   var video=el('scan-modal-video');
   if(!video) return;
-  el('scan-status').textContent='&#x23F3; Requesting camera access...';
+  el('scan-status').textContent='⏳ Requesting camera access...';
   el('scan-result-area').style.display='none';
   el('scan-line').style.display='block';
   // Enumerate cameras first
@@ -3198,7 +3201,7 @@ function startScanner(){
     _scanStream=stream;
     video.srcObject=stream;
     video.play();
-    el('scan-status').textContent='&#x1F7E2; Scanning — hold barcode steady...';
+    el('scan-status').textContent='🟢 Scanning — hold barcode steady...';
     // Use ZXing
     if(typeof ZXing!=='undefined'){
       var hints=new Map();
@@ -3221,7 +3224,7 @@ function startScanner(){
       el('scan-status').innerHTML='&#x26A0; ZXing library loading... <button class="btn bg bxs" onclick="captureFrame()">&#x1F4F8; Capture Frame</button>';
     }
   }).catch(function(err){
-    el('scan-status').textContent='&#x274C; Camera error: '+err.message+' — use "Type Barcode" tab instead';
+    el('scan-status').textContent='❌ Camera error: '+err.message+' — use "Type Barcode" tab instead';
     el('scan-line').style.display='none';
   });
 }
