@@ -2,38 +2,18 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function signedIn() {
-      return request.auth != null;
-    }
+    function signedIn() { return request.auth != null; }
 
     function profile() {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function active() {
-      return signedIn() && profile().active != false;
-    }
+    function active() { return signedIn() && profile().active != false; }
 
-    function isPharmacy() {
-      return active() && profile().role == 'pharmacy';
-    }
-
-    function isMaster() {
-      return isPharmacy() && profile().master == true;
-    }
-
-    function isControlledOfficer() {
-      return active() && profile().role == 'controlled_pharmacy';
-    }
-
-    function isWarehouseOfficer() {
-      return active() && profile().role == 'warehouse';
-    }
-
-    // Any pharmacy manager (master or not) can manage controlled data
-    function controlledManager() {
-      return isPharmacy() || isControlledOfficer();
-    }
+    function isPharmacy()         { return active() && profile().role == 'pharmacy'; }
+    function isMaster()           { return isPharmacy() && profile().master == true; }
+    function isControlledOfficer(){ return active() && profile().role == 'controlled_pharmacy'; }
+    function isWarehouseOfficer() { return active() && profile().role == 'warehouse'; }
 
     match /users/{uid} {
       allow read: if active();
@@ -49,31 +29,31 @@ service cloud.firestore {
       allow read: if active();
 
       allow write: if
-        // Pharmacy manager writes everything controlled
-        (isPharmacy() && docId.matches('controlled_.*')) ||
+        // ── Pharmacy manager: full access to everything ──────────────────
+        isPharmacy() ||
 
-        // Warehouse officer writes warehouse stock + catalogue + moves + seed
+        // ── Warehouse officer ────────────────────────────────────────────
         (isWarehouseOfficer() && (
-          docId == 'controlled_catalog' ||
-          docId == 'controlled_warehouse' ||
-          docId == 'controlled_moves' ||
-          docId == 'controlled_alert_days' ||
+          docId == 'controlled_catalog'              ||
+          docId == 'controlled_warehouse'            ||
+          docId == 'controlled_moves'                ||
+          docId == 'controlled_alert_days'           ||
           docId == 'controlled_master_stock_seed_v4'
         )) ||
 
-        // Controlled officer writes pharmacy stock + dept lists + settings + moves + seed
+        // ── Controlled-pharmacy officer ──────────────────────────────────
         (isControlledOfficer() && (
-          docId == 'controlled_catalog' ||
-          docId == 'controlled_pharmacy_stock' ||
-          docId.matches('controlled_dept_list_.*') ||
-          docId.matches('controlled_settings_.*') ||
-          docId == 'controlled_alert_days' ||
-          docId == 'controlled_moves' ||
-          docId == 'controlled_department_seed_v2' ||
+          docId == 'controlled_catalog'              ||
+          docId == 'controlled_pharmacy_stock'       ||
+          docId.matches('controlled_dept_list_.*')   ||
+          docId.matches('controlled_settings_.*')    ||
+          docId == 'controlled_alert_days'           ||
+          docId == 'controlled_moves'                ||
+          docId == 'controlled_department_seed_v2'   ||
           docId == 'controlled_master_stock_seed_v4'
         )) ||
 
-        // Non-controlled data: all active users except controlled_pharmacy and warehouse
+        // ── Regular department / custodian users ─────────────────────────
         (!docId.matches('controlled_.*') &&
           active() &&
           profile().role != 'controlled_pharmacy' &&
@@ -89,7 +69,7 @@ service cloud.firestore {
 
     match /public_controlled_expiry/{deptId} {
       allow read: if true;
-      allow write: if controlledManager();
+      allow write: if isPharmacy() || isControlledOfficer();
     }
 
     match /{document=**} {

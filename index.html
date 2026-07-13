@@ -1595,10 +1595,14 @@ function seed(){
     }
   });
   if(changed)S.s('departments',departments);
-  departments.forEach(function(d){
-    var key='controlled_settings_'+d.id;
-    if(!S.g(key))S.s(key,{custodyOfficer:'',departmentSupervisor:'',pharmacyManager:'صيدلي / عظيمان غنام القحطاني'});
-  });
+  // controlled_settings_* requires controlled_pharmacy or pharmacy role.
+  // Skip for warehouse/department users to avoid permission errors.
+  if(CU && (CU.role==='pharmacy' || CU.role==='controlled_pharmacy')){
+    departments.forEach(function(d){
+      var key='controlled_settings_'+d.id;
+      if(!S.g(key))S.s(key,{custodyOfficer:'',departmentSupervisor:'',pharmacyManager:'صيدلي / عظيمان غنام القحطاني'});
+    });
+  }
 }
 
 // ── HELPERS ──────────────────────────────────────────────
@@ -4504,9 +4508,7 @@ var CONTROLLED_MASTER_STOCK_SEED = [{"moh":"545031626","nupco":"","name":"ALPRAZ
 
 async function ctlRestoreMasterStockOnce(){
   if(!S.ready||!CU||S.g('controlled_master_stock_seed_v4'))return;
-  // Any pharmacy manager, controlled officer, or warehouse officer can seed
-  var isPharmacyRole=CU.role==='pharmacy';
-  if(!(isPharmacyRole||ctlIsOfficer()||ctlIsWarehouse()))return;
+  if(!(ctlIsMaster()||ctlIsOfficer()||ctlIsWarehouse()))return;
   var catalog=ctlCatalog().slice();
   var warehouse=Object.assign({},ctlWarehouse());
   var pharmacy=Object.assign({},ctlPharmacy());
