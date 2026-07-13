@@ -908,7 +908,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 </div>
 
 
-<!-- PUBLIC EXPIRY VIEW — accessible via ?view=expiry&dept=ID&token=TOKEN -->
+<!-- PUBLIC EXPIRY VIEW — accessible via ?view=expiry&dept=ID -->
 <div id="pub-view" style="display:none">
   <div id="pub-exp">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #333">
@@ -1372,7 +1372,18 @@ function el(id){return document.getElementById(id)}
 
 // ── STATE ────────────────────────────────────────────────
 var CU=null,RFS='all',EDID=null,FRID=null,IROWS=[],SROLE='pharmacy';
-var SITE_URL='https://pharmorder.vercel.app';
+function getAppUrl(){
+  var url=new URL(window.location.href);
+  url.search='';
+  url.hash='';
+  return url.toString();
+}
+function getPublicExpiryUrl(deptId){
+  var url=new URL(getAppUrl());
+  url.searchParams.set('view','expiry');
+  url.searchParams.set('dept',deptId);
+  return url.toString();
+}
 
 // ── THEME ────────────────────────────────────────────────
 function toggleTheme(){
@@ -2070,7 +2081,6 @@ function delDept(id){
   localStorage.removeItem('po_expiry_'+id);
   localStorage.removeItem('po_shelves_'+id);
   localStorage.removeItem('po_alerts_'+id);
-  localStorage.removeItem('po_pub_token_'+id);
   toast('Department deleted','info');
   renderUsers();fillDS();populateInvDeptSel();
 }
@@ -2513,8 +2523,8 @@ function doDeptPrint(){
   var deptName=CU.deptName;
   var userName=CU.username;
   // Build QR code using a free API (no external JS lib needed)
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(SITE_URL);
-  var qrExpUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(SITE_URL+'?view=expiry&dept='+CU.deptId+'&token='+getPublicToken(CU.deptId));
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getAppUrl());
+  var qrExpUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getPublicExpiryUrl(CU.deptId));
   // Group meds
   var grp={};
   ms.forEach(function(m){if(!grp[m.category])grp[m.category]=[];grp[m.category].push(m)});
@@ -2703,8 +2713,8 @@ function printShelfList(){
     if(!byShelf[sid])byShelf[sid]=[];
     byShelf[sid].push(m);
   });
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(SITE_URL+'?view=expiry&dept='+CU.deptId+'&token='+getPublicToken(CU.deptId));
-  var qrSiteUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(SITE_URL);
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getPublicExpiryUrl(CU.deptId));
+  var qrSiteUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getAppUrl());
   var rows='';
   Object.keys(byShelf).sort().forEach(function(sid){
     var shelf=sid==='__none__'?{name:'Unassigned / &#x63A;&#x64A;&#x631; &#x645;&#x639;&#x64A;&#x646;'}:shelves.find(function(s){return s.id===sid});
@@ -2771,20 +2781,12 @@ function printShelfList(){
   pw.document.close();
 }
 
-// ── PUBLIC EXPIRY TOKEN (read-only, no login) ─────────────
-function getPublicToken(deptId){
-  var tok=S.g('pub_token_'+deptId);
-  if(!tok){tok='ptk_'+Date.now()+'_'+Math.random().toString(36).slice(2,8);S.s('pub_token_'+deptId,tok);}
-  return tok;
-}
+// ── PUBLIC EXPIRY VIEW (read-only, no login) ─────────────
 function checkPublicView(){
   var params=new URLSearchParams(window.location.search);
   if(params.get('view')!=='expiry')return;
   var deptId=params.get('dept');
-  var token=params.get('token');
-  if(!deptId||!token)return;
-  var stored=S.g('pub_token_'+deptId);
-  if(token!==stored)return; // invalid token
+  if(!deptId)return;
   // Show public view
   el('auth').style.display='none';
   el('app').style.display='none';
@@ -3755,7 +3757,7 @@ function getNextDispSlot(deptId){
   return best;
 }
 // ── BOOT ─────────────────────────────────────────────────
-seed();fillDS();applyTheme();
+seed();fillDS();applyTheme();checkPublicView();
 // Expiry check on load — alert if any dept has expiring meds
 setTimeout(function(){
   var alerts=[];
