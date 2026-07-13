@@ -312,6 +312,71 @@ body.light #ctl-out-table tr.ctl-critical-row .badge.brd{
   #pg-controlled .ch input,#pg-controlled .ch select{flex:1;min-width:120px}
 }
 
+
+/* Controlled stock table refinement */
+#pg-controlled{max-width:none;width:100%;padding-left:8px;padding-right:8px}
+#pg-controlled .card{width:100%}
+#pg-controlled .tw{width:100%;max-width:100%;overflow-x:auto}
+#pg-controlled table{width:100%;table-layout:fixed}
+#pg-controlled th,#pg-controlled td{padding:6px 5px;font-size:11px;line-height:1.25}
+#pg-controlled th:first-child,#pg-controlled td:first-child{
+  width:28px!important;min-width:28px!important;max-width:28px!important;
+  padding-left:2px!important;padding-right:2px!important;text-align:center
+}
+#pg-controlled th:nth-child(2),#pg-controlled td:nth-child(2){
+  width:19%;min-width:170px;white-space:normal;word-break:break-word
+}
+#pg-controlled .btn.bxs{padding:3px 5px;font-size:10px}
+#pg-controlled td:last-child{white-space:normal!important}
+
+/* Warehouse uses amber, leaving blue exclusively for LASA */
+.ctl-wh-head,.ctl-wh-cell{background:rgba(210,153,34,.12)!important}
+.ctl-wh-head{color:var(--yll)!important;border-bottom-color:var(--yl)!important}
+body.light .ctl-wh-head,body.light .ctl-wh-cell{background:rgba(154,103,0,.10)!important}
+
+/* Pharmacy keeps green */
+.ctl-ph-head,.ctl-ph-cell{background:rgba(46,160,67,.11)!important}
+.ctl-ph-head{color:var(--gnl)!important;border-bottom-color:var(--gn)!important}
+body.light .ctl-ph-head,body.light .ctl-ph-cell{background:rgba(26,127,55,.09)!important}
+
+/* Available quantity/expiry emphasis */
+.ctl-stock-available{
+  background:rgba(46,160,67,.16)!important;
+  box-shadow:inset 0 0 0 1px rgba(46,160,67,.30)
+}
+.ctl-stock-empty{
+  background:rgba(110,118,129,.12)!important;
+  color:var(--tx3)!important
+}
+
+/* Only the medicine-name cell becomes gray when unavailable in BOTH locations */
+.ctl-name-fully-out{
+  background:rgba(110,118,129,.26)!important;
+  color:#c9d1d9!important
+}
+body.light .ctl-name-fully-out{
+  background:#d8dde3!important;
+  color:#3d444d!important
+}
+
+/* Out-of-stock section remains neutral gray, but available side cells stay highlighted */
+#ctl-out-table tr td{background:rgba(110,118,129,.08)!important}
+#ctl-out-table tr td.ctl-stock-available{background:rgba(46,160,67,.16)!important}
+#ctl-out-table tr td.ctl-wh-cell.ctl-stock-available{background:rgba(210,153,34,.18)!important}
+#ctl-out-table tr td.ctl-name-fully-out{background:rgba(110,118,129,.30)!important}
+body.light #ctl-out-table tr td{background:#eef0f2!important}
+body.light #ctl-out-table tr td.ctl-stock-available{background:rgba(26,127,55,.13)!important}
+body.light #ctl-out-table tr td.ctl-wh-cell.ctl-stock-available{background:rgba(154,103,0,.14)!important}
+body.light #ctl-out-table tr td.ctl-name-fully-out{background:#d8dde3!important}
+
+@media(max-width:1100px){
+  #pg-controlled th,#pg-controlled td{font-size:10px;padding:5px 3px}
+  #pg-controlled th:first-child,#pg-controlled td:first-child{
+    width:24px!important;min-width:24px!important;max-width:24px!important
+  }
+  #pg-controlled th:nth-child(2),#pg-controlled td:nth-child(2){min-width:145px}
+}
+
 </style>
 </head>
 <body>
@@ -4525,7 +4590,7 @@ function renderCtlOverview(){
     if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Pharmacy</button>');
     if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>');
     if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">Delete</button>');
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
   }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected filter.</td></tr>';
 }
 function renderCtlCatalog(){
@@ -4705,6 +4770,24 @@ function ctlOutInfo(w,p){
   return '';
 }
 
+
+function ctlLocationQty(w,p){
+  return {
+    warehouse:ctlNum(w.system)+ctlNum(w.outside),
+    pharmacy:ctlNum(p.qty)
+  };
+}
+function ctlNameCellClass(w,p){
+  var q=ctlLocationQty(w,p);
+  return q.warehouse===0&&q.pharmacy===0?'ctl-name-fully-out':'';
+}
+function ctlWarehouseCellClass(w){
+  return (ctlNum(w.system)+ctlNum(w.outside))>0?'ctl-wh-cell ctl-stock-available':'ctl-wh-cell ctl-stock-empty';
+}
+function ctlPharmacyCellClass(p){
+  return ctlNum(p.qty)>0?'ctl-ph-cell ctl-stock-available':'ctl-ph-cell ctl-stock-empty';
+}
+
 function renderCtlOverview(){
   var body=el('ctl-overview-table'),outBody=el('ctl-out-table');
   if(!body)return;
@@ -4744,14 +4827,14 @@ function renderCtlOverview(){
 
   body.innerHTML=available.length?available.map(function(x,i){
     var m=x.m,w=x.w,p=x.p;
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td class="'+ctlNameCellClass(w,p)+'"><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td>'+actionsFor(m)+'</td></tr>';
   }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No available medicines match the selected filter.</td></tr>';
 
   if(outBody){
     el('ctl-out-count').textContent=outRows.length;
     outBody.innerHTML=outRows.length?outRows.map(function(x,i){
       var m=x.m,w=x.w,p=x.p;
-      return '<tr class="ctl-critical-row"><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td><span class="badge brd">'+esc(x.outFrom)+'</span></td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
+      return '<tr><td>'+(i+1)+'</td><td class="'+ctlNameCellClass(w,p)+'"><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td><span class="badge bgr">'+esc(x.outFrom)+'</span></td><td>'+actionsFor(m)+'</td></tr>';
     }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">No out-of-stock medicines.</td></tr>';
   }
 }
