@@ -330,9 +330,9 @@ body.light #ctl-out-table tr.ctl-critical-row .badge.brd{
 #pg-controlled td:last-child{white-space:normal!important}
 
 /* Warehouse uses amber, leaving blue exclusively for LASA */
-.ctl-wh-head,.ctl-wh-cell{background:rgba(210,153,34,.12)!important}
-.ctl-wh-head{color:var(--yll)!important;border-bottom-color:var(--yl)!important}
-body.light .ctl-wh-head,body.light .ctl-wh-cell{background:rgba(154,103,0,.10)!important}
+.ctl-wh-head,.ctl-wh-cell{background:rgba(168,85,247,.12)!important}
+.ctl-wh-head{color:#c084fc!important;border-bottom-color:#a855f7!important}
+body.light .ctl-wh-head,body.light .ctl-wh-cell{background:rgba(147,51,234,.10)!important}
 
 /* Pharmacy keeps green */
 .ctl-ph-head,.ctl-ph-cell{background:rgba(46,160,67,.11)!important}
@@ -343,6 +343,13 @@ body.light .ctl-ph-head,body.light .ctl-ph-cell{background:rgba(26,127,55,.09)!i
 .ctl-stock-available{
   background:rgba(46,160,67,.16)!important;
   box-shadow:inset 0 0 0 1px rgba(46,160,67,.30)
+}
+.ctl-wh-cell.ctl-stock-available{
+  background:rgba(249,115,22,.16)!important;
+  box-shadow:inset 0 0 0 1px rgba(249,115,22,.30)
+}
+body.light .ctl-wh-cell.ctl-stock-available{
+  background:rgba(234,88,12,.13)!important
 }
 .ctl-stock-empty{
   background:rgba(110,118,129,.12)!important;
@@ -362,11 +369,11 @@ body.light .ctl-name-fully-out{
 /* Out-of-stock section remains neutral gray, but available side cells stay highlighted */
 #ctl-out-table tr td{background:rgba(110,118,129,.08)!important}
 #ctl-out-table tr td.ctl-stock-available{background:rgba(46,160,67,.16)!important}
-#ctl-out-table tr td.ctl-wh-cell.ctl-stock-available{background:rgba(210,153,34,.18)!important}
+#ctl-out-table tr td.ctl-wh-cell.ctl-stock-available{background:rgba(249,115,22,.18)!important}
 #ctl-out-table tr td.ctl-name-fully-out{background:rgba(110,118,129,.30)!important}
 body.light #ctl-out-table tr td{background:#eef0f2!important}
 body.light #ctl-out-table tr td.ctl-stock-available{background:rgba(26,127,55,.13)!important}
-body.light #ctl-out-table tr td.ctl-wh-cell.ctl-stock-available{background:rgba(154,103,0,.14)!important}
+body.light #ctl-out-table tr td.ctl-wh-cell.ctl-stock-available{background:rgba(234,88,12,.14)!important}
 body.light #ctl-out-table tr td.ctl-name-fully-out{background:#d8dde3!important}
 
 @media(max-width:1100px){
@@ -375,6 +382,20 @@ body.light #ctl-out-table tr td.ctl-name-fully-out{background:#d8dde3!important}
     width:24px!important;min-width:24px!important;max-width:24px!important
   }
   #pg-controlled th:nth-child(2),#pg-controlled td:nth-child(2){min-width:145px}
+}
+
+
+@media print{
+  #parea{font-family:Arial,'Tahoma',sans-serif!important}
+  .dpn{font-size:13pt!important;line-height:1.35!important;text-align:center!important}
+  .dpd{font-size:9pt!important;line-height:1.35!important;text-align:center!important}
+  .ptbl{font-size:9pt!important;table-layout:fixed!important}
+  .ptbl th,.ptbl td{padding:4px 5px!important;line-height:1.35!important}
+  .ptbl th:nth-child(2),.ptbl td:nth-child(2){width:42%!important}
+  .print-bundle{padding:8px!important}
+  .handover-title{font-size:15pt!important;font-weight:700!important;text-align:center!important;margin-bottom:8px!important}
+  .handover-meta{font-size:10pt!important;line-height:1.7!important}
+  .handover-signatures{display:grid!important;grid-template-columns:1fr 1fr 1fr!important;gap:12mm!important;margin-top:16mm!important;text-align:center!important;font-size:10pt!important}
 }
 
 </style>
@@ -1127,7 +1148,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt">Add User / إضافة مستخدم</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
     <div class="fg"><label>Email</label><input type="email" id="nuname" placeholder="e.g. icu@example.com"></div>
     <div class="fg"><label>Password</label><input type="password" id="nupass" placeholder="At least 8 characters"></div>
-    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="department">Department user</option><option value="custodian">Department controlled-custody viewer</option><option value="controlled_pharmacy">Pharmacy controlled & psychotropic medicines officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy">Pharmacy manager</option></select></div>
+    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="department">Department user</option><option value="custodian">Department controlled-custody viewer</option><option value="controlled_pharmacy">Pharmacy controlled & psychotropic medicines officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy">Pharmacy Director / مدير الصيدلية</option></select></div>
     <div class="fg" id="nudept-wrap"><label>Department</label><select id="nudept"></select></div>
     <div class="fg" id="numaster-wrap" style="display:none"><label style="display:flex;align-items:center;gap:8px;color:var(--tx);cursor:pointer"><input type="checkbox" id="numaster" style="width:auto;margin:0"> Grant Master access</label><div class="fhint">Only a current Master can grant this permission.</div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
@@ -4890,7 +4911,96 @@ function printCtlAnalytics(){var html=el('ctl-an-table').closest('table').outerH
 async function processPublicControlledExpiry(){var p=new URLSearchParams(location.search);if(p.get('view')!=='controlled-expiry')return false;document.body.innerHTML='<div id="pub-ctl" style="max-width:1000px;margin:20px auto;padding:15px;font-family:Arial"></div>';var root=el('pub-ctl'),dept=p.get('dept')||'';try{var snap=await FB_DB.collection('public_controlled_expiry').doc(dept).get();if(!snap.exists)throw new Error('List not found');var d=snap.data(),rows=(d.items||[]).map(function(x,i){var bs=(x.batches||[]).map(function(b){var days=daysUntil(b.expiry),cls=days<=0?'exp-red':days<=ctlAlertDays()?'exp-yellow':'exp-ok';return '<div class="'+cls+'">'+(b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+' ('+days+' days)</div>'}).join('')||'—';return '<tr><td>'+(i+1)+'</td><td style="font-weight:bold">'+esc(x.name)+'</td><td>'+esc(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');root.innerHTML='<h1 style="text-align:center">متابعة انتهاء الأدوية المخدرة والنفسية</h1><h2 style="text-align:center">Controlled Medicines Expiry Follow-up</h2><h2 style="text-align:center">'+esc(d.departmentName||dept)+'</h2><div class="tw"><table><thead><tr><th>#</th><th>Medicine / الدواء</th><th>Qty / الكمية</th><th>Expiry / الانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table></div><div style="text-align:center;margin-top:18px;font-size:11px">By Ali Abudahash</div>'}catch(e){root.innerHTML='<div class="alert-banner">'+esc(e.message||'Could not load list')+'</div>'}return true}
 // Add buttons and improved batch controls after each controlled render.
 var _ctlRenderV6=renderControlled;
-renderControlled=function(){ctlEnsureV6UI();_ctlRenderV6();if(CTL_VIEW==='overview'){Array.from(document.querySelectorAll('#ctl-overview-table tr,#ctl-out-table tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild,m=ctlMedicine(id);if(td&&m&&!td.querySelector('.v6disp'))td.insertAdjacentHTML('afterbegin','<span class="v6disp">'+ctlDispenseButton(m)+'</span>')})}if(CTL_VIEW==='departments'&&ctlCanEditDept()){var h=el('ctl-departments-view').querySelector('.ch .fl');if(h&&!h.querySelector('.v6print'))h.insertAdjacentHTML('beforeend','<button class="btn bg bsm v6print" onclick="ctlChooseLogo()">Logo</button><button class="btn bg bsm v6print" onclick="printCtlHandover()">Handover record</button>')}if(el('ctl-overview-table'))Array.from(el('ctl-overview-table').querySelectorAll('tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild;if(ctlCanEditWarehouse()&&!td.querySelector('.wh-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs wh-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'warehouse\',this.dataset.id)">WH expiries</button> ');if(ctlCanEditPharmacy()&&!td.querySelector('.ph-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs ph-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'pharmacy\',this.dataset.id)">PH expiries</button> ')})}
+renderControlled=function(){ctlEnsureV6UI();_ctlRenderV6();if(CTL_VIEW==='overview'){Array.from(document.querySelectorAll('#ctl-overview-table tr,#ctl-out-table tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild,m=ctlMedicine(id);if(td&&m&&!td.querySelector('.v6disp'))td.insertAdjacentHTML('afterbegin','<span class="v6disp">'+ctlDispenseButton(m)+'</span>')})}if(CTL_VIEW==='departments'&&ctlCanEditDept()){var h=el('ctl-departments-view').querySelector('.ch .fl');if(h&&!h.querySelector('.v6print'))h.insertAdjacentHTML('beforeend','<button class="btn bg bsm v6print" onclick="ctlChooseLogo()">Logo</button><button class="btn bg bsm v6print" onclick="printCtlHandover()">Temporary custody handover / محضر تسليم عهدة مؤقت</button>')}if(el('ctl-overview-table'))Array.from(el('ctl-overview-table').querySelectorAll('tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild;if(ctlCanEditWarehouse()&&!td.querySelector('.wh-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs wh-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'warehouse\',this.dataset.id)">WH expiries</button> ');if(ctlCanEditPharmacy()&&!td.querySelector('.ph-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs ph-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'pharmacy\',this.dataset.id)">PH expiries</button> ')})}
+
+
+function ctlPrintTemporaryHandover(){
+  var current=prompt('Current custody officer name / اسم أمين العهدة الحالي','')||'';
+  if(!current)return;
+  var replacement=prompt('Replacement employee name / اسم الموظف البديل','')||'';
+  if(!replacement)return;
+  var manager=prompt('Pharmacy Director name / اسم مدير الصيدلية',ctlSettings().pharmacyManager||'')||'';
+  var fromDate=prompt('Handover start date (DD/MM/YYYY)','')||'';
+  var toDate=prompt('Expected return date (DD/MM/YYYY)','')||'';
+  var notes=prompt('Notes / ملاحظات','')||'';
+
+  var ph=ctlPharmacy();
+  var rows=ctlCatalog().map(function(m){
+    var p=ph[m.id]||{};
+    return '<tr><td>'+esc(m.name)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td></td></tr>';
+  }).join('');
+
+  el('parea').innerHTML=
+    '<div class="print-bundle">'+
+      '<div class="handover-title">محضر تسليم عهدة الأدوية المخدرة مؤقتًا<br>Temporary Controlled Medicines Custody Handover</div>'+
+      '<div class="handover-meta">'+
+        '<b>Current custody officer / أمين العهدة الحالي:</b> '+esc(current)+'<br>'+
+        '<b>Replacement employee / الموظف البديل:</b> '+esc(replacement)+'<br>'+
+        '<b>Handover period / مدة التسليم:</b> '+esc(fromDate)+' — '+esc(toDate)+'<br>'+
+        '<b>Date / التاريخ:</b> '+fmtDate(new Date().toISOString().slice(0,10))+'<br>'+
+        (notes?'<b>Notes / ملاحظات:</b> '+esc(notes)+'<br>':'')+
+      '</div>'+
+      '<table class="ptbl" style="margin-top:10px"><thead><tr>'+
+        '<th>Medication / الدواء</th><th>Quantity / الكمية</th><th>Expiry / الانتهاء</th><th>Counted / الجرد</th>'+
+      '</tr></thead><tbody>'+rows+'</tbody></table>'+
+      '<div class="handover-signatures">'+
+        '<div><b>Current custody officer</b><br>أمين العهدة الحالي<br><br>'+esc(current)+'<br><br>Signature / التوقيع</div>'+
+        '<div><b>Replacement employee</b><br>الموظف البديل<br><br>'+esc(replacement)+'<br><br>Signature / التوقيع</div>'+
+        '<div><b>Pharmacy Director</b><br>مدير الصيدلية<br><br>'+esc(manager)+'<br><br>Signature / التوقيع</div>'+
+      '</div>'+
+      '<div style="text-align:center;margin-top:12mm;font-size:8pt">By Ali Abudahash</div>'+
+    '</div>';
+  window.print();
+}
+
+
+function ctlPublicExpiryMessage(items,days){
+  if(!items||!items.length){
+    return '<div style="padding:24px;text-align:center;border:1px solid var(--gn);border-radius:10px;background:rgba(46,160,67,.08);font-weight:700">'+
+      'لا توجد أدوية تنتهي خلال الفترة المحددة ('+days+' يوم)<br>'+
+      'No controlled medicines expire within the selected period ('+days+' days).'+
+    '</div>';
+  }
+  return '';
+}
+
+
+function ctlPrintReturnHandover(){
+  var returning=prompt('Returning custody officer name / اسم أمين العهدة العائد من الإجازة','')||'';
+  if(!returning)return;
+  var replacement=prompt('Replacement employee name / اسم الموظف البديل','')||'';
+  if(!replacement)return;
+  var manager=prompt('Pharmacy Director name / اسم مدير الصيدلية',ctlSettings().pharmacyManager||'')||'';
+  var returnDate=prompt('Return date (DD/MM/YYYY) / تاريخ العودة','')||'';
+  var notes=prompt('Notes / ملاحظات','')||'';
+
+  var ph=ctlPharmacy();
+  var rows=ctlCatalog().map(function(m){
+    var p=ph[m.id]||{};
+    return '<tr><td>'+esc(m.name)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td></td></tr>';
+  }).join('');
+
+  el('parea').innerHTML=
+    '<div class="print-bundle">'+
+      '<div class="handover-title">محضر استرجاع عهدة الأدوية المخدرة بعد العودة من الإجازة<br>Controlled Medicines Custody Return Handover</div>'+
+      '<div class="handover-meta">'+
+        '<b>Returning custody officer / أمين العهدة العائد:</b> '+esc(returning)+'<br>'+
+        '<b>Replacement employee / الموظف البديل:</b> '+esc(replacement)+'<br>'+
+        '<b>Return date / تاريخ العودة:</b> '+esc(returnDate||fmtDate(new Date().toISOString().slice(0,10)))+'<br>'+
+        (notes?'<b>Notes / ملاحظات:</b> '+esc(notes)+'<br>':'')+
+      '</div>'+
+      '<table class="ptbl" style="margin-top:10px"><thead><tr>'+
+        '<th>Medication / الدواء</th><th>Quantity / الكمية</th><th>Expiry / الانتهاء</th><th>Counted / الجرد</th>'+
+      '</tr></thead><tbody>'+rows+'</tbody></table>'+
+      '<div class="handover-signatures">'+
+        '<div><b>Returning custody officer</b><br>أمين العهدة العائد<br><br>'+esc(returning)+'<br><br>Signature / التوقيع</div>'+
+        '<div><b>Replacement employee</b><br>الموظف البديل<br><br>'+esc(replacement)+'<br><br>Signature / التوقيع</div>'+
+        '<div><b>Pharmacy Director</b><br>مدير الصيدلية<br><br>'+esc(manager)+'<br><br>Signature / التوقيع</div>'+
+      '</div>'+
+      '<div style="text-align:center;margin-top:12mm;font-size:8pt">By Ali Abudahash</div>'+
+    '</div>';
+  window.print();
+}
 
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
