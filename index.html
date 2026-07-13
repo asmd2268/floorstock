@@ -1150,19 +1150,50 @@ function initFirebase(){
 
 // Firestore is the only operational data store. Memory is a short-lived UI cache, never persistent storage.
 var S={
-  cache:{},ready:false,
+  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,
   init:async function(){
+    S.stopRealtime();
     var snapshot=await FB_DB.collection('floorstock_state').get();
-    S.cache={};snapshot.forEach(function(doc){S.cache[doc.id]=doc.data().value;});S.ready=true;
+    S.cache={};snapshot.forEach(function(doc){S.cache[doc.id]=doc.data().value;});
+    await S.loadUsers();
+    S.ready=true;
+    S.startRealtime();
+  },
+  loadUsers:async function(){
+    var snapshot=await FB_DB.collection('users').get();
+    S.cache.users=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
+  },
+  startRealtime:function(){
+    S.stateUnsub=FB_DB.collection('floorstock_state').onSnapshot(function(snapshot){
+      snapshot.docChanges().forEach(function(change){
+        if(change.type==='removed')delete S.cache[change.doc.id];
+        else S.cache[change.doc.id]=change.doc.data().value;
+      });
+      S.scheduleRefresh();
+    },function(err){console.error('floorstock_state realtime error',err);toast('Live sync disconnected — reload the page.','err');});
+    S.usersUnsub=FB_DB.collection('users').onSnapshot(function(snapshot){
+      S.cache.users=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
+      S.scheduleRefresh();
+    },function(err){console.error('users realtime error',err);toast('User sync disconnected — reload the page.','err');});
+  },
+  stopRealtime:function(){
+    if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
+    if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
+    if(S.refreshTimer){clearTimeout(S.refreshTimer);S.refreshTimer=null;}
+  },
+  scheduleRefresh:function(){
+    if(!S.ready||!CU)return;
+    if(S.refreshTimer)clearTimeout(S.refreshTimer);
+    S.refreshTimer=setTimeout(function(){S.refreshTimer=null;refreshCurrentPage();},120);
   },
   g:function(k){return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null},
   s:function(k,v){
     S.cache[k]=v;
-    FB_DB.collection('floorstock_state').doc(k).set({value:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(err){console.error(err);toast('Save failed — Firebase rejected the update.','err');});
+    return FB_DB.collection('floorstock_state').doc(k).set({value:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(err){console.error(err);toast('Save failed — Firebase rejected the update.','err');throw err;});
   },
-  rm:function(k){delete S.cache[k];return FB_DB.collection('floorstock_state').doc(k).delete().catch(function(err){console.error(err);toast('Delete failed — Firebase rejected the update.','err');});},
-  push:function(k,v){v.id=v.id||'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);var a=S.g(k)||[];a.push(v);S.s(k,a);return v},
-  upd:function(k,id,d){var a=S.g(k)||[];var i=a.findIndex(function(x){return x.id===id});if(i>-1){a[i]=Object.assign({},a[i],d);S.s(k,a)}},
+  rm:function(k){delete S.cache[k];return FB_DB.collection('floorstock_state').doc(k).delete().catch(function(err){console.error(err);toast('Delete failed — Firebase rejected the update.','err');throw err;});},
+  push:function(k,v){v.id=v.id||'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);var a=(S.g(k)||[]).slice();a.push(v);S.s(k,a);return v},
+  upd:function(k,id,d){var a=(S.g(k)||[]).slice();var i=a.findIndex(function(x){return x.id===id});if(i>-1){a[i]=Object.assign({},a[i],d);S.s(k,a)}},
   del:function(k,id){S.s(k,(S.g(k)||[]).filter(function(x){return x.id!==id}))}
 };
 // Per-dept keys: medications are stored per dept
@@ -1543,6 +1574,7 @@ async function doLogin(){
   }
 }
 async function doLogout(){
+  S.stopRealtime();
   try{await FB_AUTH.signOut();}catch(err){console.error(err);}
   CU=null;S.cache={};S.ready=false;el('app').style.display='none';el('auth').style.display='flex';el('lgp').value='';
 }
@@ -1577,6 +1609,21 @@ function buildNav(){
     nav.appendChild(btn);
   });
 }
+function refreshCurrentPage(){
+  var active=document.querySelector('.pg.on');
+  if(!active)return;
+  var map={
+    'pg-dash':renderDash,'pg-inv':renderInv,'pg-reqs':renderReqs,
+    'pg-analytics':renderAn,'pg-users':renderUsers,'pg-newreq':renderReqForm,
+    'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
+    'pg-expiry':renderExpiry,'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
+    'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule,'pg-controlled':renderControlled
+  };
+  populateInvDeptSel();fillDS();
+  if(map[active.id])map[active.id]();
+  updateNotesBadge();
+}
+
 function showPg(id){
   document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
   document.querySelectorAll('.nb').forEach(function(b){b.classList.remove('on')});
@@ -2250,23 +2297,22 @@ async function saveUser(){
   try{
     var call=FB_FUNCTIONS.httpsCallable('createManagedUser');
     var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='custodian')?did:null,master:grantMaster});
-    var profile=result.data.user;
-    var users=gu().filter(function(u){return u.id!==profile.id});users.push(profile);S.s('users',users);
-    toast('Firebase user created securely ✓','succ');CM('muser');renderUsers();
+    toast('Firebase user created securely ✓','succ');CM('muser');
+    await S.loadUsers();renderUsers();
   }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}
 }
 async function delUser(id){
   if(!CU||CU.master!==true)return toast('Only Master can permanently delete users.','err');
   if(id===CU.id)return toast('You cannot delete your own account.','err');
   if(!confirm('Permanently delete this user from Firebase Authentication and Firestore?\n\nThis cannot be undone.'))return;
-  try{var call=FB_FUNCTIONS.httpsCallable('deleteManagedUser');await call({uid:id});S.s('users',gu().filter(function(u){return u.id!==id}));toast('User permanently deleted','info');renderUsers();}
+  try{var call=FB_FUNCTIONS.httpsCallable('deleteManagedUser');await call({uid:id});await S.loadUsers();toast('User permanently deleted','info');renderUsers();}
   catch(err){console.error(err);toast((err&&err.message)||'Could not delete user','err');}
 }
 async function toggleMasterUser(id,isMaster){
   if(!CU||CU.master!==true)return toast('Only Master can change Master access.','err');
   var action=isMaster?'remove Master access from':'grant Master access to';
   if(!confirm('Are you sure you want to '+action+' this user?'))return;
-  try{var call=FB_FUNCTIONS.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});S.upd('users',id,{master:!isMaster});toast('Master access updated ✓','succ');renderUsers();}
+  try{var call=FB_FUNCTIONS.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});await S.loadUsers();toast('Master access updated ✓','succ');renderUsers();}
   catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
 }
 
