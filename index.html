@@ -11,7 +11,7 @@
 :root{--bg:#0d1117;--s:#161b22;--s2:#1c2128;--s3:#222831;--bd:#30363d;--bd2:#3d444d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;--ac:#1f6feb;--acl:#388bfd;--gn:#2ea043;--gnl:#3fb950;--rd:#da3633;--rdl:#f85149;--yl:#d29922;--yll:#e3b341;--pu:#0ea5e9;--mono:'JetBrains Mono',monospace}
 body.light{--bg:#f5f7fa;--s:#ffffff;--s2:#f0f2f5;--s3:#e8eaed;--bd:#d0d7de;--bd2:#bac1cb;--tx:#1f2328;--tx2:#656d76;--tx3:#9198a1;--ac:#0969da;--acl:#1f6feb;--gn:#1a7f37;--gnl:#2ea043;--rd:#cf222e;--rdl:#da3633;--yl:#9a6700;--yll:#d29922;--pu:#0284c7}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:14px;line-height:1.5;transition:background .2s,color .2s}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:15px;line-height:1.55;transition:background .2s,color .2s}
 #auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,#1f2d4a 0%,var(--bg) 60%)}
 body.light #auth{background:radial-gradient(ellipse at 30% 20%,#dbeafe 0%,var(--bg) 60%)}
 .acard{background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:44px 38px;width:420px;max-width:94vw}
@@ -22,7 +22,7 @@ body.light #auth{background:radial-gradient(ellipse at 30% 20%,#dbeafe 0%,var(--
 .rtab{padding:10px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);color:var(--tx2);cursor:pointer;font-size:12px;font-weight:500;text-align:center;transition:all .15s}
 .rtab.on{background:var(--ac);border-color:var(--ac);color:#fff}
 label{display:block;font-size:12px;font-weight:500;color:var(--tx2);margin-bottom:5px}
-input,select,textarea{width:100%;padding:9px 11px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:13px;font-family:inherit;outline:none;transition:border-color .15s;margin-bottom:13px}
+input,select,textarea{width:100%;padding:9px 11px;background:var(--s2);border:1px solid var(--bd);border-radius:8px;color:var(--tx);font-size:14px;font-family:inherit;outline:none;transition:border-color .15s;margin-bottom:13px}
 input:focus,select:focus,textarea:focus{border-color:var(--ac)}
 select option{background:var(--s2)}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:9px 15px;border-radius:8px;border:none;font-size:13px;font-weight:500;cursor:pointer;transition:all .15s;font-family:inherit;white-space:nowrap}
@@ -56,8 +56,8 @@ nav{display:flex;gap:2px;padding:0 14px;background:var(--s);border-bottom:1px so
 .sv{font-size:26px;font-weight:700;line-height:1}.ss{font-size:11px;color:var(--tx2);margin-top:4px}
 .tw{overflow-x:auto}
 table{width:100%;border-collapse:collapse}
-th{text-align:left;padding:9px 11px;font-size:11px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);white-space:nowrap}
-td{padding:8px 11px;font-size:13px;border-bottom:1px solid var(--bd);vertical-align:middle}
+th{text-align:left;padding:10px 11px;font-size:12px;font-weight:600;color:var(--tx2);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd);white-space:nowrap}
+td{padding:9px 11px;font-size:14px;border-bottom:1px solid var(--bd);vertical-align:middle}
 tr:last-child td{border-bottom:none}
 tr:hover td{background:rgba(255,255,255,.02)}
 .badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;border:1px solid;white-space:nowrap}
@@ -141,7 +141,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 /* expiry batch row */
 .batch-row td{background:var(--s2);font-size:12px}
 /* public expiry page */
-#pub-exp{min-height:100vh;padding:24px 16px;max-width:900px;margin:0 auto}
+#pub-exp,#pub-req{min-height:100vh;padding:24px 16px;max-width:900px;margin:0 auto}
 
 /* ── BARCODE SCANNER ── */
 #scan-modal-video{width:100%;border-radius:8px;background:#000;display:block}
@@ -289,6 +289,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
       <div class="tw"><table>
         <thead><tr>
           <th style="width:36px"><input type="checkbox" id="inv-all-chk" onchange="toggleAllInv(this)" title="Select all"></th>
+          <th style="width:48px;text-align:center">#</th>
           <th>Medication</th><th>Category</th><th>Classification</th>
           <th style="text-align:center">Min</th><th style="text-align:center">Max</th>
           <th style="text-align:center">Monthly</th><th></th>
@@ -387,7 +388,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 
   <div class="pg" id="pg-print">
     <div class="fl ic jb mb14">
-      <div><div class="stitle">Print Orders</div><div class="ssub" style="margin:0">Select fulfilled requests to print</div></div>
+      <div><div class="stitle">Print Orders</div><div class="ssub" style="margin:0">You may print any fulfilled request again whenever needed</div></div>
       <div class="fl g8 ic">
         <select id="pcols" class="psel"><option value="4">4 per page</option><option value="5">5 per page</option><option value="2">2 per page</option><option value="3">3 per page</option></select>
         <button class="btn bp" onclick="doPrint()">&#x1F5A8; Print</button>
@@ -395,7 +396,7 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
     </div>
     <div class="card">
       <div class="ch"><span class="ct">Fulfilled Requests</span><button class="btn bg bsm" onclick="document.querySelectorAll('.pchk').forEach(function(c){c.checked=true;})">Select All</button></div>
-      <div class="tw"><table><thead><tr><th><input type="checkbox" onchange="document.querySelectorAll('.pchk').forEach(function(c){c.checked=this.checked;}.bind(this))"></th><th>Department</th><th>Request Date</th><th>Fulfilled</th><th>Items</th></tr></thead><tbody id="ptbl"></tbody></table></div>
+      <div class="tw"><table><thead><tr><th><input type="checkbox" onchange="document.querySelectorAll('.pchk').forEach(function(c){c.checked=this.checked;}.bind(this))"></th><th>Department</th><th>Request Date</th><th>Fulfilled</th><th>Items</th><th>Printed</th></tr></thead><tbody id="ptbl"></tbody></table></div>
     </div>
   </div>
 
@@ -553,6 +554,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
       </div>
       <div class="tw"><table>
         <thead><tr>
+          <th style="width:48px;text-align:center">#</th>
           <th>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</th>
           <th>Batch / Lot / &#x627;&#x644;&#x62F;&#x641;&#x639;&#x629;</th>
           <th>Expiry / &#x62A;&#x627;&#x631;&#x64A;&#x62E; &#x627;&#x644;&#x627;&#x646;&#x62A;&#x647;&#x627;&#x621;</th>
@@ -577,6 +579,13 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
             <select id="dpopt-pages" class="psel">
               <option value="fit">Fit on 1 page</option>
               <option value="multi" selected>Multiple pages (numbered)</option>
+            </select>
+          </div>
+          <div class="fl ic g8">
+            <label style="margin:0;white-space:nowrap">Expiry print:</label>
+            <select id="dpopt-expiry" class="psel">
+              <option value="date-barcode" selected>Write-in date + expiry barcode</option>
+              <option value="barcode">Expiry barcode only</option>
             </select>
           </div>
           <button class="btn bp" onclick="doDeptPrint()">&#x1F5A8; Print</button>
@@ -810,7 +819,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt" id="fulfill-title">Fulfill Request</span><button class="xbtn" onclick="CM('mfulfill')">&#x2715;</button></div>
     <p id="fulfill-hint" style="font-size:12px;color:var(--tx2);margin-bottom:13px">Enter actual quantity to dispense. 0 = skip.</p>
     <div class="tw" style="max-height:380px;overflow-y:auto">
-      <table><thead><tr><th>Medication</th><th>Class</th><th style="text-align:center">Requested</th><th>Dispense Qty</th></tr></thead><tbody id="ftbl"></tbody></table>
+      <table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Requested</th><th>Dispense Qty</th></tr></thead><tbody id="ftbl"></tbody></table>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn bg" onclick="CM('mfulfill')">Cancel</button>
@@ -938,6 +947,11 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
       Read-only view &mdash; Developed by Ali Abudahash &mdash; PharmOrder
     </div>
   </div>
+</div>
+
+<!-- MOBILE REQUEST VIEW — accessible via ?view=request&request=ID -->
+<div id="pub-request" style="display:none">
+  <div id="pub-req"></div>
 </div>
 
 <div class="modal-bg" id="mnote-reply">
@@ -1149,6 +1163,12 @@ function fmtDateShort(iso){
   var d=new Date(iso);
   if(isNaN(d))return iso;
   return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+}
+function fmtDateTime(iso){
+  if(!iso)return '—';
+  var d=new Date(iso);
+  if(isNaN(d))return iso;
+  return d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 function daysUntil(iso){
   if(!iso)return null;
@@ -1386,6 +1406,12 @@ function getPublicExpiryUrl(deptId){
   url.searchParams.set('dept',deptId);
   return url.toString();
 }
+function getMobileRequestUrl(requestId){
+  var url=new URL(getAppUrl());
+  url.searchParams.set('view','request');
+  url.searchParams.set('request',requestId);
+  return url.toString();
+}
 
 // ── THEME ────────────────────────────────────────────────
 function toggleTheme(){
@@ -1612,8 +1638,8 @@ function renderInv(){
   if(!deptId){
     var ds=gd();
     el('itbl').innerHTML=!ds.length
-      ?'<tr><td colspan="8" style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">&#x1F3E2;</div><div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div><button class="btn bp" onclick="showPg(&#x27;pg-users&#x27;)">&#x2B; Add Department</button></td></tr>'
-      :'<tr><td colspan="8" style="text-align:center;color:var(--tx2);padding:24px">&#x2190; Select a department</td></tr>';
+      ?'<tr><td colspan="9" style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">&#x1F3E2;</div><div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div><button class="btn bp" onclick="showPg(&#x27;pg-users&#x27;)">&#x2B; Add Department</button></td></tr>'
+      :'<tr><td colspan="9" style="text-align:center;color:var(--tx2);padding:24px">&#x2190; Select a department</td></tr>';
     el('dup-banner').style.display='none';
     el('bulk-bar').style.display='none';
     return;
@@ -1632,12 +1658,15 @@ function renderInv(){
   var grp={};
   fil.forEach(function(m){if(!grp[m.category])grp[m.category]=[];grp[m.category].push(m)});
   var html='';
-  if(!fil.length) html='<tr><td colspan="8" style="text-align:center;color:var(--tx2);padding:22px">No medications found</td></tr>';
+  if(!fil.length) html='<tr><td colspan="9" style="text-align:center;color:var(--tx2);padding:22px">No medications found</td></tr>';
+  var medNumber=0;
   Object.keys(grp).sort().forEach(function(cat){
-    html+='<tr><td colspan="8" class="cath">&#x1F4C1; '+cat+' <span style="color:var(--tx3);font-size:10px">('+grp[cat].length+')</span></td></tr>';
+    html+='<tr><td colspan="9" class="cath">&#x1F4C1; '+cat+' <span style="color:var(--tx3);font-size:10px">('+grp[cat].length+')</span></td></tr>';
     grp[cat].forEach(function(m){
+      medNumber++;
       html+='<tr class="'+rowCls(m)+'" id="inv-row-'+m.id+'">'
         +'<td style="padding:4px 8px"><input type="checkbox" class="inv-chk" data-id="'+m.id+'" onchange="onInvCheck()"></td>'
+        +'<td style="text-align:center;font-family:var(--mono);font-weight:600">'+medNumber+'</td>'
         +'<td style="font-weight:500">'+m.name+'</td>'
         +'<td><span class="chip">'+m.category+'</span></td>'
         +'<td>'+bdg(m)+'</td>'
@@ -1742,6 +1771,7 @@ function rcard(r,isp){
     +'<button class="btn bg bsm" data-id="'+r.id+'" onclick="viewReq(this.getAttribute(\'data-id\'))">View</button></div></div>'
     +'<div style="padding:9px 18px;font-size:12px;color:var(--tx2)">'+(r.items||[]).length+' items'
     +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDate(r.fulfilledAt):' &middot; Awaiting fulfillment')
+    +(r.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">&#x1F4C5; Scheduled dispense: '+fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' &middot; '+r.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">&#x1F4C5; Dispense time: Not scheduled yet</div>')
     +'</div></div>';
 }
 function viewReq(id){
@@ -1750,11 +1780,11 @@ function viewReq(id){
   el('vdname').textContent=(d&&d.name)||r.deptId;
   var ms=getMeds(r.deptId||'');
   el('vbody').innerHTML='<p style="font-size:12px;color:var(--tx2);margin-bottom:11px">Submitted: '+fmtDate(r.created)+'</p>'
-    +'<div class="tw"><table><thead><tr><th>Medication</th><th style="text-align:center">Requested</th><th style="text-align:center">Dispensed</th></tr></thead><tbody>'
-    +(r.items||[]).map(function(it){
+    +'<div class="tw"><table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th style="text-align:center">Requested</th><th style="text-align:center">Dispensed</th></tr></thead><tbody>'
+    +(r.items||[]).map(function(it,index){
       var m=ms.find(function(x){return x.id===it.medId});
       var dsp=(r.dispensed||[]).find(function(x){return x.medId===it.medId});
-      return '<tr><td>'+(m?m.name:it.medId)+'</td><td style="text-align:center;font-family:var(--mono)">'+it.qty+'</td><td style="text-align:center;font-family:var(--mono)">'+(dsp?dsp.qty:'&mdash;')+'</td></tr>';
+      return '<tr><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td>'+(m?m.name:it.medId)+'</td><td style="text-align:center;font-family:var(--mono)">'+it.qty+'</td><td style="text-align:center;font-family:var(--mono)">'+(dsp?dsp.qty:'&mdash;')+'</td></tr>';
     }).join('')+'</tbody></table></div>';
   OM('mview');
 }
@@ -1767,12 +1797,12 @@ function openFulfill(id){
   el('fulfill-hint').textContent=isEdit?'Editing previously dispensed quantities.':'Enter actual quantity to dispense. 0 = skip.';
   el('fulfill-btn').textContent=isEdit?'Update ✓':'Confirm ✓';
   var ms=getMeds(r.deptId||'');
-  el('ftbl').innerHTML=(r.items||[]).map(function(it){
+  el('ftbl').innerHTML=(r.items||[]).map(function(it,index){
     var m=ms.find(function(x){return x.id===it.medId});
     var prevQty=it.qty;
     if(isEdit){var prev=(r.dispensed||[]).find(function(x){return x.medId===it.medId});if(prev)prevQty=prev.qty;}
     var rowBg=m&&m.high_alert?'background:rgba(218,54,51,.07)':m&&m.hazard?'background:rgba(210,153,34,.06)':'background:rgba(31,111,235,.04)';
-    return '<tr style="'+rowBg+'"><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
+    return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
       +'<td style="text-align:center;font-family:var(--mono);font-weight:700">'+it.qty+'</td>'
       +'<td><input type="number" min="0" max="'+it.qty+'" value="'+prevQty+'" data-med="'+it.medId+'" style="width:78px;padding:5px 7px;text-align:center;margin:0"></td></tr>';
   }).join('');
@@ -1824,14 +1854,14 @@ function renderReqForm(){
   var html='';
   Object.keys(grp).sort().forEach(function(cat){
     html+='<div class="cath">&#x1F4C1; '+cat+'</div>'
-      +'<div class="tw"><table style="width:100%"><thead><tr><th>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="width:160px">Qty / &#x627;&#x644;&#x643;&#x645;&#x64A;&#x629;</th></tr></thead><tbody>';
-    grp[cat].forEach(function(m){
+      +'<div class="tw"><table style="width:100%"><thead><tr><th style="width:48px;text-align:center">#</th><th>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="width:160px">Qty / &#x627;&#x644;&#x643;&#x645;&#x64A;&#x629;</th></tr></thead><tbody>';
+    grp[cat].forEach(function(m,index){
       var u=used[m.id]||0;
       var maxA=m.monthly?Math.min(m.max,m.monthly-u):m.max;
       var blk=maxA<=0;
       var rc=rowCls(m);
       html+='<tr class="'+rc+'"'+(blk?' style="opacity:.4"':'')+'>'
-        +'<td style="font-weight:500">'+m.name+'</td><td>'+bdg(m)+'</td>'
+        +'<td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+m.name+'</td><td>'+bdg(m)+'</td>'
         +'<td style="text-align:center;font-family:var(--mono)">'+m.min+'</td>'
         +'<td style="text-align:center;font-family:var(--mono)">'+m.max+'</td>'
         +'<td><div class="qwrap"><input type="number" class="rqi" data-mid="'+m.id+'" data-max="'+maxA+'" min="0" max="'+maxA+'" value="" placeholder="0"'+(blk?' disabled':'')
@@ -1869,7 +1899,8 @@ function submitReq(){
     var used=getMonthlyReqCount(CU.deptId);
     if(used>=lim)return toast('&#x1F6AB; Monthly request limit reached ('+lim+'/month). Contact pharmacy.','err');
   }
-  S.push('requests',{deptId:CU.deptId,deptName:CU.deptName,items:items,status:'pending',created:nowISO()});
+  var nextDispense=getNextDispSlot(CU.deptId);
+  S.push('requests',{deptId:CU.deptId,deptName:CU.deptName,items:items,status:'pending',created:nowISO(),scheduledFor:nextDispense?nextDispense.scheduledAt:null,scheduledLabel:nextDispense?nextDispense.slot.label:''});
   toast('Request submitted — '+items.length+' items &#x2713;','succ');renderReqForm();
 }
 
@@ -1912,7 +1943,7 @@ function renderExpiry(){
     if(filterVal==='ok')return days!==null&&days>d1;
     return true;
   });
-  var rows=filtered.map(function(b){
+  var rows=filtered.map(function(b,index){
     var m=ms.find(function(x){return x.id===b.medId});
     var days=daysUntil(b.date);
     var statusTxt='',dayCls='exp-ok';
@@ -1923,6 +1954,7 @@ function renderExpiry(){
     else{statusTxt='<span class="badge bgn">OK</span>';}
     var rc=m?rowCls(m):'';
     return '<tr class="batch-row '+rc+'">'
+      +'<td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td>'
       +'<td style="font-weight:500">'+(m?m.name:(b.medId||'Unknown'))+'</td>'
       +'<td style="font-family:var(--mono)">'+(b.batch||'—')+'</td>'
       +'<td>'+fmtDate(b.date)+'</td>'
@@ -1933,7 +1965,7 @@ function renderExpiry(){
         +'<button class="btn bd2c bxs" data-bid="'+b.id+'" onclick="delBatch(this.getAttribute(&#x27;data-bid&#x27;))">&#x2715;</button>'
       +'</td></tr>';
   });
-  el('exptbl').innerHTML=rows.join('')||'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tx2)">No batches '+(filterVal!=='all'?'matching filter':'— click + Add Batch')+'</td></tr>';
+  el('exptbl').innerHTML=rows.join('')||'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--tx2)">No batches '+(filterVal!=='all'?'matching filter':'— click + Add Batch')+'</td></tr>';
 }
 function saveAlertSettings(){
   if(!CU)return;
@@ -2127,9 +2159,9 @@ function renderPrint(){
   var rs=gr().filter(function(r){return r.status!=='pending'}).slice().reverse();
   el('ptbl').innerHTML=rs.length
     ?rs.map(function(r){var d=gd().find(function(x){return x.id===r.deptId});var n=(r.dispensed||[]).filter(function(x){return x.qty>0}).length;
-      return '<tr><td><input type="checkbox" class="pchk" data-id="'+r.id+'"></td><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDate(r.created)+'</td><td>'+fmtDate(r.fulfilledAt)+'</td><td>'+n+' items</td></tr>'
+      return '<tr><td><input type="checkbox" class="pchk" data-id="'+r.id+'"></td><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDate(r.created)+'</td><td>'+fmtDate(r.fulfilledAt)+'</td><td>'+n+' items</td><td style="text-align:center;font-family:var(--mono)">'+(r.printCount||0)+'</td></tr>'
     }).join('')
-    :'<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:18px">No fulfilled requests</td></tr>';
+    :'<tr><td colspan="6" style="text-align:center;color:var(--tx2);padding:18px">No fulfilled requests</td></tr>';
 }
 function doPrint(){
   var sel=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
@@ -2141,13 +2173,17 @@ function doPrint(){
     var dept=gd().find(function(d){return d.id===r.deptId});
     var ms=getMeds(r.deptId||'');
     var items=(r.dispensed||[]).filter(function(d){return d.qty>0});
-    return '<div class="dpb"><div class="dph"><div class="dpn">'+((dept&&dept.name)||r.deptId)+'</div><div class="dpd">Printed: '+today+' | Req: '+fmtDate(r.created)+'</div></div>'
+    var mobileUrl=getMobileRequestUrl(r.id);
+    var mobileQr='https://api.qrserver.com/v1/create-qr-code/?size=70x70&data='+encodeURIComponent(mobileUrl);
+    return '<div class="dpb"><div class="dph" style="display:flex;justify-content:space-between;gap:8px"><div><div class="dpn">'+((dept&&dept.name)||r.deptId)+'</div><div class="dpd">Printed: '+today+' | Req: '+fmtDate(r.created)+'</div>'+(r.scheduledFor?'<div class="dpd">Scheduled dispense: '+fmtDateTime(r.scheduledFor)+'</div>':'')+'</div><div style="text-align:center"><img src="'+mobileQr+'" width="48" height="48" alt="Mobile request barcode"><div style="font-size:6pt">Mobile view</div></div></div>'
       +'<table class="ptbl"><thead><tr><th>#</th><th>Medication</th><th>Qty</th></tr></thead><tbody>'
       +items.map(function(d,i){var m=ms.find(function(x){return x.id===d.medId});return '<tr><td>'+(i+1)+'</td><td>'+(m?m.name:d.medId)+'</td><td>'+d.qty+'</td></tr>'}).join('')
       +'</tbody></table></div>';
   }).join('');
+  sel.forEach(function(id){var request=gr().find(function(r){return r.id===id});if(request)S.upd('requests',id,{printCount:(request.printCount||0)+1,lastPrintedAt:nowISO()});});
   el('parea').innerHTML='<style>.pgrid{grid-template-columns:repeat('+cols+',1fr)!important}</style><div class="pgrid">'+blocks+'</div>';
   window.print();
+  renderPrint();
 }
 
 // ── IMPORT ───────────────────────────────────────────────
@@ -2521,19 +2557,24 @@ function doDeptPrint(){
   if(!CU)return;
   var ms=getMeds(CU.deptId);
   var fitOne=el('dpopt-pages').value==='fit';
+  var includeExpiryDate=el('dpopt-expiry').value==='date-barcode';
   var today=fmtDate(nowISO());
   var deptName=CU.deptName;
   var userName=CU.username;
   // Build QR code using a free API (no external JS lib needed)
   var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getAppUrl());
   var qrExpUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getPublicExpiryUrl(CU.deptId));
+  var expiryPrintBlock='<div style="text-align:center"><img src="'+qrExpUrl+'" width="60" height="60" alt="Expiry barcode"><div style="font-size:5.5pt;color:#888">Expiry Monitor Barcode</div>'
+    +(includeExpiryDate?'<div style="font-size:7pt;color:#333;margin-top:5px;white-space:nowrap">Expiry Date / تاريخ الصلاحية: ____________</div>':'')
+    +'</div>';
   // Group meds
   var grp={};
   ms.forEach(function(m){if(!grp[m.category])grp[m.category]=[];grp[m.category].push(m)});
-  var rows='';
+  var rows='',medNumber=0;
   Object.keys(grp).sort().forEach(function(cat){
-    rows+='<tr class="cat-row"><td colspan="4" style="background:#e8e8e8;font-weight:700;font-size:7pt;text-transform:uppercase;letter-spacing:.5px;padding:4px 6px;border:1px solid #ccc">'+cat+' / '+catAr(cat)+'</td></tr>';
+    rows+='<tr class="cat-row"><td colspan="5" style="background:#e8e8e8;font-weight:700;font-size:7pt;text-transform:uppercase;letter-spacing:.5px;padding:4px 6px;border:1px solid #ccc">'+cat+' / '+catAr(cat)+'</td></tr>';
     grp[cat].forEach(function(m){
+      medNumber++;
       var bc=m.high_alert?'#da3633':m.hazard?'#d29922':m.lasa?'#8957e5':'transparent';
       var bg=m.high_alert?'#fff0f0':m.hazard?'#fffbea':m.lasa?'#f5f0ff':'#ffffff';
       var flagTxt='';var flagColor='#000';
@@ -2542,6 +2583,7 @@ function doDeptPrint(){
       else if(m.hazard){flagTxt='HAZARD / خطر';flagColor='#b07d00';}
       else if(m.lasa){flagTxt='LASA';flagColor='#6639ba';}
       rows+='<tr style="background:'+bg+';border-left:3px solid '+bc+'">'
+        +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+medNumber+'</td>'
         +'<td style="padding:3px 5px;border:1px solid #ddd;font-weight:500">'+m.name+'</td>'
         +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700;color:'+flagColor+';font-size:6.5pt">'+flagTxt+'</td>'
         +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+m.min+'</td>'
@@ -2576,12 +2618,11 @@ function doDeptPrint(){
     +'<div style="font-size:7pt;color:#666;margin-top:3px">Developed by Ali Abudahash | PharmOrder System</div>'
     +'</div>'
     +'<div style="text-align:center">'
-    +'<img src="'+qrUrl+'" width="60" height="60" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div><div style="text-align:center"><img src="'+qrExpUrl+'" width="60" height="60" alt="Expiry"><div style="font-size:5.5pt;color:#888">Expiry Monitor</div>'
-    +'<div style="font-size:6pt;color:#888;margin-top:2px">Scan for system</div>'
-    +'</div>'
+    +'<img src="'+qrUrl+'" width="60" height="60" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'+expiryPrintBlock
     +'</div>'
     +'<table>'
     +'<thead><tr>'
+    +'<th class="c">#</th>'
     +'<th>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</th>'
     +'<th>Classification / &#x627;&#x644;&#x62A;&#x635;&#x646;&#x64A;&#x641;</th>'
     +'<th class="c">Min / &#x627;&#x644;&#x623;&#x62F;&#x646;&#x649;</th>'
@@ -2786,6 +2827,7 @@ function printShelfList(){
 // ── PUBLIC EXPIRY VIEW (read-only, no login) ─────────────
 function checkPublicView(){
   var params=new URLSearchParams(window.location.search);
+  if(params.get('view')==='request')return renderMobileRequest(params.get('request'));
   if(params.get('view')!=='expiry')return;
   var deptId=params.get('dept');
   if(!deptId)return;
@@ -2838,6 +2880,33 @@ function checkPublicView(){
     shareDiv.innerHTML='<b>Public expiry link / رابط متابعة الصلاحية</b><br><a href="'+publicUrl+'" style="color:var(--acl);display:inline-block;margin:5px 0">Open expiry monitor / فتح صفحة الصلاحية</a><br><code style="font-size:11px;word-break:break-all">'+publicUrl+'</code>';
     el('pub-exp').appendChild(shareDiv);
   }
+}
+
+function renderMobileRequest(requestId){
+  var request=gr().find(function(r){return r.id===requestId});
+  el('auth').style.display='none';
+  el('app').style.display='none';
+  var publicPage=el('pub-request');
+  if(publicPage)publicPage.style.display='block';
+  applyTheme();
+  var container=el('pub-req');
+  if(!request){
+    container.innerHTML='<div class="card" style="margin-top:24px"><div class="cb" style="text-align:center">Request not found or is no longer available.</div></div>';
+    return;
+  }
+  var dept=(gd().find(function(d){return d.id===request.deptId})||{}).name||request.deptName||request.deptId;
+  var meds=getMeds(request.deptId);
+  var mobileUrl=getMobileRequestUrl(request.id);
+  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=80x80&data='+encodeURIComponent(mobileUrl);
+  var rows=(request.items||[]).map(function(item,index){
+    var med=meds.find(function(m){return m.id===item.medId});
+    var dispensed=(request.dispensed||[]).find(function(itemDispensed){return itemDispensed.medId===item.medId});
+    return '<tr><td style="text-align:center;font-family:var(--mono)">'+(index+1)+'</td><td style="font-weight:600">'+(med?med.name:item.medId)+'</td><td style="text-align:center;font-family:var(--mono)">'+item.qty+'</td><td style="text-align:center;font-family:var(--mono)">'+(dispensed?dispensed.qty:'—')+'</td></tr>';
+  }).join('');
+  container.innerHTML='<div class="card" style="margin-top:8px"><div class="cb"><div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start"><div><div class="stitle">'+dept+' — Request Summary</div><div class="ssub">Read-only mobile view</div></div><img src="'+qrUrl+'" width="72" height="72" alt="Request barcode"></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:14px 0"><div class="chip">Status: '+request.status+'</div><div class="chip">Submitted: '+fmtDateTime(request.created)+'</div>'+(request.scheduledFor?'<div class="chip">Scheduled: '+fmtDateTime(request.scheduledFor)+'</div>':'<div class="chip">Dispense: Not scheduled</div>')+'</div>'
+    +'<div class="tw"><table><thead><tr><th>#</th><th>Medication</th><th>Requested</th><th>Dispensed</th></tr></thead><tbody>'+rows+'</tbody></table></div>'
+    +'<div style="margin-top:16px;font-size:11px;color:var(--tx2);text-align:center">Read-only request view — By Ali Abudahash</div></div></div>';
 }
 
 
@@ -3752,9 +3821,14 @@ function getNextDispSlot(deptId){
     slots.forEach(function(s){
       if((s.days||[]).indexOf(day)<0)return;
       var sm=timeToMins(s.time);
-      var diff=d*1440+(sm-nowMins);
-      if(diff<=0&&d===0)diff+=1440;
-      if(diff>0&&diff<bestDiff){bestDiff=diff;best={slot:s,day:DAY_NAMES[day],time:fmt12(s.time),minsAway:diff};}
+      var diff=d*1440+(sm-nowMins),dayOffset=d;
+      if(diff<=0&&d===0){diff+=1440;dayOffset=1;}
+      if(diff>0&&diff<bestDiff){
+        var scheduled=new Date(now);
+        scheduled.setDate(now.getDate()+dayOffset);
+        scheduled.setHours(Math.floor(sm/60),sm%60,0,0);
+        bestDiff=diff;best={slot:s,day:DAY_NAMES[day],time:fmt12(s.time),minsAway:diff,scheduledAt:scheduled.toISOString()};
+      }
     });
   }
   return best;
