@@ -822,7 +822,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt">Add User / إضافة مستخدم</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
     <div class="fg"><label>Email</label><input type="email" id="nuname" placeholder="e.g. icu@example.com"></div>
     <div class="fg"><label>Password</label><input type="password" id="nupass" placeholder="At least 8 characters"></div>
-    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option><option value="department">Department user (print only)</option><option value="pharmacy">Pharmacy manager</option></select></div>
+    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="department">Department user</option><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy">Pharmacy manager</option></select></div>
     <div class="fg" id="nudept-wrap"><label>Department</label><select id="nudept"></select></div>
     <div class="fg" id="numaster-wrap" style="display:none"><label style="display:flex;align-items:center;gap:8px;color:var(--tx);cursor:pointer"><input type="checkbox" id="numaster" style="width:auto;margin:0"> Grant Master access</label><div class="fhint">Only a current Master can grant this permission.</div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
@@ -2214,8 +2214,16 @@ function openAddUser(){
     }
     emailInput.value='';
     passInput.value='';
-    roleSelect.value='custodian';
+    roleSelect.value='department';
     masterInput.checked=false;
+    var deptSelect=el('nudept');
+    var departments=gd();
+    if(deptSelect){
+      deptSelect.innerHTML=departments.length
+        ? departments.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>';}).join('')
+        : '<option value="">No departments available — add a department first</option>';
+      deptSelect.disabled=!departments.length;
+    }
     updateUserRoleFields();
     modal.classList.add('on');
     setTimeout(function(){emailInput.focus();},50);
@@ -2229,7 +2237,7 @@ async function saveUser(){
   var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value,requestedRole=el('nurole').value,grantMaster=el('numaster').checked===true;
   if(!email||!password)return toast('Fill all fields','err');
   if(password.length<8)return toast('Password must be at least 8 characters','err');
-  if((requestedRole==='department'||requestedRole==='custodian')&&!did)return toast('Add a department first','err');
+  if((requestedRole==='department'||requestedRole==='custodian')&&!did)return toast('Create a department first, then choose it for this user.','err');
   if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
   try{
     var call=FB_FUNCTIONS.httpsCallable('createManagedUser');
