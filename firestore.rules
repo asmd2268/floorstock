@@ -34,6 +34,11 @@ service cloud.firestore {
           profile().role != 'warehouse');
     }
 
+    match /public_controlled_expiry/{deptId} {
+      allow read: if true;
+      allow write: if active() && (profile().role == 'controlled_pharmacy' || profile().role == 'pharmacy');
+    }
+
     match /public_expiry/{deptId} {
       allow read: if true;
       allow write: if active() &&

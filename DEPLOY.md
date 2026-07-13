@@ -1,24 +1,15 @@
-# Controlled pharmacy officer role
+# Deployment
 
-1. Upload `index.html` to GitHub and replace the current file.
-2. Deploy the updated Cloud Function because a new role was added:
+1. Replace your GitHub `index.html` with this file.
+2. From this folder run:
 
 ```bash
-cd ~/Downloads/floorstock-controlled-pharmacy-role
-cd functions
-npm install
-cd ..
 firebase use floorstock-6ac2d
 firebase deploy --only functions,firestore:rules
 ```
 
-3. Refresh the website with Command + Shift + R.
-4. Sign in as the Master pharmacy account.
-5. Users → Add User → choose:
-   `Pharmacy controlled & psychotropic medicines officer`
+3. Hard refresh with Command + Shift + R.
+4. Create the role **Pharmacy controlled & psychotropic medicines officer** from Users.
+5. Open Controlled & Psychotropic Medicines and import `narcotic.xlsx`.
 
-Permissions:
-- Controlled pharmacy officer: manages lists for all departments, edits pharmacy custody stock, accepts/rejects warehouse deliveries, dispenses.
-- Warehouse officer: edits warehouse stock and sends to pharmacy.
-- Each can view the other party's stock read-only.
-- Department and normal pharmacy accounts have read/print access only on this module.
+The Excel mapping is A MOH, B NUPCO, C name, D warehouse system balance, E warehouse outside-system balance, F first warehouse expiry, G second batch quantity, H second batch expiry, I min, J max, L pharmacy quantity, M pharmacy expiry.
