@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
+    function active() { return signedIn() && profile().active != false; }
+    function pharmacy() { return active() && profile().role == 'pharmacy'; }
+    function master() { return pharmacy() && profile().master == true; }
+
+    match /users/{uid} {
+      allow read: if active() && (request.auth.uid == uid || pharmacy());
+      allow create, update, delete: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if master();
+      allow write: if false;
+    }
+
+    match /floorstock_state/{docId} {
+      allow read, write: if active();
+    }
+
+    match /public_expiry/{deptId} {
+      allow read: if true;
+      allow write: if active();
+    }
+
+    match /{document=**} {
+      allow read, write: if active();
+    }
+  }
+}

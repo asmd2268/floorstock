@@ -9,6 +9,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0d1117;--s:#161b22;--s2:#1c2128;--s3:#222831;--bd:#30363d;--bd2:#3d444d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;--ac:#1f6feb;--acl:#388bfd;--gn:#2ea043;--gnl:#3fb950;--rd:#da3633;--rdl:#f85149;--yl:#d29922;--yll:#e3b341;--pu:#0ea5e9;--mono:'JetBrains Mono',monospace}
@@ -821,8 +822,9 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt">Add Custody / Warehouse User</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
     <div class="fg"><label>Email</label><input type="email" id="nuname" placeholder="e.g. icu@example.com"></div>
     <div class="fg"><label>Password</label><input type="password" id="nupass" placeholder="At least 8 characters"></div>
-    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole"><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option><option value="department">Department user (print only)</option></select></div>
-    <div class="fg"><label>Department</label><select id="nudept"></select></div>
+    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option><option value="department">Department user (print only)</option><option value="pharmacy">Pharmacy manager</option></select></div>
+    <div class="fg" id="nudept-wrap"><label>Department</label><select id="nudept"></select></div>
+    <div class="fg" id="numaster-wrap" style="display:none"><label style="display:flex;align-items:center;gap:8px;color:var(--tx);cursor:pointer"><input type="checkbox" id="numaster" style="width:auto;margin:0"> Grant Master access</label><div class="fhint">Only a current Master can grant this permission.</div></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
       <button class="btn bg" onclick="CM('muser')">Cancel</button>
       <button class="btn bs" onclick="saveUser()">Create User</button>
@@ -1139,11 +1141,11 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
 var FIREBASE_CONFIG={apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
-var FB_APP=null,FB_AUTH=null,FB_DB=null;
+var FB_APP=null,FB_AUTH=null,FB_DB=null,FB_FUNCTIONS=null;
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
-  FB_AUTH=firebase.auth();FB_DB=firebase.firestore();
+  FB_AUTH=firebase.auth();FB_DB=firebase.firestore();FB_FUNCTIONS=firebase.functions();
 }
 
 // Firestore is the only operational data store. Memory is a short-lived UI cache, never persistent storage.
@@ -1526,7 +1528,7 @@ async function doLogin(){
     var deptId=profile.deptId||null;
     var dept=deptId?gd().find(function(d){return d.id===deptId}):null;
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
-    CU={role:profile.role,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:!!profile.controlledCustodian};
+    CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:!!profile.controlledCustodian};
     startApp();
   }catch(err){
     console.error(err);el('aerr').textContent=err.message||'Unable to sign in';el('aerr').style.display='block';
@@ -2164,77 +2166,72 @@ function renderUsers(){
   el('utbl').innerHTML=us.length
     ?us.map(function(u){
       var d=ds.find(function(x){return x.id===u.deptId});
-      return '<tr><td style="font-family:var(--mono)">'+u.email+'</td>'
-        +'<td>'+((d&&d.name)||u.deptId)+'</td>'
+      var roleLabel=u.role==='pharmacy'?'Pharmacy':(u.role==='warehouse'?'Warehouse':(u.controlledCustodian?'Custodian':'Department'));
+      var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
+      var actions='';
+      if(CU&&CU.master===true&&u.id!==CU.id){
+        actions+='<button class="btn bg bxs" data-id="'+u.id+'" data-master="'+(u.master===true?'1':'0')+'" onclick="toggleMasterUser(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-master&#x27;)==&#x27;1&#x27;)">'+(u.master===true?'Remove Master':'Grant Master')+'</button> ';
+        actions+='<button class="btn bd2c bxs" data-id="'+u.id+'" onclick="delUser(this.getAttribute(&#x27;data-id&#x27;))">Delete permanently</button>';
+      }else if(u.id===CU.id){actions='<span style="font-size:11px;color:var(--tx2)">Current user</span>';}
+      else{actions='<span style="font-size:11px;color:var(--tx2)">Master only</span>';}
+      return '<tr><td style="font-family:var(--mono)">'+esc(u.email||'')+'</td>'
+        +'<td>'+roleLabel+masterBadge+(d?' — '+esc(d.name):'')+'</td>'
         +'<td><span class="badge '+(u.active===false?'brd':'bgn')+'">'+(u.active===false?'Inactive':'Active')+'</span></td>'
-        +'<td><button class="btn bd2c bxs" data-id="'+u.id+'" onclick="delUser(this.getAttribute(&#x27;data-id&#x27;))">Deactivate</button></td></tr>';
+        +'<td>'+actions+'</td></tr>';
     }).join('')
-    :'<tr><td colspan="4" style="text-align:center;color:var(--tx2);padding:18px">No department users yet</td></tr>';
-  // Department list — rich cards
+    :'<tr><td colspan="4" style="text-align:center;color:var(--tx2);padding:18px">No managed users yet</td></tr>';
   el('dlst').innerHTML=ds.length
     ?ds.map(function(d){
       var medCount=getMeds(d.id).length;
       var userCount=us.filter(function(u){return u.deptId===d.id}).length;
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--bd);gap:10px">'
-        +'<div style="flex:1">'
-          +'<div style="font-weight:600">'+d.name+'</div>'
-          +'<div style="font-size:11px;color:var(--tx2);margin-top:2px">'
-            +'<span class="chip">'+medCount+' medications</span> '
-            +'<span class="chip">'+userCount+' users</span>'
-          +'</div>'
-        +'</div>'
-        +'<div style="display:flex;gap:6px;flex-shrink:0">'
-          +'<button class="btn bg bxs" data-id="'+d.id+'" data-name="'+d.name+'" onclick="renameDept(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-name&#x27;))">&#x270F; Rename</button>'
-          +'<button class="btn bp bxs" onclick="showPg(&#x27;pg-inv&#x27;);document.getElementById(&#x27;inv-dept-sel&#x27;).value=&#x27;'+d.id+'&#x27;;renderInv()">&#x1F4CB; View Meds</button>'
-          +'<button class="btn bd2c bxs" data-id="'+d.id+'" onclick="delDept(this.getAttribute(&#x27;data-id&#x27;))">&#x1F5D1; Delete</button>'
-        +'</div>'
-        +'</div>';
-    }).join('')
-    :'<div style="text-align:center;padding:24px;color:var(--tx2)">No departments yet — add one above</div>';
-  // Update "copy from" selector in add dept form
+        +'<div style="flex:1"><div style="font-weight:600">'+esc(d.name)+'</div><div style="font-size:11px;color:var(--tx2);margin-top:2px"><span class="chip">'+medCount+' medications</span> <span class="chip">'+userCount+' users</span></div></div>'
+        +'<div style="display:flex;gap:6px;flex-shrink:0"><button class="btn bg bxs" data-id="'+d.id+'" data-name="'+esc(d.name)+'" onclick="renameDept(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-name&#x27;))">&#x270F; Rename</button><button class="btn bp bxs" onclick="showPg(&#x27;pg-inv&#x27;);document.getElementById(&#x27;inv-dept-sel&#x27;).value=&#x27;'+d.id+'&#x27;;renderInv()">&#x1F4CB; View Meds</button><button class="btn bd2c bxs" data-id="'+d.id+'" onclick="delDept(this.getAttribute(&#x27;data-id&#x27;))">&#x1F5D1; Delete</button></div></div>';
+    }).join(''):'<div style="text-align:center;padding:24px;color:var(--tx2)">No departments yet — add one above</div>';
   var ndcopy=el('ndcopy');
-  if(ndcopy){
-    var curVal=ndcopy.value;
-    ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option>'
-      +'<option value="default">Default list (all medications)</option>'
-      +'<optgroup label="Copy from existing dept:">'
-      +ds.map(function(d){return '<option value="'+d.id+'">Copy from: '+d.name+' ('+getMeds(d.id).length+' meds)</option>'}).join('')
-      +'</optgroup>';
-    if(curVal)ndcopy.value=curVal;
-  }
-  el('nudept').innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  if(ndcopy){var curVal=ndcopy.value;ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option><option value="default">Default list (all medications)</option><optgroup label="Copy from existing dept:">'+ds.map(function(d){return '<option value="'+d.id+'">Copy from: '+esc(d.name)+' ('+getMeds(d.id).length+' meds)</option>'}).join('')+'</optgroup>';if(curVal)ndcopy.value=curVal;}
+  el('nudept').innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
 }
-function renameDept(id,currentName){
-  var newName=prompt('Rename department / &#x625;&#x639;&#x627;&#x62F;&#x629; &#x62A;&#x633;&#x645;&#x64A;&#x629;:',currentName);
-  if(!newName||!newName.trim())return;
-  S.upd('departments',id,{name:newName.trim()});
-  toast('Renamed to "'+newName.trim()+'" &#x2713;','succ');
-  renderUsers();fillDS();populateInvDeptSel();
+function updateUserRoleFields(){
+  var role=el('nurole').value;
+  el('nudept-wrap').style.display=(role==='warehouse'||role==='pharmacy')?'none':'block';
+  el('numaster-wrap').style.display=(CU&&CU.master===true&&role==='pharmacy')?'block':'none';
+  if(role!=='pharmacy')el('numaster').checked=false;
 }
-function openAddUser(){if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create custody or warehouse users.','err');el('nuname').value='';el('nupass').value='';el('nurole').value='custodian';renderUsers();OM('muser')}
+function openAddUser(){
+  if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
+  el('nuname').value='';el('nupass').value='';el('nurole').value='custodian';el('numaster').checked=false;renderUsers();updateUserRoleFields();OM('muser');
+}
 async function saveUser(){
   if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
-  var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value,requestedRole=el('nurole').value;
+  var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value,requestedRole=el('nurole').value,grantMaster=el('numaster').checked===true;
   if(!email||!password)return toast('Fill all fields','err');
   if(password.length<8)return toast('Password must be at least 8 characters','err');
-  if(requestedRole!=='warehouse'&&!did)return toast('Add a department first','err');
-  if(gu().find(function(u){return u.email===email}))return toast('Email already exists','err');
-  var secondary=null;
+  if((requestedRole==='department'||requestedRole==='custodian')&&!did)return toast('Add a department first','err');
+  if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
   try{
-    secondary=firebase.initializeApp(FIREBASE_CONFIG,'floorstock-user-'+Date.now());
-    var credential=await secondary.auth().createUserWithEmailAndPassword(email,password);
-    var profile={id:credential.user.uid,email:email,displayName:email,role:requestedRole==='warehouse'?'warehouse':'department',deptId:requestedRole==='warehouse'?null:did,controlledCustodian:requestedRole==='custodian',active:true,created:nowISO()};
-    await FB_DB.collection('users').doc(profile.id).set(profile);
-    S.push('users',profile);
-    toast('Firebase user created ✓','succ');CM('muser');renderUsers();
-  }catch(err){console.error(err);toast(err.message||'Could not create Firebase user','err');}
-  finally{if(secondary)await secondary.delete();}
+    var call=FB_FUNCTIONS.httpsCallable('createManagedUser');
+    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='custodian')?did:null,master:grantMaster});
+    var profile=result.data.user;
+    var users=gu().filter(function(u){return u.id!==profile.id});users.push(profile);S.s('users',users);
+    toast('Firebase user created securely ✓','succ');CM('muser');renderUsers();
+  }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}
 }
 async function delUser(id){
-  if(!confirm('Deactivate this user?'))return;
-  try{await FB_DB.collection('users').doc(id).update({active:false});S.upd('users',id,{active:false});toast('User deactivated','info');renderUsers();}
-  catch(err){console.error(err);toast('Could not deactivate user','err');}
+  if(!CU||CU.master!==true)return toast('Only Master can permanently delete users.','err');
+  if(id===CU.id)return toast('You cannot delete your own account.','err');
+  if(!confirm('Permanently delete this user from Firebase Authentication and Firestore?\n\nThis cannot be undone.'))return;
+  try{var call=FB_FUNCTIONS.httpsCallable('deleteManagedUser');await call({uid:id});S.s('users',gu().filter(function(u){return u.id!==id}));toast('User permanently deleted','info');renderUsers();}
+  catch(err){console.error(err);toast((err&&err.message)||'Could not delete user','err');}
 }
+async function toggleMasterUser(id,isMaster){
+  if(!CU||CU.master!==true)return toast('Only Master can change Master access.','err');
+  var action=isMaster?'remove Master access from':'grant Master access to';
+  if(!confirm('Are you sure you want to '+action+' this user?'))return;
+  try{var call=FB_FUNCTIONS.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});S.upd('users',id,{master:!isMaster});toast('Master access updated ✓','succ');renderUsers();}
+  catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
+}
+
 function addDept(){
   var n=el('ndname').value.trim();if(!n)return toast('Enter department name','err');
   // Generate unique id from name
