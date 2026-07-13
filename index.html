@@ -334,8 +334,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
           <div class="fg" style="margin:0">
             <label>Copy drug list from / &#x646;&#x633;&#x62E; &#x642;&#x627;&#x626;&#x645;&#x629; &#x623;&#x62F;&#x648;&#x64A;&#x629; &#x645;&#x646;</label>
             <select id="ndcopy" style="margin:0">
+              <option value="empty" selected>Empty list — no medicines copied</option>
               <option value="default">Default list (all medications)</option>
-              <option value="empty">Empty list (start fresh)</option>
             </select>
           </div>
           <div style="padding-bottom:13px;flex-shrink:0">
@@ -818,10 +818,10 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 
 <div class="modal-bg" id="muser">
   <div class="modal">
-    <div class="mh"><span class="mt">Add Department User</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
+    <div class="mh"><span class="mt">Add Custody / Warehouse User</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
     <div class="fg"><label>Email</label><input type="email" id="nuname" placeholder="e.g. icu@example.com"></div>
     <div class="fg"><label>Password</label><input type="password" id="nupass" placeholder="At least 8 characters"></div>
-    <div class="fg"><label>Controlled-custody role</label><select id="nurole"><option value="department">Department user (print only)</option><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option></select></div>
+    <div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole"><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option><option value="department">Department user (print only)</option></select></div>
     <div class="fg"><label>Department</label><select id="nudept"></select></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
       <button class="btn bg" onclick="CM('muser')">Cancel</button>
@@ -2195,8 +2195,8 @@ function renderUsers(){
   var ndcopy=el('ndcopy');
   if(ndcopy){
     var curVal=ndcopy.value;
-    ndcopy.innerHTML='<option value="default">Default list (all medications)</option>'
-      +'<option value="empty">Empty list (start fresh)</option>'
+    ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option>'
+      +'<option value="default">Default list (all medications)</option>'
       +'<optgroup label="Copy from existing dept:">'
       +ds.map(function(d){return '<option value="'+d.id+'">Copy from: '+d.name+' ('+getMeds(d.id).length+' meds)</option>'}).join('')
       +'</optgroup>';
@@ -2211,8 +2211,9 @@ function renameDept(id,currentName){
   toast('Renamed to "'+newName.trim()+'" &#x2713;','succ');
   renderUsers();fillDS();populateInvDeptSel();
 }
-function openAddUser(){el('nuname').value='';el('nupass').value='';el('nurole').value='department';renderUsers();OM('muser')}
+function openAddUser(){if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create custody or warehouse users.','err');el('nuname').value='';el('nupass').value='';el('nurole').value='custodian';renderUsers();OM('muser')}
 async function saveUser(){
+  if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
   var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value,requestedRole=el('nurole').value;
   if(!email||!password)return toast('Fill all fields','err');
   if(password.length<8)return toast('Password must be at least 8 characters','err');
@@ -2243,7 +2244,7 @@ function addDept(){
   S.push('departments',{id:id,name:n,created:nowISO()});
   el('ndname').value='';
   // Seed drug list based on copy option
-  var copyMode=(el('ndcopy')||{value:'default'}).value||'default';
+  var copyMode=(el('ndcopy')||{value:'empty'}).value||'empty';
   if(copyMode==='default'&&!getMeds(id).length){
     var ms=MEDS.map(function(m){
       return{id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,5)+'_'+m.n.slice(0,2),
