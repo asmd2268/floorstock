@@ -209,6 +209,109 @@ body.light .ctl-ph-head,body.light .ctl-ph-cell{background:rgba(26,127,55,.09)!i
 .batch-editor-row{display:grid;grid-template-columns:110px 1fr 1fr 38px;gap:8px;align-items:center;margin-bottom:8px}
 .batch-editor-row input{margin:0}.ctl-wide-med{min-width:280px;white-space:normal}.ctl-stat-number{font-size:24px;font-weight:700}
 @media print{.by-ali{display:block!important;text-align:center;font-size:9pt;margin-top:8mm}}
+
+/* ── Controlled medicines responsive screen fit ── */
+#pg-controlled{
+  width:100%;
+  max-width:none;
+  padding:14px 10px 24px;
+  overflow-x:hidden;
+}
+#pg-controlled .card{margin-bottom:10px}
+#pg-controlled .ch{padding:10px 12px}
+#pg-controlled .cb{padding:12px}
+#pg-controlled .tw{
+  width:100%;
+  max-width:100%;
+  overflow-x:auto;
+  -webkit-overflow-scrolling:touch;
+}
+#pg-controlled table{
+  width:100%;
+  table-layout:fixed;
+  font-size:12px;
+}
+#pg-controlled th{
+  padding:7px 5px;
+  font-size:10px;
+  white-space:normal;
+  line-height:1.25;
+  word-break:normal;
+}
+#pg-controlled td{
+  padding:7px 5px;
+  font-size:11px;
+  line-height:1.35;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  vertical-align:middle;
+}
+#pg-controlled td .btn{
+  margin:2px 1px;
+  padding:4px 7px;
+  font-size:10px;
+  white-space:normal;
+}
+#pg-controlled .fhint{font-size:9px;line-height:1.25}
+#pg-controlled .badge{font-size:9px;padding:2px 5px;white-space:normal;text-align:center}
+#pg-controlled input,#pg-controlled select{max-width:100%}
+
+/* Main unified table column sizing */
+#ctl-overview-table td:nth-child(1),#ctl-out-table td:nth-child(1){width:3%;text-align:center}
+#ctl-overview-table td:nth-child(2),#ctl-out-table td:nth-child(2){width:18%}
+#ctl-overview-table td:last-child,#ctl-out-table td:last-child{width:16%}
+
+/* Out-of-stock rows: clear neutral grey in both themes */
+#ctl-out-table tr.ctl-critical-row td{
+  background:#262b31!important;
+  color:#d8dee4!important;
+  border-bottom-color:#444c56!important;
+}
+#ctl-out-table tr.ctl-critical-row:hover td{
+  background:#30363d!important;
+}
+#ctl-out-table tr.ctl-critical-row .fhint{color:#aeb6bf!important}
+#ctl-out-table tr.ctl-critical-row .ctl-wh-cell,
+#ctl-out-table tr.ctl-critical-row .ctl-ph-cell{
+  background:#2d333b!important;
+}
+#ctl-out-table tr.ctl-critical-row .badge.brd{
+  color:#f0f3f6!important;
+  border-color:#8c959f!important;
+  background:#57606a!important;
+}
+body.light #ctl-out-table tr.ctl-critical-row td{
+  background:#e6e8eb!important;
+  color:#24292f!important;
+  border-bottom-color:#c7cdd3!important;
+}
+body.light #ctl-out-table tr.ctl-critical-row:hover td{
+  background:#d8dce1!important;
+}
+body.light #ctl-out-table tr.ctl-critical-row .fhint{color:#57606a!important}
+body.light #ctl-out-table tr.ctl-critical-row .ctl-wh-cell,
+body.light #ctl-out-table tr.ctl-critical-row .ctl-ph-cell{
+  background:#dde1e5!important;
+}
+body.light #ctl-out-table tr.ctl-critical-row .badge.brd{
+  color:#24292f!important;
+  border-color:#8c959f!important;
+  background:#c7cdd3!important;
+}
+
+@media (max-width:1100px){
+  #pg-controlled{padding:10px 6px 20px}
+  #pg-controlled table{min-width:980px}
+  #pg-controlled .stitle{font-size:15px}
+  #pg-controlled .ssub{font-size:11px}
+}
+@media (max-width:700px){
+  #pg-controlled table{min-width:900px}
+  #pg-controlled .ch{align-items:flex-start}
+  #pg-controlled .ch>.fl{width:100%}
+  #pg-controlled .ch input,#pg-controlled .ch select{flex:1;min-width:120px}
+}
+
 </style>
 </head>
 <body>
@@ -583,10 +686,10 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         </table></div>
       </div>
 
-      <div class="card" style="border-color:var(--rd)">
-        <div class="ch" style="background:rgba(218,54,51,.06)">
+      <div class="card" style="border-color:var(--bd2)">
+        <div class="ch" style="background:var(--s2)">
           <div>
-            <span class="ct" style="color:var(--rdl)">Out of stock / الأدوية النافدة</span>
+            <span class="ct" style="color:var(--tx2)">Out of stock / الأدوية النافدة</span>
             <div class="fhint">Medicines that are unavailable in the warehouse, pharmacy custody, or both.</div>
           </div>
           <span class="badge brd" id="ctl-out-count">0</span>
