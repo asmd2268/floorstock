@@ -1198,10 +1198,10 @@ var S={
 };
 // Per-dept keys: medications are stored per dept
 function getMeds(deptId){return S.g('meds_'+deptId)||[]}
-function setMeds(deptId,arr){S.s('meds_'+deptId,arr)}
-function pushMed(deptId,v){var arr=getMeds(deptId);v.id=v.id||'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);arr.push(v);setMeds(deptId,arr);return v}
-function updMed(deptId,id,d){var arr=getMeds(deptId);var i=arr.findIndex(function(x){return x.id===id});if(i>-1){arr[i]=Object.assign({},arr[i],d);setMeds(deptId,arr)}}
-function delMed(deptId,id){setMeds(deptId,getMeds(deptId).filter(function(x){return x.id!==id}))}
+function setMeds(deptId,arr){return S.s('meds_'+deptId,arr)}
+function pushMed(deptId,v){var arr=getMeds(deptId).slice();v.id=v.id||'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);arr.push(v);setMeds(deptId,arr);return v}
+function updMed(deptId,id,d){var arr=getMeds(deptId).slice();var i=arr.findIndex(function(x){return x.id===id});if(i>-1){arr[i]=Object.assign({},arr[i],d);return setMeds(deptId,arr)}return Promise.resolve()}
+function delMed(deptId,id){return setMeds(deptId,getMeds(deptId).filter(function(x){return x.id!==id}))}
 function getExpiry(deptId){return S.g('expiry_'+deptId)||[]}
 function setExpiry(deptId,arr){
   S.s('expiry_'+deptId,arr);
@@ -1432,17 +1432,8 @@ function seed(){
   if(!gd().length){
     S.s('departments',[{id:'icu',name:'ICU',created:nowISO()},{id:'ed',name:'Emergency Dept',created:nowISO()}]);
   }
-  // Seed ICU meds if empty
-  gd().forEach(function(dept){
-    if(!getMeds(dept.id).length){
-      var ms=MEDS.map(function(m){
-        return {id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,5)+'_'+m.n.slice(0,3),
-          name:m.n,category:m.c,min:m.mn,max:m.mx,monthly:null,
-          high_alert:!!m.ha,hazard:!!m.hz,lasa:!!m.ls,created:nowISO()};
-      });
-      setMeds(dept.id,ms);
-    }
-  });
+  // Medication lists are never auto-restored here.
+  // A default list is created only when a department is added and the user explicitly selects "Default list".
   // Import the department names supplied in the Narcotic for floor stocks workbook once.
   // Existing departments are preserved; this is an additive import only.
   var narcoticDepartments=['Emergency','ICU','ANESTHESIA','MMW','MSW','FMW','CCU','FSW','OBW','PEDIA','Nursery','ENDOSCOPY UNIT','AKU','HOME CARE'];
@@ -1574,6 +1565,13 @@ async function doLogin(){
   }
 }
 async function doLogout(){
+  try{
+    if(FB_DB)await FB_DB.waitForPendingWrites();
+  }catch(err){
+    console.error(err);
+    toast('Some changes were not saved. Please retry before signing out.','err');
+    return;
+  }
   S.stopRealtime();
   try{await FB_AUTH.signOut();}catch(err){console.error(err);}
   CU=null;S.cache={};S.ready=false;el('app').style.display='none';el('auth').style.display='flex';el('lgp').value='';
@@ -1843,9 +1841,16 @@ function saveDrug(){
   else{pushMed(deptId,Object.assign({},data,{created:nowISO()}));toast('Added &#x2713;','succ');}
   CM('mdrug');renderInv();
 }
-function delDrug(id,deptId){
+async function delDrug(id,deptId){
   if(!confirm('Delete this medication?'))return;
-  delMed(deptId,id);renderInv();toast('Deleted','info');
+  try{
+    await delMed(deptId,id);
+    renderInv();
+    toast('Deleted and saved ✓','succ');
+  }catch(err){
+    console.error(err);
+    toast('Delete was not saved. Please retry.','err');
+  }
 }
 // Duplicate panel
 function showDupPanel(){
@@ -1868,13 +1873,20 @@ function showDupPanel(){
   OM('mdup');
 }
 function toggleDupAll(chk){document.querySelectorAll('.dup-chk').forEach(function(c){c.checked=chk.checked})}
-function deleteSelected(){
+async function deleteSelected(){
   var selected=Array.from(document.querySelectorAll('.dup-chk:checked'));
   if(!selected.length)return toast('Select at least one','err');
   if(!confirm('Delete '+selected.length+' selected medications?'))return;
-  selected.forEach(function(chk){delMed(chk.dataset.dept,chk.dataset.id)});
-  toast('Deleted '+selected.length+' medications','succ');
-  CM('mdup');renderInv();
+  var deptId=selected[0].dataset.dept;
+  var ids=new Set(selected.map(function(chk){return chk.dataset.id}));
+  try{
+    await setMeds(deptId,getMeds(deptId).filter(function(m){return !ids.has(m.id)}));
+    toast('Deleted '+selected.length+' medications and saved ✓','succ');
+    CM('mdup');renderInv();
+  }catch(err){
+    console.error(err);
+    toast('Delete was not saved. Please retry.','err');
+  }
 }
 
 // ── REQUESTS ─────────────────────────────────────────────
@@ -3734,15 +3746,21 @@ function clearInvSelection(){
 function getSelectedMedIds(){
   return Array.from(document.querySelectorAll('.inv-chk:checked')).map(function(c){return c.dataset.id});
 }
-function bulkDelete(){
+async function bulkDelete(){
   var ids=getSelectedMedIds();
   if(!ids.length)return toast('Select medications first','err');
   var deptId=getInvDept();
   if(!confirm('Delete '+ids.length+' selected medications from this department?'))return;
-  ids.forEach(function(id){delMed(deptId,id)});
-  toast(ids.length+' medications deleted ✓','succ');
-  clearInvSelection();
-  renderInv();
+  var idSet=new Set(ids);
+  try{
+    await setMeds(deptId,getMeds(deptId).filter(function(m){return !idSet.has(m.id)}));
+    toast(ids.length+' medications deleted and saved ✓','succ');
+    clearInvSelection();
+    renderInv();
+  }catch(err){
+    console.error(err);
+    toast('Delete was not saved. Please retry.','err');
+  }
 }
 function bulkChangeCategory(){
   var ids=getSelectedMedIds();
