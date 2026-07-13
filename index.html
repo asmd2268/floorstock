@@ -2199,8 +2199,30 @@ function updateUserRoleFields(){
   if(role!=='pharmacy')el('numaster').checked=false;
 }
 function openAddUser(){
-  if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
-  el('nuname').value='';el('nupass').value='';el('nurole').value='custodian';el('numaster').checked=false;renderUsers();updateUserRoleFields();OM('muser');
+  try{
+    if(!CU||CU.role!=='pharmacy'){
+      toast('Only the Pharmacy Manager may create users.','err');
+      return;
+    }
+    var emailInput=el('nuname');
+    var passInput=el('nupass');
+    var roleSelect=el('nurole');
+    var masterInput=el('numaster');
+    var modal=el('muser');
+    if(!emailInput||!passInput||!roleSelect||!masterInput||!modal){
+      throw new Error('Add User form is missing from the current page. Upload the latest index.html and refresh.');
+    }
+    emailInput.value='';
+    passInput.value='';
+    roleSelect.value='custodian';
+    masterInput.checked=false;
+    updateUserRoleFields();
+    modal.classList.add('on');
+    setTimeout(function(){emailInput.focus();},50);
+  }catch(err){
+    console.error('openAddUser failed:',err);
+    toast(err.message||'Could not open Add User form.','err');
+  }
 }
 async function saveUser(){
   if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
