@@ -1,23 +1,23 @@
-# Stock quantity restoration and out-of-stock separation
+# Required deployment
 
-This build restores the exact quantities and expiry dates from `narcotic-master-stock.xlsx`:
+The error `Missing or insufficient permission` was caused by a mismatch between the Firestore document names used by the website and the names permitted by the old Firestore rules.
 
-- A: MOH code
-- B: NUPCO code
-- C: medicine name
-- D: warehouse system balance
-- E: warehouse outside-system balance
-- F: first warehouse expiry
-- G: quantity linked to the second warehouse expiry
-- H: second warehouse expiry
-- I: minimum
-- J: maximum
-- L: pharmacy controlled-custody quantity
-- M: pharmacy controlled-custody expiry
+## Install
 
-The inpatient department workbook remains separate and does not overwrite warehouse or pharmacy quantities.
+1. Replace the current GitHub `index.html` with this folder's `index.html`.
+2. Open Terminal in this extracted folder.
+3. Run:
 
-## Deployment
-Replace the current GitHub `index.html` with this file, then hard-refresh the site with Command + Shift + R.
+```bash
+firebase use floorstock-6ac2d
+firebase deploy --only firestore:rules
+```
 
-No Cloud Functions redeployment is required for this correction.
+4. Wait for `Deploy complete`.
+5. Hard-refresh the website with `Command + Shift + R`.
+6. Sign out and sign in again.
+
+## Colours
+
+- Blue columns: warehouse quantities and expiry dates.
+- Green columns: controlled-pharmacy quantities and expiry dates.

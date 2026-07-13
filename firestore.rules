@@ -1,13 +1,37 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    function signedIn() { return request.auth != null; }
-    function profile() { return get(/databases/$(database)/documents/users/$(request.auth.uid)).data; }
-    function active() { return signedIn() && profile().active != false; }
-    function pharmacy() { return active() && profile().role == 'pharmacy'; }
-    function master() { return pharmacy() && profile().master == true; }
-    function controlledOfficer() { return active() && profile().role == 'controlled_pharmacy'; }
-    function warehouseOfficer() { return active() && profile().role == 'warehouse'; }
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function active() {
+      return signedIn() && profile().active != false;
+    }
+
+    function isPharmacy() {
+      return active() && profile().role == 'pharmacy';
+    }
+
+    function isMaster() {
+      return isPharmacy() && profile().master == true;
+    }
+
+    function isControlledOfficer() {
+      return active() && profile().role == 'controlled_pharmacy';
+    }
+
+    function isWarehouseOfficer() {
+      return active() && profile().role == 'warehouse';
+    }
+
+    function controlledManager() {
+      return isMaster() || isControlledOfficer();
+    }
 
     match /users/{uid} {
       allow read: if active();
@@ -15,28 +39,53 @@ service cloud.firestore {
     }
 
     match /audit_logs/{logId} {
-      allow read: if master();
+      allow read: if isMaster();
       allow write: if false;
     }
 
     match /floorstock_state/{docId} {
       allow read: if active();
 
+      // Shared controlled-medicine catalogue:
+      // Master and controlled pharmacy officer can fully manage it.
+      // Warehouse officer may add/update shared medicine details.
       allow write: if
-        (docId == 'controlled_catalog' && controlledOfficer()) ||
-        (docId.matches('controlled_list_.*') && controlledOfficer()) ||
-        (docId.matches('controlled_stock_custody_.*') && controlledOfficer()) ||
-        (docId == 'controlled_stock_warehouse' && warehouseOfficer()) ||
-        (docId == 'controlled_moves' && (controlledOfficer() || warehouseOfficer())) ||
-        (docId.matches('controlled_settings_.*') && (controlledOfficer() || pharmacy())) ||
-        (!docId.matches('controlled_.*') && active() &&
+        (docId == 'controlled_catalog' &&
+          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // Warehouse quantities and warehouse expiry dates.
+        (docId == 'controlled_warehouse' &&
+          (isMaster() || isWarehouseOfficer())) ||
+
+        // Pharmacy controlled-custody quantities and expiry dates.
+        (docId == 'controlled_pharmacy_stock' &&
+          controlledManager()) ||
+
+        // Per-department controlled medicine lists.
+        (docId.matches('controlled_dept_list_.*') &&
+          controlledManager()) ||
+
+        // Controlled module settings, signatures and configurable alert period.
+        (docId.matches('controlled_settings_.*') &&
+          controlledManager()) ||
+        (docId == 'controlled_alert_days' &&
+          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // Shared movement and receipt log.
+        (docId == 'controlled_moves' &&
+          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // One-time import/seed markers used by the current application.
+        (docId == 'controlled_department_seed_v2' &&
+          controlledManager()) ||
+        (docId == 'controlled_master_stock_seed_v4' &&
+          (isMaster() || isControlledOfficer() || isWarehouseOfficer())) ||
+
+        // Existing non-controlled application data.
+        (!docId.matches('controlled_.*') &&
+          active() &&
           profile().role != 'controlled_pharmacy' &&
           profile().role != 'warehouse');
-    }
-
-    match /public_controlled_expiry/{deptId} {
-      allow read: if true;
-      allow write: if active() && (profile().role == 'controlled_pharmacy' || profile().role == 'pharmacy');
     }
 
     match /public_expiry/{deptId} {
@@ -44,6 +93,11 @@ service cloud.firestore {
       allow write: if active() &&
         profile().role != 'controlled_pharmacy' &&
         profile().role != 'warehouse';
+    }
+
+    match /public_controlled_expiry/{deptId} {
+      allow read: if true;
+      allow write: if controlledManager();
     }
 
     match /{document=**} {

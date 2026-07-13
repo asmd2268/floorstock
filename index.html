@@ -194,6 +194,14 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
 
 .ctl-alert-row td{background:rgba(210,153,34,.055)!important}
 .ctl-critical-row td{background:rgba(218,54,51,.07)!important}
+
+/* Controlled stock ownership colours */
+.ctl-wh-head,.ctl-wh-cell{background:rgba(31,111,235,.10)!important}
+.ctl-wh-head{color:#58a6ff!important;border-bottom-color:#1f6feb!important}
+.ctl-ph-head,.ctl-ph-cell{background:rgba(46,160,67,.10)!important}
+.ctl-ph-head{color:#56d364!important;border-bottom-color:#2ea043!important}
+body.light .ctl-wh-head,body.light .ctl-wh-cell{background:rgba(9,105,218,.09)!important}
+body.light .ctl-ph-head,body.light .ctl-ph-cell{background:rgba(26,127,55,.09)!important}
 </style>
 </head>
 <body>
@@ -561,8 +569,8 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         <div class="tw"><table>
           <thead><tr>
             <th>#</th><th>Medicine</th><th>Classification</th><th>Flags</th><th>Min / Max</th>
-            <th>Warehouse system</th><th>Warehouse outside</th><th>Warehouse expiry</th>
-            <th>Pharmacy qty</th><th>Pharmacy expiry</th><th>Status</th><th></th>
+            <th class="ctl-wh-head">Warehouse system</th><th class="ctl-wh-head">Warehouse outside</th><th class="ctl-wh-head">Warehouse expiry</th>
+            <th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th><th>Status</th><th></th>
           </tr></thead>
           <tbody id="ctl-overview-table"></tbody>
         </table></div>
@@ -579,8 +587,8 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         <div class="tw"><table>
           <thead><tr>
             <th>#</th><th>Medicine</th><th>Classification</th><th>Min / Max</th>
-            <th>Warehouse system</th><th>Warehouse outside</th><th>Warehouse expiry</th>
-            <th>Pharmacy qty</th><th>Pharmacy expiry</th><th>Missing from</th><th></th>
+            <th class="ctl-wh-head">Warehouse system</th><th class="ctl-wh-head">Warehouse outside</th><th class="ctl-wh-head">Warehouse expiry</th>
+            <th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th><th>Missing from</th><th></th>
           </tr></thead>
           <tbody id="ctl-out-table"></tbody>
         </table></div>
@@ -2294,7 +2302,8 @@ async function ctlEditWarehouseStock(id){if(!ctlIsWarehouse())return;var all=Obj
 async function ctlEditPharmacyStock(id){if(!ctlIsOfficer())return;var all=Object.assign({},ctlPharmacy()),x=Object.assign({},all[id]||{}),qty=ctlNum(prompt('Pharmacy custody quantity',x.qty||0)),b=ctlPromptBatches(x.batches,'Pharmacy');if(b===null)return;all[id]={qty:qty,batches:b};await ctlSetPharmacy(all);ctlMove({type:'pharmacy_stock_edit',medId:id,note:'Pharmacy custody balance/expiry updated'});renderControlled()}
 async function ctlSendToPharmacy(id){if(!ctlIsWarehouse())return;var wh=Object.assign({},ctlWarehouse()),x=Object.assign({},wh[id]||{}),qty=ctlNum(prompt('Quantity to send to pharmacy','0'));if(qty<=0||qty>ctlNum(x.system)+ctlNum(x.outside))return toast('Invalid or insufficient quantity','err');var expiry=ctlDate(prompt('Expiry date for sent batch',''));if(!expiry)return;var fromSystem=Math.min(qty,ctlNum(x.system));x.system=ctlNum(x.system)-fromSystem;x.outside=ctlNum(x.outside)-(qty-fromSystem);wh[id]=x;await ctlSetWarehouse(wh);ctlMove({type:'warehouse_send',medId:id,qty:qty,expiry:expiry,status:'pending',note:'Sent to pharmacy; awaiting accept/reject'});renderControlled()}
 async function ctlReceiveDelivery(moveId,accept){if(!ctlIsOfficer())return;var moves=ctlMoves().slice(),m=moves.find(function(x){return x.id===moveId});if(!m||m.status!=='pending')return;if(accept){var ph=Object.assign({},ctlPharmacy()),x=Object.assign({},ph[m.medId]||{});x.qty=ctlNum(x.qty)+ctlNum(m.qty);x.batches=(x.batches||[]).concat([{qty:ctlNum(m.qty),expiry:m.expiry,lot:''}]);ph[m.medId]=x;await ctlSetPharmacy(ph);m.status='accepted';m.type='receipt_accepted';m.note='Accepted by controlled-medicines pharmacy officer';}else{var why=prompt('Reason for rejection');if(!why)return;var wh=Object.assign({},ctlWarehouse()),w=Object.assign({},wh[m.medId]||{});w.system=ctlNum(w.system)+ctlNum(m.qty);wh[m.medId]=w;await ctlSetWarehouse(wh);m.status='rejected';m.type='receipt_rejected';m.note=why;}await S.s('controlled_moves',moves);renderControlled()}
-async function ctlAssignMedicineToDept(){if(!ctlCanEditDept())return;var dept=ctlCurrentDept(),cat=ctlCatalog(),term=prompt('Enter medicine name, MOH code or NUPCO code');if(!term)return;var q=term.toLowerCase(),matches=cat.filter(function(m){return [m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)});if(!matches.length)return toast('Medicine not found in shared catalogue','err');var med=matches.length===1?matches[0]:matches[ctlNum(prompt(matches.map(function(m,i){return (i+1)+'. '+m.name}).join('\n')+'\nChoose number','1'))-1];if(!med)return;var list=ctlDeptList(dept).slice();if(list.some(function(x){return x.medId===med.id}))return toast('Already assigned','err');list.push({medId:med.id,min:med.min,max:med.max,qty:0,batches:[]});await ctlSetDeptList(dept,list);ctlMove({type:'dept_list_add',dept:dept,medId:med.id,note:'Added to inpatient department list'});renderControlled()}
+async function ctlAssignMedicineToDept(){if(!ctlCanEditDept())return;var dept=ctlCurrentDept(),cat=ctlCatalog(),term=prompt('Enter medicine name, MOH code or NUPCO code');if(!term)return;var q=term.toLowerCase(),matches=cat.filter(function(m){return [m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)});if(!matches.length)return toast('Medicine not found in shared catalogue','err');var med=matches.length===1?matches[0]:matches[ctlNum(prompt(matches.map(function(m,i){return (i+1)+'. '+m.name}).join('\n')+'
+Choose number','1'))-1];if(!med)return;var list=ctlDeptList(dept).slice();if(list.some(function(x){return x.medId===med.id}))return toast('Already assigned','err');list.push({medId:med.id,min:med.min,max:med.max,qty:0,batches:[]});await ctlSetDeptList(dept,list);ctlMove({type:'dept_list_add',dept:dept,medId:med.id,note:'Added to inpatient department list'});renderControlled()}
 async function ctlEditDeptMedicine(id){if(!ctlCanEditDept())return;var dept=ctlCurrentDept(),list=ctlDeptList(dept).slice(),i=list.findIndex(function(x){return x.medId===id});if(i<0)return;var x=Object.assign({},list[i]);x.min=ctlNum(prompt('Department minimum',x.min||0));x.max=ctlNum(prompt('Department maximum',x.max||0));x.qty=ctlNum(prompt('Current department quantity',x.qty||0));var b=ctlPromptBatches(x.batches,'Department');if(b===null)return;x.batches=b;list[i]=x;await ctlSetDeptList(dept,list);await ctlSyncPublicDept(dept);ctlMove({type:'dept_stock_edit',dept:dept,medId:id,note:'Department quantity/expiry updated'});renderControlled()}
 async function ctlRemoveDeptMedicine(id){if(!ctlCanEditDept()||!confirm('Remove this medicine from the department list?'))return;var dept=ctlCurrentDept();await ctlSetDeptList(dept,ctlDeptList(dept).filter(function(x){return x.medId!==id}));await ctlSyncPublicDept(dept);ctlMove({type:'dept_list_remove',dept:dept,medId:id,note:'Removed from inpatient department list'});renderControlled()}
 async function ctlEditSignatures(){if(!ctlCanEditDept())return;var dept=ctlCurrentDept(),s=Object.assign({},S.g('controlled_settings_'+dept)||{});s.custodyOfficer=prompt('أمين العهدة بالقسم',s.custodyOfficer||'')||'';s.pharmacyControlledOfficer=prompt('مسؤول الأدوية المخدرة بالصيدلية',s.pharmacyControlledOfficer||CU.username)||'';s.pharmacyManager=prompt('مدير الصيدلية',s.pharmacyManager||'')||'';await S.s('controlled_settings_'+dept,s);renderControlled()}
@@ -2313,7 +2322,9 @@ function ctlImportRows(rows,source){
   return Promise.all([ctlSetCatalog(cat),ctlSetWarehouse(wh),ctlSetPharmacy(ph)]).then(function(){ctlMove({type:'master_import',note:'Imported '+source+'; added '+added+', updated '+updated});toast('Import completed: '+added+' added, '+updated+' updated ✓','succ');renderControlled()});
 }
 function ctlImportMasterFile(file){if(!file)return;if(typeof XLSX==='undefined')return toast('Excel library unavailable','err');var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});ctlImportRows(rows,file.name)}catch(err){console.error(err);toast(err.message||'Import failed','err')}el('ctl-import-file').value=''};reader.readAsArrayBuffer(file)}
-function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)return toast('Paste text first','err');var rows=t.split(/\r?\n/).map(function(line){return line.split('\t')});ctlImportRows(rows,'pasted text')}
+function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)return toast('Paste text first','err');var rows=t.split(/
+?
+/).map(function(line){return line.split('\t')});ctlImportRows(rows,'pasted text')}
 function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list to print it.','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,list=ctlDeptList(dept),s=S.g('controlled_settings_'+dept)||{},rows=list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'')+'</td><td>'+esc(m.nupco||'')+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min)+'</td><td>'+ctlNum(x.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc((x.batches||[]).map(function(b){return (b.qty||0)+' @ '+fmtDate(b.expiry)}).join(' / '))+'</td></tr>'}).join(''),url=new URL(window.location.href);url.search='';url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url.toString()),w=window.open('','_ctlprint');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:center}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:35px;text-align:center}.line{border-top:1px solid #333;padding-top:8px;margin-top:35px}</style></head><body><h2>'+esc(name)+' — قائمة الأدوية المخدرة والنفسية</h2><img src="'+qr+'" width="115" style="float:left"><p>Barcode: expiry follow-up / متابعة تواريخ الانتهاء</p><table><thead><tr><th>#</th><th>الكود الوزاري</th><th>كود نوبكو</th><th>الدواء</th><th>التصنيف</th><th>Min</th><th>Max</th><th>الكمية</th><th>الدفعات والانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div class="line">أمين العهدة بالقسم<br>'+esc(s.custodyOfficer||'')+'</div><div class="line">مسؤول الأدوية المخدرة بالصيدلية<br>'+esc(s.pharmacyControlledOfficer||'')+'</div><div class="line">مدير الصيدلية<br>'+esc(s.pharmacyManager||'')+'</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>');w.document.close()}
 
 // ── EXPIRY DATES ─────────────────────────────────────────
@@ -4390,7 +4401,7 @@ function renderCtlOverview(){
     if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Pharmacy</button>');
     if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>');
     if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">Delete</button>');
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(w.system)+'</td><td>'+ctlNum(w.outside)+'</td><td>'+ctlBatchText(w.batches)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
   }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected filter.</td></tr>';
 }
 function renderCtlCatalog(){
@@ -4609,14 +4620,14 @@ function renderCtlOverview(){
 
   body.innerHTML=available.length?available.map(function(x,i){
     var m=x.m,w=x.w,p=x.p;
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(w.system)+'</td><td>'+ctlNum(w.outside)+'</td><td>'+ctlBatchText(w.batches)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
   }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No available medicines match the selected filter.</td></tr>';
 
   if(outBody){
     el('ctl-out-count').textContent=outRows.length;
     outBody.innerHTML=outRows.length?outRows.map(function(x,i){
       var m=x.m,w=x.w,p=x.p;
-      return '<tr class="ctl-critical-row"><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(w.system)+'</td><td>'+ctlNum(w.outside)+'</td><td>'+ctlBatchText(w.batches)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td><span class="badge brd">'+esc(x.outFrom)+'</span></td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
+      return '<tr class="ctl-critical-row"><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="ctl-wh-cell">'+ctlNum(w.system)+'</td><td class="ctl-wh-cell">'+ctlNum(w.outside)+'</td><td class="ctl-wh-cell">'+ctlBatchText(w.batches)+'</td><td class="ctl-ph-cell">'+ctlNum(p.qty)+'</td><td class="ctl-ph-cell">'+ctlBatchText(p.batches)+'</td><td><span class="badge brd">'+esc(x.outFrom)+'</span></td><td style="white-space:nowrap">'+actionsFor(m)+'</td></tr>';
     }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">No out-of-stock medicines.</td></tr>';
   }
 }
