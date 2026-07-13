@@ -403,6 +403,137 @@ body.light #ctl-out-table tr td.ctl-name-fully-out{background:#d8dde3!important}
 #ctl-dept-table td:first-child,#ctl-dept-table th:first-child{text-align:center}
 #ctl-bulk-shelf-btn{border-color:var(--ac);color:var(--acl)}
 
+
+/* Refrigerated medicine badge: violet-gray, distinct from LASA/alerts */
+.badge.bcool{
+  color:#d8b4fe;
+  border-color:#7e22ce;
+  background:rgba(126,34,206,.16)
+}
+body.light .badge.bcool{
+  color:#6b21a8;
+  border-color:#9333ea;
+  background:rgba(147,51,234,.10)
+}
+
+/* Compact one-page request printing */
+@media print{
+  .request-print-sheet{
+    width:100%!important;
+    max-width:none!important;
+    margin:0!important;
+    padding:2mm!important;
+    font-size:7.5pt!important;
+    page-break-inside:avoid!important
+  }
+  .request-print-header{
+    padding:2mm 3mm!important;
+    margin-bottom:2mm!important;
+    font-size:8pt!important;
+    line-height:1.15!important
+  }
+  .request-print-header .dept-name{
+    font-size:10pt!important;
+    margin:0!important
+  }
+  .request-print-sheet table{
+    width:100%!important;
+    table-layout:fixed!important;
+    font-size:7pt!important
+  }
+  .request-print-sheet th,.request-print-sheet td{
+    padding:1.5mm 1.2mm!important;
+    line-height:1.15!important
+  }
+  .request-print-sheet tr{page-break-inside:avoid!important}
+  @page{size:A4 portrait;margin:5mm}
+}
+
+
+.cool-icon{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:23px;
+  height:23px;
+  margin-inline-start:5px;
+  border-radius:50%;
+  border:1px solid #7e22ce;
+  background:rgba(126,34,206,.16);
+  color:#e9d5ff;
+  font-size:13px;
+  line-height:1;
+  vertical-align:middle;
+  box-shadow:0 0 0 1px rgba(126,34,206,.08)
+}
+body.light .cool-icon{
+  background:rgba(147,51,234,.11);
+  border-color:#9333ea;
+  color:#6b21a8
+}
+@media print{
+  .cool-icon{
+    width:auto!important;
+    height:auto!important;
+    margin-inline-start:3px!important;
+    border:none!important;
+    background:none!important;
+    box-shadow:none!important;
+    font-size:10pt!important
+  }
+}
+
+
+.fridge-icon{
+  position:relative;
+  width:22px!important;
+  height:24px!important;
+  padding:0!important;
+  border-radius:5px!important;
+  background:rgba(126,34,206,.14)!important;
+  border:1px solid #7e22ce!important;
+}
+.fridge-glyph{
+  position:relative;
+  display:block;
+  width:10px;
+  height:15px;
+  border:1.7px solid currentColor;
+  border-radius:2px;
+}
+.fridge-glyph:before{
+  content:"";
+  position:absolute;
+  left:-1.7px;
+  right:-1.7px;
+  top:5px;
+  border-top:1.7px solid currentColor;
+}
+.fridge-glyph:after{
+  content:"";
+  position:absolute;
+  right:1.5px;
+  top:1.7px;
+  width:1.5px;
+  height:3px;
+  background:currentColor;
+  border-radius:1px;
+  box-shadow:0 6px 0 currentColor;
+}
+@media print{
+  .fridge-icon{
+    width:14px!important;
+    height:17px!important;
+    border:1px solid #000!important;
+    background:none!important;
+  }
+  .fridge-glyph{
+    width:8px!important;
+    height:12px!important;
+    color:#000!important;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -1179,6 +1310,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0"><input type="checkbox" id="cha2" style="width:auto;margin:0"> <span class="badge brd">&#x1F534; High Alert</span></label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0"><input type="checkbox" id="chaz" style="width:auto;margin:0"> <span class="badge byl">&#x26A0; Hazard</span></label>
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0"><input type="checkbox" id="chls" style="width:auto;margin:0"> <span class="badge bpu">&#x1F535; LASA</span></label>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;color:var(--tx);font-size:13px;margin:0"><input type="checkbox" id="chcool" style="width:auto;margin:0"> <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span></label>
       </div>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
@@ -2521,15 +2653,15 @@ function renderControlled(){
 }
 function renderCtlCatalog(){
   var q=(el('ctl-search')?el('ctl-search').value:'').toLowerCase(),rows=ctlCatalog().filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)});
-  el('ctl-catalog-table').innerHTML=rows.length?rows.map(function(m,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td style="font-weight:600">'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+'</td><td>'+ctlNum(m.max)+'</td><td>'+(ctlCanEditCatalog()?'<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button>':'')+'</td></tr>'}).join(''):'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tx2)">No medicines yet. Import the Excel file or add a medicine.</td></tr>';
+  el('ctl-catalog-table').innerHTML=rows.length?rows.map(function(m,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td style="font-weight:600">'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+'</td><td>'+ctlNum(m.max)+'</td><td>'+(ctlCanEditCatalog()?'<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button>':'')+'</td></tr>'}).join(''):'<tr><td colspan="8" style="text-align:center;padding:24px;color:var(--tx2)">No medicines yet. Import the Excel file or add a medicine.</td></tr>';
 }
 function renderCtlWarehouse(){
   var wh=ctlWarehouse(),ph=ctlPharmacy(),can=ctlIsWarehouse();
-  el('ctl-warehouse-table').innerHTML=ctlCatalog().map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(w.system)+'</td><td>'+ctlNum(w.outside)+'</td><td>'+ctlBatchText(w.batches)+'</td><td>'+ctlNum(p.qty)+'<br>'+ctlBatchText(p.batches)+'</td><td>'+(can?'<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button> <button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join('');
+  el('ctl-warehouse-table').innerHTML=ctlCatalog().map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')<div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(w.system)+'</td><td>'+ctlNum(w.outside)+'</td><td>'+ctlBatchText(w.batches)+'</td><td>'+ctlNum(p.qty)+'<br>'+ctlBatchText(p.batches)+'</td><td>'+(can?'<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button> <button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join('');
 }
 function renderCtlPharmacy(){
   var wh=ctlWarehouse(),ph=ctlPharmacy(),can=ctlIsOfficer();
-  el('ctl-pharmacy-table').innerHTML=ctlCatalog().map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td>'+ctlNum(w.system)+' / '+ctlNum(w.outside)+'</td><td>'+(can?'<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join('');
+  el('ctl-pharmacy-table').innerHTML=ctlCatalog().map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')<div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td>'+ctlNum(w.system)+' / '+ctlNum(w.outside)+'</td><td>'+(can?'<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join('');
 }
 function renderCtlDepartments(){
   var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
@@ -2541,11 +2673,11 @@ function renderCtlDepartments(){
   var alerts=[];
   list.forEach(function(x){(x.batches||[]).forEach(function(b){var d=daysUntil(b.expiry);if(d!==null&&d<=30)alerts.push({name:(ctlMedicine(x.medId)||{}).name||'',days:d})})});
   el('ctl-dept-alerts').innerHTML=alerts.length?'<div class="alert-banner">⚠ '+alerts.map(function(a){return esc(a.name)+' ('+(a.days<0?'expired '+Math.abs(a.days)+'d':a.days+'d')+')'}).join(' · ')+'</div>':'';
-  el('ctl-dept-table').innerHTML=list.length?list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td><b>'+esc(m.name||'')+'</b></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min!=null?x.min:m.min)+'</td><td>'+ctlNum(x.max!=null?x.max:m.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+ctlBatchText(x.batches)+'</td><td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join(''):'<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
+  el('ctl-dept-table').innerHTML=list.length?list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td><b>'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min!=null?x.min:m.min)+'</td><td>'+ctlNum(x.max!=null?x.max:m.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+ctlBatchText(x.batches)+'</td><td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join(''):'<tr><td colspan="10" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
 }
 function renderCtlPending(){
   if(!el('ctl-pending'))return;var pending=ctlMoves().filter(function(x){return x.type==='warehouse_send'&&x.status==='pending'});
-  el('ctl-pending').innerHTML=pending.length?pending.map(function(x){var m=ctlMedicine(x.medId)||{};return '<div class="limit-row"><span><b>'+esc(m.name||'')+'</b> — Qty: '+ctlNum(x.qty)+(x.expiry?' · Exp: '+fmtDate(x.expiry):'')+'</span>'+(ctlIsOfficer()?'<span><button class="btn bs bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,true)">Accept</button> <button class="btn bd2c bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,false)">Reject</button></span>':'<span class="chip">Awaiting pharmacy officer</span>')+'</div>'}).join(''):'<div style="color:var(--tx2)">No pending deliveries.</div>';
+  el('ctl-pending').innerHTML=pending.length?pending.map(function(x){var m=ctlMedicine(x.medId)||{};return '<div class="limit-row"><span><b>'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'') — Qty: '+ctlNum(x.qty)+(x.expiry?' · Exp: '+fmtDate(x.expiry):'')+'</span>'+(ctlIsOfficer()?'<span><button class="btn bs bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,true)">Accept</button> <button class="btn bd2c bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,false)">Reject</button></span>':'<span class="chip">Awaiting pharmacy officer</span>')+'</div>'}).join(''):'<div style="color:var(--tx2)">No pending deliveries.</div>';
 }
 function renderCtlLog(){if(!el('ctl-log'))return;var dept=ctlCurrentDept(),rows=ctlMoves().filter(function(x){return !x.dept||x.dept===dept}).slice(-30).reverse();el('ctl-log').innerHTML=rows.length?'<div class="tw"><table><thead><tr><th>Date</th><th>Action</th><th>Medicine</th><th>By</th><th>Details</th></tr></thead><tbody>'+rows.map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+esc(x.type||'')+'</td><td>'+esc(m.name||'—')+'</td><td>'+esc(x.by||'')+'</td><td>'+esc(x.note||'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<div style="color:var(--tx2)">No movements yet.</div>'}
 function ctlPromptMed(existing){
@@ -2580,7 +2712,7 @@ function ctlImportRows(rows,source){
 }
 function ctlImportMasterFile(file){if(!file)return;if(typeof XLSX==='undefined')return toast('Excel library unavailable','err');var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});ctlImportRows(rows,file.name)}catch(err){console.error(err);toast(err.message||'Import failed','err')}el('ctl-import-file').value=''};reader.readAsArrayBuffer(file)}
 function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)return toast('Paste text first','err');var rows=t.split(/\r?\n/).map(function(line){return line.split('\t')});ctlImportRows(rows,'pasted text')}
-function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list to print it.','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,list=ctlDeptList(dept),s=S.g('controlled_settings_'+dept)||{},rows=list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'')+'</td><td>'+esc(m.nupco||'')+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min)+'</td><td>'+ctlNum(x.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc((x.batches||[]).map(function(b){return (b.qty||0)+' @ '+fmtDate(b.expiry)}).join(' / '))+'</td></tr>'}).join(''),url=new URL(window.location.href);url.search='';url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url.toString()),w=window.open('','_ctlprint');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:center}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:35px;text-align:center}.line{border-top:1px solid #333;padding-top:8px;margin-top:35px}</style></head><body><h2>'+esc(name)+' — قائمة الأدوية المخدرة والمقيدة</h2><img src="'+qr+'" width="115" style="float:left"><p>Barcode: expiry follow-up / متابعة تواريخ الانتهاء</p><table><thead><tr><th>#</th><th>الكود الوزاري</th><th>كود نوبكو</th><th>الدواء</th><th>التصنيف</th><th>Min</th><th>Max</th><th>الكمية</th><th>الدفعات والانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div class="line">أمين العهدة بالقسم<br>'+esc(s.custodyOfficer||'')+'</div><div class="line">مسؤول الأدوية المخدرة بالصيدلية<br>'+esc(s.pharmacyControlledOfficer||'')+'</div><div class="line">مدير الصيدلية<br>'+esc(s.pharmacyManager||'')+'</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>');w.document.close()}
+function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list to print it.','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,list=ctlDeptList(dept),s=S.g('controlled_settings_'+dept)||{},rows=list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'')+'</td><td>'+esc(m.nupco||'')+'</td><td>'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min)+'</td><td>'+ctlNum(x.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc((x.batches||[]).map(function(b){return (b.qty||0)+' @ '+fmtDate(b.expiry)}).join(' / '))+'</td></tr>'}).join(''),url=new URL(window.location.href);url.search='';url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url.toString()),w=window.open('','_ctlprint');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:center}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:35px;text-align:center}.line{border-top:1px solid #333;padding-top:8px;margin-top:35px}</style></head><body><h2>'+esc(name)+' — قائمة الأدوية المخدرة والمقيدة</h2><img src="'+qr+'" width="115" style="float:left"><p>Barcode: expiry follow-up / متابعة تواريخ الانتهاء</p><table><thead><tr><th>#</th><th>الكود الوزاري</th><th>كود نوبكو</th><th>الدواء</th><th>التصنيف</th><th>Min</th><th>Max</th><th>الكمية</th><th>الدفعات والانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div class="line">أمين العهدة بالقسم<br>'+esc(s.custodyOfficer||'')+'</div><div class="line">مسؤول الأدوية المخدرة بالصيدلية<br>'+esc(s.pharmacyControlledOfficer||'')+'</div><div class="line">مدير الصيدلية<br>'+esc(s.pharmacyManager||'')+'</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>');w.document.close()}
 
 // ── EXPIRY DATES ─────────────────────────────────────────
 function renderExpiry(){
@@ -4594,6 +4726,7 @@ function ctlFlags(m){
   var out=[];
   if(m.highAlert)out.push('<span class="badge brd">🔴 High Alert</span>');
   if(m.lasa)out.push('<span class="badge bpu">🔵 LASA</span>');
+  if(m.refrigerated)out.push('<span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>');
   return out.join(' ')||'<span class="badge bgr">—</span>';
 }
 function ctlClassLabel(v){
@@ -4656,7 +4789,7 @@ function renderCtlOverview(){
     if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Pharmacy</button>');
     if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>');
     if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">Delete</button>');
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')<div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
   }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected filter.</td></tr>';
 }
 function renderCtlCatalog(){
@@ -4664,7 +4797,7 @@ function renderCtlCatalog(){
   el('ctl-catalog-table').innerHTML=rows.length?rows.map(function(m,i){
     var buttons=[];
     if(ctlCanEditCatalog())buttons.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">Delete</button>');
-    return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td style="font-weight:600">'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+'</td><td>'+ctlNum(m.max)+'</td><td>'+(buttons.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td style="font-weight:600">'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+'</td><td>'+ctlNum(m.max)+'</td><td>'+(buttons.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
   }).join(''):'<tr><td colspan="9" style="text-align:center;padding:24px;color:var(--tx2)">No medicines yet.</td></tr>';
 }
 function ctlPromptMed(existing){
@@ -4672,9 +4805,11 @@ function ctlPromptMed(existing){
   var moh=prompt('MOH code',e.moh||'')||'',nupco=prompt('NUPCO code',e.nupco||'')||'';
   var cls=String(prompt('Classification: narcotic or psychotropic',e.classification||'narcotic')||'').toLowerCase();
   if(cls!=='narcotic'&&cls!=='psychotropic'){toast('Classification must be narcotic or psychotropic','err');return null}
-  var highAlert=confirm('Mark as HIGH ALERT? (Red badge)'),lasa=confirm('Mark as LASA? (Blue badge)');
+  var highAlert=confirm('Mark as HIGH ALERT? (Red badge)');
+  var lasa=confirm('Mark as LASA? (Blue badge)');
+  var refrigerated=confirm('Does this medicine require refrigeration? / Refrigerated');
   var min=ctlNum(prompt('Minimum quantity',e.min||0)),max=ctlNum(prompt('Maximum quantity',e.max||0));
-  return {name:name.trim(),moh:moh.trim(),nupco:nupco.trim(),classification:cls,highAlert:highAlert,lasa:lasa,min:min,max:max};
+  return {name:name.trim(),moh:moh.trim(),nupco:nupco.trim(),classification:cls,highAlert:highAlert,lasa:lasa,refrigerated:refrigerated,min:min,max:max};
 }
 async function ctlAddCatalogMedicine(){
   if(!ctlCanAddCatalog())return toast('No add permission','err');
@@ -4718,7 +4853,7 @@ function renderCtlDepartments(){
   el('ctl-dept-alerts').innerHTML=alerts.length?'<div class="alert-banner">⚠ '+alerts.map(function(a){return esc(a.name)+' ('+(a.days<=0?'expired '+Math.abs(a.days)+'d':a.days+'d')+')'}).join(' · ')+'</div>':'';
   el('ctl-dept-table').innerHTML=list.length?list.map(function(x,i){
     var m=ctlMedicine(x.medId)||{};
-    return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td><b>'+esc(m.name||'')+'</b></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(x.min!=null?x.min:m.min)+'</td><td>'+ctlNum(x.max!=null?x.max:m.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+ctlBatchText(x.batches)+'</td><td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td><b>'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(x.min!=null?x.min:m.min)+'</td><td>'+ctlNum(x.max!=null?x.max:m.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+ctlBatchText(x.batches)+'</td><td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td></tr>';
   }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
 }
 async function ctlEnsureDepartmentSeed(){
@@ -4740,7 +4875,7 @@ async function ctlEnsureDepartmentSeed(){
       CONTROLLED_DEPARTMENT_SEED[deptName].forEach(function(r){
         var med=cat.find(function(m){return (r.moh&&m.moh===r.moh)||String(m.name||'').toLowerCase()===String(r.name||'').toLowerCase()});
         if(!med){
-          med={id:ctlKey(r.moh,'',r.name)+'_'+Math.random().toString(36).slice(2,6),moh:r.moh||'',nupco:'',name:r.name,classification:'narcotic',highAlert:false,lasa:false,min:r.min||0,max:r.max||0};
+          med={id:ctlKey(r.moh,'',r.name)+'_'+Math.random().toString(36).slice(2,6),moh:r.moh||'',nupco:'',name:r.name,classification:'narcotic',highAlert:false,lasa:false,refrigerated:false,min:r.min||0,max:r.max||0};
           cat.push(med);changedCat=true;
         }
         list.push({medId:med.id,min:r.min||0,max:r.max||0,qty:r.qty||0,batches:(r.expiries||[]).map(function(d){return {qty:0,expiry:d,lot:''}})});
@@ -4789,7 +4924,7 @@ async function ctlRestoreMasterStockOnce(){
       med.min=ctlNum(r.min);
       med.max=ctlNum(r.max);
       if(typeof med.highAlert==='undefined')med.highAlert=false;
-      if(typeof med.lasa==='undefined')med.lasa=false;
+      if(typeof med.lasa==='undefined')med.lasa=false;if(typeof med.refrigerated==='undefined')med.refrigerated=false;
       updated++;
     }
 
@@ -4893,14 +5028,14 @@ function renderCtlOverview(){
 
   body.innerHTML=available.length?available.map(function(x,i){
     var m=x.m,w=x.w,p=x.p;
-    return '<tr><td>'+(i+1)+'</td><td class="'+ctlNameCellClass(w,p)+'"><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td>'+actionsFor(m)+'</td></tr>';
+    return '<tr><td>'+(i+1)+'</td><td class="'+ctlNameCellClass(w,p)+'"><b>'+esc(m.name)+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')<div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td>'+actionsFor(m)+'</td></tr>';
   }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No available medicines match the selected filter.</td></tr>';
 
   if(outBody){
     el('ctl-out-count').textContent=outRows.length;
     outBody.innerHTML=outRows.length?outRows.map(function(x,i){
       var m=x.m,w=x.w,p=x.p;
-      return '<tr><td>'+(i+1)+'</td><td class="'+ctlNameCellClass(w,p)+'"><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td><span class="badge bgr">'+esc(x.outFrom)+'</span></td><td>'+actionsFor(m)+'</td></tr>';
+      return '<tr><td>'+(i+1)+'</td><td class="'+ctlNameCellClass(w,p)+'"><b>'+esc(m.name)+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')<div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td><span class="badge bgr">'+esc(x.outFrom)+'</span></td><td>'+actionsFor(m)+'</td></tr>';
     }).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px;color:var(--tx2)">No out-of-stock medicines.</td></tr>';
   }
 }
@@ -4948,9 +5083,9 @@ function ctlCodeMode(){return prompt('Print code option: nupco, moh, or none','n
 function ctlPublicUrl(dept){var u=new URL(window.location.href);u.search='';u.searchParams.set('view','controlled-expiry');u.searchParams.set('dept',dept);return u.toString()}
 async function ctlPublishDept(dept){var name=(gd().find(function(d){return d.id===dept})||{}).name||dept,items=ctlDeptList(dept).map(function(x){var m=ctlMedicine(x.medId)||{};return {name:m.name,moh:m.moh,nupco:m.nupco,qty:x.qty,batches:x.batches||[]}});await FB_DB.collection('public_controlled_expiry').doc(dept).set({departmentName:name,items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()})}
 function ctlPrintHTML(title,body){var w=window.open('','_blank');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 landscape;margin:9mm}body{font-family:Arial;direction:rtl;color:#111}h1,h2{text-align:center;margin:3px}.head{display:grid;grid-template-columns:120px 1fr 120px;align-items:center}.logo{max-width:100px;max-height:75px}.qr{width:95px;height:95px}table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}th,td{border:1px solid #333;padding:5px;text-align:center;font-size:10px}th{background:#e8eef7}.med{width:36%;text-align:right;font-weight:bold}.expiry{text-align:right;line-height:1.65}.signs{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:22px}.sig{text-align:center;border-top:1px solid #222;padding-top:5px;margin-top:32px}.by{font-size:9px;text-align:center;margin-top:12px}.handover{margin:12px 0;padding:8px;border:1px solid #444}.ltr{direction:ltr}</style></head><body>'+body+'<div class="by">By Ali Abudahash</div><script>setTimeout(function(){window.print()},700)<\/script></body></html>');w.document.close()}
-async function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list first','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept;await ctlPublishDept(dept);var codeMode=ctlCodeMode();var s=ctlPrintSettings(dept),logo=ctlLogo(),url=ctlPublicUrl(dept),qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);var rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{},code=codeMode==='moh'?m.moh:(codeMode==='nupco'?m.nupco:'');return '<tr><td>'+(i+1)+'</td>'+(codeMode==='none'?'':'<td>'+esc(code||'—')+'</td>')+'<td class="med">'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td class="expiry">'+((x.batches||[]).map(function(b){return (b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+(b.lot?' — '+esc(b.lot):'')}).join('<br>')||'—')+'</td></tr>'}).join('');var body='<div class="head"><div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div><div><h1>قائمة الأدوية المخدرة والمقيدة</h1><h2>Controlled Medicines List</h2><h2>'+esc(name)+'</h2></div><div><img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Expiry follow-up<br>متابعة الانتهاء</div></div></div><table><thead><tr><th>#</th>'+(codeMode==='none'?'':'<th>'+(codeMode==='moh'?'MOH Code':'NUPCO Code')+'</th>')+'<th class="med">اسم الدواء / Medicine</th><th>الكمية / Qty</th><th>تواريخ الانتهاء / Expiry dates (DD/MM/YYYY)</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">رئيس تمريض القسم<br>Head Nurse<br><b>'+esc(s.nursingHead||'')+'</b></div><div class="sig">أمين عهدة الأدوية المخدرة<br>Controlled Medicines Custodian<br><b>'+esc(s.controlledCustodian||'')+'</b></div><div class="sig">مدير الصيدلية<br>Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';ctlPrintHTML(name,body)}
-function printCtlHandover(){if(CTL_VIEW!=='departments')return toast('Open department list first','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,receiver=prompt('اسم المستلم / Receiver name','')||'',date=prompt('التاريخ / Date',new Date().toISOString().slice(0,10))||'',s=ctlPrintSettings(dept),rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td class="med">'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td>'+((x.batches||[]).map(function(b){return ctlFmtDMY(b.expiry)}).join('<br>')||'—')+'</td><td></td></tr>'}).join('');var body='<h1>محضر استلام وتسليم عهدة الأدوية المخدرة</h1><h2>Controlled Medicines Custody Handover Record</h2><h2>'+esc(name)+'</h2><div class="handover">اسم المستلم / Receiver: <b>'+esc(receiver)+'</b> &nbsp;&nbsp; التاريخ / Date: <b>'+esc(ctlFmtDMY(date))+'</b></div><table><thead><tr><th>#</th><th class="med">الدواء / Medicine</th><th>الكمية المجردة / Counted Qty</th><th>الانتهاء / Expiry</th><th>ملاحظات / Notes</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">المسلّم / Delivered by</div><div class="sig">المستلم / Received by<br><b>'+esc(receiver)+'</b></div><div class="sig">مدير الصيدلية / Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';ctlPrintHTML('Handover '+name,body)}
-function renderCtlAnalytics(){if(!CU)return;var deptSel=el('ctl-an-dept');if(deptSel&&deptSel.options.length<=1)deptSel.innerHTML='<option value="">All departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');var from=el('ctl-an-from')?el('ctl-an-from').value:'',to=el('ctl-an-to')?el('ctl-an-to').value:'',type=el('ctl-an-type')?el('ctl-an-type').value:'',dept=deptSel?deptSel.value:'',rec=(el('ctl-an-recipient')?el('ctl-an-recipient').value:'').toLowerCase();var rows=ctlMoves().filter(function(x){if(x.type!=='dispense')return false;var d=String(x.at||'').slice(0,10);return (!from||d>=from)&&(!to||d<=to)&&(!type||x.dispenseType===type)&&(!dept||x.dept===dept)&&(!rec||String(x.recipient||'').toLowerCase().includes(rec))});var total=rows.reduce(function(s,x){return s+ctlNum(x.qty)},0),recipients=new Set(rows.map(function(x){return x.recipient}).filter(Boolean)).size,depts=new Set(rows.map(function(x){return x.dept}).filter(Boolean)).size;el('ctl-an-stats').innerHTML='<div class="sc"><div class="sl">Transactions</div><div class="ctl-stat-number">'+rows.length+'</div></div><div class="sc"><div class="sl">Total quantity</div><div class="ctl-stat-number">'+total+'</div></div><div class="sc"><div class="sl">Recipients</div><div class="ctl-stat-number">'+recipients+'</div></div><div class="sc"><div class="sl">Departments</div><div class="ctl-stat-number">'+depts+'</div></div>';el('ctl-an-table').innerHTML=rows.slice().reverse().map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc(x.source||'')+'</td><td>'+esc(x.dispenseType||'')+'</td><td>'+esc(x.deptName||'—')+'</td><td>'+esc(x.recipient||'')+'</td><td>'+esc(x.by||'')+'</td></tr>'}).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px">No matching records</td></tr>'}
+async function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list first','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept;await ctlPublishDept(dept);var codeMode=ctlCodeMode();var s=ctlPrintSettings(dept),logo=ctlLogo(),url=ctlPublicUrl(dept),qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);var rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{},code=codeMode==='moh'?m.moh:(codeMode==='nupco'?m.nupco:'');return '<tr><td>'+(i+1)+'</td>'+(codeMode==='none'?'':'<td>'+esc(code||'—')+'</td>')+'<td class="med">'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</td><td>'+ctlNum(x.qty)+'</td><td class="expiry">'+((x.batches||[]).map(function(b){return (b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+(b.lot?' — '+esc(b.lot):'')}).join('<br>')||'—')+'</td></tr>'}).join('');var body='<div class="head"><div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div><div><h1>قائمة الأدوية المخدرة والمقيدة</h1><h2>Controlled Medicines List</h2><h2>'+esc(name)+'</h2></div><div><img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Expiry follow-up<br>متابعة الانتهاء</div></div></div><table><thead><tr><th>#</th>'+(codeMode==='none'?'':'<th>'+(codeMode==='moh'?'MOH Code':'NUPCO Code')+'</th>')+'<th class="med">اسم الدواء / Medicine</th><th>الكمية / Qty</th><th>تواريخ الانتهاء / Expiry dates (DD/MM/YYYY)</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">رئيس تمريض القسم<br>Head Nurse<br><b>'+esc(s.nursingHead||'')+'</b></div><div class="sig">أمين عهدة الأدوية المخدرة<br>Controlled Medicines Custodian<br><b>'+esc(s.controlledCustodian||'')+'</b></div><div class="sig">مدير الصيدلية<br>Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';ctlPrintHTML(name,body)}
+function printCtlHandover(){if(CTL_VIEW!=='departments')return toast('Open department list first','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,receiver=prompt('اسم المستلم / Receiver name','')||'',date=prompt('التاريخ / Date',new Date().toISOString().slice(0,10))||'',s=ctlPrintSettings(dept),rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td class="med">'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</td><td>'+ctlNum(x.qty)+'</td><td>'+((x.batches||[]).map(function(b){return ctlFmtDMY(b.expiry)}).join('<br>')||'—')+'</td><td></td></tr>'}).join('');var body='<h1>محضر استلام وتسليم عهدة الأدوية المخدرة</h1><h2>Controlled Medicines Custody Handover Record</h2><h2>'+esc(name)+'</h2><div class="handover">اسم المستلم / Receiver: <b>'+esc(receiver)+'</b> &nbsp;&nbsp; التاريخ / Date: <b>'+esc(ctlFmtDMY(date))+'</b></div><table><thead><tr><th>#</th><th class="med">الدواء / Medicine</th><th>الكمية المجردة / Counted Qty</th><th>الانتهاء / Expiry</th><th>ملاحظات / Notes</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">المسلّم / Delivered by</div><div class="sig">المستلم / Received by<br><b>'+esc(receiver)+'</b></div><div class="sig">مدير الصيدلية / Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';ctlPrintHTML('Handover '+name,body)}
+function renderCtlAnalytics(){if(!CU)return;var deptSel=el('ctl-an-dept');if(deptSel&&deptSel.options.length<=1)deptSel.innerHTML='<option value="">All departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');var from=el('ctl-an-from')?el('ctl-an-from').value:'',to=el('ctl-an-to')?el('ctl-an-to').value:'',type=el('ctl-an-type')?el('ctl-an-type').value:'',dept=deptSel?deptSel.value:'',rec=(el('ctl-an-recipient')?el('ctl-an-recipient').value:'').toLowerCase();var rows=ctlMoves().filter(function(x){if(x.type!=='dispense')return false;var d=String(x.at||'').slice(0,10);return (!from||d>=from)&&(!to||d<=to)&&(!type||x.dispenseType===type)&&(!dept||x.dept===dept)&&(!rec||String(x.recipient||'').toLowerCase().includes(rec))});var total=rows.reduce(function(s,x){return s+ctlNum(x.qty)},0),recipients=new Set(rows.map(function(x){return x.recipient}).filter(Boolean)).size,depts=new Set(rows.map(function(x){return x.dept}).filter(Boolean)).size;el('ctl-an-stats').innerHTML='<div class="sc"><div class="sl">Transactions</div><div class="ctl-stat-number">'+rows.length+'</div></div><div class="sc"><div class="sl">Total quantity</div><div class="ctl-stat-number">'+total+'</div></div><div class="sc"><div class="sl">Recipients</div><div class="ctl-stat-number">'+recipients+'</div></div><div class="sc"><div class="sl">Departments</div><div class="ctl-stat-number">'+depts+'</div></div>';el('ctl-an-table').innerHTML=rows.slice().reverse().map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc(x.source||'')+'</td><td>'+esc(x.dispenseType||'')+'</td><td>'+esc(x.deptName||'—')+'</td><td>'+esc(x.recipient||'')+'</td><td>'+esc(x.by||'')+'</td></tr>'}).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px">No matching records</td></tr>'}
 function printCtlAnalytics(){var html=el('ctl-an-table').closest('table').outerHTML;ctlPrintHTML('Controlled dispensing analytics','<h1>إحصائيات صرف الأدوية المخدرة</h1><h2>Controlled Dispensing Analytics</h2>'+html)}
 // Override public barcode page to be login-free and cleaner.
 async function processPublicControlledExpiry(){var p=new URLSearchParams(location.search);if(p.get('view')!=='controlled-expiry')return false;document.body.innerHTML='<div id="pub-ctl" style="max-width:1000px;margin:20px auto;padding:15px;font-family:Arial"></div>';var root=el('pub-ctl'),dept=p.get('dept')||'';try{var snap=await FB_DB.collection('public_controlled_expiry').doc(dept).get();if(!snap.exists)throw new Error('List not found');var d=snap.data(),rows=(d.items||[]).map(function(x,i){var bs=(x.batches||[]).map(function(b){var days=daysUntil(b.expiry),cls=days<=0?'exp-red':days<=ctlAlertDays()?'exp-yellow':'exp-ok';return '<div class="'+cls+'">'+(b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+' ('+days+' days)</div>'}).join('')||'—';return '<tr><td>'+(i+1)+'</td><td style="font-weight:bold">'+esc(x.name)+'</td><td>'+esc(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');root.innerHTML='<h1 style="text-align:center">متابعة انتهاء الأدوية المخدرة والمقيدة</h1><h2 style="text-align:center">Controlled Medicines Expiry Follow-up</h2><h2 style="text-align:center">'+esc(d.departmentName||dept)+'</h2><div class="tw"><table><thead><tr><th>#</th><th>Medicine / الدواء</th><th>Qty / الكمية</th><th>Expiry / الانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table></div><div style="text-align:center;margin-top:18px;font-size:11px">By Ali Abudahash</div>'}catch(e){root.innerHTML='<div class="alert-banner">'+esc(e.message||'Could not load list')+'</div>'}return true}
@@ -5216,7 +5351,7 @@ function renderCtlDepartments(){
       '<td>'+(i+1)+'</td>'+
       '<td>'+esc(m.moh||'—')+'</td>'+
       '<td>'+esc(m.nupco||'—')+'</td>'+
-      '<td><b>'+esc(m.name||'')+'</b></td>'+
+      '<td><b>'+(esc(m.name||'')+(m.refrigerated?' <span class="fridge-glyph" aria-hidden="true"></span>':''))+'</b>'+(m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'')</td>'+
       '<td>'+ctlClassLabel(m.classification)+'</td>'+
       '<td>'+ctlFlags(m)+'</td>'+
       '<td>'+ctlNum(x.min!=null?x.min:m.min)+'</td>'+
@@ -5233,6 +5368,83 @@ function renderCtlDepartments(){
   }
   ctlRefreshDeptBulkBar();
 }
+
+
+function medRefrigeratedLabel(m){
+  return m&&m.refrigerated?' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>':'';
+}
+function addRefrigeratedLabelsToRequests(){
+  var meds={};
+  gd().forEach(function(d){
+    getMeds(d.id).forEach(function(m){meds[m.id]=m});
+  });
+  document.querySelectorAll('[data-med-id]').forEach(function(node){
+    var m=meds[node.dataset.medId]||ctlMedicine(node.dataset.medId);
+    if(m&&m.refrigerated&&!node.querySelector('.bcool')){
+      node.insertAdjacentHTML('beforeend',' <span class="cool-icon fridge-icon" title="Refrigerated / Store in refrigerator (2–8°C)" aria-label="Refrigerated medicine"><span class="fridge-glyph" aria-hidden="true"></span></span>');
+    }
+  });
+}
+
+
+function isMasterUser(){
+  return !!(CU&&CU.role==='pharmacy'&&CU.master===true);
+}
+async function masterDeleteRequest(reqId){
+  if(!isMasterUser())return toast('Only the master user can delete requests','err');
+  var reqs=(S.g('requests')||[]).slice();
+  var req=reqs.find(function(r){return r.id===reqId});
+  if(!req)return toast('Request not found','err');
+  if(!confirm('Delete this request permanently? Its quantities will also disappear from statistics.'))return;
+  reqs=reqs.filter(function(r){return r.id!==reqId});
+  await S.s('requests',reqs);
+
+  // Remove request-linked activity/dispensing records so deleted quantities disappear.
+  var acts=(S.g('activity')||[]).filter(function(a){return a.requestId!==reqId&&a.reqId!==reqId});
+  var moves=(S.g('controlled_moves')||[]).filter(function(a){return a.requestId!==reqId&&a.reqId!==reqId});
+  await Promise.all([S.s('activity',acts),S.s('controlled_moves',moves)]);
+  toast('Request deleted and quantities removed ✓','succ');
+  renderAll();
+}
+function masterDeleteButton(reqId){
+  return isMasterUser()
+    ?'<button class="btn bd2c bxs" data-rid="'+reqId+'" onclick="masterDeleteRequest(this.dataset.rid)">Delete</button>'
+    :'';
+}
+
+
+function injectMasterRequestDeleteButtons(){
+  if(!isMasterUser())return;
+  document.querySelectorAll('[data-request-id]').forEach(function(node){
+    var id=node.dataset.requestId;
+    if(!id||node.querySelector('.master-delete-request'))return;
+    var btn=document.createElement('button');
+    btn.className='btn bd2c bxs master-delete-request';
+    btn.textContent='Delete';
+    btn.onclick=function(){masterDeleteRequest(id)};
+    node.appendChild(btn);
+  });
+}
+
+
+function prepareRequestPrintOnePage(){
+  var area=el('parea');
+  if(!area)return;
+  area.classList.add('request-print-sheet');
+  var headers=area.querySelectorAll('.dph,.print-request-group,.request-header');
+  headers.forEach(function(h){h.classList.add('request-print-header')});
+  area.querySelectorAll('.dpn').forEach(function(n){n.classList.add('dept-name')});
+}
+
+
+document.addEventListener('DOMContentLoaded',function(){
+  var observer=new MutationObserver(function(){
+    addRefrigeratedLabelsToRequests();
+    injectMasterRequestDeleteButtons();
+  });
+  observer.observe(document.body,{subtree:true,childList:true});
+});
+window.addEventListener('beforeprint',prepareRequestPrintOnePage);
 
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
