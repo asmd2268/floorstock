@@ -398,6 +398,11 @@ body.light #ctl-out-table tr td.ctl-name-fully-out{background:#d8dde3!important}
   .handover-signatures{display:grid!important;grid-template-columns:1fr 1fr 1fr!important;gap:12mm!important;margin-top:16mm!important;text-align:center!important;font-size:10pt!important}
 }
 
+
+#ctl-dept-table input[type=checkbox]{width:15px;height:15px;margin:0}
+#ctl-dept-table td:first-child,#ctl-dept-table th:first-child{text-align:center}
+#ctl-bulk-shelf-btn{border-color:var(--ac);color:var(--acl)}
+
 </style>
 </head>
 <body>
@@ -827,14 +832,18 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
       <div class="card">
         <div class="ch" style="flex-wrap:wrap;gap:8px">
           <span class="ct">Controlled and Restricted Medicines List / قائمة الأدوية المخدرة والمقيدة</span>
-          <div class="fl g8">
+          <div class="fl g8" style="flex-wrap:wrap">
             <select id="ctl-dept" class="psel" onchange="renderControlled()"></select>
             <button class="btn bp bsm" id="ctl-assign-btn" onclick="ctlAssignMedicineToDept()">+ Add from shared catalogue</button>
             <button class="btn bg bsm" id="ctl-sign-btn" onclick="ctlEditSignatures()">Edit signatures</button>
+            <button class="btn bg bsm" id="ctl-bulk-shelf-btn" onclick="ctlOpenBulkShelf()" style="display:none">Add selected to shelf</button>
           </div>
         </div>
         <div id="ctl-dept-alerts" class="cb" style="padding-bottom:0"></div>
-        <div class="tw"><table><thead><tr><th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine</th><th>Class</th><th>Flags</th><th>Min</th><th>Max</th><th>Current qty</th><th>Expiry batches</th><th></th></tr></thead><tbody id="ctl-dept-table"></tbody></table></div>
+        <div class="tw"><table><thead><tr>
+<th style="width:34px"><input type="checkbox" id="ctl-dept-select-all" onchange="ctlToggleAllDeptMeds(this)"></th>
+<th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine</th><th>Class</th><th>Flags</th><th>Min</th><th>Max</th><th>Current qty</th><th>Shelf</th><th>Expiry batches</th><th></th>
+</tr></thead><tbody id="ctl-dept-table"></tbody></table></div>
       </div>
       <div class="card"><div class="ch"><span class="ct">Recent custody movements / سجل الحركات</span></div><div id="ctl-log" class="cb"></div></div>
     </div>
@@ -1117,6 +1126,25 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 </div>
 
 <!-- ══ MODALS ══ -->
+
+<div class="modal-bg" id="mctl-bulk-shelf">
+  <div class="modal">
+    <div class="mh">
+      <span class="mt">Add selected medicines to shelf / إضافة الأدوية المحددة إلى رف</span>
+      <button class="xbtn" onclick="CM('mctl-bulk-shelf')">✕</button>
+    </div>
+    <div class="fg">
+      <label>Shelf / الرف</label>
+      <select id="ctl-bulk-shelf-select"></select>
+    </div>
+    <div class="fhint" id="ctl-bulk-shelf-count" style="margin-bottom:14px"></div>
+    <div class="fl g8" style="justify-content:flex-end">
+      <button class="btn bg" onclick="CM('mctl-bulk-shelf')">Cancel</button>
+      <button class="btn bp" onclick="ctlApplyBulkShelf()">Add selected ✓</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="mshelf">
   <div class="modal">
     <div class="mh"><span class="mt" id="mshelf-title">Add Shelf</span><button class="xbtn" onclick="CM('mshelf')">&#x2715;</button></div>
@@ -5086,6 +5114,125 @@ renderControlledStats=function(){
   if(_prevRenderControlledStats)_prevRenderControlledStats();
   renderWarehouseReceiptStats();
 };
+
+
+var CTL_DEPT_SELECTED = {};
+
+function ctlDeptShelves(deptId){
+  return S.g('controlled_dept_shelves_'+deptId)||[];
+}
+function ctlSetDeptShelves(deptId,arr){
+  return S.s('controlled_dept_shelves_'+deptId,arr);
+}
+function ctlDeptShelfName(deptId,shelfId){
+  var s=ctlDeptShelves(deptId).find(function(x){return x.id===shelfId});
+  return s?s.name:'—';
+}
+function ctlToggleDeptMed(cb){
+  var dept=ctlCurrentDept();
+  if(!CTL_DEPT_SELECTED[dept])CTL_DEPT_SELECTED[dept]={};
+  if(cb.checked)CTL_DEPT_SELECTED[dept][cb.dataset.id]=true;
+  else delete CTL_DEPT_SELECTED[dept][cb.dataset.id];
+  ctlRefreshDeptBulkBar();
+}
+function ctlToggleAllDeptMeds(cb){
+  var dept=ctlCurrentDept(),list=ctlDeptList(dept);
+  CTL_DEPT_SELECTED[dept]={};
+  list.forEach(function(x){
+    if(cb.checked)CTL_DEPT_SELECTED[dept][x.medId]=true;
+  });
+  renderCtlDepartments();
+}
+function ctlSelectedDeptIds(){
+  var dept=ctlCurrentDept();
+  return Object.keys(CTL_DEPT_SELECTED[dept]||{}).filter(function(id){return CTL_DEPT_SELECTED[dept][id]});
+}
+function ctlRefreshDeptBulkBar(){
+  var ids=ctlSelectedDeptIds(),btn=el('ctl-bulk-shelf-btn');
+  if(btn){
+    btn.style.display=ctlCanEditDept()&&ids.length?'inline-flex':'none';
+    btn.textContent='Add '+ids.length+' selected to shelf';
+  }
+}
+function ctlOpenBulkShelf(){
+  var ids=ctlSelectedDeptIds();
+  if(!ids.length)return toast('Select at least one medicine','err');
+  var dept=ctlCurrentDept(),shelves=ctlDeptShelves(dept);
+  var sel=el('ctl-bulk-shelf-select');
+  sel.innerHTML=shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
+  if(!shelves.length){
+    var name=prompt('No shelf exists. Enter a new shelf name, e.g. Refrigerator / ثلاجة','');
+    if(!name)return;
+    var shelf={id:'shelf_'+Date.now().toString(36),name:name.trim(),created:nowISO()};
+    ctlSetDeptShelves(dept,[shelf]).then(function(){
+      sel.innerHTML='<option value="'+shelf.id+'">'+esc(shelf.name)+'</option>';
+      el('ctl-bulk-shelf-count').textContent=ids.length+' medicines selected';
+      OM('mctl-bulk-shelf');
+    });
+    return;
+  }
+  el('ctl-bulk-shelf-count').textContent=ids.length+' medicines selected';
+  OM('mctl-bulk-shelf');
+}
+async function ctlApplyBulkShelf(){
+  if(!ctlCanEditDept())return toast('No permission','err');
+  var dept=ctlCurrentDept(),shelfId=el('ctl-bulk-shelf-select').value,ids=ctlSelectedDeptIds();
+  if(!shelfId||!ids.length)return;
+  var list=ctlDeptList(dept).map(function(x){
+    return ids.includes(x.medId)?Object.assign({},x,{shelfId:shelfId}):x;
+  });
+  await ctlSetDeptList(dept,list);
+  CTL_DEPT_SELECTED[dept]={};
+  CM('mctl-bulk-shelf');
+  toast(ids.length+' medicines added to shelf ✓','succ');
+  renderCtlDepartments();
+}
+
+function renderCtlDepartments(){
+  var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
+  if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
+  else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
+  if(cur&&Array.from(sel.options).some(function(o){return o.value===cur}))sel.value=cur;
+  var dept=ctlCurrentDept(),list=ctlDeptList(dept),can=ctlCanEditDept();
+  el('ctl-assign-btn').style.display=can?'inline-flex':'none';
+  el('ctl-sign-btn').style.display=can?'inline-flex':'none';
+
+  var selected=CTL_DEPT_SELECTED[dept]||{};
+  var alerts=[];
+  list.forEach(function(x){
+    (x.batches||[]).forEach(function(b){
+      var d=daysUntil(b.expiry);
+      if(d!==null&&d<=ctlAlertDays())alerts.push({name:(ctlMedicine(x.medId)||{}).name||'',days:d});
+    });
+  });
+  el('ctl-dept-alerts').innerHTML=alerts.length
+    ?'<div class="alert-banner">⚠ '+alerts.map(function(a){return esc(a.name)+' ('+(a.days<=0?'expired '+Math.abs(a.days)+'d':a.days+'d')+')'}).join(' · ')+'</div>'
+    :'';
+
+  el('ctl-dept-table').innerHTML=list.length?list.map(function(x,i){
+    var m=ctlMedicine(x.medId)||{};
+    return '<tr>'+
+      '<td><input type="checkbox" data-id="'+x.medId+'" onchange="ctlToggleDeptMed(this)" '+(selected[x.medId]?'checked':'')+'></td>'+
+      '<td>'+(i+1)+'</td>'+
+      '<td>'+esc(m.moh||'—')+'</td>'+
+      '<td>'+esc(m.nupco||'—')+'</td>'+
+      '<td><b>'+esc(m.name||'')+'</b></td>'+
+      '<td>'+ctlClassLabel(m.classification)+'</td>'+
+      '<td>'+ctlFlags(m)+'</td>'+
+      '<td>'+ctlNum(x.min!=null?x.min:m.min)+'</td>'+
+      '<td>'+ctlNum(x.max!=null?x.max:m.max)+'</td>'+
+      '<td>'+ctlNum(x.qty)+'</td>'+
+      '<td><span class="shelf-badge">'+esc(ctlDeptShelfName(dept,x.shelfId))+'</span></td>'+
+      '<td>'+ctlBatchText(x.batches)+'</td>'+
+      '<td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td>'+
+    '</tr>';
+  }).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
+
+  if(el('ctl-dept-select-all')){
+    el('ctl-dept-select-all').checked=list.length>0&&list.every(function(x){return selected[x.medId]});
+  }
+  ctlRefreshDeptBulkBar();
+}
 
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
