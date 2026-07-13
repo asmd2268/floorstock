@@ -1145,7 +1145,17 @@ var FB_APP=null,FB_AUTH=null,FB_DB=null,FB_FUNCTIONS=null;
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
-  FB_AUTH=firebase.auth();FB_DB=firebase.firestore();FB_FUNCTIONS=firebase.functions();
+  FB_AUTH=firebase.auth();
+  FB_DB=firebase.firestore();
+  // Enable offline persistence so writes survive temporary disconnections and logout
+  FB_DB.enablePersistence({synchronizeTabs:true}).catch(function(err){
+    if(err.code==='failed-precondition'){
+      console.warn('Firestore persistence disabled: multiple tabs open. Only one tab can use persistence at a time.');
+    }else if(err.code==='unimplemented'){
+      console.warn('Firestore persistence not supported in this browser.');
+    }
+  });
+  FB_FUNCTIONS=firebase.functions();
 }
 
 // Firestore is the only operational data store. Memory is a short-lived UI cache, never persistent storage.
@@ -1188,10 +1198,26 @@ var S={
   },
   g:function(k){return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null},
   s:function(k,v){
+    var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     S.cache[k]=v;
-    return FB_DB.collection('floorstock_state').doc(k).set({value:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(err){console.error(err);toast('Save failed — Firebase rejected the update.','err');throw err;});
+    return _wrapSave(FB_DB.collection('floorstock_state').doc(k).set({value:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(err){
+      // Rollback cache to previous value on Firestore failure
+      if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
+      console.error('Firestore save failed for key:',k,err);
+      toast('Save failed — Firebase rejected the update.','err');
+      throw err;
+    }));
   },
-  rm:function(k){delete S.cache[k];return FB_DB.collection('floorstock_state').doc(k).delete().catch(function(err){console.error(err);toast('Delete failed — Firebase rejected the update.','err');throw err;});},
+  rm:function(k){
+    var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
+    delete S.cache[k];
+    return _wrapSave(FB_DB.collection('floorstock_state').doc(k).delete().catch(function(err){
+      if(prev!==undefined)S.cache[k]=prev;
+      console.error('Firestore delete failed for key:',k,err);
+      toast('Delete failed — Firebase rejected the update.','err');
+      throw err;
+    }));
+  },
   push:function(k,v){v.id=v.id||'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);var a=(S.g(k)||[]).slice();a.push(v);S.s(k,a);return v},
   upd:function(k,id,d){var a=(S.g(k)||[]).slice();var i=a.findIndex(function(x){return x.id===id});if(i>-1){a[i]=Object.assign({},a[i],d);S.s(k,a)}},
   del:function(k,id){S.s(k,(S.g(k)||[]).filter(function(x){return x.id!==id}))}
@@ -1565,12 +1591,15 @@ async function doLogin(){
   }
 }
 async function doLogout(){
+  // Wait for any pending Firestore writes before signing out
   try{
-    if(FB_DB)await FB_DB.waitForPendingWrites();
+    if(FB_DB){
+      toast('جاري حفظ البيانات...','info');
+      await FB_DB.waitForPendingWrites();
+    }
   }catch(err){
-    console.error(err);
-    toast('Some changes were not saved. Please retry before signing out.','err');
-    return;
+    console.error('Pending writes failed before logout:',err);
+    if(!confirm('تحذير: بعض التغييرات قد لا تكون محفوظة. هل تريد تسجيل الخروج على أي حال؟'))return;
   }
   S.stopRealtime();
   try{await FB_AUTH.signOut();}catch(err){console.error(err);}
@@ -1831,15 +1860,20 @@ function openEditDrug(id,deptId){
   if(ddsel){ddsel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'"'+(d.id===deptId?' selected':'')+'>'+d.name+'</option>'}).join('');}
   OM('mdrug');
 }
-function saveDrug(){
+async function saveDrug(){
   var n=el('dname').value.trim();if(!n)return toast('Enter medication name','err');
   var deptId=el('ddept-sel').value;if(!deptId)return toast('Select a department','err');
   var data={name:n,category:el('dcat').value,min:+(el('dmin').value)||0,max:+(el('dmax').value)||1,
     monthly:el('dmly').value?+(el('dmly').value):null,
     high_alert:el('cha2').checked,hazard:el('chaz').checked,lasa:el('chls').checked};
-  if(EDID){updMed(deptId,EDID,data);toast('Updated &#x2713;','succ');}
-  else{pushMed(deptId,Object.assign({},data,{created:nowISO()}));toast('Added &#x2713;','succ');}
-  CM('mdrug');renderInv();
+  try{
+    if(EDID){await updMed(deptId,EDID,data);toast('Updated &#x2713;','succ');}
+    else{pushMed(deptId,Object.assign({},data,{created:nowISO()}));toast('Added &#x2713;','succ');}
+    CM('mdrug');renderInv();
+  }catch(err){
+    console.error('saveDrug failed:',err);
+    toast('Save failed — please retry.','err');
+  }
 }
 async function delDrug(id,deptId){
   if(!confirm('Delete this medication?'))return;
@@ -4105,6 +4139,20 @@ function getNextDispSlot(deptId){
   }
   return best;
 }
+// ── PENDING WRITES TRACKER ────────────────────────────────
+// Tracks in-flight Firestore writes so we can warn before unload
+var _pendingWrites=0;
+function _wrapSave(promise){
+  _pendingWrites++;
+  return promise.finally(function(){_pendingWrites=Math.max(0,_pendingWrites-1);});
+}
+window.addEventListener('beforeunload',function(e){
+  if(_pendingWrites>0){
+    var msg='البيانات لم تُحفظ بعد. هل أنت متأكد من المغادرة؟';
+    e.preventDefault();e.returnValue=msg;return msg;
+  }
+});
+
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
   try{
