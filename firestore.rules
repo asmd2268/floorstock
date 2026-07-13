@@ -18,7 +18,6 @@ service cloud.firestore {
       return active() && profile().role == 'pharmacy';
     }
 
-    // Master = pharmacy manager with master:true flag
     function isMaster() {
       return isPharmacy() && profile().master == true;
     }
@@ -31,72 +30,56 @@ service cloud.firestore {
       return active() && profile().role == 'warehouse';
     }
 
+    // Any pharmacy manager (master or not) can manage controlled data
     function controlledManager() {
-      return isMaster() || isControlledOfficer();
+      return isPharmacy() || isControlledOfficer();
     }
 
-    // ── users collection ──────────────────────────────────
     match /users/{uid} {
       allow read: if active();
-      allow create, update, delete: if false;  // Cloud Functions only
+      allow create, update, delete: if false;
     }
 
-    // ── audit logs ────────────────────────────────────────
     match /audit_logs/{logId} {
       allow read: if isMaster();
       allow write: if false;
     }
 
-    // ── main application state ────────────────────────────
     match /floorstock_state/{docId} {
       allow read: if active();
 
       allow write: if
-        // ① Master has unrestricted write access to ALL keys
-        isMaster() ||
+        // Pharmacy manager writes everything controlled
+        (isPharmacy() && docId.matches('controlled_.*')) ||
 
-        // ② Controlled catalogue — officer + warehouse can add/edit
-        (docId == 'controlled_catalog' &&
-          (isControlledOfficer() || isWarehouseOfficer())) ||
+        // Warehouse officer writes warehouse stock + catalogue + moves + seed
+        (isWarehouseOfficer() && (
+          docId == 'controlled_catalog' ||
+          docId == 'controlled_warehouse' ||
+          docId == 'controlled_moves' ||
+          docId == 'controlled_alert_days' ||
+          docId == 'controlled_master_stock_seed_v4'
+        )) ||
 
-        // ③ Warehouse stock — warehouse officer only
-        (docId == 'controlled_warehouse' &&
-          isWarehouseOfficer()) ||
+        // Controlled officer writes pharmacy stock + dept lists + settings + moves + seed
+        (isControlledOfficer() && (
+          docId == 'controlled_catalog' ||
+          docId == 'controlled_pharmacy_stock' ||
+          docId.matches('controlled_dept_list_.*') ||
+          docId.matches('controlled_settings_.*') ||
+          docId == 'controlled_alert_days' ||
+          docId == 'controlled_moves' ||
+          docId == 'controlled_department_seed_v2' ||
+          docId == 'controlled_master_stock_seed_v4'
+        )) ||
 
-        // ④ Pharmacy controlled custody — officer only
-        (docId == 'controlled_pharmacy_stock' &&
-          isControlledOfficer()) ||
-
-        // ⑤ Per-department controlled lists
-        (docId.matches('controlled_dept_list_.*') &&
-          isControlledOfficer()) ||
-
-        // ⑥ Controlled settings & signatures
-        (docId.matches('controlled_settings_.*') &&
-          isControlledOfficer()) ||
-
-        // ⑦ Global alert-days setting
-        (docId == 'controlled_alert_days' &&
-          (isControlledOfficer() || isWarehouseOfficer())) ||
-
-        // ⑧ Shared movement log
-        (docId == 'controlled_moves' &&
-          (isControlledOfficer() || isWarehouseOfficer())) ||
-
-        // ⑨ One-time seed/import flags
-        (docId == 'controlled_department_seed_v2' &&
-          isControlledOfficer()) ||
-        (docId == 'controlled_master_stock_seed_v4' &&
-          (isControlledOfficer() || isWarehouseOfficer())) ||
-
-        // ⑩ All non-controlled keys (regular pharmacy + department users)
+        // Non-controlled data: all active users except controlled_pharmacy and warehouse
         (!docId.matches('controlled_.*') &&
           active() &&
           profile().role != 'controlled_pharmacy' &&
           profile().role != 'warehouse');
     }
 
-    // ── public expiry QR views ────────────────────────────
     match /public_expiry/{deptId} {
       allow read: if true;
       allow write: if active() &&
@@ -109,7 +92,6 @@ service cloud.firestore {
       allow write: if controlledManager();
     }
 
-    // ── catch-all: authenticated read, no write ───────────
     match /{document=**} {
       allow read: if active();
       allow write: if false;
