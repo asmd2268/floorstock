@@ -1,17 +1,23 @@
-# Deployment
+# Stock quantity restoration and out-of-stock separation
 
-1. Replace the current GitHub `index.html` with the file in this folder.
-2. No Cloud Functions change is required for this update if the controlled-pharmacy role was already deployed.
-3. Open the site and perform a hard refresh: `Command + Shift + R`.
-4. Sign in as the Master account or the controlled-medicines pharmacy officer.
-5. Open **Controlled & Psychotropic Medicines**.
-6. The inpatient department lists from the attached workbook are imported automatically once.
+This build restores the exact quantities and expiry dates from `narcotic-master-stock.xlsx`:
 
-## New capabilities
-- Unified warehouse and pharmacy stock table.
-- Configurable expiry alert period shared by both parties.
-- Out-of-stock, below-minimum, expired and expiring-soon filters.
-- Narcotic/Psychotropic classification.
-- High Alert red badge and LASA blue badge.
-- Add, edit and delete catalogue medicines.
-- Department lists editable only by Master or the controlled-medicines pharmacy officer.
+- A: MOH code
+- B: NUPCO code
+- C: medicine name
+- D: warehouse system balance
+- E: warehouse outside-system balance
+- F: first warehouse expiry
+- G: quantity linked to the second warehouse expiry
+- H: second warehouse expiry
+- I: minimum
+- J: maximum
+- L: pharmacy controlled-custody quantity
+- M: pharmacy controlled-custody expiry
+
+The inpatient department workbook remains separate and does not overwrite warehouse or pharmacy quantities.
+
+## Deployment
+Replace the current GitHub `index.html` with this file, then hard-refresh the site with Command + Shift + R.
+
+No Cloud Functions redeployment is required for this correction.
