@@ -135,6 +135,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
   .ptbl{width:100%;border-collapse:collapse;font-size:7pt}
   .ptbl th,.ptbl td{border:1px solid #bbb;padding:2px 3px}
   .ptbl th{background:#eee;font-weight:700}
+  .print-bundle{border:1px solid #888;border-radius:3px;padding:5px}
+  .print-request-group td{background:#edf3ff!important;border-top:2px solid #1f6feb!important;font-size:7pt}
   @page{size:A4;margin:8mm}
 }
 /* shelf badges */
@@ -391,8 +393,8 @@ input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none}
     <div class="fl ic jb mb14">
       <div><div class="stitle">Print Orders</div><div class="ssub" style="margin:0">You may print any fulfilled request again whenever needed</div></div>
       <div class="fl g8 ic">
-        <select id="pcols" class="psel"><option value="4">4 per page</option><option value="5">5 per page</option><option value="2">2 per page</option><option value="3">3 per page</option></select>
-        <button class="btn bp" onclick="doPrint()">&#x1F5A8; Print</button>
+        <span class="chip">Selected orders are combined into one print sheet</span>
+        <button class="btn bp" onclick="doPrint()">&#x1F5A8; Print combined orders</button>
       </div>
     </div>
     <div class="card">
@@ -515,6 +517,18 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="stitle">My Requests / &#x637;&#x644;&#x628;&#x627;&#x62A;&#x64A;</div>
     <div class="ssub">History of your department requests</div>
     <div id="mrlst"></div>
+  </div>
+
+  <div class="pg" id="pg-controlled">
+    <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
+      <div><div class="stitle">Controlled Medicines Custody / عهدة الأدوية المخدرة</div><div class="ssub" id="ctl-sub">Separate from Inventory — all movements are recorded</div></div>
+      <div class="fl g8 ic" style="flex-wrap:wrap"><select id="ctl-dept" class="psel" onchange="renderControlled()"></select><button class="btn bg" onclick="printControlledList()">🖨 Print list</button></div>
+    </div>
+    <div id="ctl-actions" class="card mb14"></div>
+    <input type="file" id="ctl-import-file" accept=".xlsx,.xls,.csv" style="display:none" onchange="ctlImportFile(this.files[0])">
+    <div class="card"><div class="tw"><table><thead><tr><th>#</th><th>Arabic medication name</th><th>Classification</th><th>Expiry</th><th>MOH code</th><th>NUPCO code</th><th>System balance</th><th>Outside-system balance</th><th></th></tr></thead><tbody id="ctl-table"></tbody></table></div></div>
+    <div class="card" style="margin-top:14px"><div class="ch"><span class="ct">Pending receipts / الاستلامات المعلقة</span></div><div id="ctl-pending" class="cb"></div></div>
+    <div class="card" style="margin-top:14px"><div class="ch"><span class="ct">Recent custody movements / آخر الحركات</span></div><div id="ctl-log" class="cb"></div></div>
   </div>
 
   <div class="pg" id="pg-expiry">
@@ -807,6 +821,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt">Add Department User</span><button class="xbtn" onclick="CM('muser')">&#x2715;</button></div>
     <div class="fg"><label>Email</label><input type="email" id="nuname" placeholder="e.g. icu@example.com"></div>
     <div class="fg"><label>Password</label><input type="password" id="nupass" placeholder="At least 8 characters"></div>
+    <div class="fg"><label>Controlled-custody role</label><select id="nurole"><option value="department">Department user (print only)</option><option value="custodian">Department controlled-custody officer</option><option value="warehouse">Warehouse custody officer</option></select></div>
     <div class="fg"><label>Department</label><select id="nudept"></select></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
       <button class="btn bg" onclick="CM('muser')">Cancel</button>
@@ -1155,7 +1170,24 @@ function pushMed(deptId,v){var arr=getMeds(deptId);v.id=v.id||'m_'+Date.now()+'_
 function updMed(deptId,id,d){var arr=getMeds(deptId);var i=arr.findIndex(function(x){return x.id===id});if(i>-1){arr[i]=Object.assign({},arr[i],d);setMeds(deptId,arr)}}
 function delMed(deptId,id){setMeds(deptId,getMeds(deptId).filter(function(x){return x.id!==id}))}
 function getExpiry(deptId){return S.g('expiry_'+deptId)||[]}
-function setExpiry(deptId,arr){S.s('expiry_'+deptId,arr)}
+function setExpiry(deptId,arr){
+  S.s('expiry_'+deptId,arr);
+  syncPublicExpiry(deptId,arr);
+}
+// A separate, sanitised document is used for the public QR view.  It contains
+// expiry-monitoring data only; requests, users and the rest of Floor Stock stay private.
+function syncPublicExpiry(deptId,batches){
+  if(!FB_DB||!FB_AUTH||!FB_AUTH.currentUser)return;
+  var meds=getMeds(deptId);
+  var publicBatches=(batches||[]).map(function(b){
+    var med=meds.find(function(m){return m.id===b.medId});
+    return {medication:med?med.name:(b.medId||'Unknown medication'),batch:b.batch||'',date:b.date||''};
+  });
+  var cfg=getAlertSettings(deptId);
+  return FB_DB.collection('public_expiry').doc(deptId).set({
+    departmentId:deptId,batches:publicBatches,alertDays:{soon:cfg.d1||30,urgent:cfg.d2||7},updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+  },{merge:true}).then(function(){return true;}).catch(function(err){console.error(err);toast('Public expiry QR could not be updated.','err');return false;});
+}
 function addExpBatch(deptId,batch){var arr=getExpiry(deptId);batch.id=batch.id||'ex_'+Date.now()+'_'+Math.random().toString(36).slice(2,4);arr.push(batch);setExpiry(deptId,arr);return batch}
 function delExpBatch(deptId,id){setExpiry(deptId,getExpiry(deptId).filter(function(b){return b.id!==id}))}
 function updExpBatch(deptId,id,d){var arr=getExpiry(deptId);var i=arr.findIndex(function(x){return x.id===id});if(i>-1){arr[i]=Object.assign({},arr[i],d);setExpiry(deptId,arr)}}
@@ -1378,6 +1410,22 @@ function seed(){
       setMeds(dept.id,ms);
     }
   });
+  // Import the department names supplied in the Narcotic for floor stocks workbook once.
+  // Existing departments are preserved; this is an additive import only.
+  var narcoticDepartments=['Emergency','ICU','ANESTHESIA','MMW','MSW','FMW','CCU','FSW','OBW','PEDIA','Nursery','ENDOSCOPY UNIT','AKU','HOME CARE'];
+  var departments=gd().slice(),changed=false;
+  narcoticDepartments.forEach(function(name){
+    if(!departments.some(function(d){return d.name.toLowerCase()===name.toLowerCase()})){
+      var id=name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'');
+      while(departments.some(function(d){return d.id===id}))id+='x';
+      departments.push({id:id,name:name,created:nowISO()});changed=true;
+    }
+  });
+  if(changed)S.s('departments',departments);
+  departments.forEach(function(d){
+    var key='controlled_settings_'+d.id;
+    if(!S.g(key))S.s(key,{custodyOfficer:'',departmentSupervisor:'',pharmacyManager:'صيدلي / عظيمان غنام القحطاني'});
+  });
 }
 
 // ── HELPERS ──────────────────────────────────────────────
@@ -1473,12 +1521,12 @@ async function doLogin(){
     if(!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
     var profile=profileSnapshot.data();
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(profile.role!=='pharmacy'&&profile.role!=='department')throw new Error('This account has an invalid role.');
+    if(profile.role!=='pharmacy'&&profile.role!=='department'&&profile.role!=='warehouse')throw new Error('This account has an invalid role.');
     await S.init();seed();
     var deptId=profile.deptId||null;
     var dept=deptId?gd().find(function(d){return d.id===deptId}):null;
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
-    CU={role:profile.role,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:''};
+    CU={role:profile.role,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:!!profile.controlledCustodian};
     startApp();
   }catch(err){
     console.error(err);el('aerr').textContent=err.message||'Unable to sign in';el('aerr').style.display='block';
@@ -1495,20 +1543,22 @@ function startApp(){
   rb.innerHTML=CU.role==='pharmacy'?'&#x1F3E5; Pharmacy':'&#x1F3E2; '+CU.deptName;
   rb.className='trole '+(CU.role==='pharmacy'?'rph':'rdp');
   buildNav();
-  showPg(CU.role==='pharmacy'?'pg-dash':'pg-newreq');
+  showPg(CU.role==='pharmacy'?'pg-dash':CU.role==='warehouse'?'pg-controlled':'pg-newreq');
   setTimeout(updateNotesBadge,200);
 }
 function buildNav(){
   var nav=el('mnav');nav.innerHTML='';
   var items=CU.role==='pharmacy'
     ?[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','&#x1F4DD; Notes'],['pg-schedule','&#x23F0; Schedule'],
-      ['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','Users'],['pg-import','&#x2B07; Import']]
+      ['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','Users'],['pg-import','&#x2B07; Import'],['pg-controlled','🔒 Controlled custody']]
+    :CU.role==='warehouse'
+    ?[['pg-controlled','🔒 Warehouse controlled custody']]
     :[['pg-newreq','New Request / \u0637\u0644\u0628 \u062C\u062F\u064A\u062F'],
       ['pg-myreqs','My Requests / \u0637\u0644\u0628\u0627\u062A\u064A'],
       ['pg-expiry','Expiry Dates / \u062A\u0648\u0627\u0631\u064A\u062E'],
       ['pg-shelves','\uD83D\uDCE6 Shelves / \u0623\u0631\u0641\u0641'],
       ['pg-notes-dept','\uD83D\uDCDD Notes / \u0645\u0644\u0627\u062D\u0638\u0627\u062A'],
-      ['pg-deptprint','\uD83D\uDDA8 Print Drug List']];
+      ['pg-deptprint','\uD83D\uDDA8 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
   items.forEach(function(x){
     var btn=document.createElement('button');
     btn.className='nb';btn.innerHTML=x[1];
@@ -1527,7 +1577,7 @@ function showPg(id){
     'pg-analytics':renderAn,'pg-users':renderUsers,'pg-newreq':renderReqForm,
     'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
     'pg-expiry':renderExpiry,'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
-    'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule
+    'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule,'pg-controlled':renderControlled
   };
   if(map[id])map[id]();
 }
@@ -1931,6 +1981,85 @@ function renderMyReqs(){
     :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">&#x1F4CB;</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests yet</div></div>';
 }
 
+// ── CONTROLLED MEDICINES CUSTODY (separate from Inventory) ────────────────
+function ctlCatalog(){return S.g('controlled_catalog')||[]}
+function ctlList(dept){return S.g('controlled_list_'+dept)||[]}
+function ctlSetList(dept,v){S.s('controlled_list_'+dept,v)}
+function ctlStock(owner){return S.g('controlled_stock_'+owner)||{}}
+function ctlSetStock(owner,v){S.s('controlled_stock_'+owner,v)}
+function ctlMoves(){return S.g('controlled_moves')||[]}
+function ctlMove(v){v.id='ctl_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);v.at=nowISO();v.by=CU.username;S.push('controlled_moves',v);return v}
+function ctlOwner(dept){return CU.role==='warehouse'?'warehouse':'custody_'+dept}
+function ctlCanCorrect(dept){return CU.role==='warehouse'||(CU.role==='department'&&CU.controlledCustodian&&CU.deptId===dept)}
+function ctlCanManageList(dept){return CU.role==='department'&&CU.controlledCustodian&&CU.deptId===dept}
+function ctlBalance(owner,id){var s=ctlStock(owner)[id]||{};return {system:+s.system||0,outside:+s.outside||0}}
+function ctlChange(owner,id,system,outside){var s=ctlStock(owner);s[id]={system:Math.max(0,+system||0),outside:Math.max(0,+outside||0)};ctlSetStock(owner,s)}
+function ctlDept(){var x=el('ctl-dept');return x&&x.value?x.value:(CU.deptId||'')}
+function renderControlled(){
+  if(!CU)return;var sel=el('ctl-dept'),ds=gd(),current=sel.value;
+  if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+CU.deptName+'</option>';
+  else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  if(current&&Array.from(sel.options).some(function(o){return o.value===current}))sel.value=current;
+  var dept=ctlDept(), owner=ctlOwner(dept), ids=ctlList(dept), catalog=ctlCatalog();
+  el('ctl-sub').textContent=(gd().find(function(d){return d.id===dept})||{}).name||dept+' — controlled custody list, separate from Inventory';
+  var canCorrect=ctlCanCorrect(dept),canList=ctlCanManageList(dept),isPharmacy=CU.role==='pharmacy';
+  var acts='';
+  if(canList)acts+='<div class="cb"><b>Custody officer controls this department list.</b><div class="fl g8" style="margin-top:10px;flex-wrap:wrap"><button class="btn bp bsm" onclick="ctlAddMedication()">+ Add medication</button><button class="btn bg bsm" onclick="document.getElementById(\'ctl-import-file\').click()">Import custody Excel</button><button class="btn bg bsm" onclick="ctlHandover()">Handover for leave</button></div><div class="fhint" style="margin-top:8px">Required column order: Code NO, Generic Name, Strength, Dosage Form, Std. Qty., Present, Exp. Date, Exp. Date, Exp. Date.</div></div>';
+  else if(CU.role==='warehouse')acts='<div class="cb"><b>Warehouse balance</b> — select a department, then send stock to its custody officer.</div>';
+  else if(isPharmacy)acts='<div class="cb"><b>Pharmacy manager</b> — read, print and dispense only; balance correction is disabled.</div>';
+  else acts='<div class="cb">This department has print-only access. Contact its controlled-custody officer for changes.</div>';
+  el('ctl-actions').innerHTML=acts;
+  el('ctl-table').innerHTML=ids.length?ids.map(function(id,i){var m=catalog.find(function(x){return x.id===id});if(!m)return '';var b=ctlBalance(owner,id);var action='';
+    if(CU.role==='warehouse')action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlWarehouseAdd(this.dataset.id)">+ Stock</button> <button class="btn bp bxs" data-id="'+id+'" onclick="ctlSend(this.dataset.id)">Send</button>';
+    else if(isPharmacy)action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlPharmacyDispense(this.dataset.id)">Dispense</button>';
+    else if(canCorrect)action='<button class="btn bg bxs" data-id="'+id+'" onclick="ctlCorrect(this.dataset.id)">Correct</button>';
+    return '<tr><td>'+ (i+1)+'</td><td style="font-weight:600">'+m.nameAr+'</td><td>'+m.classification+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+ (m.moh||'—')+'</td><td>'+ (m.nupco||'—')+'</td><td>'+b.system+'</td><td>'+b.outside+'</td><td>'+action+'</td></tr>';}).join(''):'<tr><td colspan="9" style="text-align:center;padding:22px;color:var(--tx2)">No controlled medicines assigned to this department.</td></tr>';
+  var pending=ctlMoves().filter(function(m){return m.type==='warehouse_send'&&m.to===dept&&m.status==='pending'});
+  el('ctl-pending').innerHTML=pending.length?pending.map(function(m){var med=catalog.find(function(x){return x.id===m.medId})||{};return '<div class="limit-row"><span>'+med.nameAr+' — System: '+m.system+', Outside: '+m.outside+'</span>'+(canCorrect?'<span><button class="btn bs bxs" data-id="'+m.id+'" onclick="ctlReceive(this.dataset.id,true)">Accept</button> <button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlReceive(this.dataset.id,false)">Reject</button></span>':'<span class="chip">Awaiting custody officer</span>')+'</div>';}).join(''):'<div style="color:var(--tx2)">No pending receipts.</div>';
+  var logs=ctlMoves().filter(function(m){return m.dept===dept||m.to===dept}).slice(-10).reverse();
+  el('ctl-log').innerHTML=logs.length?'<div class="tw"><table><thead><tr><th>Date</th><th>Action</th><th>Medication</th><th>By</th><th>Details</th></tr></thead><tbody>'+logs.map(function(m){var med=catalog.find(function(x){return x.id===m.medId})||{};return '<tr><td>'+fmtDateTime(m.at)+'</td><td>'+m.type+'</td><td>'+ (med.nameAr||'—')+'</td><td>'+m.by+'</td><td>'+ (m.note||'')+'</td></tr>';}).join('')+'</tbody></table></div>':'<div style="color:var(--tx2)">No movements yet.</div>';
+}
+function ctlAddMedication(){var n=prompt('Arabic medication name / اسم الدواء بالعربي');if(!n)return;var expiry=prompt('Expiry date (YYYY-MM-DD)');if(!expiry)return;var cls=prompt('Classification: مقيد or نفسي','مقيد');if(cls!=='مقيد'&&cls!=='نفسي')return toast('Choose مقيد or نفسي','err');var moh=prompt('MOH code (optional)')||'',nupco=prompt('NUPCO code (optional)')||'';var id='cm_'+Date.now();var c=ctlCatalog();c.push({id:id,nameAr:n.trim(),expiry:expiry,classification:cls,moh:moh.trim(),nupco:nupco.trim()});S.s('controlled_catalog',c);var a=ctlList(CU.deptId);a.push(id);ctlSetList(CU.deptId,a);ctlChange('custody_'+CU.deptId,id,0,0);ctlMove({type:'list_add',dept:CU.deptId,medId:id,note:'Added to department controlled list'});renderControlled();}
+function ctlImportFile(file){
+  if(!file||!ctlCanManageList(ctlDept()))return toast('Only this department custody officer may import the list.','err');
+  if(typeof XLSX==='undefined')return toast('Excel reader is unavailable. Reload and try again.','err');
+  var reader=new FileReader();
+  reader.onload=function(e){
+    try{
+      var wb=XLSX.read(e.target.result,{type:'array',cellDates:true});
+      var ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false});
+      var header=rows.findIndex(function(r){return String(r[0]).trim().toLowerCase()==='code no'});
+      if(header<0)throw new Error('Could not find the Code NO header.');
+      var catalog=ctlCatalog().slice(),list=ctlList(ctlDept()).slice(),stock=ctlStock('custody_'+ctlDept()),added=0;
+      for(var i=header+1;i<rows.length;i++){
+        var r=rows[i],code=String(r[0]||'').trim(),generic=String(r[1]||'').trim();
+        if(!code&&!generic)break;
+        if(!code||!generic)continue;
+        var strength=String(r[2]||'').trim(),form=String(r[3]||'').trim(),standard=+r[4]||0,present=+r[5]||0;
+        var expiries=[r[6],r[7],r[8]].map(function(v){return String(v||'').replace(' 00:00:00','').trim();}).filter(Boolean).sort();
+        var id='cm_'+code.replace(/[^a-zA-Z0-9]/g,'')+'_'+strength.replace(/[^a-zA-Z0-9]/g,'').slice(0,12);
+        var med=catalog.find(function(x){return x.id===id});
+        if(!med){med={id:id,nameAr:generic+' '+strength,nameEn:generic,strength:strength,dosageForm:form,classification:'مقيد',moh:code,nupco:'',standardQty:standard,expiry:expiries[0]||'',expiryDates:expiries};catalog.push(med);added++;}
+        if(list.indexOf(id)<0)list.push(id);
+        stock[id]={system:present,outside:(stock[id]&&stock[id].outside)||0};
+      }
+      if(!added&&!list.length)throw new Error('No medication rows were found after the headers.');
+      S.s('controlled_catalog',catalog);ctlSetList(ctlDept(),list);ctlSetStock('custody_'+ctlDept(),stock);
+      ctlMove({type:'excel_import',dept:ctlDept(),note:'Imported '+(list.length)+' listed medications from '+file.name});
+      toast('Custody list imported and ordered ✓','succ');renderControlled();
+    }catch(err){console.error(err);toast(err.message||'Could not import this Excel file.','err');}
+    el('ctl-import-file').value='';
+  };
+  reader.readAsArrayBuffer(file);
+}
+function ctlCorrect(id){if(!ctlCanCorrect(ctlDept()))return toast('You cannot correct this balance','err');var owner=ctlOwner(ctlDept()),b=ctlBalance(owner,id),sys=prompt('New system balance',b.system),out=prompt('New outside-system balance',b.outside),reason=prompt('Correction reason (required)');if(sys===null||out===null||!reason)return;ctlChange(owner,id,+sys,+out);ctlMove({type:'balance_correction',dept:ctlDept(),medId:id,note:reason+' | Before: '+b.system+'/'+b.outside+' | After: '+sys+'/'+out});renderControlled();}
+function ctlWarehouseAdd(id){var b=ctlBalance('warehouse',id),sys=+prompt('System quantity to add','0'),out=+prompt('Outside-system quantity to add','0'),reason=prompt('Source / reason');if((!sys&&!out)||sys<0||out<0||!reason)return;ctlChange('warehouse',id,b.system+sys,b.outside+out);ctlMove({type:'warehouse_add',dept:ctlDept(),medId:id,note:reason+' | Added: '+sys+'/'+out});renderControlled();}
+function ctlSend(id){var dept=ctlDept(),b=ctlBalance('warehouse',id),sys=+prompt('System quantity to send','0'),out=+prompt('Outside-system quantity to send','0');if((!sys&&!out)||sys<0||out<0)return; if(sys>b.system||out>b.outside)return toast('Insufficient warehouse balance','err');ctlChange('warehouse',id,b.system-sys,b.outside-out);ctlMove({type:'warehouse_send',dept:dept,to:dept,medId:id,system:sys,outside:out,status:'pending',note:'Awaiting custody acceptance'});renderControlled();}
+function ctlReceive(id,accept){var moves=ctlMoves(),m=moves.find(function(x){return x.id===id});if(!m)return;if(accept){var b=ctlBalance('custody_'+m.to,m.medId);ctlChange('custody_'+m.to,m.medId,b.system+m.system,b.outside+m.outside);m.status='accepted';m.type='receipt_accepted';m.note='Received from warehouse';}else{var why=prompt('Reason for rejection')||'Rejected by custody officer',b2=ctlBalance('warehouse',m.medId);ctlChange('warehouse',m.medId,b2.system+m.system,b2.outside+m.outside);m.status='rejected';m.type='receipt_rejected';m.note=why;}S.s('controlled_moves',moves);renderControlled();}
+function ctlPharmacyDispense(id){var dept=ctlDept(),b=ctlBalance('custody_'+dept,id),sys=+prompt('System quantity to dispense','0'),out=+prompt('Outside-system quantity to dispense','0');if(sys>b.system||out>b.outside||sys<0||out<0||(!sys&&!out))return toast('Invalid quantity','err');var target=prompt('Department (optional)')||'',person=prompt('Person name for tablets (optional)')||'',ref=prompt('Outside-system reference no. (optional)')||'';ctlChange('custody_'+dept,id,b.system-sys,b.outside-out);ctlMove({type:'pharmacy_dispense',dept:dept,medId:id,system:sys,outside:out,note:'Department: '+target+' | Person: '+person+' | Ref: '+ref});renderControlled();}
+function ctlHandover(){var recipient=prompt('Receiving custody officer name');if(!recipient)return;var manifest=ctlList(CU.deptId).map(function(id){var m=ctlCatalog().find(function(x){return x.id===id})||{},b=ctlBalance('custody_'+CU.deptId,id);return (m.nameAr||id)+': '+b.system+'/'+b.outside;}).join('; ');ctlMove({type:'leave_handover',dept:CU.deptId,note:'To: '+recipient+' | Handover manifest: '+manifest});toast('Handover record created','succ');renderControlled();}
+function printControlledList(){if(!CU||CU.role!=='department')return toast('Only department users may print this controlled-custody list.','err');var dept=ctlDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,settings=S.g('controlled_settings_'+dept)||{},rows=ctlList(dept).map(function(id,i){var m=ctlCatalog().find(function(x){return x.id===id})||{},b=ctlBalance('custody_'+dept,id);return '<tr><td>'+ (i+1)+'</td><td>'+m.nameAr+'</td><td>'+m.classification+'</td><td>'+fmtDate(m.expiry)+'</td><td>'+b.system+'</td><td>'+b.outside+'</td></tr>';}).join('');var qr='https://api.qrserver.com/v1/create-qr-code/?size=160x160&data='+encodeURIComponent('Internal controlled custody list | '+name);var w=window.open('','_ctl_');w.document.write('<html><head><title>Controlled custody</title><style>body{font-family:Arial;padding:20px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #777;padding:6px;text-align:left}</style></head><body><h2>'+name+' — Controlled Medicines Custody</h2><p>Custody officer: '+(settings.custodyOfficer||'—')+' | Department supervisor: '+(settings.departmentSupervisor||'—')+' | Pharmacy manager: '+(settings.pharmacyManager||'—')+'</p><p>Internal list — authenticated access required | By Ali Abudahash</p><img src="'+qr+'" width="110"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>Expiry</th><th>System</th><th>Outside system</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.print()<\/script></body></html>');w.document.close();}
+
 // ── EXPIRY DATES ─────────────────────────────────────────
 function renderExpiry(){
   if(!CU||CU.role!=='department')return;
@@ -2082,18 +2211,18 @@ function renameDept(id,currentName){
   toast('Renamed to "'+newName.trim()+'" &#x2713;','succ');
   renderUsers();fillDS();populateInvDeptSel();
 }
-function openAddUser(){el('nuname').value='';el('nupass').value='';renderUsers();OM('muser')}
+function openAddUser(){el('nuname').value='';el('nupass').value='';el('nurole').value='department';renderUsers();OM('muser')}
 async function saveUser(){
-  var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value;
+  var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value,requestedRole=el('nurole').value;
   if(!email||!password)return toast('Fill all fields','err');
   if(password.length<8)return toast('Password must be at least 8 characters','err');
-  if(!did)return toast('Add a department first','err');
+  if(requestedRole!=='warehouse'&&!did)return toast('Add a department first','err');
   if(gu().find(function(u){return u.email===email}))return toast('Email already exists','err');
   var secondary=null;
   try{
     secondary=firebase.initializeApp(FIREBASE_CONFIG,'floorstock-user-'+Date.now());
     var credential=await secondary.auth().createUserWithEmailAndPassword(email,password);
-    var profile={id:credential.user.uid,email:email,displayName:email,role:'department',deptId:did,active:true,created:nowISO()};
+    var profile={id:credential.user.uid,email:email,displayName:email,role:requestedRole==='warehouse'?'warehouse':'department',deptId:requestedRole==='warehouse'?null:did,controlledCustodian:requestedRole==='custodian',active:true,created:nowISO()};
     await FB_DB.collection('users').doc(profile.id).set(profile);
     S.push('users',profile);
     toast('Firebase user created ✓','succ');CM('muser');renderUsers();
@@ -2145,6 +2274,8 @@ function delDept(id){
   // Clean up dept data
   S.rm('meds_'+id);
   S.rm('expiry_'+id);
+  // Remove the separately published, read-only expiry monitor as well.
+  if(FB_DB&&FB_AUTH&&FB_AUTH.currentUser)FB_DB.collection('public_expiry').doc(id).delete().catch(function(err){console.error(err);toast('Public expiry monitor could not be removed.','err');});
   S.rm('shelves_'+id);
   S.rm('alerts_'+id);
   toast('Department deleted','info');
@@ -2198,22 +2329,19 @@ function renderPrint(){
 function doPrint(){
   var sel=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
   if(!sel.length)return toast('Select at least one','err');
-  var cols=+(el('pcols').value)||4;
   var today=fmtDate(nowISO());
-  var blocks=sel.map(function(id){
+  var rows=sel.map(function(id,requestIndex){
     var r=gr().find(function(x){return x.id===id});if(!r)return '';
     var dept=gd().find(function(d){return d.id===r.deptId});
     var ms=getMeds(r.deptId||'');
     var items=(r.dispensed||[]).filter(function(d){return d.qty>0});
     var mobileUrl=getMobileRequestUrl(r.id);
-    var mobileQr='https://api.qrserver.com/v1/create-qr-code/?size=70x70&data='+encodeURIComponent(mobileUrl);
-    return '<div class="dpb"><div class="dph" style="display:flex;justify-content:space-between;gap:8px"><div><div class="dpn">'+((dept&&dept.name)||r.deptId)+'</div><div class="dpd">Printed: '+today+' | Req: '+fmtDate(r.created)+'</div>'+(r.scheduledFor?'<div class="dpd">Scheduled dispense: '+fmtDateTime(r.scheduledFor)+'</div>':'')+'</div><div style="text-align:center"><img src="'+mobileQr+'" width="48" height="48" alt="Mobile request barcode"><div style="font-size:6pt">Mobile view</div></div></div>'
-      +'<table class="ptbl"><thead><tr><th>#</th><th>Medication</th><th>Qty</th></tr></thead><tbody>'
-      +items.map(function(d,i){var m=ms.find(function(x){return x.id===d.medId});return '<tr><td>'+(i+1)+'</td><td>'+(m?m.name:d.medId)+'</td><td>'+d.qty+'</td></tr>'}).join('')
-      +'</tbody></table></div>';
+    var mobileQr='https://api.qrserver.com/v1/create-qr-code/?size=48x48&data='+encodeURIComponent(mobileUrl);
+    var group='<tr class="print-request-group"><td colspan="5"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><b>Order '+(requestIndex+1)+': '+((dept&&dept.name)||r.deptId)+'</b><span style="margin-left:8px">Requested: '+fmtDate(r.created)+'</span>'+(r.scheduledFor?'<span style="margin-left:8px">Scheduled: '+fmtDateTime(r.scheduledFor)+'</span>':'')+'</div><img src="'+mobileQr+'" width="32" height="32" alt="Mobile order QR"></div></td></tr>';
+    return group+items.map(function(d,i){var m=ms.find(function(x){return x.id===d.medId});return '<tr><td>'+((requestIndex+1)+'.'+(i+1))+'</td><td>'+((dept&&dept.name)||r.deptId)+'</td><td>'+fmtDate(r.created)+'</td><td>'+(m?m.name:d.medId)+'</td><td>'+d.qty+'</td></tr>'}).join('');
   }).join('');
   sel.forEach(function(id){var request=gr().find(function(r){return r.id===id});if(request)S.upd('requests',id,{printCount:(request.printCount||0)+1,lastPrintedAt:nowISO()});});
-  el('parea').innerHTML='<style>.pgrid{grid-template-columns:repeat('+cols+',1fr)!important}</style><div class="pgrid">'+blocks+'</div>';
+  el('parea').innerHTML='<div class="print-bundle"><div class="dph"><div class="dpn">Combined Floor Stock Orders</div><div class="dpd">Printed: '+today+' | Total orders: '+sel.length+' | By Ali Abudahash</div></div><table class="ptbl"><thead><tr><th>#</th><th>Department</th><th>Request date</th><th>Medication</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
   window.print();
   renderPrint();
 }
@@ -2585,9 +2713,13 @@ function renderDeptPrint(){
   el('deptprint-sub').textContent=CU.deptName+' — Drug List';
   el('deptprint-preview').innerHTML='<div style="color:var(--tx2);font-size:13px">Configure options above and click <b>Print</b>.</div>';
 }
-function doDeptPrint(){
+async function doDeptPrint(){
   if(!CU)return;
   var ms=getMeds(CU.deptId);
+  if(!await syncPublicExpiry(CU.deptId,getExpiry(CU.deptId))){
+    toast('Printing stopped because the public expiry QR could not be published.','err');
+    return;
+  }
   var fitOne=el('dpopt-pages').value==='fit';
   var includeExpiryDate=el('dpopt-expiry').value==='date-barcode';
   var today=fmtDate(nowISO());
@@ -2596,7 +2728,7 @@ function doDeptPrint(){
   // Build QR code using a free API (no external JS lib needed)
   var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getAppUrl());
   var qrExpUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getPublicExpiryUrl(CU.deptId));
-  var expiryPrintBlock='<div style="text-align:center"><img src="'+qrExpUrl+'" width="60" height="60" alt="Expiry barcode"><div style="font-size:5.5pt;color:#888">Expiry Monitor Barcode</div>'
+  var expiryPrintBlock='<div style="text-align:center;max-width:260px;margin:18px auto 8px;padding:10px;border:1px solid #bbb;border-radius:6px;page-break-inside:avoid"><div style="font-size:8pt;font-weight:700;margin-bottom:5px">Expiry Monitor / متابعة الصلاحية</div><img src="'+qrExpUrl+'" width="110" height="110" alt="Expiry monitor QR code"><div style="font-size:7pt;color:#555;margin-top:3px">Scan to open the public expiry monitor</div>'
     +(includeExpiryDate?'<div style="font-size:7pt;color:#333;margin-top:5px;white-space:nowrap">Expiry Date / تاريخ الصلاحية: ____________</div>':'')
     +'</div>';
   // Group meds
@@ -2650,7 +2782,7 @@ function doDeptPrint(){
     +'<div style="font-size:7pt;color:#666;margin-top:3px">Developed by Ali Abudahash | PharmOrder System</div>'
     +'</div>'
     +'<div style="text-align:center">'
-    +'<img src="'+qrUrl+'" width="60" height="60" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'+expiryPrintBlock
+    +'<img src="'+qrUrl+'" width="60" height="60" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'
     +'</div>'
     +'<table>'
     +'<thead><tr>'
@@ -2661,7 +2793,7 @@ function doDeptPrint(){
     +'<th class="c">Max / &#x627;&#x644;&#x623;&#x639;&#x644;&#x649;</th>'
     +'</tr></thead>'
     +'<tbody>'+rows+'</tbody>'
-    +'</table>'
+    +'</table>'+expiryPrintBlock
     // Footer with page numbers and QR
     +'<div id="footer" style="margin-top:20px;padding-top:8px;border-top:1px solid #ccc;font-size:7pt;color:#555;display:flex;justify-content:space-between;align-items:center">'
     +'<span>'+footerNote+'</span>'
@@ -2857,7 +2989,7 @@ function printShelfList(){
 }
 
 // ── PUBLIC EXPIRY VIEW (read-only, no login) ─────────────
-function checkPublicView(){
+async function checkPublicView(){
   var params=new URLSearchParams(window.location.search);
   if(params.get('view')==='request')return renderMobileRequest(params.get('request'));
   if(params.get('view')!=='expiry')return;
@@ -2868,20 +3000,23 @@ function checkPublicView(){
   el('app').style.display='none';
   var pv=el('pub-view');if(pv)pv.style.display='block';
   applyTheme();
-  var dept=gd().find(function(d){return d.id===deptId});
-  var deptName=dept?dept.name:deptId;
-  el('pub-title').textContent=deptName+' — Expiry Monitor / مراقبة الصلاحية';
-  el('pub-sub').innerHTML='Last updated: '+fmtDate(nowISO())+' &nbsp;|&nbsp; Read-only / &#x642;&#x631;&#x627;&#x621;&#x629; &#x641;&#x642;&#x637;';
-  var publicUrl=getPublicExpiryUrl(deptId);
-  var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=60x60&data='+encodeURIComponent(publicUrl);
-  el('pub-qr').src=qrUrl;
-  // Render expiry data
-  var ms=getMeds(deptId);
-  var batches=getExpiry(deptId);
-  var cfg=getAlertSettings(deptId);
-  var d1=cfg.d1||30,d2=cfg.d2||7;
+  el('pub-title').textContent='Expiry Monitor / مراقبة الصلاحية';
+  el('pub-sub').textContent='Loading public expiry data…';
+  try{
+    // This is the only collection the public QR route reads. Do not initialise
+    // the private Floor Stock state here: it includes requests and user data.
+    var snapshot=await FB_DB.collection('public_expiry').doc(deptId).get();
+    if(!snapshot.exists)throw new Error('No published expiry data is available for this department yet.');
+    var publicData=snapshot.data()||{};
+    var batches=publicData.batches||[];
+    var updated=publicData.updatedAt&&publicData.updatedAt.toDate?publicData.updatedAt.toDate().toISOString():nowISO();
+    var publicUrl=getPublicExpiryUrl(deptId);
+    var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(publicUrl);
+    el('pub-qr').src=qrUrl;
+    el('pub-title').textContent='Expiry Monitor / مراقبة الصلاحية';
+    el('pub-sub').innerHTML='Last updated: '+fmtDate(updated)+' &nbsp;|&nbsp; Read-only / &#x642;&#x631;&#x627;&#x621;&#x629; &#x641;&#x642;&#x637;';
+    var d1=(publicData.alertDays||{}).soon||30,d2=(publicData.alertDays||{}).urgent||7;
   var rows=batches.map(function(b){
-    var m=ms.find(function(x){return x.id===b.medId});
     var days=daysUntil(b.date);
     var status='',bg='';
     if(days===null){status='<span class="badge bgr">No date</span>';}
@@ -2890,7 +3025,7 @@ function checkPublicView(){
     else if(days<=d1){status='<span class="badge byl">Soon</span>';bg='rgba(210,153,34,.06)';}
     else{status='<span class="badge bgn">OK</span>';}
     return '<tr style="background:'+bg+'">'
-      +'<td style="font-weight:500">'+(m?m.name:(b.medId||'?'))+'</td>'
+      +'<td style="font-weight:500">'+(b.medication||'Unknown medication')+'</td>'
       +'<td style="font-family:var(--mono)">'+(b.batch||'—')+'</td>'
       +'<td>'+fmtDate(b.date)+'</td>'
       +'<td style="font-family:var(--mono)">'+(days!==null?days+'d':'—')+'</td>'
@@ -2911,6 +3046,11 @@ function checkPublicView(){
     shareDiv.style.cssText='margin-top:16px;padding:12px;background:var(--s2);border-radius:8px;font-size:12px';
     shareDiv.innerHTML='<b>Public expiry link / رابط متابعة الصلاحية</b><br><a href="'+publicUrl+'" style="color:var(--acl);display:inline-block;margin:5px 0">Open expiry monitor / فتح صفحة الصلاحية</a><br><code style="font-size:11px;word-break:break-all">'+publicUrl+'</code>';
     el('pub-exp').appendChild(shareDiv);
+  }
+  }catch(err){
+    console.error(err);
+    el('pub-sub').textContent='This public expiry page is not available yet.';
+    el('pub-tbl').innerHTML='<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--rd)">Public expiry data could not be loaded.</td></tr>';
   }
 }
 
@@ -3867,7 +4007,12 @@ function getNextDispSlot(deptId){
 }
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
-  try{initFirebase();applyTheme();}
+  try{
+    initFirebase();
+    var view=new URLSearchParams(window.location.search).get('view');
+    if(view==='expiry'||view==='request'){checkPublicView();return;}
+    applyTheme();
+  }
   catch(err){console.error(err);el('aerr').textContent='Firebase failed to initialize. Check the connection and Firebase setup.';el('aerr').style.display='block';}
 }
 boot();
