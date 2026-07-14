@@ -7463,5 +7463,127 @@ renderCrashCarts=function(){
 };
 </script>
 
+
+<style>
+/* Crash Cart complete management */
+.cc-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.cc-section{border-top:1px solid var(--bd)}
+.cc-section-title{padding:9px 14px;background:var(--s3);font-size:12px;font-weight:700;letter-spacing:.4px;display:flex;justify-content:space-between;align-items:center}
+.cc-db-row{display:grid;grid-template-columns:minmax(220px,1.7fr) 110px 120px 100px 90px minmax(220px,1.4fr) 150px;gap:8px;align-items:center;padding:8px 12px;border-top:1px solid var(--bd);font-size:12px}
+.cc-db-row.cc-head{font-weight:700;color:var(--tx2);background:var(--s2)}
+.cc-exp-soon{background:rgba(210,153,34,.08)}.cc-expired{background:rgba(218,54,51,.08)}
+.cc-import-tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.cc-import-tab{padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);cursor:pointer;text-align:center;font-weight:600}
+.cc-import-tab.on{border-color:var(--ac);background:rgba(31,111,235,.10);color:var(--acl)}
+.cc-summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+@media(max-width:900px){.cc-db-row{min-width:1050px}.cc-summary-grid{grid-template-columns:1fr 1fr}.cc-table-wrap{overflow:auto}}
+</style>
+<script>
+(function(){
+  function ccCanManage(){return canManageCrashCart()}
+  function ccDays(){var s=S.g('crash_cart_settings')||{};return Number(s.expiryAlertDays||90)}
+  function ccDateISO(v){
+    v=String(v||'').trim().replace(/\.$/,'');if(!v||/^na$/i.test(v))return '';
+    var m=v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);if(!m)return v;
+    return m[3]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);
+  }
+  function ccDMY(v){if(!v)return 'NA';var m=String(v).match(/^(\d{4})-(\d{2})-(\d{2})$/);return m?m[3]+'/'+m[2]+'/'+m[1]:v}
+  function ccStatus(item){
+    var ds=(item.batches||[]).map(function(b){return daysUntil(b.expiry)}).filter(function(d){return d!==null});
+    if(!ds.length)return 'none';var min=Math.min.apply(null,ds);if(min<0)return 'expired';if(min<=ccDays())return 'soon';return 'ok';
+  }
+  function ccCartStatus(c){var st=(c.items||[]).map(ccStatus);return st.indexOf('expired')>=0?'expired':st.indexOf('soon')>=0?'soon':st.every(function(x){return x==='none'})?'none':'ok'}
+  function ccEnsureModal(){
+    if(el('cc-complete-modal'))return;
+    document.body.insertAdjacentHTML('beforeend','<div class="modal-bg" id="cc-complete-modal"><div class="modal" style="width:900px"><div class="mh"><span class="mt" id="cc-complete-title">Crash Cart</span><button class="xbtn" onclick="CM(\'cc-complete-modal\')">✕</button></div><div id="cc-complete-body"></div></div></div>');
+  }
+  window.ccOpenSettings=function(){
+    if(!ccCanManage())return;ccEnsureModal();var s=S.g('crash_cart_settings')||{};
+    el('cc-complete-title').textContent='Crash Cart settings / إعدادات عربات الإنعاش';
+    el('cc-complete-body').innerHTML='<div class="fg"><label>Near-expiry alert period (days) / مدة تنبيه قرب الانتهاء</label><input id="cc-alert-days" type="number" min="1" value="'+esc(s.expiryAlertDays||90)+'"></div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM(\'cc-complete-modal\')">Cancel</button><button class="btn bp" onclick="ccSaveSettings()">Save</button></div>';OM('cc-complete-modal');
+  };
+  window.ccSaveSettings=async function(){var d=Math.max(1,Number(el('cc-alert-days').value||90));await S.s('crash_cart_settings',{expiryAlertDays:d});CM('cc-complete-modal');renderCrashCarts();toast('Crash Cart alert settings saved ✓','succ')};
+  window.ccAddCartComplete=function(){
+    if(!ccCanManage())return;ccEnsureModal();var opts=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+    el('cc-complete-title').textContent='Add Crash Cart / إضافة عربة إنعاش';
+    el('cc-complete-body').innerHTML='<div class="g2"><div class="fg"><label>Cart name / اسم العربة</label><input id="cc-new-name"></div><div class="fg"><label>Assigned department / القسم المرتبط</label><select id="cc-new-dept">'+opts+'</select></div><div class="fg"><label>Cart number / رقم العربة</label><input id="cc-new-number"></div><div class="fg"><label>Location / الموقع</label><input id="cc-new-location"></div><div class="fg"><label>Current lock number / رقم القفل الحالي</label><input id="cc-new-lock"></div></div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM(\'cc-complete-modal\')">Cancel</button><button class="btn bp" onclick="ccSaveNewCart()">Create</button></div>';OM('cc-complete-modal');
+  };
+  window.ccSaveNewCart=async function(){
+    var name=(el('cc-new-name').value||'').trim(),deptId=el('cc-new-dept').value;if(!name||!deptId)return toast('Enter cart name and department','err');
+    var a=crashCarts().slice();a.push({id:'cc_'+Date.now().toString(36),name:name,deptId:deptId,number:(el('cc-new-number').value||'').trim(),location:(el('cc-new-location').value||'').trim(),sealNumber:(el('cc-new-lock').value||'').trim(),items:[],createdAt:nowISO(),createdBy:actualActorName()});await setCrashCarts(a);CM('cc-complete-modal');renderCrashCarts();toast('Crash Cart created ✓','succ');
+  };
+  window.ccOpenImport=function(cartId,section){
+    if(!ccCanManage())return;ccEnsureModal();window.__ccImportCart=cartId;window.__ccImportSection=section||'up';
+    el('cc-complete-title').textContent='Import '+String(section||'up').toUpperCase()+' list / استيراد القائمة';
+    el('cc-complete-body').innerHTML='<div class="cc-import-tabs"><div class="cc-import-tab '+(section==='up'?'on':'')+'" onclick="ccSwitchImport(\'up\')">UP / الجزء العلوي</div><div class="cc-import-tab '+(section==='down'?'on':'')+'" onclick="ccSwitchImport(\'down\')">DOWN / الجزء السفلي</div></div><div class="fhint" style="margin-bottom:8px">Paste directly from Google Sheets. Keep each section separate. / الصق البيانات من قوقل شيت، كل جزء بشكل منفصل.</div><textarea id="cc-import-text" rows="15" style="font-family:var(--mono)" placeholder="Generic Name\tStrength\tDosage Form\tConc. In 1ml\tStd. Qty.\tPresent\tExp. Date\tExp. Date"></textarea><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM(\'cc-complete-modal\')">Cancel</button><button class="btn bp" onclick="ccProcessImport()">Import '+String(section||'up').toUpperCase()+'</button></div>';OM('cc-complete-modal');
+  };
+  window.ccSwitchImport=function(section){var txt=(el('cc-import-text')||{}).value||'';ccOpenImport(window.__ccImportCart,section);el('cc-import-text').value=txt};
+  window.ccProcessImport=async function(){
+    var c=crashCart(window.__ccImportCart),section=window.__ccImportSection;if(!c)return;var lines=(el('cc-import-text').value||'').split(/\r?\n/).filter(function(x){return x.trim()});if(!lines.length)return toast('Paste data first','err');
+    var start=/generic name/i.test(lines[0])?1:0,added=[];
+    for(var i=start;i<lines.length;i++){
+      var p=lines[i].split('\t');if(!p[0]||/^iv solutions/i.test(p[0]))continue;
+      var std=Number(p[4]||0),present=Number(p[5]||std||0),dates=[p[6],p[7]].map(ccDateISO).filter(Boolean),batches=[];
+      if(dates.length===1)batches=[{qty:present,expiry:dates[0]}];
+      else if(dates.length>1){var q1=Math.ceil(present/dates.length),left=present;dates.forEach(function(d,idx){var q=idx===dates.length-1?left:q1;batches.push({qty:q,expiry:d});left-=q})}
+      added.push({id:'cci_'+Date.now().toString(36)+'_'+i,name:p[0].trim(),genericName:p[0].trim(),strength:(p[1]||'').trim(),dosageForm:(p[2]||'').trim(),concentration:(p[3]||'').trim(),qty:std||present,present:present,section:section,batches:batches});
+    }
+    var existing=(c.items||[]).filter(function(x){return (x.section||'up')!==section});c.items=existing.concat(added);await setCrashCarts(crashCarts().map(function(x){return x.id===c.id?c:x}));CM('cc-complete-modal');renderCrashCarts();toast(added.length+' items imported into '+section.toUpperCase()+' ✓','succ');
+  };
+  window.ccEditItemComplete=function(cartId,itemId){
+    if(!ccCanManage())return;var c=crashCart(cartId),it=c&&(c.items||[]).find(function(x){return x.id===itemId});if(!it)return;ccEnsureModal();window.__ccEditCart=cartId;window.__ccEditItem=itemId;
+    var batchRows=(it.batches||[]).map(function(b,i){return '<div class="g2"><input data-cc-bqty="'+i+'" type="number" value="'+esc(b.qty||0)+'"><input data-cc-bexp="'+i+'" type="date" value="'+esc(b.expiry||'')+'"></div>'}).join('');
+    el('cc-complete-title').textContent='Edit Crash Cart item';el('cc-complete-body').innerHTML='<div class="g2"><div class="fg"><label>Generic Name</label><input id="cc-e-name" value="'+esc(it.name||'')+'"></div><div class="fg"><label>Strength</label><input id="cc-e-strength" value="'+esc(it.strength||'')+'"></div><div class="fg"><label>Dosage Form</label><input id="cc-e-form" value="'+esc(it.dosageForm||'')+'"></div><div class="fg"><label>Conc. In 1ml</label><input id="cc-e-conc" value="'+esc(it.concentration||'')+'"></div><div class="fg"><label>Std. Qty.</label><input id="cc-e-qty" type="number" value="'+esc(it.qty||0)+'"></div><div class="fg"><label>Present</label><input id="cc-e-present" type="number" value="'+esc(typeof it.present==='number'?it.present:it.qty||0)+'"></div></div><div class="ct" style="margin:8px 0">Expiry batches</div>'+batchRows+'<button class="btn bg bsm" onclick="ccAddBatchEditor()">+ Add expiry</button><div id="cc-extra-batches"></div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" onclick="CM(\'cc-complete-modal\')">Cancel</button><button class="btn bp" onclick="ccSaveItemComplete()">Save</button></div>';OM('cc-complete-modal');
+  };
+  window.ccAddBatchEditor=function(){var d=document.createElement('div');d.className='g2';d.innerHTML='<input data-cc-newqty type="number" placeholder="Qty"><input data-cc-newexp type="date">';el('cc-extra-batches').appendChild(d)};
+  window.ccSaveItemComplete=async function(){
+    var carts=crashCarts().slice(),c=carts.find(function(x){return x.id===window.__ccEditCart}),it=c&&(c.items||[]).find(function(x){return x.id===window.__ccEditItem});if(!it)return;
+    it.name=(el('cc-e-name').value||'').trim();it.genericName=it.name;it.strength=(el('cc-e-strength').value||'').trim();it.dosageForm=(el('cc-e-form').value||'').trim();it.concentration=(el('cc-e-conc').value||'').trim();it.qty=Number(el('cc-e-qty').value||0);it.present=Number(el('cc-e-present').value||0);
+    var batches=[];document.querySelectorAll('[data-cc-bexp]').forEach(function(inp){var i=inp.getAttribute('data-cc-bexp'),q=Number((document.querySelector('[data-cc-bqty="'+i+'"]')||{}).value||0);if(inp.value)batches.push({qty:q,expiry:inp.value})});document.querySelectorAll('[data-cc-newexp]').forEach(function(inp){var q=Number((inp.parentElement.querySelector('[data-cc-newqty]')||{}).value||0);if(inp.value)batches.push({qty:q,expiry:inp.value})});it.batches=batches;await setCrashCarts(carts);CM('cc-complete-modal');renderCrashCarts();toast('Item updated ✓','succ');
+  };
+  function ccRows(items){return items.map(function(it,i){var st=ccStatus(it),cls=st==='expired'?'cc-expired':st==='soon'?'cc-exp-soon':'';return '<div class="cc-db-row '+cls+'"><span><b>'+esc(it.name||'')+'</b></span><span>'+esc(it.strength||'')+'</span><span>'+esc(it.dosageForm||'')+'</span><span>'+esc(it.concentration||'')+'</span><span>'+esc(it.qty||0)+' / '+esc(typeof it.present==='number'?it.present:it.qty||0)+'</span><span>'+esc((it.batches||[]).map(function(b){return (b.qty||0)+' × '+ccDMY(b.expiry)}).join(' | ')||'NA')+'</span><span>'+(ccCanManage()?'<button class="btn bg bxs" onclick="ccEditItemComplete(\''+window.__ccRenderCart+'\',\''+it.id+'\')">Edit</button>':'')+'</span></div>'}).join('')}
+  var oldRender=renderCrashCarts;
+  renderCrashCarts=function(){
+    var root=el('pg-crashcart');if(!root)return;var carts=crashCarts().filter(function(c){return CU.role==='department'?c.deptId===CU.deptId:true}),pending=crashReports().filter(function(r){return r.status==='pending'||r.status==='open'});
+    var add=el('crash-add-btn');if(add){add.style.display=ccCanManage()?'inline-flex':'none';add.onclick=ccAddCartComplete;add.textContent='+ Add Crash Cart'}
+    var alerts=el('crash-open-alerts');if(alerts){
+      var soonCarts=carts.filter(function(c){return ccCartStatus(c)==='soon'}),expiredCarts=carts.filter(function(c){return ccCartStatus(c)==='expired'}),soon=soonCarts.length,expired=expiredCarts.length;
+      var alertItems=[];
+      carts.forEach(function(c){
+        (c.items||[]).forEach(function(it){
+          var st=ccStatus(it);if(st!=='soon'&&st!=='expired')return;
+          var nearest=(it.batches||[]).map(function(b){return {d:daysUntil(b.expiry),e:b.expiry}}).filter(function(x){return x.d!==null}).sort(function(a,b){return a.d-b.d})[0];
+          alertItems.push({cart:c,name:it.name||'',status:st,days:nearest?nearest.d:null,expiry:nearest?nearest.e:''});
+        });
+      });
+      var scopeLabel=CU.role==='department'?'تنبيهات عربات قسمك / Your department Crash Cart alerts':'تنبيهات جميع عربات الإنعاش / All Crash Cart alerts';
+      var toolbar='<div class="cc-toolbar" style="margin-bottom:12px">'+(ccCanManage()?'<button class="btn bg bsm" onclick="ccOpenSettings()">⚙ Expiry alert settings</button>':'')+'<span class="chip">Alert ≤ '+ccDays()+' days</span><span class="chip">Near expiry carts: '+soon+'</span><span class="chip">Expired carts: '+expired+'</span></div>';
+      var detail=alertItems.length?'<div class="'+(expired?'alert-banner':'alert-banner-y')+'"><b>'+scopeLabel+'</b><div style="margin-top:7px;line-height:1.8">'+alertItems.slice(0,12).map(function(a){return (a.status==='expired'?'🔴 ':'🟡 ')+esc(a.cart.name)+' — '+esc(a.name)+(a.expiry?' — '+ccDMY(a.expiry):'')+(a.days!==null?' ('+(a.days<0?Math.abs(a.days)+' days expired':a.days+' days')+')':'')}).join('<br>')+(alertItems.length>12?'<br>… +'+(alertItems.length-12)+' more':'')+'</div></div>':'<div class="alert-banner-y" style="border-color:var(--gn);background:rgba(46,160,67,.08)">'+scopeLabel+': لا توجد أدوية منتهية أو قريبة الانتهاء.</div>';
+      var reports=ccCanManage()&&pending.length?'<div class="alert-banner-y"><b>'+pending.length+'</b> opening report(s) awaiting pharmacy approval</div>':'';
+      alerts.innerHTML=toolbar+detail+reports;
+    }
+    var list=el('crash-list');if(!list)return;list.innerHTML=carts.map(function(c){window.__ccRenderCart=c.id;var dept=gd().find(function(d){return d.id===c.deptId}),openRep=crashPendingReport(c.id),last=crashLatestApprovedReport(c.id),status=ccCartStatus(c);var up=(c.items||[]).filter(function(x){return (x.section||'up')==='up'}),down=(c.items||[]).filter(function(x){return x.section==='down'});
+      var header='<div class="cc-db-row cc-head"><span>Generic Name</span><span>Strength</span><span>Dosage Form</span><span>Conc. In 1ml</span><span>Std / Present</span><span>Expiry Date(s)</span><span>Action</span></div>';
+      var actions='<button class="btn bg bsm" '+(CU.role==='department'&&openRep?'disabled':'onclick="crashPrint(\''+c.id+'\')"')+'>Print</button>';
+      if(ccCanManage())actions+='<button class="btn bp bsm" onclick="ccOpenImport(\''+c.id+'\',\'up\')">Import UP</button><button class="btn bp bsm" onclick="ccOpenImport(\''+c.id+'\',\'down\')">Import DOWN</button><button class="btn bg bsm" onclick="crashEditCart(\''+c.id+'\')">Cart details</button>';
+      if(CU.role==='department'&&!openRep)actions+='<button class="btn bd2c bsm" onclick="crashReportOpen(\''+c.id+'\')">Report opened cart</button>';
+      if(ccCanManage()&&openRep)actions+='<button class="btn bs bsm" onclick="crashReviewReport(\''+openRep.id+'\')">Review report</button>';
+      var badge=status==='expired'?'<span class="badge brd">Expired item</span>':status==='soon'?'<span class="badge byl">Near expiry</span>':status==='none'?'<span class="badge bgr">No expiry entered</span>':'<span class="badge bgn">OK</span>';
+      return '<div class="card crash-cart-card '+(openRep?'crash-open':'')+'"><div class="ch"><div><div class="fl ic g8"><b>'+esc(c.name)+'</b>'+badge+'</div><div class="fhint">Department: '+esc((dept||{}).name||'')+(c.number?' · Cart #'+esc(c.number):'')+(c.location?' · '+esc(c.location):'')+(c.sealNumber?' · Lock '+esc(c.sealNumber):'')+'</div></div><div class="cc-toolbar">'+actions+'</div></div>'+(openRep?'<div class="alert-banner-y" style="margin:12px">Awaiting pharmacy approval · '+esc(crashNowDisplay(openRep.reportedAt))+' · '+esc(openRep.reason||'')+'</div>':'')+'<div class="cc-table-wrap"><div class="cc-section"><div class="cc-section-title"><span>UP / الجزء العلوي</span><span>'+up.length+' items</span></div>'+header+ccRowsFor(c.id,up)+'</div><div class="cc-section"><div class="cc-section-title"><span>DOWN — IV Solutions / الجزء السفلي</span><span>'+down.length+' items</span></div>'+header+ccRowsFor(c.id,down)+'</div></div></div>';
+    }).join('')||'<div class="card"><div class="cb" style="text-align:center">No Crash Carts configured.</div></div>';
+  };
+  window.ccRowsFor=function(cartId,items){return items.map(function(it){var st=ccStatus(it),cls=st==='expired'?'cc-expired':st==='soon'?'cc-exp-soon':'';return '<div class="cc-db-row '+cls+'"><span><b>'+esc(it.name||'')+'</b></span><span>'+esc(it.strength||'')+'</span><span>'+esc(it.dosageForm||'')+'</span><span>'+esc(it.concentration||'')+'</span><span>'+esc(it.qty||0)+' / '+esc(typeof it.present==='number'?it.present:it.qty||0)+'</span><span>'+esc((it.batches||[]).map(function(b){return (b.qty||0)+' × '+ccDMY(b.expiry)}).join(' | ')||'NA')+'</span><span>'+(ccCanManage()?'<button class="btn bg bxs" onclick="ccEditItemComplete(\''+cartId+'\',\''+it.id+'\')">Edit</button>':'')+'</span></div>'}).join('')||'<div class="cb" style="color:var(--tx2)">No items in this section.</div>'};
+  var basePrint=crashPrint;
+  crashPrint=function(id){
+    var c=crashCart(id),pending=crashPendingReport(id);if(!c)return;if(CU.role==='department'&&pending)return toast('Printing is locked until pharmacy approval and a new lock number is entered','err');
+    var dept=gd().find(function(d){return d.id===c.deptId}),rows=function(section){return (c.items||[]).filter(function(x){return (x.section||'up')===section}).map(function(it,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(it.name||'')+'</td><td>'+esc(it.strength||'')+'</td><td>'+esc(it.dosageForm||'')+'</td><td>'+esc(it.concentration||'')+'</td><td>'+esc(it.qty||0)+'</td><td>'+esc(typeof it.present==='number'?it.present:it.qty||0)+'</td><td>'+esc((it.batches||[]).map(function(b){return ccDMY(b.expiry)}).join(' / ')||'NA')+'</td></tr>'}).join('')};
+    var w=window.open('','_blank');w.document.write('<html><head><meta charset="utf-8"><style>body{font-family:Arial;padding:18px;color:#111}h1,h2,p{text-align:center;margin:5px}table{width:100%;border-collapse:collapse;font-size:10px;margin:10px 0 18px}th,td{border:1px solid #333;padding:5px;text-align:center}.meta{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;border:1px solid #333;padding:8px;margin:12px 0}.foot{text-align:center;font-size:9px;margin-top:18px}</style></head><body><h1>'+esc(c.name)+'</h1><h2>Crash Cart Medication List</h2><div class="meta"><div><b>Department:</b> '+esc((dept||{}).name||'')+'</div><div><b>Cart No.:</b> '+esc(c.number||'')+'</div><div><b>Lock No.:</b> '+esc(c.sealNumber||'')+'</div><div><b>Location:</b> '+esc(c.location||'')+'</div><div><b>Print Date:</b> '+ccDMY(new Date().toISOString().slice(0,10))+'</div></div><h3>UP / الجزء العلوي</h3><table><tr><th>#</th><th>Generic Name</th><th>Strength</th><th>Dosage Form</th><th>Conc. In 1ml</th><th>Std. Qty.</th><th>Present</th><th>Exp. Date</th></tr>'+rows('up')+'</table><h3>DOWN — IV Solutions / الجزء السفلي</h3><table><tr><th>#</th><th>Generic Name</th><th>Strength</th><th>Dosage Form</th><th>Conc. In 1ml</th><th>Std. Qty.</th><th>Present</th><th>Exp. Date</th></tr>'+rows('down')+'</table><div class="foot">By Ali Abudahash</div><script>window.onload=function(){window.print()}<\/script></body></html>');w.document.close();auditAction('crash_cart_print',{cartId:id});
+  };
+  // Responsible-name controls inside Controlled page.
+  window.ctlSaveResponsibleNames=async function(){var s=S.g('controlled_global_settings')||{};s.warehouseOfficer=(el('ctl-wh-officer').value||'').trim();s.controlledCustodyOfficer=(el('ctl-custody-officer').value||'').trim();await S.s('controlled_global_settings',s);toast('Responsible names saved ✓','succ')};
+  var oldCtlRender=renderControlled;
+  renderControlled=function(){oldCtlRender();var root=el('pg-controlled');if(!root||!ccCanManage())return;if(el('ctl-responsible-options'))return;var s=S.g('controlled_global_settings')||{},box=document.createElement('div');box.id='ctl-responsible-options';box.className='card';box.innerHTML='<div class="ch"><div><span class="ct">Responsible names & print options / أسماء المسؤولين وخيارات الطباعة</span><div class="fhint">Saved and used in controlled-medicine and warehouse printouts only.</div></div></div><div class="cb g2"><div class="fg"><label>Warehouse Officer / مسؤول المستودع</label><input id="ctl-wh-officer" value="'+esc(s.warehouseOfficer||'')+'"></div><div class="fg"><label>Controlled Medicines Custody Officer / مسؤول عهدة الأدوية المخدرة</label><input id="ctl-custody-officer" value="'+esc(s.controlledCustodyOfficer||'')+'"></div><div style="grid-column:1/-1"><button class="btn bp" onclick="ctlSaveResponsibleNames()">Save names</button> <button class="btn bg" onclick="ctlOpenDepartmentPrintOptions()">Print Department List options</button></div></div>';root.insertBefore(box,root.children[2]||null)};
+})();
+</script>
 </body>
 </html>
