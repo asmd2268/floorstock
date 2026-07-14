@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PharmOrder</title>
+<title>ASDHealth — Pharmacy Operations</title>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
@@ -564,15 +564,20 @@ body.role-pharmacy_staff .pg:not(#pg-reqs):not(#pg-print):not(#pg-crashcart) tex
   .topbar>.fl:last-child{width:100%;flex-wrap:wrap;justify-content:flex-end}
   .master-test-banner{max-width:100%;order:10}
 }
+
+.login-attribution{position:fixed;right:18px;bottom:14px;font-size:11px;color:var(--tx3);z-index:5;letter-spacing:.2px}
+body.light .login-attribution{color:#6b7280}
+
 </style>
 </head>
 <body>
 
 <div id="auth">
+  <div class="login-attribution">By Ali Abudahash</div>
   <div class="acard">
     <div class="alogo">
       <div class="alogo-ic">&#x1F48A;</div>
-      <div><h1>PharmOrder</h1><span>Medication Request System</span></div>
+      <div><h1>ASDHealth</h1><span>Pharmacy Operations Module</span></div>
     </div>
     <div class="rtabs">
       <div class="rtab on" id="tph" onclick="selRole('pharmacy')">&#x1F3E5; Pharmacy<br><small>&#x627;&#x644;&#x635;&#x64A;&#x62F;&#x644;&#x64A;&#x629;</small></div>
@@ -589,7 +594,7 @@ body.role-pharmacy_staff .pg:not(#pg-reqs):not(#pg-print):not(#pg-crashcart) tex
 <div id="app">
   <div class="topbar">
     <div class="fl ic g12">
-      <div class="tlogo">Pharm<span>Order</span></div>
+      <div class="tlogo">ASD<span>Health</span></div>
       <div class="trole" id="rbadge"></div>
     </div>
     <div class="fl ic g8">
@@ -1287,6 +1292,67 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     </div>
   </div>
 
+  <div class="pg" id="pg-backup-restore">
+    <div class="stitle">Backup & Restore / النسخ الاحتياطي والاسترجاع</div>
+    <div class="ssub">Master-only protection, health monitoring, export and restore for the ASDHealth Pharmacy module.</div>
+    <div class="g2">
+      <div class="card">
+        <div class="ch"><span class="ct">⬇ Export complete database backup</span></div>
+        <div class="cb">
+          <p style="font-size:13px;color:var(--tx2);margin-bottom:14px">Downloads all operational data, department stock, requests, Crash Cart data, controlled-medicine data, settings, and Firestore user profiles into one JSON file.</p>
+          <button class="btn bp" id="db-export-btn" onclick="masterExportDatabase()">Download backup / تنزيل النسخة</button>
+          <div id="db-export-status" class="fhint" style="margin-top:10px"></div>
+        </div>
+      </div>
+      <div class="card" style="border-color:var(--yl)">
+        <div class="ch"><span class="ct">⬆ Restore database backup</span></div>
+        <div class="cb">
+          <p style="font-size:13px;color:var(--tx2);margin-bottom:12px">Choose a backup JSON file, then restore it. Existing documents in the managed collections will be replaced by the backup.</p>
+          <input type="file" id="db-restore-file" accept="application/json,.json" onchange="masterPreviewBackupFile(this.files[0])">
+          <div id="db-restore-preview" class="alert-banner-y" style="display:none"></div>
+          <button class="btn bd2c" id="db-restore-btn" onclick="masterRestoreDatabase()" disabled>Restore selected backup / استرجاع النسخة</button>
+          <div id="db-restore-status" class="fhint" style="margin-top:10px"></div>
+          <div class="fhint" style="margin-top:12px">Firebase Authentication passwords/accounts are not exported by the browser. Firestore user profiles are included, while existing Firebase Auth accounts remain unchanged.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:14px">
+      <div class="ch"><span class="ct">🛡 Daily local backup / النسخ المحلي اليومي</span><span class="badge bgn" id="auto-backup-state">Checking…</span></div>
+      <div class="cb">
+        <p style="font-size:13px;color:var(--tx2);margin-bottom:12px">A free daily snapshot is saved in this browser for the Master account. The system keeps up to 365 daily snapshots and removes the oldest first if browser storage becomes full. This does not replace the manual computer download.</p>
+        <div class="g3" id="auto-backup-stats">
+          <div class="sc"><div class="sl">Last local backup</div><div class="ss" id="health-last-backup">—</div></div>
+          <div class="sc"><div class="sl">Saved snapshots</div><div class="sv" id="health-backup-count">0</div></div>
+          <div class="sc"><div class="sl">Estimated latest size</div><div class="sv" id="health-backup-size">—</div></div>
+        </div>
+        <div class="fl g8" style="margin-top:14px;flex-wrap:wrap">
+          <button class="btn bp" onclick="masterCreateLocalBackup(true)">Create local backup now</button>
+          <button class="btn bg" onclick="masterDownloadLatestLocalBackup()">Download latest local backup</button>
+          <button class="btn bg" onclick="masterRefreshSystemHealth()">Refresh health</button>
+        </div>
+        <div id="auto-backup-message" class="fhint" style="margin-top:10px"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">📊 System Health / صحة النظام</span></div>
+      <div class="cb">
+        <div class="g4" id="system-health-cards">
+          <div class="sc"><div class="sl">Departments</div><div class="sv" id="health-depts">0</div></div>
+          <div class="sc"><div class="sl">Users</div><div class="sv" id="health-users">0</div></div>
+          <div class="sc"><div class="sl">Medication records</div><div class="sv" id="health-meds">0</div></div>
+          <div class="sc"><div class="sl">Active requests</div><div class="sv" id="health-requests">0</div></div>
+          <div class="sc"><div class="sl">Crash carts</div><div class="sv" id="health-carts">0</div></div>
+          <div class="sc"><div class="sl">Controlled medicines</div><div class="sv" id="health-controlled">0</div></div>
+          <div class="sc"><div class="sl">Pending cart reports</div><div class="sv" id="health-cart-pending">0</div></div>
+          <div class="sc"><div class="sl">Last restore</div><div class="ss" id="health-last-restore">Never recorded</div></div>
+        </div>
+        <div class="alert-banner-y" style="margin-top:14px;margin-bottom:0">Free local backups live in the current browser profile. Clearing browser data or changing computers removes them, so download a manual JSON backup to the computer regularly.</div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- ══ MODALS ══ -->
@@ -1502,7 +1568,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
       <tbody id="pub-tbl"></tbody>
     </table></div>
     <div style="margin-top:16px;font-size:10px;color:var(--tx2);text-align:center">
-      Read-only view &mdash; Developed by Ali Abudahash &mdash; PharmOrder
+      Read-only view &mdash; Developed by Ali Abudahash &mdash; ASDHealth
     </div>
   </div>
 </div>
@@ -3571,7 +3637,7 @@ async function doDeptPrint(){
     +'<div>'
     +'<div class="page-title">'+deptName+' \u2014 Floor Stock / \u0645\u062e\u0632\u0648\u0646 &#x627;&#x644;&#x623;&#x631;&#x636;&#x64A;&#x629;</div>'
     +'<div class="page-sub">Print Date / &#x62A;&#x627;&#x631;&#x64A;&#x62E; &#x627;&#x644;&#x637;&#x628;&#x627;&#x639;&#x629;: <b>'+today+'</b> &nbsp;|&nbsp; Total / &#x627;&#x644;&#x625;&#x62C;&#x645;&#x627;&#x644;&#x64A;: <b>'+ms.length+'</b> &nbsp;|&nbsp; By / &#x628;&#x648;&#x627;&#x633;&#x637;&#x629;: <b>'+userName+'</b></div>'
-    +'<div style="font-size:7pt;color:#666;margin-top:3px">Developed by Ali Abudahash | PharmOrder System</div>'
+    +'<div style="font-size:7pt;color:#666;margin-top:3px">Developed by Ali Abudahash | ASDHealth System</div>'
     +'</div>'
     +'<div style="text-align:center">'
     +'<img src="'+qrUrl+'" width="60" height="60" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'
@@ -3761,7 +3827,7 @@ function printShelfList(){
     +'<div>'
     +'<div style="font-size:13pt;font-weight:700">'+deptName+' — Floor Stock / &#x645;&#x62E;&#x632;&#x648;&#x646; &#x627;&#x644;&#x623;&#x631;&#x636;&#x64A;&#x629;</div>'
     +'<div style="font-size:8pt;color:#333;margin-top:3px">Date: <b>'+today+'</b> &nbsp;|&nbsp; Shelf: <b>'+shelfLabel+'</b> &nbsp;|&nbsp; Filter: <b>'+filterLabel+'</b> &nbsp;|&nbsp; Items: <b>'+filtered.length+'</b></div>'
-    +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+CU.username+' &nbsp;|&nbsp; Developed by Ali Abudahash | PharmOrder</div>'
+    +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+CU.username+' &nbsp;|&nbsp; Developed by Ali Abudahash | ASDHealth</div>'
     +'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<div style="text-align:center"><img src="'+qrSiteUrl+'" width="55" height="55"><div style="font-size:5.5pt;color:#888">System</div></div>'
@@ -6678,5 +6744,147 @@ crashPrint=function(id){
   document.addEventListener('DOMContentLoaded',function(){setTimeout(syncMasterPrintUI,300)});
 })();
 </script>
+
+<script>
+/* Final warehouse access guard + master-only Firestore backup/restore. */
+(function(){
+  var BACKUP_COLLECTIONS=['floorstock_state','users','public_expiry','public_controlled_expiry'];
+  var pendingBackup=null;
+
+  function isMaster(){return !!(window.CU&&CU.master===true)}
+  function requireMaster(){if(!isMaster()){toast('Master permission required','err');return false}return true}
+
+  /* Warehouse must never see or open inpatient department lists. */
+  window.ctlTabs=function(){
+    if(!window.CU||!document.getElementById('ctl-tabs'))return;
+    var tabs=[];
+    if(CU.role==='warehouse')tabs=[['warehouse','My warehouse custody'],['catalog','Shared medicines list'],['pharmacy','Pharmacy custody (read only)']];
+    else if(CU.role==='controlled_pharmacy')tabs=[['catalog','Shared catalogue'],['warehouse','Warehouse (read only)'],['pharmacy','Pharmacy custody'],['departments','Inpatient departments']];
+    else if(CU.role==='pharmacy')tabs=[['catalog','Shared catalogue'],['warehouse','Warehouse'],['pharmacy','Pharmacy'],['departments','Departments']];
+    else tabs=[['departments','My controlled list']];
+    if(!tabs.some(function(x){return x[0]===window.CTL_VIEW}))window.CTL_VIEW=tabs[0][0];
+    document.getElementById('ctl-tabs').innerHTML=tabs.map(function(x){return '<button class="tbtn '+(window.CTL_VIEW===x[0]?'on':'')+'" data-view="'+x[0]+'" onclick="ctlSetView(this.dataset.view)">'+x[1]+'</button>'}).join('');
+  };
+  var originalCtlSetView=window.ctlSetView;
+  window.ctlSetView=function(v){
+    if(window.CU&&CU.role==='warehouse'&&v==='departments'){toast('Inpatient departments are not available to the warehouse role.','info');v='warehouse'}
+    window.CTL_VIEW=v;
+    if(typeof window.renderControlled==='function')window.renderControlled();
+  };
+  var originalRenderControlled=window.renderControlled;
+  if(typeof originalRenderControlled==='function')window.renderControlled=function(){
+    if(window.CU&&CU.role==='warehouse'&&(window.CTL_VIEW==='departments'||window.CTL_VIEW==='overview'))window.CTL_VIEW='warehouse';
+    var r=originalRenderControlled.apply(this,arguments);
+    if(window.CU&&CU.role==='warehouse'){
+      var dept=document.getElementById('ctl-departments-view');if(dept)dept.style.display='none';
+      document.querySelectorAll('#ctl-tabs button').forEach(function(b){if(/inpatient|departments/i.test(b.textContent||''))b.remove()});
+    }
+    return r;
+  };
+
+  /* Add the backup page to Master navigation only. */
+  var originalBuildNav=window.buildNav;
+  if(typeof originalBuildNav==='function')window.buildNav=function(){
+    var r=originalBuildNav.apply(this,arguments),nav=document.getElementById('mnav');
+    if(isMaster()&&nav&&!nav.querySelector('[data-pg="pg-backup-restore"]')){
+      var b=document.createElement('button');b.className='nb';b.setAttribute('data-pg','pg-backup-restore');b.textContent='💾 Backup & Restore';b.onclick=function(){showPg('pg-backup-restore')};nav.appendChild(b);
+    }
+    return r;
+  };
+  var originalShowPg=window.showPg;
+  if(typeof originalShowPg==='function')window.showPg=function(id){
+    if(id==='pg-backup-restore'&&!requireMaster())return;
+    return originalShowPg.apply(this,arguments);
+  };
+
+  function encodeValue(v){
+    if(v===null||v===undefined||typeof v==='string'||typeof v==='number'||typeof v==='boolean')return v;
+    if(v instanceof Date)return {__pharm_type:'date',value:v.toISOString()};
+    if(v&&typeof v.toDate==='function'&&typeof v.seconds==='number')return {__pharm_type:'timestamp',seconds:v.seconds,nanoseconds:v.nanoseconds||0};
+    if(Array.isArray(v))return v.map(encodeValue);
+    if(typeof v==='object'){var o={};Object.keys(v).forEach(function(k){o[k]=encodeValue(v[k])});return o}
+    return null;
+  }
+  function decodeValue(v){
+    if(v===null||v===undefined||typeof v!=='object')return v;
+    if(v.__pharm_type==='date')return new Date(v.value);
+    if(v.__pharm_type==='timestamp'&&window.firebase&&firebase.firestore&&firebase.firestore.Timestamp)return new firebase.firestore.Timestamp(v.seconds||0,v.nanoseconds||0);
+    if(Array.isArray(v))return v.map(decodeValue);
+    var o={};Object.keys(v).forEach(function(k){o[k]=decodeValue(v[k])});return o;
+  }
+  async function readCollection(name){
+    var snap=await FB_DB.collection(name).get();
+    return snap.docs.map(function(d){return {id:d.id,data:encodeValue(d.data())}});
+  }
+  function downloadJSON(obj,name){
+    var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
+    a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+  }
+  window.masterExportDatabase=async function(){
+    if(!requireMaster()||!FB_DB)return;
+    var btn=document.getElementById('db-export-btn'),status=document.getElementById('db-export-status');
+    btn.disabled=true;status.textContent='Reading Firestore data…';
+    try{
+      var collections={};
+      for(var i=0;i<BACKUP_COLLECTIONS.length;i++){status.textContent='Exporting '+BACKUP_COLLECTIONS[i]+'…';collections[BACKUP_COLLECTIONS[i]]=await readCollection(BACKUP_COLLECTIONS[i])}
+      var payload={format:'ASDHealth-Firestore-Backup',version:1,projectId:(FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId)||'',exportedAt:new Date().toISOString(),collections:collections};
+      var stamp=new Date().toISOString().replace(/[:.]/g,'-');downloadJSON(payload,'ASDHealth_Pharmacy_Backup_'+stamp+'.json');
+      status.textContent='Backup downloaded successfully ✓';toast('Database backup downloaded ✓','succ');
+    }catch(e){console.error(e);status.textContent='Export failed: '+(e.message||e);toast('Backup export failed','err')}finally{btn.disabled=false}
+  };
+  window.masterPreviewBackupFile=async function(file){
+    pendingBackup=null;var p=document.getElementById('db-restore-preview'),b=document.getElementById('db-restore-btn'),st=document.getElementById('db-restore-status');
+    b.disabled=true;p.style.display='none';st.textContent='';if(!file)return;
+    try{var obj=JSON.parse(await file.text());if(!obj||obj.format!=='ASDHealth-Firestore-Backup'||!obj.collections)throw new Error('This is not a valid ASDHealth backup file');
+      var counts=Object.keys(obj.collections).map(function(k){return k+': '+((obj.collections[k]||[]).length)}).join(' · ');pendingBackup=obj;p.innerHTML='<b>Backup ready:</b> '+esc(obj.exportedAt||'Unknown date')+'<br>'+esc(counts);p.style.display='block';b.disabled=false;
+    }catch(e){p.innerHTML='<b>Invalid backup:</b> '+esc(e.message||String(e));p.style.display='block';p.className='alert-banner';}
+  };
+  async function commitOps(ops){
+    for(var i=0;i<ops.length;i+=450){var batch=FB_DB.batch(),part=ops.slice(i,i+450);part.forEach(function(op){if(op.kind==='delete')batch.delete(op.ref);else batch.set(op.ref,op.data)});await batch.commit()}
+  }
+  window.masterRestoreDatabase=async function(){
+    if(!requireMaster()||!pendingBackup||!FB_DB)return;
+    if(!confirm('Restore this backup and replace the current ASDHealth Firestore data? This cannot be undone unless you export a backup first.'))return;
+    var btn=document.getElementById('db-restore-btn'),status=document.getElementById('db-restore-status');btn.disabled=true;status.textContent='Preparing restore…';
+    try{
+      if(S&&S.stopRealtime)S.stopRealtime();
+      var names=BACKUP_COLLECTIONS.slice();Object.keys(pendingBackup.collections||{}).forEach(function(n){if(!names.includes(n))names.push(n)});
+      for(var i=0;i<names.length;i++){
+        var name=names[i],incoming=pendingBackup.collections[name]||[];status.textContent='Replacing '+name+'…';
+        var existing=await FB_DB.collection(name).get(),ops=[];existing.docs.forEach(function(d){ops.push({kind:'delete',ref:d.ref})});await commitOps(ops);
+        ops=incoming.map(function(row){return {kind:'set',ref:FB_DB.collection(name).doc(row.id),data:decodeValue(row.data)}});await commitOps(ops);
+      }
+      status.textContent='Restore completed. Reloading…';toast('Database restored successfully ✓','succ');setTimeout(function(){location.reload()},900);
+    }catch(e){console.error(e);status.textContent='Restore failed: '+(e.message||e);toast('Database restore failed','err');try{await S.init()}catch(_){}btn.disabled=false}
+  };
+})();
+</script>
+
+<script>
+/* ASDHealth pilot protection: free daily IndexedDB backups + System Health. */
+(function(){
+  var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365;
+  var AH_COLLECTIONS=['floorstock_state','users','public_expiry','public_controlled_expiry'];
+  function masterOnly(){return !!(window.CU&&CU.master===true)}
+  function ahOpen(){return new Promise(function(resolve,reject){var r=indexedDB.open(AH_DB,1);r.onupgradeneeded=function(){var db=r.result;if(!db.objectStoreNames.contains(AH_STORE)){var st=db.createObjectStore(AH_STORE,{keyPath:'id'});st.createIndex('createdAt','createdAt')}};r.onsuccess=function(){resolve(r.result)};r.onerror=function(){reject(r.error)}})}
+  function ahReq(req){return new Promise(function(resolve,reject){req.onsuccess=function(){resolve(req.result)};req.onerror=function(){reject(req.error)}})}
+  function enc(v){if(v===null||v===undefined||typeof v==='string'||typeof v==='number'||typeof v==='boolean')return v;if(v instanceof Date)return{__pharm_type:'date',value:v.toISOString()};if(v&&typeof v.toDate==='function'&&typeof v.seconds==='number')return{__pharm_type:'timestamp',seconds:v.seconds,nanoseconds:v.nanoseconds||0};if(Array.isArray(v))return v.map(enc);if(typeof v==='object'){var o={};Object.keys(v).forEach(function(k){o[k]=enc(v[k])});return o}return null}
+  async function readCol(name){var snap=await FB_DB.collection(name).get();return snap.docs.map(function(d){return{id:d.id,data:enc(d.data())}})}
+  async function payload(){var cols={};for(var i=0;i<AH_COLLECTIONS.length;i++)cols[AH_COLLECTIONS[i]]=await readCol(AH_COLLECTIONS[i]);return{format:'ASDHealth-Firestore-Backup',product:'ASDHealth',module:'Pharmacy Operations',version:2,projectId:(window.FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId)||'',exportedAt:new Date().toISOString(),collections:cols}}
+  function sizeLabel(n){if(!n&&n!==0)return'—';if(n<1024)return n+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';return(n/1048576).toFixed(2)+' MB'}
+  async function allBackups(){var db=await ahOpen();var tx=db.transaction(AH_STORE,'readonly');var a=await ahReq(tx.objectStore(AH_STORE).getAll());db.close();return(a||[]).sort(function(x,y){return String(y.createdAt).localeCompare(String(x.createdAt))})}
+  async function saveBackup(obj){var txt=JSON.stringify(obj),rec={id:String(obj.exportedAt).slice(0,10),createdAt:obj.exportedAt,size:txt.length,payload:obj};var db=await ahOpen();var tx=db.transaction(AH_STORE,'readwrite'),st=tx.objectStore(AH_STORE);await ahReq(st.put(rec));var all=await ahReq(st.getAll());all.sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))});for(var i=AH_MAX;i<all.length;i++)await ahReq(st.delete(all[i].id));db.close();return rec}
+  async function saveWithQuota(obj){try{return await saveBackup(obj)}catch(e){if(e&&(/quota/i.test(e.name||'')||/quota/i.test(e.message||''))){var db=await ahOpen(),tx=db.transaction(AH_STORE,'readwrite'),st=tx.objectStore(AH_STORE),all=await ahReq(st.getAll());all.sort(function(a,b){return String(a.createdAt).localeCompare(String(b.createdAt))});for(var i=0;i<Math.max(1,Math.ceil(all.length/4));i++)await ahReq(st.delete(all[i].id));db.close();return await saveBackup(obj)}throw e}}
+  window.masterCreateLocalBackup=async function(manual){if(!masterOnly()||!window.FB_DB)return;var msg=document.getElementById('auto-backup-message');if(msg)msg.textContent='Creating protected local snapshot…';try{var p=await payload(),r=await saveWithQuota(p);localStorage.setItem('abhealth_last_auto_backup',r.createdAt);if(msg)msg.textContent='Local backup saved: '+new Date(r.createdAt).toLocaleString();if(manual&&window.toast)toast('Local backup saved ✓','succ');await window.masterRefreshSystemHealth()}catch(e){console.error(e);if(msg)msg.textContent='Local backup failed: '+(e.message||e);if(manual&&window.toast)toast('Local backup failed','err')}};
+  window.masterDownloadLatestLocalBackup=async function(){if(!masterOnly())return;var a=await allBackups();if(!a.length)return toast('No local backup is available yet.','info');var obj=a[0].payload,blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),x=document.createElement('a');x.href=url;x.download='ASDHealth_Pharmacy_Backup_'+String(obj.exportedAt).replace(/[:.]/g,'-')+'.json';document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000)};
+  window.masterRefreshSystemHealth=async function(){if(!masterOnly())return;try{var depts=typeof gd==='function'?gd():[],users=typeof gu==='function'?gu():[],reqs=typeof gr==='function'?gr():[],meds=0;depts.forEach(function(d){try{meds+=(getMeds(d.id)||[]).length}catch(e){}});var carts=typeof crashCarts==='function'?crashCarts():[],reports=typeof crashReports==='function'?crashReports():[],ctl=typeof ctlCatalog==='function'?ctlCatalog():[],a=await allBackups(),last=a[0]||null;var vals={"health-depts":depts.length,"health-users":users.length,"health-meds":meds,"health-requests":reqs.length,"health-carts":carts.length,"health-controlled":ctl.length,"health-cart-pending":reports.filter(function(r){return r.status==='pending'}).length,"health-backup-count":a.length};Object.keys(vals).forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=vals[id]});var e=document.getElementById('health-last-backup');if(e)e.textContent=last?new Date(last.createdAt).toLocaleString():'No local backup yet';e=document.getElementById('health-backup-size');if(e)e.textContent=last?sizeLabel(last.size):'—';e=document.getElementById('health-last-restore');if(e)e.textContent=localStorage.getItem('abhealth_last_restore')||'Never recorded';e=document.getElementById('auto-backup-state');if(e){e.textContent=last?'Protected':'Not backed up';e.className='badge '+(last?'bgn':'byl')}}catch(err){console.error(err)}};
+  async function daily(){if(!masterOnly()||!window.FB_DB)return;var today=new Date().toISOString().slice(0,10),last=String(localStorage.getItem('abhealth_last_auto_backup')||'').slice(0,10);if(last!==today)await window.masterCreateLocalBackup(false);else await window.masterRefreshSystemHealth()}
+  var oldBuild=window.buildNav;if(typeof oldBuild==='function')window.buildNav=function(){var r=oldBuild.apply(this,arguments);setTimeout(daily,800);return r};
+  var oldShow=window.showPg;if(typeof oldShow==='function')window.showPg=function(id){var r=oldShow.apply(this,arguments);if(id==='pg-backup-restore')setTimeout(function(){daily();window.masterRefreshSystemHealth()},100);return r};
+  var oldRestore=window.masterRestoreDatabase;if(typeof oldRestore==='function')window.masterRestoreDatabase=async function(){localStorage.setItem('abhealth_last_restore',new Date().toLocaleString());return oldRestore.apply(this,arguments)};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(daily,1800)});
+})();
+</script>
+
 </body>
 </html>
