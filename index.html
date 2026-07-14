@@ -875,7 +875,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
   <div class="pg" id="pg-controlled">
     <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
       <div>
-        <div class="stitle">Controlled Medicines / الأدوية المخدرة والمقيدة والنفسية</div>
+        <div class="stitle">Controlled Medicines / الأدوية المخدرة والمقيدة</div>
         <div class="ssub" id="ctl-sub">Unified warehouse and pharmacy comparison with inpatient-department expiry monitoring</div>
       </div>
       <button class="btn bg" onclick="printControlledCurrent()">🖨 Print department list</button>
@@ -971,7 +971,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div id="ctl-departments-view" style="display:none">
       <div class="card">
         <div class="ch" style="flex-wrap:wrap;gap:8px">
-          <span class="ct">Narcotic &amp; Restricted Medicines / قائمة الأدوية المخدرة والمقيدة</span>
+          <span class="ct">Controlled and Restricted Medicines List / قائمة الأدوية المخدرة والمقيدة</span>
           <div class="fl g8" style="flex-wrap:wrap">
             <select id="ctl-dept" class="psel" onchange="renderControlled()"></select>
             <button class="btn bp bsm" id="ctl-assign-btn" onclick="ctlAssignMedicineToDept()">+ Add from shared catalogue</button>
@@ -1247,7 +1247,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
   </div>
 
   <div class="pg" id="pg-controlled-stats">
-    <div class="stitle">Narcotic / Psychotropic Medicines Statistics / إحصائيات المخدرة والنفسية</div>
+    <div class="stitle">Controlled Medicines Statistics / إحصائيات الأدوية المخدرة</div>
     <div class="ssub">Dispensing and warehouse receipts by selected period</div>
     <div class="card">
       <div class="ch" style="flex-wrap:wrap;gap:8px">
@@ -2150,7 +2150,7 @@ function buildNav(){
     ?[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','&#x1F4DD; Notes'],['pg-schedule','&#x23F0; Schedule'],
       ['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','Users'],['pg-import','&#x2B07; Import'],['pg-controlled','🔒 Controlled custody'],['pg-ctl-analytics','📊 Controlled analytics']]
     :CU.role==='controlled_pharmacy'
-    ?[['pg-controlled','🔒 Narcotic / Psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']]
+    ?[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']]
     :CU.role==='warehouse'
     ?[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']]
     :[['pg-newreq','New Request / \u0637\u0644\u0628 \u062C\u062F\u064A\u062F'],
@@ -2470,7 +2470,7 @@ function rcard(r,isp){
   var d=gd().find(function(x){return x.id===r.deptId});
   var sm={pending:'byl',fulfilled:'bgn',partial:'bbl'};
   var delBtn=(CU&&CU.master)
-    ?'<button class="btn bd2c bsm" title="Master: حذف نهائي" data-id="'+r.id+'" onclick="masterDeleteReq(this.getAttribute(\'data-id\'))">&#x1F5D1;</button>'
+    ?'<button class="btn bd2c bsm" title="حذف نهائي — Master only" data-id="'+r.id+'" onclick="masterDeleteReq(this.getAttribute(\'data-id\'))">&#x1F5D1; حذف</button>'
     :'';
   return '<div class="card"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
     +'<div class="fl g8 ic"><span style="font-size:12px;color:var(--tx2)">'+fmtDate(r.created)+'</span>'
@@ -2486,13 +2486,16 @@ function rcard(r,isp){
 }
 function masterDeleteReq(id){
   if(!CU||!CU.master)return toast('Master access required','err');
-  var r=gr().find(function(x){return x.id===id});if(!r)return;
+  var r=gr().find(function(x){return x.id===id});
+  if(!r)return;
   var d=gd().find(function(x){return x.id===r.deptId});
-  if(!confirm('حذف هذا الطلب نهائياً؟\nالقسم: '+((d&&d.name)||r.deptId)+'\nالتاريخ: '+fmtDate(r.created)+'\nعدد العناصر: '+(r.items||[]).length+'\n\nلا يمكن التراجع.'))return;
+  var dname=(d&&d.name)||r.deptId;
+  if(!confirm('حذف هذا الطلب نهائياً؟\nالقسم: '+dname+'\nالتاريخ: '+fmtDate(r.created)+'\nعدد العناصر: '+(r.items||[]).length+'\n\nلا يمكن التراجع عن هذه العملية.'))return;
   S.del('requests',id);
   toast('تم حذف الطلب ✓','succ');
   renderReqs();
-  var ml=el('mrlst');if(ml)ml.innerHTML=gr().slice().reverse().map(function(x){return rcard(x,false)}).join('');
+  var ml=el('mrlst');
+  if(ml)ml.innerHTML=gr().slice().reverse().map(function(x){return rcard(x,false)}).join('');
   renderDash();
 }
 function viewReq(id){
@@ -2742,7 +2745,7 @@ function ctlImportRows(rows,source){
 }
 function ctlImportMasterFile(file){if(!file)return;if(typeof XLSX==='undefined')return toast('Excel library unavailable','err');var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});ctlImportRows(rows,file.name)}catch(err){console.error(err);toast(err.message||'Import failed','err')}el('ctl-import-file').value=''};reader.readAsArrayBuffer(file)}
 function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)return toast('Paste text first','err');var rows=t.split(/\r?\n/).map(function(line){return line.split('\t')});ctlImportRows(rows,'pasted text')}
-// printControlledCurrent — defined below (async version with improved layout)
+function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list to print it.','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,list=ctlDeptList(dept),s=S.g('controlled_settings_'+dept)||{},rows=list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'')+'</td><td>'+esc(m.nupco||'')+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min)+'</td><td>'+ctlNum(x.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc((x.batches||[]).map(function(b){return (b.qty||0)+' @ '+fmtDate(b.expiry)}).join(' / '))+'</td></tr>'}).join(''),url=new URL(window.location.href);url.search='';url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url.toString()),w=window.open('','_ctlprint');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:center}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:35px;text-align:center}.line{border-top:1px solid #333;padding-top:8px;margin-top:35px}</style></head><body><h2>'+esc(name)+' — قائمة الأدوية المخدرة والمقيدة</h2><img src="'+qr+'" width="115" style="float:left"><p>Barcode: expiry follow-up / متابعة تواريخ الانتهاء</p><table><thead><tr><th>#</th><th>الكود الوزاري</th><th>كود نوبكو</th><th>الدواء</th><th>التصنيف</th><th>Min</th><th>Max</th><th>الكمية</th><th>الدفعات والانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div class="line">أمين العهدة بالقسم<br>'+esc(s.custodyOfficer||'')+'</div><div class="line">مسؤول الأدوية المخدرة بالصيدلية<br>'+esc(s.pharmacyControlledOfficer||'')+'</div><div class="line">مدير الصيدلية<br>'+esc(s.pharmacyManager||'')+'</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>');w.document.close()}
 
 // ── EXPIRY DATES ─────────────────────────────────────────
 function renderExpiry(){
@@ -5119,114 +5122,13 @@ async function ctlEditSignatures(){if(!ctlCanEditDept())return;var dept=ctlCurre
 function ctlCodeMode(){return prompt('Print code option: nupco, moh, or none','nupco')||'nupco'}
 function ctlPublicUrl(dept){var u=new URL(window.location.href);u.search='';u.searchParams.set('view','controlled-expiry');u.searchParams.set('dept',dept);return u.toString()}
 async function ctlPublishDept(dept){var name=(gd().find(function(d){return d.id===dept})||{}).name||dept,items=ctlDeptList(dept).map(function(x){var m=ctlMedicine(x.medId)||{};return {name:m.name,moh:m.moh,nupco:m.nupco,qty:x.qty,batches:x.batches||[]}});await FB_DB.collection('public_controlled_expiry').doc(dept).set({departmentName:name,items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()})}
-function ctlPrintDate(){var d=new Date();return ('0'+d.getDate()).slice(-2)+'/'+(('0'+(d.getMonth()+1)).slice(-2))+'/'+d.getFullYear();}
-function ctlPrintHTML(title,body,landscape){
-  var orient=landscape===false?'portrait':'landscape';
-  var w=window.open('','_blank');
-  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'
-    +'@page{size:A4 '+orient+';margin:10mm}'
-    +'*{box-sizing:border-box}'
-    +'body{font-family:"Arial",sans-serif;direction:rtl;color:#111;font-size:10pt;margin:0;padding:0}'
-    +'h1{font-size:14pt;text-align:center;margin:0 0 2px;font-weight:900;letter-spacing:.5px}'
-    +'h2{font-size:10.5pt;text-align:center;margin:0 0 2px;font-weight:600;color:#444}'
-    +'.head{display:grid;grid-template-columns:100px 1fr 100px;align-items:center;margin-bottom:6px;border-bottom:2px solid #1a3a6e;padding-bottom:6px}'
-    +'.logo{max-width:90px;max-height:65px;object-fit:contain}'
-    +'.qr{width:80px;height:80px;display:block;margin:0 auto}'
-    +'.qr-label{font-size:7pt;text-align:center;color:#555;margin-top:2px}'
-    +'table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:8px}'
-    +'th{background:#1a3a6e;color:#fff;padding:5px 4px;font-size:8.5pt;border:1px solid #1a3a6e;text-align:center}'
-    +'td{border:1px solid #bbb;padding:4px;font-size:8.5pt;text-align:center;vertical-align:top}'
-    +'.med{width:32%;text-align:right!important;font-weight:700;padding-right:6px}'
-    +'.expiry{text-align:right!important;line-height:1.7;font-size:8pt}'
-    +'.narc-row{background:#fff8f0}.psych-row{background:#f5f0ff}'
-    +'.narc-badge{display:inline-block;background:#c0392b;color:#fff;border-radius:3px;font-size:6.5pt;padding:1px 4px;font-weight:700;white-space:nowrap}'
-    +'.psych-badge{display:inline-block;background:#6c3483;color:#fff;border-radius:3px;font-size:6.5pt;padding:1px 4px;font-weight:700;white-space:nowrap}'
-    +'.restr-badge{display:inline-block;background:#1a5276;color:#fff;border-radius:3px;font-size:6.5pt;padding:1px 4px;font-weight:700;white-space:nowrap}'
-    +'.qty-cell{font-weight:700;font-size:10pt}'
-    +'.signs{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:18px}'
-    +'.sig{text-align:center;padding-top:5px;margin-top:28px;border-top:1.5px solid #1a3a6e;font-size:8.5pt}'
-    +'.sig b{display:block;margin-top:4px;font-size:9pt}'
-    +'.sig-label{color:#555;font-size:7.5pt;margin-bottom:2px}'
-    +'.by{font-size:7pt;text-align:center;margin-top:10px;color:#aaa}'
-    +'.print-date{font-size:7.5pt;text-align:center;color:#666;margin:2px 0 6px}'
-    +'.handover{margin:8px 0;padding:7px;border:1px solid #444;background:#f9f9f9;font-size:9pt}'
-    +'.legend{display:flex;gap:12px;justify-content:center;margin:6px 0;font-size:7.5pt}'
-    +'.legend span{display:flex;align-items:center;gap:4px}'
-    +'tr:nth-child(even) td{background:rgba(0,0,0,.025)}'
-    +'</style></head><body>'
-    +body
-    +'<div class="by">By Ali Abudahash</div>'
-    +'<script>setTimeout(function(){window.print()},700)<\/script>'
-    +'</body></html>');
-  w.document.close();
-}
-async function printControlledCurrent(){
-  if(CTL_VIEW!=='departments')return toast('Open an inpatient department list first','info');
-  var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept;
-  await ctlPublishDept(dept);
-  var codeMode=ctlCodeMode();
-  var s=ctlPrintSettings(dept),logo=ctlLogo(),url=ctlPublicUrl(dept);
-  var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);
-  var list=ctlDeptList(dept);
-  // Separate narcotics from restricted (psychotropic treated as narcotic here; restricted = non-narcotic in dept context)
-  var rows=list.map(function(x,i){
-    var m=ctlMedicine(x.medId)||{};
-    var code=codeMode==='moh'?m.moh:(codeMode==='nupco'?m.nupco:'');
-    var isNarc=m.classification==='narcotic'||(m.classification!=='psychotropic');
-    var rowCls=isNarc?'narc-row':'psych-row';
-    var badge=isNarc
-      ?'<span class="narc-badge">مخدر / N</span>'
-      :'<span class="psych-badge">نفسي / P</span>';
-    var batchHtml=((x.batches||[]).map(function(b){
-      return (b.qty?'<b>'+esc(b.qty)+'</b> — ':'')+ctlFmtDMY(b.expiry)+(b.lot?' <span style="color:#777;font-size:7pt">'+esc(b.lot)+'</span>':'');
-    }).join('<br>'))||'—';
-    return '<tr class="'+rowCls+'">'
-      +'<td style="width:28px;font-weight:700">'+(i+1)+'</td>'
-      +(codeMode==='none'?'':'<td style="width:70px;font-family:monospace;font-size:8pt">'+esc(code||'—')+'</td>')
-      +'<td class="med">'+esc(m.name||'')+'<br>'+badge+'</td>'
-      +'<td class="qty-cell" style="width:52px">'+ctlNum(x.qty)+'</td>'
-      +'<td class="expiry" style="width:28%">'+batchHtml+'</td>'
-      +'</tr>';
-  }).join('');
-
-  var legend='<div class="legend">'
-    +'<span><span class="narc-badge">مخدر / N</span> Narcotic / مخدر</span>'
-    +'<span><span class="psych-badge">نفسي / P</span> Restricted / مقيد</span>'
-    +'</div>';
-
-  var head='<div class="head">'
-    +'<div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div>'
-    +'<div>'
-      +'<h1>قائمة الأدوية المخدرة والمقيدة</h1>'
-      +'<h2>Narcotic &amp; Restricted Medicines List</h2>'
-      +'<h2>'+esc(name)+'</h2>'
-    +'</div>'
-    +'<div><img class="qr" src="'+qr+'"><div class="qr-label">متابعة الانتهاء<br>Expiry follow-up</div></div>'
-    +'</div>';
-
-  var tbl='<table><thead><tr>'
-    +'<th>#</th>'
-    +(codeMode==='none'?'':'<th>'+(codeMode==='moh'?'كود وزارة الصحة<br>MOH':'كود نوبكو<br>NUPCO')+'</th>')
-    +'<th class="med">اسم الدواء / Medicine</th>'
-    +'<th>الكمية<br>Qty</th>'
-    +'<th>تواريخ الانتهاء / Expiry (DD/MM/YYYY)</th>'
-    +'</tr></thead><tbody>'+rows+'</tbody></table>';
-
-  var signs='<div class="signs">'
-    +'<div class="sig"><div class="sig-label">رئيس تمريض القسم / Head Nurse</div><b>'+esc(s.nursingHead||'')+'</b></div>'
-    +'<div class="sig"><div class="sig-label">أمين عهدة الأدوية المخدرة / Controlled Custodian</div><b>'+esc(s.controlledCustodian||'')+'</b></div>'
-    +'<div class="sig"><div class="sig-label">مدير الصيدلية / Pharmacy Manager</div><b>'+esc(s.pharmacyManager||'')+'</b></div>'
-    +'</div>';
-
-  var printDateLine='<div class="print-date">تاريخ الطباعة / Print date: '+ctlPrintDate()+'</div>';
-  var body=head+printDateLine+legend+tbl+signs;
-  ctlPrintHTML(name,body);
-}
-function printCtlHandover(){if(CTL_VIEW!=='departments')return toast('Open department list first','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,receiver=prompt('اسم المستلم / Receiver name','')||'',date=prompt('التاريخ / Date',new Date().toISOString().slice(0,10))||'',s=ctlPrintSettings(dept),rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td class="med">'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td>'+((x.batches||[]).map(function(b){return ctlFmtDMY(b.expiry)}).join('<br>')||'—')+'</td><td></td></tr>'}).join('');var body='<h1>محضر استلام وتسليم عهدة الأدوية المخدرة والمقيدة</h1><h2>Narcotic &amp; Restricted Medicines Custody Handover</h2><h2>'+esc(name)+'</h2><div class="handover">اسم المستلم / Receiver: <b>'+esc(receiver)+'</b> &nbsp;&nbsp; التاريخ / Date: <b>'+esc(ctlFmtDMY(date))+'</b></div><table><thead><tr><th>#</th><th class="med">الدواء / Medicine</th><th>الكمية المجردة / Counted Qty</th><th>الانتهاء / Expiry</th><th>ملاحظات / Notes</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">المسلّم / Delivered by</div><div class="sig">المستلم / Received by<br><b>'+esc(receiver)+'</b></div><div class="sig">مدير الصيدلية / Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';ctlPrintHTML('Handover '+name,body)}
+function ctlPrintHTML(title,body){var w=window.open('','_blank');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>@page{size:A4 landscape;margin:9mm}body{font-family:Arial;direction:rtl;color:#111}h1,h2{text-align:center;margin:3px}.head{display:grid;grid-template-columns:120px 1fr 120px;align-items:center}.logo{max-width:100px;max-height:75px}.qr{width:95px;height:95px}table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:10px}th,td{border:1px solid #333;padding:5px;text-align:center;font-size:10px}th{background:#e8eef7}.med{width:36%;text-align:right;font-weight:bold}.expiry{text-align:right;line-height:1.65}.signs{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:22px}.sig{text-align:center;border-top:1px solid #222;padding-top:5px;margin-top:32px}.by{font-size:9px;text-align:center;margin-top:12px}.handover{margin:12px 0;padding:8px;border:1px solid #444}.ltr{direction:ltr}</style></head><body>'+body+'<div class="by">By Ali Abudahash</div><script>setTimeout(function(){window.print()},700)<\/script></body></html>');w.document.close()}
+async function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list first','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept;await ctlPublishDept(dept);var codeMode=ctlCodeMode();var s=ctlPrintSettings(dept),logo=ctlLogo(),url=ctlPublicUrl(dept),qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url);var rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{},code=codeMode==='moh'?m.moh:(codeMode==='nupco'?m.nupco:'');return '<tr><td>'+(i+1)+'</td>'+(codeMode==='none'?'':'<td>'+esc(code||'—')+'</td>')+'<td class="med">'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td class="expiry">'+((x.batches||[]).map(function(b){return (b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+(b.lot?' — '+esc(b.lot):'')}).join('<br>')||'—')+'</td></tr>'}).join('');var body='<div class="head"><div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div><div><h1>قائمة الأدوية المخدرة والمقيدة</h1><h2>Controlled Medicines List</h2><h2>'+esc(name)+'</h2></div><div><img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Expiry follow-up<br>متابعة الانتهاء</div></div></div><table><thead><tr><th>#</th>'+(codeMode==='none'?'':'<th>'+(codeMode==='moh'?'MOH Code':'NUPCO Code')+'</th>')+'<th class="med">اسم الدواء / Medicine</th><th>الكمية / Qty</th><th>تواريخ الانتهاء / Expiry dates (DD/MM/YYYY)</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">رئيس تمريض القسم<br>Head Nurse<br><b>'+esc(s.nursingHead||'')+'</b></div><div class="sig">أمين عهدة الأدوية المخدرة<br>Controlled Medicines Custodian<br><b>'+esc(s.controlledCustodian||'')+'</b></div><div class="sig">مدير الصيدلية<br>Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';ctlPrintHTML(name,body)}
+function printCtlHandover(){if(CTL_VIEW!=='departments')return toast('Open department list first','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,receiver=prompt('اسم المستلم / Receiver name','')||'',date=prompt('التاريخ / Date',new Date().toISOString().slice(0,10))||'',s=ctlPrintSettings(dept),rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td class="med">'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td>'+((x.batches||[]).map(function(b){return ctlFmtDMY(b.expiry)}).join('<br>')||'—')+'</td><td></td></tr>'}).join('');var body='<h1>محضر استلام وتسليم عهدة الأدوية المخدرة</h1><h2>Controlled Medicines Custody Handover Record</h2><h2>'+esc(name)+'</h2><div class="handover">اسم المستلم / Receiver: <b>'+esc(receiver)+'</b> &nbsp;&nbsp; التاريخ / Date: <b>'+esc(ctlFmtDMY(date))+'</b></div><table><thead><tr><th>#</th><th class="med">الدواء / Medicine</th><th>الكمية المجردة / Counted Qty</th><th>الانتهاء / Expiry</th><th>ملاحظات / Notes</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">المسلّم / Delivered by</div><div class="sig">المستلم / Received by<br><b>'+esc(receiver)+'</b></div><div class="sig">مدير الصيدلية / Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';ctlPrintHTML('Handover '+name,body)}
 function renderCtlAnalytics(){if(!CU)return;var deptSel=el('ctl-an-dept');if(deptSel&&deptSel.options.length<=1)deptSel.innerHTML='<option value="">All departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');var from=el('ctl-an-from')?el('ctl-an-from').value:'',to=el('ctl-an-to')?el('ctl-an-to').value:'',type=el('ctl-an-type')?el('ctl-an-type').value:'',dept=deptSel?deptSel.value:'',rec=(el('ctl-an-recipient')?el('ctl-an-recipient').value:'').toLowerCase();var rows=ctlMoves().filter(function(x){if(x.type!=='dispense')return false;var d=String(x.at||'').slice(0,10);return (!from||d>=from)&&(!to||d<=to)&&(!type||x.dispenseType===type)&&(!dept||x.dept===dept)&&(!rec||String(x.recipient||'').toLowerCase().includes(rec))});var total=rows.reduce(function(s,x){return s+ctlNum(x.qty)},0),recipients=new Set(rows.map(function(x){return x.recipient}).filter(Boolean)).size,depts=new Set(rows.map(function(x){return x.dept}).filter(Boolean)).size;el('ctl-an-stats').innerHTML='<div class="sc"><div class="sl">Transactions</div><div class="ctl-stat-number">'+rows.length+'</div></div><div class="sc"><div class="sl">Total quantity</div><div class="ctl-stat-number">'+total+'</div></div><div class="sc"><div class="sl">Recipients</div><div class="ctl-stat-number">'+recipients+'</div></div><div class="sc"><div class="sl">Departments</div><div class="ctl-stat-number">'+depts+'</div></div>';el('ctl-an-table').innerHTML=rows.slice().reverse().map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc(x.source||'')+'</td><td>'+esc(x.dispenseType||'')+'</td><td>'+esc(x.deptName||'—')+'</td><td>'+esc(x.recipient||'')+'</td><td>'+esc(x.by||'')+'</td></tr>'}).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px">No matching records</td></tr>'}
 function printCtlAnalytics(){var html=el('ctl-an-table').closest('table').outerHTML;ctlPrintHTML('Controlled dispensing analytics','<h1>إحصائيات صرف الأدوية المخدرة</h1><h2>Controlled Dispensing Analytics</h2>'+html)}
 // Override public barcode page to be login-free and cleaner.
-async function processPublicControlledExpiry(){var p=new URLSearchParams(location.search);if(p.get('view')!=='controlled-expiry')return false;document.body.innerHTML='<div id="pub-ctl" style="max-width:1000px;margin:20px auto;padding:15px;font-family:Arial"></div>';var root=el('pub-ctl'),dept=p.get('dept')||'';try{var snap=await FB_DB.collection('public_controlled_expiry').doc(dept).get();if(!snap.exists)throw new Error('List not found');var d=snap.data(),rows=(d.items||[]).map(function(x,i){var bs=(x.batches||[]).map(function(b){var days=daysUntil(b.expiry),cls=days<=0?'exp-red':days<=ctlAlertDays()?'exp-yellow':'exp-ok';return '<div class="'+cls+'">'+(b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+' ('+days+' days)</div>'}).join('')||'—';return '<tr><td>'+(i+1)+'</td><td style="font-weight:bold">'+esc(x.name)+'</td><td>'+esc(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');root.innerHTML='<h1 style="text-align:center">متابعة انتهاء الأدوية المخدرة والمقيدة</h1><h2 style="text-align:center">Narcotic &amp; Restricted Medicines — Expiry Follow-up</h2><h2 style="text-align:center">'+esc(d.departmentName||dept)+'</h2><div class="tw"><table><thead><tr><th>#</th><th>Medicine / الدواء</th><th>Qty / الكمية</th><th>Expiry / الانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table></div><div style="text-align:center;margin-top:18px;font-size:11px">By Ali Abudahash</div>'}catch(e){root.innerHTML='<div class="alert-banner">'+esc(e.message||'Could not load list')+'</div>'}return true}
+async function processPublicControlledExpiry(){var p=new URLSearchParams(location.search);if(p.get('view')!=='controlled-expiry')return false;document.body.innerHTML='<div id="pub-ctl" style="max-width:1000px;margin:20px auto;padding:15px;font-family:Arial"></div>';var root=el('pub-ctl'),dept=p.get('dept')||'';try{var snap=await FB_DB.collection('public_controlled_expiry').doc(dept).get();if(!snap.exists)throw new Error('List not found');var d=snap.data(),rows=(d.items||[]).map(function(x,i){var bs=(x.batches||[]).map(function(b){var days=daysUntil(b.expiry),cls=days<=0?'exp-red':days<=ctlAlertDays()?'exp-yellow':'exp-ok';return '<div class="'+cls+'">'+(b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+' ('+days+' days)</div>'}).join('')||'—';return '<tr><td>'+(i+1)+'</td><td style="font-weight:bold">'+esc(x.name)+'</td><td>'+esc(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');root.innerHTML='<h1 style="text-align:center">متابعة انتهاء الأدوية المخدرة والمقيدة</h1><h2 style="text-align:center">Controlled Medicines Expiry Follow-up</h2><h2 style="text-align:center">'+esc(d.departmentName||dept)+'</h2><div class="tw"><table><thead><tr><th>#</th><th>Medicine / الدواء</th><th>Qty / الكمية</th><th>Expiry / الانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table></div><div style="text-align:center;margin-top:18px;font-size:11px">By Ali Abudahash</div>'}catch(e){root.innerHTML='<div class="alert-banner">'+esc(e.message||'Could not load list')+'</div>'}return true}
 // Add buttons and improved batch controls after each controlled render.
 var _ctlRenderV6=renderControlled;
 renderControlled=function(){ctlEnsureV6UI();_ctlRenderV6();if(CTL_VIEW==='overview'){Array.from(document.querySelectorAll('#ctl-overview-table tr,#ctl-out-table tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild,m=ctlMedicine(id);if(td&&m&&!td.querySelector('.v6disp'))td.insertAdjacentHTML('afterbegin','<span class="v6disp">'+ctlDispenseButton(m)+'</span>')})}if(CTL_VIEW==='departments'&&ctlCanEditDept()){var h=el('ctl-departments-view').querySelector('.ch .fl');if(h&&!h.querySelector('.v6print'))h.insertAdjacentHTML('beforeend','<button class="btn bg bsm v6print" onclick="ctlChooseLogo()">Logo</button><button class="btn bg bsm v6print" onclick="printCtlHandover()">Temporary custody handover / محضر تسليم عهدة مؤقت</button>')}if(el('ctl-overview-table'))Array.from(el('ctl-overview-table').querySelectorAll('tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild;if(ctlCanEditWarehouse()&&!td.querySelector('.wh-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs wh-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'warehouse\',this.dataset.id)">WH expiries</button> ');if(ctlCanEditPharmacy()&&!td.querySelector('.ph-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs ph-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'pharmacy\',this.dataset.id)">PH expiries</button> ')})}
@@ -5250,7 +5152,7 @@ function ctlPrintTemporaryHandover(){
 
   el('parea').innerHTML=
     '<div class="print-bundle">'+
-      '<div class="handover-title">محضر تسليم عهدة الأدوية المخدرة والنفسية مؤقتًا<br>Temporary Narcotic / Psychotropic Medicines Custody Handover</div>'+
+      '<div class="handover-title">محضر تسليم عهدة الأدوية المخدرة مؤقتًا<br>Temporary Controlled Medicines Custody Handover</div>'+
       '<div class="handover-meta">'+
         '<b>Current custody officer / أمين العهدة الحالي:</b> '+esc(current)+'<br>'+
         '<b>Replacement employee / الموظف البديل:</b> '+esc(replacement)+'<br>'+
