@@ -1102,7 +1102,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         </div>
         <div class="fl g8 ic" style="flex-wrap:wrap">
           <div class="sbr" style="min-width:240px"><span class="sic">&#x1F50D;</span><input id="shelf-med-search" type="text" placeholder="Search medication..." oninput="renderShelfMedicationDatabase()"></div>
-          <select id="shelf-med-filter" class="psel" onchange="renderShelfMedicationDatabase()"><option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option></select>
+          <select id="shelf-med-filter" class="psel" onchange="renderShelfMedicationDatabase()"><option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option></select>
         </div>
       </div>
       <div id="shelf-bulk-bar" style="display:none;background:var(--s2);border-bottom:1px solid var(--bd);padding:10px 14px">
@@ -5681,7 +5681,7 @@ buildNav=function(){
   else if(CU.role==='pharmacy_staff')items=common;
   else if(CU.role==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']];
   else if(CU.role==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
-  else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-expiry','Expiry Dates / تواريخ'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
+  else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
   if(isMasterActual()){
     var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';
     mb.innerHTML=MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';
@@ -5857,7 +5857,16 @@ function shelfMedMatches(m){
     var hasExpiry=getExpiry(CU.deptId).some(function(b){return b.medId===m.id&&String(b.date||'').trim();});
     if(hasExpiry)return false;
   }
-  if(f!=='all'&&f!=='__none__'&&f!=='__no_expiry__'&&m.shelfId!==f)return false;
+  if(f==='__expiring_soon__'){
+    var cfg=getAlertSettings(CU.deptId)||{d1:30,d2:7};
+    var isSoon=getExpiry(CU.deptId).some(function(b){
+      if(b.medId!==m.id||!String(b.date||'').trim())return false;
+      var days=daysUntil(b.date);
+      return days!==null&&days>0&&days<=Number(cfg.d1||30);
+    });
+    if(!isSoon)return false;
+  }
+  if(f!=='all'&&f!=='__none__'&&f!=='__no_expiry__'&&f!=='__expiring_soon__'&&m.shelfId!==f)return false;
   return true;
 }
 function shelfExpiryCell(medId){
@@ -5891,7 +5900,7 @@ function renderShelfMedicationDatabase(){
   var filter=el('shelf-med-filter'),target=el('shelf-bulk-target');
   if(filter){
     var fv=filter.value;
-    filter.innerHTML='<option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option>'+shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
+    filter.innerHTML='<option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option>'+shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
     if(Array.from(filter.options).some(function(o){return o.value===fv}))filter.value=fv;
   }
   if(target){var tv=target.value;target.innerHTML='<option value="">Choose drawer...</option><option value="__none__">Remove from drawer</option>'+shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');if(Array.from(target.options).some(function(o){return o.value===tv}))target.value=tv}
