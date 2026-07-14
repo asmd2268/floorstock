@@ -743,11 +743,18 @@ body.light .request-snow-marker{
   </div>
 
   <div class="pg" id="pg-print">
-    <div class="fl ic jb mb14">
+    <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
       <div><div class="stitle">Print Orders</div><div class="ssub" style="margin:0">You may print any fulfilled request again whenever needed</div></div>
-      <div class="fl g8 ic">
-        <span class="chip">Selected orders are combined into one print sheet</span>
-        <button class="btn bp" onclick="doPrint()">&#x1F5A8; Print combined orders</button>
+      <div class="fl g8 ic" style="flex-wrap:wrap">
+        <label style="margin:0;font-size:13px;color:var(--tx2)">Orders per page</label>
+        <div class="fl g6 ic">
+          <button class="tbtn ppp-btn on" data-v="1" onclick="setPPP(1,this)">1</button>
+          <button class="tbtn ppp-btn" data-v="2" onclick="setPPP(2,this)">2</button>
+          <button class="tbtn ppp-btn" data-v="3" onclick="setPPP(3,this)">3</button>
+          <button class="tbtn ppp-btn" data-v="4" onclick="setPPP(4,this)">4</button>
+          <button class="tbtn ppp-btn" data-v="5" onclick="setPPP(5,this)">5</button>
+        </div>
+        <button class="btn bp" onclick="doPrint()">&#x1F5A8; Print selected</button>
       </div>
     </div>
     <div class="card">
@@ -2469,34 +2476,15 @@ function renderReqs(){
 function rcard(r,isp){
   var d=gd().find(function(x){return x.id===r.deptId});
   var sm={pending:'byl',fulfilled:'bgn',partial:'bbl'};
-  var delBtn=(CU&&CU.master)
-    ?'<button class="btn bd2c bsm" title="حذف نهائي — Master only" data-id="'+r.id+'" onclick="masterDeleteReq(this.getAttribute(\'data-id\'))">&#x1F5D1; حذف</button>'
-    :'';
   return '<div class="card"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
     +'<div class="fl g8 ic"><span style="font-size:12px;color:var(--tx2)">'+fmtDate(r.created)+'</span>'
     +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">Fulfill</button>':'')
     +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">&#x270F; Edit</button>':'')
-    +'<button class="btn bg bsm" data-id="'+r.id+'" onclick="viewReq(this.getAttribute(\'data-id\'))">View</button>'
-    +delBtn
-    +'</div></div>'
+    +'<button class="btn bg bsm" data-id="'+r.id+'" onclick="viewReq(this.getAttribute(\'data-id\'))">View</button></div></div>'
     +'<div style="padding:9px 18px;font-size:12px;color:var(--tx2)">'+(r.items||[]).length+' items'
     +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDate(r.fulfilledAt):' &middot; Awaiting fulfillment')
     +(r.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">&#x1F4C5; Scheduled dispense: '+fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' &middot; '+r.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">&#x1F4C5; Dispense time: Not scheduled yet</div>')
     +'</div></div>';
-}
-function masterDeleteReq(id){
-  if(!CU||!CU.master)return toast('Master access required','err');
-  var r=gr().find(function(x){return x.id===id});
-  if(!r)return;
-  var d=gd().find(function(x){return x.id===r.deptId});
-  var dname=(d&&d.name)||r.deptId;
-  if(!confirm('حذف هذا الطلب نهائياً؟\nالقسم: '+dname+'\nالتاريخ: '+fmtDate(r.created)+'\nعدد العناصر: '+(r.items||[]).length+'\n\nلا يمكن التراجع عن هذه العملية.'))return;
-  S.del('requests',id);
-  toast('تم حذف الطلب ✓','succ');
-  renderReqs();
-  var ml=el('mrlst');
-  if(ml)ml.innerHTML=gr().slice().reverse().map(function(x){return rcard(x,false)}).join('');
-  renderDash();
 }
 function viewReq(id){
   var r=gr().find(function(x){return x.id===id});if(!r)return;
@@ -3038,23 +3026,95 @@ function renderPrint(){
     }).join('')
     :'<tr><td colspan="6" style="text-align:center;color:var(--tx2);padding:18px">No fulfilled requests</td></tr>';
 }
+var PPP=1; // orders per page (1-5)
+function setPPP(n,btn){
+  PPP=n;
+  document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
+  btn.classList.add('on');
+}
 function doPrint(){
   var sel=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
-  if(!sel.length)return toast('Select at least one','err');
+  if(!sel.length)return toast('Select at least one order','err');
+  var ppp=PPP||1;
   var today=fmtDate(nowISO());
-  var rows=sel.map(function(id,requestIndex){
-    var r=gr().find(function(x){return x.id===id});if(!r)return '';
+
+  // Collect order data
+  var orders=sel.map(function(id){
+    var r=gr().find(function(x){return x.id===id});if(!r)return null;
     var dept=gd().find(function(d){return d.id===r.deptId});
     var ms=getMeds(r.deptId||'');
     var items=(r.dispensed||[]).filter(function(d){return d.qty>0});
-    var mobileUrl=getMobileRequestUrl(r.id);
-    var mobileQr='https://api.qrserver.com/v1/create-qr-code/?size=48x48&data='+encodeURIComponent(mobileUrl);
-    var group='<tr class="print-request-group"><td colspan="5"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><div><b>Order '+(requestIndex+1)+': '+((dept&&dept.name)||r.deptId)+'</b><span style="margin-left:8px">Requested: '+fmtDate(r.created)+'</span>'+(r.scheduledFor?'<span style="margin-left:8px">Scheduled: '+fmtDateTime(r.scheduledFor)+'</span>':'')+'</div><img src="'+mobileQr+'" width="32" height="32" alt="Mobile order QR"></div></td></tr>';
-    return group+items.map(function(d,i){var m=ms.find(function(x){return x.id===d.medId});return '<tr><td>'+((requestIndex+1)+'.'+(i+1))+'</td><td>'+((dept&&dept.name)||r.deptId)+'</td><td>'+fmtDate(r.created)+'</td><td>'+(m?m.name:d.medId)+'</td><td>'+d.qty+'</td></tr>'}).join('');
-  }).join('');
-  sel.forEach(function(id){var request=gr().find(function(r){return r.id===id});if(request)S.upd('requests',id,{printCount:(request.printCount||0)+1,lastPrintedAt:nowISO()});});
-  el('parea').innerHTML='<div class="print-bundle"><div class="dph"><div class="dpn">Combined Floor Stock Orders</div><div class="dpd">Printed: '+today+' | Total orders: '+sel.length+' | By Ali Abudahash</div></div><table class="ptbl"><thead><tr><th>#</th><th>Department</th><th>Request date</th><th>Medication</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  window.print();
+    return {r:r,dept:dept,ms:ms,items:items};
+  }).filter(Boolean);
+
+  // Layout config per ppp value
+  var cfg={
+    1:{cols:1,headPt:13,namePt:10.5,qtyPt:13,rowPad:'5px 10px',headPad:'8px 12px'},
+    2:{cols:2,headPt:11,namePt:9.5, qtyPt:12,rowPad:'4px 8px', headPad:'7px 10px'},
+    3:{cols:3,headPt:10,namePt:8.5, qtyPt:11,rowPad:'3px 7px', headPad:'6px 8px'},
+    4:{cols:2,headPt:10,namePt:8.5, qtyPt:11,rowPad:'3px 7px', headPad:'6px 8px'},
+    5:{cols:3,headPt:9.5,namePt:8,  qtyPt:10,rowPad:'2px 6px', headPad:'5px 7px'}
+  }[ppp]||{cols:1,headPt:13,namePt:10.5,qtyPt:13,rowPad:'5px 10px',headPad:'8px 12px'};
+  // 4 orders: 2x2 grid; 5 orders: top row 3 + bottom row 2
+  var gridCols=cfg.cols;
+
+  var css=[
+    '@page{size:A4 portrait;margin:8mm}',
+    'body{font-family:Arial,sans-serif;color:#111;margin:0;padding:0}',
+    '.page{width:100%;height:267mm;display:grid;grid-template-rows:auto 1fr auto;page-break-after:always;box-sizing:border-box}',
+    '.page:last-child{page-break-after:avoid}',
+    '.pg-head{text-align:center;font-size:7.5pt;color:#666;border-bottom:1px solid #ccc;padding-bottom:3px;margin-bottom:6px}',
+    '.pg-foot{text-align:center;font-size:6.5pt;color:#bbb;margin-top:4px}',
+    '.grid{display:grid;grid-template-columns:repeat('+gridCols+',1fr);gap:6px;align-content:start;height:100%}',
+    '.ob{border:2px solid #1a3a6e;border-radius:6px;overflow:hidden;display:flex;flex-direction:column}',
+    '.oh{background:#1a3a6e;color:#fff;padding:'+cfg.headPad+';display:flex;justify-content:space-between;align-items:baseline;gap:4px}',
+    '.oh .dn{font-size:'+cfg.headPt+'pt;font-weight:900;line-height:1.1}',
+    '.oh .dm{font-size:6.5pt;opacity:.8;text-align:right;white-space:nowrap}',
+    '.oi{flex:1;padding:2px 0}',
+    '.or{display:flex;align-items:baseline;padding:'+cfg.rowPad+';border-bottom:1px solid #eee;gap:5px}',
+    '.or:last-child{border-bottom:none}',
+    '.or .idx{color:#aaa;font-size:6.5pt;width:14px;text-align:right;flex-shrink:0}',
+    '.or .nm{flex:1;font-size:'+cfg.namePt+'pt;line-height:1.25}',
+    '.or .qty{font-weight:900;font-size:'+cfg.qtyPt+'pt;color:#1a3a6e;min-width:24px;text-align:center;flex-shrink:0}',
+  ].join('');
+
+  // Split into pages
+  var pages=[];
+  for(var i=0;i<orders.length;i+=ppp)pages.push(orders.slice(i,i+ppp));
+
+  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body>';
+
+  pages.forEach(function(pg,pi){
+    html+='<div class="page">';
+    html+='<div class="pg-head">Floor Stock Dispensing Orders &nbsp;&bull;&nbsp; '+today+' &nbsp;&bull;&nbsp; Page '+(pi+1)+'/'+pages.length+'</div>';
+    html+='<div class="grid">';
+    pg.forEach(function(o){
+      var dname=(o.dept&&o.dept.name)||o.r.deptId;
+      var dispDate=fmtDate(o.r.fulfilledAt||o.r.created);
+      html+='<div class="ob">';
+      html+='<div class="oh"><span class="dn">'+esc(dname)+'</span><span class="dm">'+dispDate+'</span></div>';
+      html+='<div class="oi">';
+      o.items.forEach(function(d,i){
+        var m=o.ms.find(function(x){return x.id===d.medId});
+        html+='<div class="or"><span class="idx">'+(i+1)+'</span><span class="nm">'+esc(m?m.name:d.medId)+'</span><span class="qty">'+d.qty+'</span></div>';
+      });
+      html+='</div></div>';
+    });
+    html+='</div>';
+    html+='<div class="pg-foot">By Ali Abudahash</div>';
+    html+='</div>';
+  });
+
+  html+='<script>window.onload=function(){window.print();}<\/script></body></html>';
+
+  sel.forEach(function(id){
+    var r=gr().find(function(x){return x.id===id});
+    if(r)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:nowISO()});
+  });
+
+  var w=window.open('','_blank');
+  w.document.write(html);
+  w.document.close();
   renderPrint();
 }
 
