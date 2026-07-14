@@ -4,18 +4,18 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PharmOrder</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0d1117;--s:#161b22;--s2:#1c2128;--s3:#222831;--bd:#30363d;--bd2:#3d444d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;--ac:#1f6feb;--acl:#388bfd;--gn:#2ea043;--gnl:#3fb950;--rd:#da3633;--rdl:#f85149;--yl:#d29922;--yll:#e3b341;--pu:#0ea5e9;--mono:'JetBrains Mono',monospace}
 body.light{--bg:#f5f7fa;--s:#ffffff;--s2:#f0f2f5;--s3:#e8eaed;--bd:#d0d7de;--bd2:#bac1cb;--tx:#1f2328;--tx2:#656d76;--tx3:#9198a1;--ac:#0969da;--acl:#1f6feb;--gn:#1a7f37;--gnl:#2ea043;--rd:#cf222e;--rdl:#da3633;--yl:#9a6700;--yll:#d29922;--pu:#0284c7}
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh;font-size:15px;line-height:1.55;transition:background .2s,color .2s}
+.pg{contain:layout style;content-visibility:auto;contain-intrinsic-size:900px}
+.tw{contain:content}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 #auth{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 30% 20%,#1f2d4a 0%,var(--bg) 60%)}
 body.light #auth{background:radial-gradient(ellipse at 30% 20%,#dbeafe 0%,var(--bg) 60%)}
 .acard{background:var(--s);border:1px solid var(--bd);border-radius:16px;padding:44px 38px;width:420px;max-width:94vw}
@@ -558,6 +558,12 @@ body.role-pharmacy_staff .pg:not(#pg-reqs):not(#pg-print):not(#pg-crashcart) tex
 .approved-mark{display:inline-flex;align-items:center;gap:5px;border:2px solid var(--gn);color:var(--gnl);border-radius:6px;padding:4px 8px;font-weight:700}
 @media print{.approved-mark{color:#000!important;border-color:#000!important}}
 
+
+@media(max-width:760px){
+  .topbar{height:auto;min-height:52px;flex-wrap:wrap;padding:8px 10px;gap:7px}
+  .topbar>.fl:last-child{width:100%;flex-wrap:wrap;justify-content:flex-end}
+  .master-test-banner{max-width:100%;order:10}
+}
 </style>
 </head>
 <body>
@@ -646,7 +652,7 @@ body.role-pharmacy_staff .pg:not(#pg-reqs):not(#pg-print):not(#pg-crashcart) tex
     </div>
     <div class="card">
       <div class="ch" style="flex-wrap:wrap;gap:8px">
-        <div class="sbr"><span class="sic">&#x1F50D;</span><input type="text" id="isrch" placeholder="Search..." oninput="renderInv()"></div>
+        <div class="sbr"><span class="sic">&#x1F50D;</span><input type="text" id="isrch" placeholder="Search..." oninput="renderInvDebounced()"></div>
         <div class="fl g8 ic" style="flex-wrap:wrap">
           <select id="icatf" class="psel" onchange="renderInv()"><option value="">All Categories</option></select>
           <select id="iclsf" class="psel" onchange="renderInv()">
@@ -875,7 +881,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="ssub" id="dnsub">Enter quantities needed</div>
     <div class="card">
       <div class="ch">
-        <div class="sbr"><span class="sic">&#x1F50D;</span><input type="text" id="rsrch" placeholder="Search medications..." oninput="renderReqForm()"></div>
+        <div class="sbr"><span class="sic">&#x1F50D;</span><input type="text" id="rsrch" placeholder="Search medications..." oninput="renderReqFormDebounced()"></div>
         <div style="font-size:12px;color:var(--tx2)"><span id="rcnt">0</span> items entered</div>
       </div>
       <div id="rfbody"></div>
@@ -924,7 +930,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
               <option value="expired">Expired</option>
               <option value="soon">Expiring soon</option>
             </select>
-            <input id="ctl-overview-search" placeholder="Search name or code..." style="margin:0;width:230px" oninput="renderControlled()">
+            <input id="ctl-overview-search" placeholder="Search name or code..." style="margin:0;width:230px" oninput="renderControlledDebounced()">
             <button class="btn bp bsm" id="ctl-add-overview-btn" onclick="ctlAddCatalogMedicine()">+ Add medicine</button>
           </div>
         </div>
@@ -982,7 +988,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         <div class="ch" style="flex-wrap:wrap;gap:8px">
           <span class="ct">Shared medicine catalogue / القائمة المشتركة</span>
           <div class="fl g8">
-            <input id="ctl-search" placeholder="Search name or code..." style="margin:0;width:240px" oninput="renderControlled()">
+            <input id="ctl-search" placeholder="Search name or code..." style="margin:0;width:240px" oninput="renderControlledDebounced()">
             <button class="btn bp bsm" id="ctl-add-med-btn" onclick="ctlAddCatalogMedicine()">+ Add medicine</button>
           </div>
         </div>
@@ -1123,16 +1129,41 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         </table></div>
       </div>
       <div class="card">
-        <div class="ch">
-          <span class="ct">Assign Drug to Shelf / &#x62A;&#x639;&#x64A;&#x64A;&#x646; &#x62F;&#x648;&#x627;&#x621;</span>
-        </div>
-        <div class="cb">
-          <div class="fg"><label>Medication</label><select id="assign-med" style="margin-bottom:14px"></select></div>
-          <div class="fg"><label>Shelf / &#x627;&#x644;&#x631;&#x641;</label><select id="assign-shelf" style="margin-bottom:14px"><option value="">Unassigned</option></select></div>
-          <button class="btn bp" onclick="assignMedToShelf()">Assign &#x2713;</button>
-        </div>
+        <div class="ch"><span class="ct">Quick Summary / ملخص سريع</span></div>
+        <div class="cb" id="shelves-summary" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px"></div>
       </div>
     </div>
+
+    <div class="card" style="border-color:var(--ac)">
+      <div class="ch" style="flex-wrap:wrap;gap:10px">
+        <div>
+          <span class="ct">Medication Database / قاعدة بيانات الأدوية</span>
+          <div style="font-size:11px;color:var(--tx2);margin-top:3px">Select one or more medicines, then assign all selected items to a drawer.</div>
+        </div>
+        <div class="fl g8 ic" style="flex-wrap:wrap">
+          <div class="sbr" style="min-width:240px"><span class="sic">&#x1F50D;</span><input id="shelf-med-search" type="text" placeholder="Search medication..." oninput="renderShelfMedicationDatabase()"></div>
+          <select id="shelf-med-filter" class="psel" onchange="renderShelfMedicationDatabase()"><option value="all">All drawers</option><option value="__none__">Unassigned</option></select>
+        </div>
+      </div>
+      <div id="shelf-bulk-bar" style="display:none;background:var(--s2);border-bottom:1px solid var(--bd);padding:10px 14px">
+        <div class="fl ic jb" style="gap:10px;flex-wrap:wrap">
+          <strong id="shelf-selected-count">0 selected</strong>
+          <div class="fl g8 ic" style="flex-wrap:wrap">
+            <select id="shelf-bulk-target" class="psel"><option value="">Choose drawer...</option><option value="__none__">Remove from drawer</option></select>
+            <button class="btn bp bsm" onclick="assignSelectedMedsToShelf()">Assign selected ✓</button>
+            <button class="btn bg bsm" onclick="clearShelfMedicationSelection()">Clear selection</button>
+          </div>
+        </div>
+      </div>
+      <div class="tw"><table>
+        <thead><tr>
+          <th style="width:38px"><input type="checkbox" id="shelf-med-all" onchange="toggleAllShelfMedications(this.checked)"></th>
+          <th style="width:52px">#</th><th>Medication</th><th>Category</th><th>Classification</th><th>Current drawer</th><th style="width:110px">Min</th><th style="width:110px">Max</th>
+        </tr></thead>
+        <tbody id="shelf-med-db"></tbody>
+      </table></div>
+    </div>
+
     <div class="card">
       <div class="ch">
         <span class="ct">&#x1F5A8; Print Shelf Lists</span>
@@ -1690,6 +1721,24 @@ async function checkPublicControlledExpiry(){
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
 var FIREBASE_CONFIG={apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
 var FB_APP=null,FB_AUTH=null,FB_DB=null,FB_FUNCTIONS=null;
+var _lazyScripts={};
+function loadScriptOnce(key,src,test){
+  if(test&&test())return Promise.resolve();
+  if(_lazyScripts[key])return _lazyScripts[key];
+  _lazyScripts[key]=new Promise(function(resolve,reject){
+    var sc=document.createElement('script');sc.src=src;sc.async=true;
+    sc.onload=function(){resolve()};sc.onerror=function(){delete _lazyScripts[key];reject(new Error(key+' library failed to load'))};
+    document.head.appendChild(sc);
+  });
+  return _lazyScripts[key];
+}
+function ensureXLSX(){return loadScriptOnce('Excel','https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){return typeof XLSX!=='undefined'})}
+function ensureZXing(){return loadScriptOnce('Barcode scanner','https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js',function(){return typeof ZXing!=='undefined'})}
+function ensureFirebaseFunctions(){return loadScriptOnce('Firebase Functions','https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js',function(){return !!(window.firebase&&firebase.functions)}).then(function(){FB_FUNCTIONS=firebase.functions();return FB_FUNCTIONS})}
+function debounce(fn,wait){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},wait)}}
+var renderInvDebounced=debounce(function(){renderInv()},220);
+var renderReqFormDebounced=debounce(function(){renderReqForm()},220);
+var renderControlledDebounced=debounce(function(){renderControlled()},220);
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
@@ -1703,7 +1752,7 @@ function initFirebase(){
       console.warn('Firestore persistence not supported in this browser.');
     }
   });
-  FB_FUNCTIONS=firebase.functions();
+  FB_FUNCTIONS=null;
 }
 
 // Firestore is the only operational data store. Memory is a short-lived UI cache, never persistent storage.
@@ -1742,7 +1791,7 @@ var S={
   scheduleRefresh:function(){
     if(!S.ready||!CU)return;
     if(S.refreshTimer)clearTimeout(S.refreshTimer);
-    S.refreshTimer=setTimeout(function(){S.refreshTimer=null;refreshCurrentPage();},120);
+    S.refreshTimer=setTimeout(function(){S.refreshTimer=null;if(document.visibilityState==='visible')refreshCurrentPage();},450);
   },
   g:function(k){return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null},
   s:function(k,v){
@@ -2746,7 +2795,7 @@ function ctlImportRows(rows,source){
   }
   return Promise.all([ctlSetCatalog(cat),ctlSetWarehouse(wh),ctlSetPharmacy(ph)]).then(function(){ctlMove({type:'master_import',note:'Imported '+source+'; added '+added+', updated '+updated});toast('Import completed: '+added+' added, '+updated+' updated ✓','succ');renderControlled()});
 }
-function ctlImportMasterFile(file){if(!file)return;if(typeof XLSX==='undefined')return toast('Excel library unavailable','err');var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});ctlImportRows(rows,file.name)}catch(err){console.error(err);toast(err.message||'Import failed','err')}el('ctl-import-file').value=''};reader.readAsArrayBuffer(file)}
+async function ctlImportMasterFile(file){if(!file)return;try{await ensureXLSX()}catch(e){return toast('Excel library unavailable','err')};var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});ctlImportRows(rows,file.name)}catch(err){console.error(err);toast(err.message||'Import failed','err')}el('ctl-import-file').value=''};reader.readAsArrayBuffer(file)}
 function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)return toast('Paste text first','err');var rows=t.split(/\r?\n/).map(function(line){return line.split('\t')});ctlImportRows(rows,'pasted text')}
 function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list to print it.','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,list=ctlDeptList(dept),s=S.g('controlled_settings_'+dept)||{},rows=list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'')+'</td><td>'+esc(m.nupco||'')+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min)+'</td><td>'+ctlNum(x.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc((x.batches||[]).map(function(b){return (b.qty||0)+' @ '+fmtDate(b.expiry)}).join(' / '))+'</td></tr>'}).join(''),url=new URL(window.location.href);url.search='';url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url.toString()),w=window.open('','_ctlprint');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:center}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:35px;text-align:center}.line{border-top:1px solid #333;padding-top:8px;margin-top:35px}</style></head><body><h2>'+esc(name)+' — قائمة الأدوية المخدرة والمقيدة</h2><img src="'+qr+'" width="115" style="float:left"><p>Barcode: expiry follow-up / متابعة تواريخ الانتهاء</p><table><thead><tr><th>#</th><th>الكود الوزاري</th><th>كود نوبكو</th><th>الدواء</th><th>التصنيف</th><th>Min</th><th>Max</th><th>الكمية</th><th>الدفعات والانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div class="line">أمين العهدة بالقسم<br>'+esc(s.custodyOfficer||'')+'</div><div class="line">مسؤول الأدوية المخدرة بالصيدلية<br>'+esc(s.pharmacyControlledOfficer||'')+'</div><div class="line">مدير الصيدلية<br>'+esc(s.pharmacyManager||'')+'</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>');w.document.close()}
 
@@ -2928,7 +2977,7 @@ async function saveUser(){
   if((requestedRole==='department')&&!did)return toast('Create a department first, then choose it for this user.','err');
   if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
   try{
-    var call=FB_FUNCTIONS.httpsCallable('createManagedUser');
+    await ensureFirebaseFunctions();var call=FB_FUNCTIONS.httpsCallable('createManagedUser');
     var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department')?did:null,master:grantMaster});
     toast('Firebase user created securely ✓','succ');CM('muser');
     await S.loadUsers();renderUsers();
@@ -2938,14 +2987,14 @@ async function delUser(id){
   if(!CU||CU.master!==true)return toast('Only Master can permanently delete users.','err');
   if(id===CU.id)return toast('You cannot delete your own account.','err');
   if(!confirm('Permanently delete this user from Firebase Authentication and Firestore?\n\nThis cannot be undone.'))return;
-  try{var call=FB_FUNCTIONS.httpsCallable('deleteManagedUser');await call({uid:id});await S.loadUsers();toast('User permanently deleted','info');renderUsers();}
+  try{await ensureFirebaseFunctions();var call=FB_FUNCTIONS.httpsCallable('deleteManagedUser');await call({uid:id});await S.loadUsers();toast('User permanently deleted','info');renderUsers();}
   catch(err){console.error(err);toast((err&&err.message)||'Could not delete user','err');}
 }
 async function toggleMasterUser(id,isMaster){
   if(!CU||CU.master!==true)return toast('Only Master can change Master access.','err');
   var action=isMaster?'remove Master access from':'grant Master access to';
   if(!confirm('Are you sure you want to '+action+' this user?'))return;
-  try{var call=FB_FUNCTIONS.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});await S.loadUsers();toast('Master access updated ✓','succ');renderUsers();}
+  try{await ensureFirebaseFunctions();var call=FB_FUNCTIONS.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});await S.loadUsers();toast('Master access updated ✓','succ');renderUsers();}
   catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
 }
 
@@ -3155,8 +3204,9 @@ function handleXlsxDrop(e){
   var f=e.dataTransfer.files[0];
   if(f)handleXlsxFile(f);
 }
-function handleXlsxFile(file){
+async function handleXlsxFile(file){
   if(!file)return;
+  try{await ensureXLSX()}catch(e){toast('Excel library not loaded. Try paste mode.','err');return;}
   var dz=el('xlsx-drop-zone');
   if(dz){dz.querySelector('div:nth-child(2)').textContent='Reading: '+file.name;}
   var reader=new FileReader();
@@ -3174,8 +3224,9 @@ function handleXlsxFile(file){
   if(file.name.endsWith('.csv')) reader.readAsText(file);
   else reader.readAsArrayBuffer(e.target.result||file);
 }
-function handleXlsxFile(file){
+async function handleXlsxFile(file){
   if(!file)return;
+  try{await ensureXLSX()}catch(e){toast('Excel library not loaded. Try paste mode.','err');return;}
   var ext=file.name.split('.').pop().toLowerCase();
   var dz=el('xlsx-drop-zone');
   if(dz){var h2=dz.querySelector('.upload-status');if(!h2){h2=document.createElement('div');h2.className='upload-status';h2.style.cssText='font-size:12px;color:var(--acl);margin-top:8px';dz.appendChild(h2);}h2.textContent='⏳ Reading: '+file.name;}
@@ -3195,7 +3246,6 @@ function parseCsvData(text){
   parseImport();
 }
 function parseXlsxData(buffer,fname){
-  if(typeof XLSX==='undefined'){toast('XLSX library not loaded. Try paste mode.','err');return;}
   var wb=XLSX.read(buffer,{type:'array',cellStyles:true});
   var wsName=wb.SheetNames[0];
   var ws=wb.Sheets[wsName];
@@ -4206,7 +4256,7 @@ function fuzzyMatchMed(drug){
 }
 
 // ── Camera Scanner ────────────────────────────────────────
-function startScanner(){
+async function startScanner(){
   stopScanner();
   var video=el('scan-modal-video');
   if(!video) return;
@@ -4225,12 +4275,13 @@ function startScanner(){
       constraints.video={deviceId:{exact:sel.value},width:{ideal:1280},height:{ideal:720}};
     }
     return navigator.mediaDevices.getUserMedia(constraints);
-  }).then(function(stream){
+  }).then(async function(stream){
     _scanStream=stream;
     video.srcObject=stream;
     video.play();
     el('scan-status').textContent='🟢 Scanning — hold barcode steady...';
-    // Use ZXing
+    // Load ZXing only when the scanner is opened
+    try{await ensureZXing()}catch(e){}
     if(typeof ZXing!=='undefined'){
       var hints=new Map();
       var fmts=[
@@ -5594,67 +5645,72 @@ function ensureMasterRoleModal(){
   document.body.insertAdjacentHTML('beforeend',
     '<div class="modal-bg" id="mmaster-role">'
     +'<div class="modal" style="width:590px;max-width:94vw">'
-    +'<div class="mh"><span class="mt">Test User Permissions / اختبار صلاحيات مستخدم</span><button class="xbtn" onclick="CM(\'mmaster-role\')">✕</button></div>'
-    +'<div style="font-size:12px;color:var(--tx2);margin-bottom:12px">اختر مستخدمًا فعليًا لتجربة صلاحياته. ستبقى جميع العمليات وسجلات التدقيق باسم حساب الماستر الحقيقي.</div>'
-    +'<div class="fg"><label>User to test / المستخدم المراد اختبار صلاحياته</label><select id="master-user-select" onchange="masterPreviewUser()"></select></div>'
+    +'<div class="mh"><span class="mt">Switch Role / الانتقال بين الأدوار</span><button class="xbtn" onclick="CM(\'mmaster-role\')">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--tx2);margin-bottom:12px">اختر الدور الذي تريد معاينة النظام بصلاحياته. سيظل تسجيل الدخول وسجل العمليات باسم حساب الماستر الحقيقي.</div>'
+    +'<div class="fg"><label>Role / الدور</label><select id="master-role-select" onchange="masterRoleSelectionChanged()">'
+    +'<option value="pharmacy">Pharmacy Director / مدير الصيدلية</option>'
+    +'<option value="inpatient_supervisor">Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم</option>'
+    +'<option value="pharmacy_staff">Pharmacy Employee / موظف صيدلية</option>'
+    +'<option value="controlled_pharmacy">Controlled Medicines Pharmacy Officer / مسؤول الأدوية الخاضعة للرقابة</option>'
+    +'<option value="warehouse">Warehouse Custody Officer / مسؤول عهدة المستودع</option>'
+    +'<option value="department">Department Employee / موظف قسم</option>'
+    +'</select></div>'
+    +'<div class="fg" id="master-dept-wrap" style="display:none"><label>Department / القسم</label><select id="master-dept-select" onchange="masterPreviewRole()"></select></div>'
     +'<div id="master-user-preview" class="master-test-detail"></div>'
     +'<div class="fl g8" style="justify-content:flex-end;margin-top:18px">'
     +'<button class="btn bg" onclick="CM(\'mmaster-role\')">Cancel</button>'
-    +'<button class="btn bd2c" id="master-reset-modal-btn" onclick="masterResetRole()">Exit Test Mode</button>'
-    +'<button class="btn bp" onclick="masterApplyRole()">Start Test</button>'
+    +'<button class="btn bd2c" id="master-reset-modal-btn" onclick="masterResetRole()">Return to Master / العودة للماستر</button>'
+    +'<button class="btn bp" onclick="masterApplyRole()">Switch / انتقال</button>'
     +'</div></div></div>');
 }
 function openMasterRoleSwitch(){
   if(!isMasterActual())return;
   ensureMasterRoleModal();
-  var actual=actualUser()||{};
-  var users=gu().filter(function(u){return u&&u.active!==false&&u.id!==actual.id&&u.master!==true});
-  var select=el('master-user-select');
-  select.innerHTML=users.length
-    ?users.map(function(u){
-      var dept=u.deptId?gd().find(function(d){return d.id===u.deptId}):null;
-      var label=masterRoleLabel(u.role)+' — '+(u.email||u.username||u.id)+(dept?' — '+dept.name:'');
-      return '<option value="'+esc(u.id)+'">'+esc(label)+'</option>';
-    }).join('')
-    :'<option value="">No active managed users available</option>';
-  select.disabled=!users.length;
+  var roleSel=el('master-role-select'),deptSel=el('master-dept-select');
+  if(MASTER_EFFECTIVE)roleSel.value=MASTER_EFFECTIVE.role||'pharmacy';
+  else roleSel.value='pharmacy';
+  deptSel.innerHTML=gd().length?gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join(''):'<option value="">No departments available</option>';
+  if(MASTER_EFFECTIVE&&MASTER_EFFECTIVE.deptId)deptSel.value=MASTER_EFFECTIVE.deptId;
   el('master-reset-modal-btn').style.display=MASTER_EFFECTIVE?'inline-flex':'none';
-  masterPreviewUser();
+  masterRoleSelectionChanged();
   OM('mmaster-role');
 }
-function masterPreviewUser(){
-  var id=el('master-user-select')?el('master-user-select').value:'';
-  var u=gu().find(function(x){return x.id===id});
+function masterRoleSelectionChanged(){
+  var role=el('master-role-select')?el('master-role-select').value:'pharmacy';
+  var wrap=el('master-dept-wrap');if(wrap)wrap.style.display=role==='department'?'block':'none';
+  masterPreviewRole();
+}
+function masterPreviewRole(){
+  var role=el('master-role-select')?el('master-role-select').value:'pharmacy';
+  var deptId=el('master-dept-select')?el('master-dept-select').value:'';
+  var dept=role==='department'?gd().find(function(d){return d.id===deptId}):null;
   var preview=el('master-user-preview');if(!preview)return;
-  if(!u){preview.innerHTML='<span style="color:var(--tx2)">Create or activate a managed user first.</span>';return}
-  var dept=u.deptId?gd().find(function(d){return d.id===u.deptId}):null;
-  preview.innerHTML='<strong>Effective permissions:</strong> '+esc(masterRoleLabel(u.role))
-    +'<br><strong>Tested user:</strong> '+esc(u.email||u.username||u.id)
-    +(dept?'<br><strong>Department:</strong> '+esc(dept.name):'')
+  preview.innerHTML='<strong>Effective permissions:</strong> '+esc(masterRoleLabel(role))
+    +(role==='department'?'<br><strong>Department:</strong> '+esc(dept?dept.name:'No department selected'):'')
     +'<br><strong>Actual signed-in user:</strong> '+esc((actualUser()||{}).email||(actualUser()||{}).username||'Master')+' (Master)';
 }
 function masterApplyRole(){
   if(!isMasterActual())return;
   ensureMasterRoleModal();
-  var userId=el('master-user-select').value;
-  var target=gu().find(function(u){return u.id===userId});
-  if(!target)return toast('Choose an active user to test.','err');
+  var role=el('master-role-select').value;
+  var deptId=role==='department'?el('master-dept-select').value:null;
+  var dept=deptId?gd().find(function(d){return d.id===deptId}):null;
+  if(role==='department'&&!dept)return toast('Choose a department first.','err');
   if(!MASTER_ACTUAL)MASTER_ACTUAL=Object.assign({},CU);
-  var dept=target.deptId?gd().find(function(d){return d.id===target.deptId}):null;
-  if(target.role==='department'&&!dept)return toast('The selected user has no valid department assignment.','err');
-  MASTER_EFFECTIVE={userId:target.id,email:target.email||target.username||'',role:target.role,deptId:target.deptId||null,deptName:dept?dept.name:''};
-  CU=Object.assign({},target,{
-    id:target.id,
-    username:target.username||target.email||'Test user',
-    email:target.email||'',
-    role:target.role,
+  MASTER_EFFECTIVE={userId:'master-preview-'+role,email:(MASTER_ACTUAL.email||MASTER_ACTUAL.username||'Master'),role:role,deptId:deptId||null,deptName:dept?dept.name:''};
+  CU={
+    id:MASTER_ACTUAL.id,
+    username:MASTER_ACTUAL.username||MASTER_ACTUAL.email||'Master',
+    email:MASTER_ACTUAL.email||'',
+    role:role,
     master:false,
-    deptId:target.deptId||null,
-    deptName:dept?dept.name:''
-  });
-  auditAction('master_user_permission_test',{testedUserId:target.id,testedUser:target.email||'',role:target.role,deptId:target.deptId||null});
+    deptId:deptId||null,
+    deptName:dept?dept.name:'',
+    controlledCustodian:role==='department'?true:!!MASTER_ACTUAL.controlledCustodian
+  };
+  auditAction('master_role_preview',{role:role,deptId:deptId||null});
   CM('mmaster-role');startApp();
-  toast('Test mode started: '+masterEffectiveDescription(CU),'info');
+  toast('Switched to: '+masterEffectiveDescription(CU),'info');
 }
 function masterResetRole(){
   if(MASTER_ACTUAL){
@@ -5708,14 +5764,18 @@ buildNav=function(){
   else if(CU.role==='pharmacy_staff')items=common;
   else if(CU.role==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']];
   else if(CU.role==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
-  else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-deptinventory','📦 Department Inventory'],['pg-expiry','Expiry Dates / تواريخ'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
+  else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-expiry','Expiry Dates / تواريخ'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
+  if(isMasterActual()){
+    var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';
+    mb.innerHTML=MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';
+    mb.onclick=openMasterRoleSwitch;nav.appendChild(mb);
+  }
   items.forEach(function(x){var btn=document.createElement('button');btn.className='nb';btn.innerHTML=x[1];btn.dataset.pg=x[0];btn.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(btn)});
 };
 
 var _showPgComprehensive=showPg;
 showPg=function(id){
   _showPgComprehensive(id);
-  if(id==='pg-deptinventory')renderDeptInventory();
   if(id==='pg-crashcart')renderCrashCarts();
 };
 
@@ -5866,6 +5926,57 @@ async function deptInvEditOne(id){
   auditAction('department_inventory_edit',{deptId:CU.deptId,medId:id});renderDeptInventory();
 }
 
+
+
+// ── DEPARTMENT SHELF MEDICATION DATABASE ─────────────────
+var SHELF_MED_SELECTED={};
+function shelfSelectedIds(){return Object.keys(SHELF_MED_SELECTED).filter(function(id){return SHELF_MED_SELECTED[id]})}
+function shelfMedMatches(m){
+  var q=((el('shelf-med-search')||{}).value||'').trim().toLowerCase();
+  var f=((el('shelf-med-filter')||{}).value||'all');
+  if(q && !(String(m.name||'').toLowerCase().includes(q)||String(m.category||'').toLowerCase().includes(q)))return false;
+  if(f==='__none__' && m.shelfId)return false;
+  if(f!=='all'&&f!=='__none__'&&m.shelfId!==f)return false;
+  return true;
+}
+function renderShelfMedicationDatabase(){
+  if(!CU||CU.role!=='department'||!el('shelf-med-db'))return;
+  var shelves=getShelves(CU.deptId),meds=getMeds(CU.deptId),shown=meds.filter(shelfMedMatches);
+  var filter=el('shelf-med-filter'),target=el('shelf-bulk-target');
+  if(filter){var fv=filter.value;filter.innerHTML='<option value="all">All drawers</option><option value="__none__">Unassigned</option>'+shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');if(Array.from(filter.options).some(function(o){return o.value===fv}))filter.value=fv}
+  if(target){var tv=target.value;target.innerHTML='<option value="">Choose drawer...</option><option value="__none__">Remove from drawer</option>'+shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');if(Array.from(target.options).some(function(o){return o.value===tv}))target.value=tv}
+  el('shelf-med-db').innerHTML=shown.map(function(m,i){
+    return '<tr><td><input type="checkbox" '+(SHELF_MED_SELECTED[m.id]?'checked':'')+' data-mid="'+m.id+'" onchange="toggleShelfMedication(this.dataset.mid,this.checked)"></td>'
+      +'<td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b>'+requestColdMarker(m)+'</td><td>'+esc(m.category||'—')+'</td><td>'+bdg(m)+'</td>'
+      +'<td>'+(m.shelfId?'<span class="shelf-badge">'+esc(getShelfName(m.shelfId))+'</span>':'<span class="badge bgr">Unassigned</span>')+'</td>'
+      +'<td style="text-align:center">'+esc(m.min==null?'—':m.min)+'</td><td style="text-align:center">'+esc(m.max==null?'—':m.max)+'</td></tr>';
+  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:26px;color:var(--tx2)">No medications match this search.</td></tr>';
+  var ids=shelfSelectedIds(),bar=el('shelf-bulk-bar');if(bar)bar.style.display=ids.length?'block':'none';
+  if(el('shelf-selected-count'))el('shelf-selected-count').textContent=ids.length+' selected';
+  var all=el('shelf-med-all');if(all){all.checked=shown.length>0&&shown.every(function(m){return !!SHELF_MED_SELECTED[m.id]});all.indeterminate=!all.checked&&shown.some(function(m){return !!SHELF_MED_SELECTED[m.id]})}
+}
+function toggleShelfMedication(id,v){SHELF_MED_SELECTED[id]=v;renderShelfMedicationDatabase()}
+function toggleAllShelfMedications(v){getMeds(CU.deptId).filter(shelfMedMatches).forEach(function(m){SHELF_MED_SELECTED[m.id]=v});renderShelfMedicationDatabase()}
+function clearShelfMedicationSelection(){SHELF_MED_SELECTED={};renderShelfMedicationDatabase()}
+async function assignSelectedMedsToShelf(){
+  var ids=shelfSelectedIds(),target=(el('shelf-bulk-target')||{}).value;
+  if(!ids.length)return toast('Select one or more medications first','err');
+  if(!target)return toast('Choose a drawer first','err');
+  var shelfId=target==='__none__'?'':target;
+  var meds=getMeds(CU.deptId).map(function(m){return ids.includes(m.id)?Object.assign({},m,{shelfId:shelfId}):m});
+  await setMeds(CU.deptId,meds);auditAction('department_bulk_shelf',{deptId:CU.deptId,ids:ids,shelfId:shelfId});
+  SHELF_MED_SELECTED={};renderShelves();toast(ids.length+' medications updated ✓','succ');
+}
+
+var _renderShelvesDatabase=renderShelves;
+renderShelves=function(){
+  _renderShelvesDatabase();
+  if(!CU||CU.role!=='department')return;
+  var meds=getMeds(CU.deptId),shelves=getShelves(CU.deptId),assigned=meds.filter(function(m){return !!m.shelfId}).length;
+  if(el('shelves-summary'))el('shelves-summary').innerHTML='<div class="sc" style="padding:12px"><div class="sl">Medications</div><div class="sv" style="font-size:22px">'+meds.length+'</div></div>'+'<div class="sc" style="padding:12px"><div class="sl">Assigned</div><div class="sv" style="font-size:22px">'+assigned+'</div></div>'+'<div class="sc" style="padding:12px"><div class="sl">Unassigned</div><div class="sv" style="font-size:22px">'+(meds.length-assigned)+'</div></div>';
+  renderShelfMedicationDatabase();
+};
+
 // Crash Cart
 function crashCarts(){return S.g('crash_carts')||[]}
 function setCrashCarts(v){return S.s('crash_carts',v)}
@@ -6009,8 +6120,10 @@ function boot(){
   catch(err){console.error(err);el('aerr').textContent='Firebase failed to initialize. Check the connection and Firebase setup.';el('aerr').style.display='block';}
 }
 boot();
+document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'&&S.ready&&CU)S.scheduleRefresh()});
 // Expiry check on load — alert if any dept has expiring meds
 setTimeout(function(){
+  if(!S.ready||!CU||document.visibilityState!=='visible')return;
   var alerts=[];
   gd().forEach(function(dept){
     var exp=getExpiry(dept.id);
