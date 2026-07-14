@@ -6361,5 +6361,96 @@ crashPrint=function(id){
   document.head.appendChild(st);
 })();
 </script>
+
+<style>
+#ctl-admin-directory-card{border:1px solid var(--ac);background:rgba(31,111,235,.045)}
+#ctl-admin-directory-card .admin-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#ctl-admin-directory-card input,#ctl-admin-directory-card select{margin:0}
+#ctl-admin-directory-card .admin-section{border:1px solid var(--bd);border-radius:10px;padding:12px;background:var(--s2)}
+#ctl-admin-directory-card .admin-section-title{font-size:13px;font-weight:700;margin-bottom:10px;color:var(--acl)}
+.ctl-dept-readonly-banner{border:1px solid var(--ac);background:rgba(31,111,235,.08);border-radius:10px;padding:11px 14px;margin-bottom:12px;font-size:12px;line-height:1.7}
+@media(max-width:760px){#ctl-admin-directory-card .admin-grid{grid-template-columns:1fr}}
+</style>
+<script>
+/* ===== Unified responsible names + department print directory ===== */
+(function(){
+  function ctlDirectoryCanEdit(){
+    try{return !!(isPharmacyDirector()||ctlIsOfficer());}catch(e){return false;}
+  }
+  function ctlDirectoryDeptName(id){var d=(gd()||[]).find(function(x){return x.id===id});return d?d.name:id;}
+  function ctlDirectorySelectedDept(){return (document.getElementById('ctl-admin-dept-select')||{}).value||'';}
+  function ctlDirectorySettings(id){return (S.g('controlled_settings_'+id)||{});}
+  function ctlDirectoryLoadDept(){
+    var id=ctlDirectorySelectedDept(),s=ctlDirectorySettings(id);
+    ['departmentManager','nursingHead','controlledCustodian','pharmacyManager'].forEach(function(k){var x=document.getElementById('ctl-admin-'+k);if(x)x.value=s[k]||'';});
+    var n=document.getElementById('ctl-admin-dept-name');if(n)n.textContent=id?ctlDirectoryDeptName(id):'—';
+  }
+  window.ctlDirectorySaveDept=async function(){
+    if(!ctlDirectoryCanEdit())return toast('No permission / لا توجد صلاحية','err');
+    var id=ctlDirectorySelectedDept();if(!id)return toast('Choose a department / اختر القسم','err');
+    var s=Object.assign({},ctlDirectorySettings(id));
+    s.departmentManager=(document.getElementById('ctl-admin-departmentManager')||{}).value||'';
+    s.nursingHead=(document.getElementById('ctl-admin-nursingHead')||{}).value||'';
+    s.controlledCustodian=(document.getElementById('ctl-admin-controlledCustodian')||{}).value||'';
+    s.pharmacyManager=(document.getElementById('ctl-admin-pharmacyManager')||{}).value||'';
+    await S.s('controlled_settings_'+id,s);
+    auditAction('controlled_department_print_directory_save',{departmentId:id});
+    toast('Department details saved / تم حفظ بيانات القسم','succ');
+    renderControlled();
+  };
+  window.ctlDirectorySaveGlobal=async function(){
+    if(!ctlDirectoryCanEdit())return toast('No permission / لا توجد صلاحية','err');
+    var s=ctlSettingsGlobal();
+    s.warehouseManager=(document.getElementById('ctl-admin-warehouseManager')||{}).value||'';
+    s.controlledCustodian=(document.getElementById('ctl-admin-globalControlledCustodian')||{}).value||'';
+    await S.s('controlled_global_settings',s);
+    auditAction('controlled_responsible_names_save',{warehouseManager:s.warehouseManager,controlledCustodian:s.controlledCustodian});
+    toast('Responsible names saved / تم حفظ أسماء المسؤولين','succ');
+    renderControlled();
+  };
+  window.ctlDirectoryApplyPharmacyManagerAll=async function(){
+    if(!ctlDirectoryCanEdit())return;
+    var name=(document.getElementById('ctl-admin-pharmacyManager')||{}).value||'';
+    if(!name)return toast('Enter pharmacy manager name first / أدخل اسم مدير الصيدلية','err');
+    var ds=gd()||[];
+    for(var i=0;i<ds.length;i++){
+      var s=Object.assign({},ctlDirectorySettings(ds[i].id));s.pharmacyManager=name;await S.s('controlled_settings_'+ds[i].id,s);
+    }
+    toast('Applied to all departments / تم التطبيق على جميع الأقسام','succ');
+  };
+  function buildAdminCard(){
+    var pg=document.getElementById('pg-controlled');if(!pg||!ctlDirectoryCanEdit())return;
+    var old=document.getElementById('ctl-admin-directory-card');if(old)old.remove();
+    var ds=(gd()||[]).slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base'});});
+    var current=(typeof ctlCurrentDept==='function'?ctlCurrentDept():'')||((ds[0]||{}).id||'');
+    var gs=ctlResponsibleSettings();
+    var card=document.createElement('div');card.className='card';card.id='ctl-admin-directory-card';
+    card.innerHTML='<div class="ch"><div><span class="ct">Responsible names & department print directory / أسماء المسؤولين وبيانات طباعة الأقسام</span><div class="fhint">Available to Pharmacy Manager and Controlled Medicines Officer. Select any inpatient department and update its current responsible persons.</div></div></div>'+
+      '<div class="cb"><div class="admin-grid">'+
+      '<div class="admin-section"><div class="admin-section-title">Global responsible names / أسماء المسؤولين العامة</div><div class="fg"><label>Warehouse manager / مسؤول المستودع</label><input id="ctl-admin-warehouseManager" value="'+esc(gs.warehouseManager||'')+'"></div><div class="fg"><label>Controlled medicines custody officer / مسؤول عهدة الأدوية المخدرة</label><input id="ctl-admin-globalControlledCustodian" value="'+esc(gs.controlledCustodian||'')+'"></div><button class="btn bp bsm" onclick="ctlDirectorySaveGlobal()">Save responsible names / حفظ</button></div>'+
+      '<div class="admin-section"><div class="admin-section-title">Department print details / بيانات طباعة القسم</div><div class="fg"><label>Department / القسم</label><select id="ctl-admin-dept-select" onchange="ctlDirectoryLoadDeptPublic()">'+ds.map(function(d){return '<option value="'+esc(d.id)+'" '+(d.id===current?'selected':'')+'>'+esc(d.name||d.id)+'</option>';}).join('')+'</select></div><div class="fhint" style="margin-bottom:8px">Editing: <b id="ctl-admin-dept-name"></b></div><div class="fg"><label>Department manager / مدير القسم</label><input id="ctl-admin-departmentManager"></div><div class="fg"><label>Head nurse / رئيس التمريض</label><input id="ctl-admin-nursingHead"></div><div class="fg"><label>Controlled medicines custodian / أمين العهدة</label><input id="ctl-admin-controlledCustodian"></div><div class="fg"><label>Pharmacy manager / مدير الصيدلية</label><input id="ctl-admin-pharmacyManager"></div><div class="fl g8" style="flex-wrap:wrap"><button class="btn bp bsm" onclick="ctlDirectorySaveDept()">Save department details / حفظ</button><button class="btn bg bsm" onclick="ctlDirectoryApplyPharmacyManagerAll()">Apply pharmacy manager to all departments</button></div></div>'+
+      '</div></div>';
+    var tabs=document.getElementById('ctl-tabs');if(tabs)tabs.insertAdjacentElement('beforebegin',card);else pg.insertBefore(card,pg.firstChild);
+    window.ctlDirectoryLoadDeptPublic=ctlDirectoryLoadDept;ctlDirectoryLoadDept();
+  }
+  function enforceDepartmentReadOnly(){
+    if(!CU||CU.role!=='department')return;
+    var pg=document.getElementById('pg-controlled');if(!pg)return;
+    ['ctl-responsible-names-card','ctl-admin-directory-card','ctl-dept-print-settings'].forEach(function(id){var x=document.getElementById(id);if(x)x.remove();});
+    var view=document.getElementById('ctl-departments-view');if(view){
+      var old=document.getElementById('ctl-dept-readonly-banner');if(old)old.remove();
+      var b=document.createElement('div');b.id='ctl-dept-readonly-banner';b.className='ctl-dept-readonly-banner';b.innerHTML='<b>Department access / صلاحية القسم:</b> View the assigned controlled-medicine list, expiry alerts and warnings, and print only. Editing medicines, quantities, expiry dates, and responsible names is restricted to the pharmacy.';
+      view.insertBefore(b,view.firstChild);
+      view.querySelectorAll('button').forEach(function(btn){var t=(btn.textContent||'').toLowerCase();var oc=btn.getAttribute('onclick')||'';var allow=t.includes('print')||t.includes('طباعة')||oc.includes('printControlled')||oc.includes('ctlOpenDepartmentPrintOptions');if(!allow)btn.style.display='none';});
+      view.querySelectorAll('input,select,textarea').forEach(function(x){if(x.id!=='ctl-dept-sel')x.disabled=true;});
+    }
+  }
+  var previousRender=renderControlled;
+  renderControlled=function(){var r=previousRender.apply(this,arguments);setTimeout(function(){
+    var legacy=document.getElementById('ctl-responsible-names-card');if(legacy)legacy.remove();
+    if(ctlDirectoryCanEdit())buildAdminCard();else enforceDepartmentReadOnly();
+  },0);return r;};
+})();
+</script>
 </body>
 </html>
