@@ -2136,11 +2136,11 @@ async function doLogin(){
     if(!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
     var profile=profileSnapshot.data();
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(profile.role!=='pharmacy'&&profile.role!=='department'&&profile.role!=='warehouse'&&profile.role!=='controlled_pharmacy')throw new Error('This account has an invalid role.');
+    if(!['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'].includes(profile.role))throw new Error('This account has an invalid role.');
     await S.init();seed();
     var deptId=profile.deptId||null;
     var dept=deptId?gd().find(function(d){return d.id===deptId}):null;
-    if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
+    if(['department','pharmacy_staff','inpatient_supervisor'].includes(profile.role)&&!dept)throw new Error('Your department assignment is missing.');
     CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:!!profile.controlledCustodian};
     startApp();
   }catch(err){
@@ -2756,7 +2756,8 @@ function ctlImportRows(rows,source){
 }
 async function ctlImportMasterFile(file){if(!file)return;try{await ensureXLSX()}catch(e){return toast('Excel library unavailable','err')};var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});ctlImportRows(rows,file.name)}catch(err){console.error(err);toast(err.message||'Import failed','err')}el('ctl-import-file').value=''};reader.readAsArrayBuffer(file)}
 function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)return toast('Paste text first','err');var rows=t.split(/\r?\n/).map(function(line){return line.split('\t')});ctlImportRows(rows,'pasted text')}
-function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list to print it.','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,list=ctlDeptList(dept),s=S.g('controlled_settings_'+dept)||{},rows=list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'')+'</td><td>'+esc(m.nupco||'')+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min)+'</td><td>'+ctlNum(x.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc((x.batches||[]).map(function(b){return (b.qty||0)+' @ '+fmtDate(b.expiry)}).join(' / '))+'</td></tr>'}).join(''),url=new URL(window.location.href);url.search='';url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url.toString()),w=window.open('','_ctlprint');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:center}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:35px;text-align:center}.line{border-top:1px solid #333;padding-top:8px;margin-top:35px}</style></head><body><h2>'+esc(name)+' — قائمة الأدوية المخدرة والمقيدة</h2><img src="'+qr+'" width="115" style="float:left"><p>Barcode: expiry follow-up / متابعة تواريخ الانتهاء</p><table><thead><tr><th>#</th><th>الكود الوزاري</th><th>كود نوبكو</th><th>الدواء</th><th>التصنيف</th><th>Min</th><th>Max</th><th>الكمية</th><th>الدفعات والانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div class="line">أمين العهدة بالقسم<br>'+esc(s.custodyOfficer||'')+'</div><div class="line">مسؤول الأدوية المخدرة بالصيدلية<br>'+esc(s.pharmacyControlledOfficer||'')+'</div><div class="line">مدير الصيدلية<br>'+esc(s.pharmacyManager||'')+'</div></div><script>setTimeout(function(){window.print()},500)<\/script>
+function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open an inpatient department list to print it.','info');var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,list=ctlDeptList(dept),s=S.g('controlled_settings_'+dept)||{},rows=list.map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'')+'</td><td>'+esc(m.nupco||'')+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(x.min)+'</td><td>'+ctlNum(x.max)+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc((x.batches||[]).map(function(b){return (b.qty||0)+' @ '+fmtDate(b.expiry)}).join(' / '))+'</td></tr>'}).join(''),url=new URL(window.location.href);url.search='';url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var qr='https://api.qrserver.com/v1/create-qr-code/?size=180x180&data='+encodeURIComponent(url.toString()),w=window.open('','_ctlprint');w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>body{font-family:Arial;padding:20px;direction:rtl}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:center}.sign{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:35px;text-align:center}.line{border-top:1px solid #333;padding-top:8px;margin-top:35px}</style></head><body><h2>'+esc(name)+' — قائمة الأدوية المخدرة والمقيدة</h2><img src="'+qr+'" width="115" style="float:left"><p>Barcode: expiry follow-up / متابعة تواريخ الانتهاء</p><table><thead><tr><th>#</th><th>الكود الوزاري</th><th>كود نوبكو</th><th>الدواء</th><th>التصنيف</th><th>Min</th><th>Max</th><th>الكمية</th><th>الدفعات والانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="sign"><div class="line">أمين العهدة بالقسم<br>'+esc(s.custodyOfficer||'')+'</div><div class="line">مسؤول الأدوية المخدرة بالصيدلية<br>'+esc(s.pharmacyControlledOfficer||'')+'</div><div class="line">مدير الصيدلية<br>'+esc(s.pharmacyManager||'')+'</div></div><script>setTimeout(function(){window.print()},500)<\/script></body></html>');w.document.close();}
+</script>
 <style>
 .crash-report-status{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid}
 .crash-report-pending{color:var(--yll);border-color:var(--yl);background:rgba(210,153,34,.12)}
@@ -3191,7 +3192,10 @@ function doPrint(){
     html+='</div>';
   });
 
-  html+='<script>window.onload=function(){window.print();}<\/script>
+  html+='<script>window.onload=function(){window.print();}<\/script></body></html>';
+  var pw=window.open('','_print');if(!pw)return toast('Popup blocked','err');pw.document.open();pw.document.write(html);pw.document.close();
+}
+</script>
 <style>
 .crash-report-status{display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;font-size:10px;font-weight:700;border:1px solid}
 .crash-report-pending{color:var(--yll);border-color:var(--yl);background:rgba(210,153,34,.12)}
@@ -6262,7 +6266,7 @@ doLogin=async function(){
     if(!allowed.includes(profile.role))throw new Error('This account has an invalid role.');
     await S.init();seed();
     var deptId=profile.deptId||null,dept=deptId?gd().find(function(d){return d.id===deptId}):null;
-    if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
+    if(['department','pharmacy_staff','inpatient_supervisor'].includes(profile.role)&&!dept)throw new Error('Your department assignment is missing.');
     CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:!!profile.controlledCustodian};
     MASTER_ACTUAL=CU.master?Object.assign({},CU):null;MASTER_EFFECTIVE=null;
     startApp();
