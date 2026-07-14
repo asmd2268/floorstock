@@ -6465,5 +6465,112 @@ crashPrint=function(id){
   },0);return r;};
 })();
 </script>
+
+<style>
+#ctl-admin-directory-card,#ctl-responsible-names-card,#ctl-dept-print-settings{display:none!important}
+.wh-stock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.wh-batch-row{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:8px;align-items:end;margin-bottom:8px}
+.wh-batch-row input{margin:0}
+.crash-toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.crash-summary{display:grid;grid-template-columns:repeat(4,minmax(130px,1fr));gap:10px;margin-bottom:14px}
+.crash-table td,.crash-table th{vertical-align:top}
+.crash-section-label{font-weight:700;color:var(--acl);background:var(--s2)}
+.crash-import-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.crash-import-grid textarea{min-height:220px;font-family:var(--mono);font-size:11px}
+@media(max-width:760px){.wh-stock-grid,.crash-import-grid,.crash-summary{grid-template-columns:1fr}.wh-batch-row{grid-template-columns:1fr 1fr}.wh-batch-row button{grid-column:2}}
+</style>
+
+<div class="modal-bg" id="mwh-stock-pro">
+  <div class="modal" style="width:760px">
+    <div class="mh"><span class="mt" id="mwh-stock-title">Warehouse custody</span><button class="xbtn" onclick="CM('mwh-stock-pro')">✕</button></div>
+    <input type="hidden" id="mwh-stock-med-id">
+    <div class="wh-stock-grid">
+      <div class="fg"><label>System quantity / كمية النظام</label><input id="mwh-system" type="number" min="0"></div>
+      <div class="fg"><label>Outside-system quantity / أدوية خارج النظام</label><input id="mwh-outside" type="number" min="0"></div>
+    </div>
+    <div class="card" style="margin-top:4px"><div class="ch"><div><span class="ct">Expiry dates / تواريخ الانتهاء</span><div class="fhint">Add any number of expiry dates. Linking a quantity to each date is optional.</div></div><button class="btn bg bsm" onclick="whAddBatchRow()">+ Add expiry</button></div><div class="cb" id="mwh-batches"></div></div>
+    <div class="fhint">Unallocated quantities are allowed. During dispensing you may optionally choose a specific expiry batch.</div>
+    <div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-stock-pro')">Cancel</button><button class="btn bp" onclick="whSaveStockPro()">Save custody</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="mcrash-cart-pro">
+  <div class="modal" style="width:680px">
+    <div class="mh"><span class="mt">Add Crash Cart / إضافة عربة</span><button class="xbtn" onclick="CM('mcrash-cart-pro')">✕</button></div>
+    <div class="frow"><div class="fg"><label>Cart name / اسم العربة</label><input id="ccp-name"></div><div class="fg"><label>Cart number / رقم العربة</label><input id="ccp-number"></div></div>
+    <div class="frow"><div class="fg"><label>Assigned department / القسم</label><select id="ccp-dept"></select></div><div class="fg"><label>Location / الموقع</label><input id="ccp-location"></div></div>
+    <div class="fg"><label>Current seal number / رقم القفل الحالي</label><input id="ccp-seal"></div>
+    <div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM('mcrash-cart-pro')">Cancel</button><button class="btn bp" onclick="crashSaveCartPro()">Create cart</button></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="mcrash-import-pro">
+  <div class="modal" style="width:980px">
+    <div class="mh"><span class="mt" id="mcrash-import-title">Import Crash Cart</span><button class="xbtn" onclick="CM('mcrash-import-pro')">✕</button></div>
+    <input type="hidden" id="cc-import-cart-id">
+    <div class="crash-import-grid">
+      <div><label>UP / الجزء العلوي</label><textarea id="cc-import-up" placeholder="Generic Name\tStrength\tDosage Form\tConc. In 1ml\tStd. Qty.\tPresent\tExp. Date\tExp. Date"></textarea></div>
+      <div><label>DOWN / IV Solutions</label><textarea id="cc-import-down" placeholder="Generic Name\tStrength\tDosage Form\tConc. In 1ml\tStd. Qty.\tPresent\tExp. Date\tExp. Date"></textarea></div>
+    </div>
+    <div class="fhint">Paste each list separately. Existing items with the same name and section are updated; new items are added.</div>
+    <div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mcrash-import-pro')">Cancel</button><button class="btn bp" onclick="crashImportBothPro()">Import lists</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function removeDirectory(){['ctl-admin-directory-card','ctl-responsible-names-card','ctl-dept-print-settings'].forEach(function(id){var x=document.getElementById(id);if(x)x.remove();});}
+  var oldRenderControlled=renderControlled;
+  renderControlled=function(){var r=oldRenderControlled.apply(this,arguments);setTimeout(removeDirectory,0);return r;};
+  document.addEventListener('DOMContentLoaded',removeDirectory);
+
+  window.whAddBatchRow=function(b){
+    var row=document.createElement('div');row.className='wh-batch-row';b=b||{};
+    row.innerHTML='<div><label>Expiry date</label><input class="wh-exp" type="date" value="'+esc(b.expiry||'')+'"></div><div><label>Linked qty (optional)</label><input class="wh-qty" type="number" min="0" value="'+(b.qty==null?'':esc(b.qty))+'"></div><div><label>Batch / Lot (optional)</label><input class="wh-lot" value="'+esc(b.lot||'')+'"></div><button class="btn bd2c bxs" type="button" onclick="this.parentElement.remove()">✕</button>';
+    document.getElementById('mwh-batches').appendChild(row);
+  };
+  window.ctlEditWarehouseStock=function(id){
+    if(!ctlCanEditWarehouse())return;
+    var m=ctlMedicine(id)||{},x=(ctlWarehouse()||{})[id]||{};
+    document.getElementById('mwh-stock-med-id').value=id;document.getElementById('mwh-stock-title').textContent='Warehouse custody — '+(m.name||'');
+    document.getElementById('mwh-system').value=ctlNum(x.system);document.getElementById('mwh-outside').value=ctlNum(x.outside);
+    var box=document.getElementById('mwh-batches');box.innerHTML='';(x.batches||[]).forEach(whAddBatchRow);if(!(x.batches||[]).length)whAddBatchRow({});OM('mwh-stock-pro');
+  };
+  window.whSaveStockPro=async function(){
+    var id=document.getElementById('mwh-stock-med-id').value;if(!id)return;
+    var batches=Array.from(document.querySelectorAll('#mwh-batches .wh-batch-row')).map(function(r){var q=r.querySelector('.wh-qty').value;return {expiry:r.querySelector('.wh-exp').value,qty:q===''?null:ctlNum(q),lot:r.querySelector('.wh-lot').value.trim()};}).filter(function(b){return b.expiry||b.qty||b.lot});
+    var all=Object.assign({},ctlWarehouse()),x=Object.assign({},all[id]||{});x.system=ctlNum(document.getElementById('mwh-system').value);x.outside=ctlNum(document.getElementById('mwh-outside').value);x.batches=batches;all[id]=x;
+    await ctlSetWarehouse(all);await ctlMove({type:'warehouse_stock_edit',medId:id,note:'Warehouse balances and expiry batches updated'});CM('mwh-stock-pro');renderControlled();toast('Warehouse custody saved ✓','succ');
+  };
+
+  window.crashAddCart=function(){
+    if(!canManageCrashCart())return toast('No permission','err');
+    document.getElementById('ccp-name').value='';document.getElementById('ccp-number').value='';document.getElementById('ccp-location').value='';document.getElementById('ccp-seal').value='';
+    document.getElementById('ccp-dept').innerHTML=(gd()||[]).map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name||d.id)+'</option>';}).join('');OM('mcrash-cart-pro');
+  };
+  window.crashSaveCartPro=async function(){
+    var name=document.getElementById('ccp-name').value.trim(),deptId=document.getElementById('ccp-dept').value;if(!name||!deptId)return toast('Enter cart name and department','err');
+    var cart={id:'cc_'+Date.now().toString(36),name:name,number:document.getElementById('ccp-number').value.trim(),location:document.getElementById('ccp-location').value.trim(),seal:document.getElementById('ccp-seal').value.trim(),deptId:deptId,items:[],createdAt:nowISO(),createdBy:actualActorName()};
+    var arr=crashCarts().slice();arr.push(cart);await setCrashCarts(arr);auditAction('crash_cart_add',{cartId:cart.id,deptId:deptId});CM('mcrash-cart-pro');renderCrashCarts();toast('Crash cart created ✓','succ');
+  };
+  function crashParseDate(v){v=String(v||'').trim();if(!v||/^na$/i.test(v))return '';var m=v.match(/^(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})$/);if(m)return m[3]+'-'+String(m[2]).padStart(2,'0')+'-'+String(m[1]).padStart(2,'0');return /^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';}
+  function crashParseRows(text,section){
+    var lines=String(text||'').split(/\r?\n/).filter(function(x){return x.trim();});if(!lines.length)return[];
+    if(/generic name/i.test(lines[0]))lines.shift();
+    return lines.map(function(line){var c=line.split('\t');var name=(c[0]||'').trim();if(!name||/iv solutions/i.test(name))return null;var std=ctlNum(c[4]),present=ctlNum(c[5]);var exps=[crashParseDate(c[6]),crashParseDate(c[7])].filter(Boolean);var batches=exps.map(function(e,i){return {expiry:e,qty:i===0?present:null,lot:''};});return {id:'cci_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,5),section:section,name:name,strength:(c[1]||'').trim(),dosageForm:(c[2]||'').trim(),concentration:(c[3]||'').trim(),qty:std,present:present,batches:batches};}).filter(Boolean);
+  }
+  window.crashOpenImportPro=function(id){var c=crashCart(id);if(!c)return;document.getElementById('cc-import-cart-id').value=id;document.getElementById('mcrash-import-title').textContent='Import lists — '+c.name;document.getElementById('cc-import-up').value='';document.getElementById('cc-import-down').value='';OM('mcrash-import-pro');};
+  window.crashImportBothPro=async function(){var id=document.getElementById('cc-import-cart-id').value,c=crashCart(id);if(!c)return;var incoming=crashParseRows(document.getElementById('cc-import-up').value,'up').concat(crashParseRows(document.getElementById('cc-import-down').value,'down'));if(!incoming.length)return toast('Paste at least one list','err');c.items=c.items||[];incoming.forEach(function(n){var old=c.items.find(function(x){return String(x.name).toLowerCase()===String(n.name).toLowerCase()&&(x.section||'up')===n.section});if(old)Object.assign(old,n,{id:old.id});else c.items.push(n);});await setCrashCarts(crashCarts().map(function(x){return x.id===id?c:x}));auditAction('crash_cart_import',{cartId:id,count:incoming.length});CM('mcrash-import-pro');renderCrashCarts();toast('Crash Cart lists imported ✓','succ');};
+  function crashStatus(c){var soon=0,expired=0,missing=0;(c.items||[]).forEach(function(it){if(!(it.batches||[]).length)missing++;(it.batches||[]).forEach(function(b){var d=daysUntil(b.expiry);if(d!==null&&d<0)expired++;else if(d!==null&&d<=30)soon++;});});return {soon:soon,expired:expired,missing:missing};}
+  window.renderCrashCarts=function(){
+    var list=document.getElementById('crash-list'),alerts=document.getElementById('crash-open-alerts'),add=document.getElementById('crash-add-btn');if(!list||!alerts||!add)return;
+    var carts=crashCarts().filter(function(c){return CU.role==='department'?c.deptId===CU.deptId:true}),reports=crashReports();add.style.display=canManageCrashCart()?'inline-flex':'none';
+    var open=reports.filter(function(r){return r.status==='open'&&(CU.role==='department'?r.deptId===CU.deptId:true)});alerts.innerHTML=open.length?'<div class="alert-banner">'+open.length+' crash cart report(s) awaiting pharmacy closure.</div>':'';
+    var totalItems=carts.reduce(function(a,c){return a+(c.items||[]).length},0),expired=carts.reduce(function(a,c){return a+crashStatus(c).expired},0),soon=carts.reduce(function(a,c){return a+crashStatus(c).soon},0);
+    var summary='<div class="crash-summary"><div class="sc"><div class="sl">Carts</div><div class="sv">'+carts.length+'</div></div><div class="sc"><div class="sl">Items</div><div class="sv">'+totalItems+'</div></div><div class="sc"><div class="sl">Expiring soon</div><div class="sv">'+soon+'</div></div><div class="sc"><div class="sl">Expired</div><div class="sv">'+expired+'</div></div></div>';
+    list.innerHTML=summary+(carts.map(function(c){var dept=(gd()||[]).find(function(d){return d.id===c.deptId})||{},openRep=reports.find(function(r){return r.cartId===c.id&&r.status==='open'}),st=crashStatus(c);var rows=['up','down'].map(function(sec){var xs=(c.items||[]).filter(function(i){return (i.section||'up')===sec});if(!xs.length)return'';return '<tr class="crash-section-label"><td colspan="8">'+(sec==='up'?'UP / الجزء العلوي':'DOWN / IV Solutions')+'</td></tr>'+xs.map(function(it,i){return '<tr><td>'+(i+1)+'</td><td><b>'+esc(it.name)+'</b></td><td>'+esc(it.strength||'—')+'</td><td>'+esc(it.dosageForm||'—')+'</td><td>'+esc(it.concentration||'—')+'</td><td>'+ctlNum(it.qty)+'</td><td>'+ctlNum(it.present!=null?it.present:it.qty)+'</td><td>'+esc((it.batches||[]).map(function(b){return (b.qty==null?'':b.qty+' × ')+fmtDate(b.expiry)}).join(' / ')||'—')+'</td></tr>';}).join('');}).join('');var actions='<button class="btn bg bsm" onclick="crashPrint(\''+c.id+'\')">Print</button>';if(canManageCrashCart())actions+='<button class="btn bp bsm" onclick="crashOpenImportPro(\''+c.id+'\')">Import UP / DOWN</button><button class="btn bg bsm" onclick="crashAddItem(\''+c.id+'\')">Add item</button>';if(CU.role==='department'&&!openRep)actions+='<button class="btn bd2c bsm" onclick="crashReportOpen(\''+c.id+'\')">Report opened cart</button>';if(canManageCrashCart()&&openRep)actions+='<button class="btn bs bsm" onclick="crashCloseReport(\''+openRep.id+'\')">Replace & close</button>';return '<div class="card crash-cart-card '+(openRep?'crash-open':'')+'"><div class="ch"><div><span class="ct">'+esc(c.name)+'</span><div class="fhint">'+esc(dept.name||c.deptId)+' · Cart '+esc(c.number||'—')+' · '+esc(c.location||'—')+' · Seal '+esc(c.seal||'—')+'</div><div class="fhint">'+(st.expired?'🔴 '+st.expired+' expired · ':'')+(st.soon?'🟡 '+st.soon+' soon · ':'')+(st.missing?'⚪ '+st.missing+' without expiry':'')+'</div></div><div class="crash-toolbar">'+actions+'</div></div><div class="tw"><table class="crash-table"><thead><tr><th>#</th><th>Generic name</th><th>Strength</th><th>Form</th><th>Conc.</th><th>Std.</th><th>Present</th><th>Expiry dates</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';}).join('')||'<div class="card"><div class="cb" style="text-align:center;color:var(--tx2)">No crash carts configured.</div></div>');
+  };
+})();
+</script>
 </body>
 </html>
