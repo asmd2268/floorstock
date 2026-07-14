@@ -600,7 +600,7 @@ body.light .login-attribution{color:#6b7280}
     <div class="fl ic g8">
       <span style="font-size:12px;color:var(--tx2)" id="tuser"></span>
       <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle">&#x1F319;</button>
-      <button class="btn bg bsm" id="print-branding-btn" onclick="openLogoSettings()" title="Print header settings" style="display:none">🖨 Print Header</button>
+      <button class="btn bg bsm" id="print-branding-btn" onclick="openLogoSettings()" title="Print header settings" style="display:none">⚙ Official Print Header</button>
       <button class="btn bg bsm" onclick="doLogout()">Sign Out</button>
     </div>
   </div>
@@ -6886,5 +6886,146 @@ crashPrint=function(id){
 })();
 </script>
 
+
+<script>
+/* Pilot fixes: split controlled lists, master manual delete, compact order printing, public expiry routes. */
+(function(){
+  function byId(id){return document.getElementById(id)}
+  function isMasterUser(){return !!(window.CU&&CU.master===true)}
+
+  /* Make the official print-header setting easy to find for Master. */
+  function syncOfficialHeaderButton(){
+    var b=byId('print-branding-btn');
+    if(!b)return;
+    b.style.display=isMasterUser()?'inline-flex':'none';
+    b.textContent='⚙ Official Print Header';
+    b.title='Master only: logo and four official print-header lines';
+  }
+
+  /* Master may delete any individual request, regardless of age. Fulfilled movement remains archived for analytics. */
+  window.masterDeleteRequestNow=async function(id){
+    if(!isMasterUser())return toast('Master permission required','err');
+    var all=gr(),r=all.find(function(x){return x.id===id});
+    if(!r)return;
+    var dept=(gd().find(function(d){return d.id===r.deptId})||{}).name||r.deptId||'';
+    if(!confirm('Delete this request now?\n\nDepartment: '+dept+'\nDate: '+fmtDate(r.created||r.fulfilledAt)+'\n\nFulfilled quantities will remain in Analytics.'))return;
+    if(r.status!=='pending'){
+      var archive=(S.g('request_analytics_archive')||[]).slice();
+      if(!archive.some(function(x){return x.id===r.id}))archive.push(requestArchiveRecord(r));
+      await S.s('request_analytics_archive',archive);
+    }
+    await S.s('requests',all.filter(function(x){return x.id!==id}));
+    toast('Request deleted; analytics preserved ✓','succ');
+    if(typeof renderReqs==='function')renderReqs();
+    if(typeof renderPrint==='function')renderPrint();
+    if(typeof renderDash==='function')renderDash();
+  };
+  var originalRcard=window.rcard;
+  if(typeof originalRcard==='function')window.rcard=function(r,isp){
+    var html=originalRcard(r,isp);
+    if(isp&&isMasterUser()){
+      var button='<button class="btn bd2c bsm" data-id="'+esc(r.id)+'" onclick="masterDeleteRequestNow(this.dataset.id)">Delete</button>';
+      html=html.replace('<button class="btn bg bsm" data-id="'+r.id+'" onclick="viewReq(this.getAttribute(\\\'data-id\\\'))">View</button>',button+'<button class="btn bg bsm" data-id="'+r.id+'" onclick="viewReq(this.getAttribute(\\\'data-id\\\'))">View</button>');
+      if(html.indexOf(button)<0)html=html.replace('</div></div><div style="padding:9px 18px',button+'</div></div><div style="padding:9px 18px');
+    }
+    return html;
+  };
+
+  /* Controlled medicines: two shared lists. Both custodians see both balances; each edits only their own custody. */
+  function roleOwnSide(){return window.CU&&CU.role==='warehouse'?'warehouse':'pharmacy'}
+  function batchesNear(batches){
+    return (batches||[]).some(function(b){var d=daysUntil(b.expiry);return d>=0&&d<=ctlAlertDays()});
+  }
+  function controlledMatchesFilter(m,w,p,filter){
+    var wh=ctlNum(w.system)+ctlNum(w.outside),ph=ctlNum(p.qty);
+    if(filter==='warehouse_unavailable')return wh<=0;
+    if(filter==='pharmacy_unavailable')return ph<=0;
+    if(filter==='both_unavailable')return wh<=0&&ph<=0;
+    if(filter==='near_mine')return roleOwnSide()==='warehouse'?batchesNear(w.batches):batchesNear(p.batches);
+    return true;
+  }
+  function controlledFilterOptions(){return '<option value="all">All medicines / كل الأدوية</option><option value="warehouse_unavailable">Unavailable in warehouse / غير متوفر بالمستودع</option><option value="pharmacy_unavailable">Unavailable in pharmacy / غير متوفر بالصيدلية</option><option value="both_unavailable">Unavailable in both / غير متوفر في كليهما</option><option value="near_mine">Expiring soon in my custody / قريب الانتهاء في عهدتي</option>'}
+  function ensureSplitControlledUI(){
+    var root=byId('ctl-overview-view');if(!root||byId('ctl-narcotic-table'))return;
+    root.innerHTML=''
+      +'<div id="ctl-global-alerts"></div>'
+      +'<div class="card"><div class="ch"><div><span class="ct">Narcotic medicines / الأدوية المخدرة</span><div class="fhint">Shared list: warehouse and pharmacy balances are shown together. Each custodian edits only their own stock.</div></div><div class="fl g8 ic"><select id="ctl-narcotic-filter" class="psel" onchange="renderCtlOverview()">'+controlledFilterOptions()+'</select><input id="ctl-narcotic-search" placeholder="Search narcotic medicine..." style="margin:0;width:220px" oninput="renderControlledDebounced()"></div></div><div class="tw"><table><thead><tr><th>#</th><th>Medicine</th><th>Min / Max</th><th class="ctl-wh-head">Warehouse qty</th><th class="ctl-wh-head">Warehouse expiry</th><th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th><th>Status</th><th>Actions</th></tr></thead><tbody id="ctl-narcotic-table"></tbody></table></div></div>'
+      +'<div class="card"><div class="ch"><div><span class="ct">Psychotropic medicines / الأدوية النفسية</span><div class="fhint">The same availability and near-expiry filters apply independently to this list.</div></div><div class="fl g8 ic"><select id="ctl-psychotropic-filter" class="psel" onchange="renderCtlOverview()">'+controlledFilterOptions()+'</select><input id="ctl-psychotropic-search" placeholder="Search psychotropic medicine..." style="margin:0;width:220px" oninput="renderControlledDebounced()"></div></div><div class="tw"><table><thead><tr><th>#</th><th>Medicine</th><th>Min / Max</th><th class="ctl-wh-head">Warehouse qty</th><th class="ctl-wh-head">Warehouse expiry</th><th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th><th>Status</th><th>Actions</th></tr></thead><tbody id="ctl-psychotropic-table"></tbody></table></div></div>'
+      +'<div class="card"><div class="ch"><span class="ct">Pending warehouse deliveries / الاستلامات المعلقة</span></div><div id="ctl-pending" class="cb"></div></div>';
+  }
+  function renderControlledGroup(group){
+    var body=byId('ctl-'+group+'-table');if(!body)return;
+    var wh=ctlWarehouse(),ph=ctlPharmacy();
+    var filter=(byId('ctl-'+group+'-filter')||{}).value||'all';
+    var q=((byId('ctl-'+group+'-search')||{}).value||'').toLowerCase();
+    var rows=ctlCatalog().filter(function(m){
+      return String(m.classification||'').toLowerCase()===group&&(!q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q));
+    }).map(function(m){return {m:m,w:wh[m.id]||{},p:ph[m.id]||{},status:ctlStatus(m,wh[m.id]||{},ph[m.id]||{})}})
+      .filter(function(x){return controlledMatchesFilter(x.m,x.w,x.p,filter)});
+    body.innerHTML=rows.length?rows.map(function(x,i){
+      var m=x.m,w=x.w,p=x.p,actions=[];
+      if(typeof ctlCanEditWarehouse==='function'&&ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');
+      if(typeof ctlCanEditPharmacy==='function'&&ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>');
+      if(typeof ctlIsWarehouse==='function'&&ctlIsWarehouse())actions.push('<button class="btn bs bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Dispense to pharmacy</button>');
+      return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name||'')+'</b><div class="fhint">'+esc(m.moh||'')+(m.nupco?' · '+esc(m.nupco):'')+'</div></td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+(ctlNum(w.system)+ctlNum(w.outside))+'<div class="fhint">System '+ctlNum(w.system)+' · Outside '+ctlNum(w.outside)+'</div></td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td>'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
+    }).join(''):'<tr><td colspan="9" style="text-align:center;padding:22px;color:var(--tx2)">No medicines match this filter.</td></tr>';
+  }
+  window.renderCtlOverview=function(){
+    ensureSplitControlledUI();
+    renderControlledGroup('narcotic');renderControlledGroup('psychotropic');
+    var all=ctlCatalog(),wh=ctlWarehouse(),ph=ctlPharmacy(),count=all.filter(function(m){return ctlStatus(m,wh[m.id]||{},ph[m.id]||{}).key!=='ok'}).length;
+    var a=byId('ctl-global-alerts');if(a)a.innerHTML=count?'<div class="alert-banner-y"><b>'+count+'</b> medicine(s) require stock or expiry review.</div>':'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ No current stock or expiry alerts.</div>';
+  };
+  var priorRenderControlled=window.renderControlled;
+  if(typeof priorRenderControlled==='function')window.renderControlled=function(){
+    if(window.CU&&CU.role!=='department'&&(window.CTL_VIEW==='overview'||window.CTL_VIEW==='warehouse'||window.CTL_VIEW==='pharmacy'))window.CTL_VIEW='overview';
+    var r=priorRenderControlled.apply(this,arguments);
+    if(window.CU&&CU.role!=='department'){
+      ensureSplitControlledUI();
+      ['overview','catalog','departments'].forEach(function(v){var n=byId('ctl-'+v+'-view');if(n)n.style.display=(v==='overview'&&CTL_VIEW==='overview')||(v===CTL_VIEW)?'block':'none'});
+      window.renderCtlOverview();
+      if(typeof renderCtlPending==='function')renderCtlPending();
+    }
+    return r;
+  };
+  var priorCtlTabs=window.ctlTabs;
+  window.ctlTabs=function(){
+    if(!window.CU||!byId('ctl-tabs'))return;
+    var tabs;
+    if(CU.role==='department')tabs=[['departments','My controlled list']];
+    else if(CU.role==='warehouse')tabs=[['overview','Narcotic & psychotropic custody'],['catalog','Shared catalogue']];
+    else if(CU.role==='controlled_pharmacy')tabs=[['overview','Narcotic & psychotropic custody'],['catalog','Shared catalogue'],['departments','Inpatient departments']];
+    else tabs=[['overview','Narcotic & psychotropic custody'],['catalog','Shared catalogue'],['departments','Inpatient departments']];
+    if(!tabs.some(function(x){return x[0]===window.CTL_VIEW}))window.CTL_VIEW=tabs[0][0];
+    byId('ctl-tabs').innerHTML=tabs.map(function(x){return '<button class="tbtn '+(CTL_VIEW===x[0]?'on':'')+'" data-view="'+x[0]+'" onclick="ctlSetView(this.dataset.view)">'+x[1]+'</button>'}).join('');
+  };
+
+  /* Compact order printing: no fixed page height, no trailing blank page, narrower margins. */
+  window.doPrint=function(){
+    var sel=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
+    if(!sel.length)return toast('Select at least one order','err');
+    if([2,3,4,5].indexOf(PPP)<0)return toast('Choose orders per page: 2, 3, 4, or 5','err');
+    var orders=sel.map(function(id){var r=gr().find(function(x){return x.id===id});if(!r)return null;return {r:r,dept:gd().find(function(d){return d.id===r.deptId}),ms:getMeds(r.deptId||''),items:(r.dispensed||[]).filter(function(d){return d.qty>0})}}).filter(Boolean);
+    var cfg={2:{cols:2,name:9.3,qty:11.5},3:{cols:3,name:8.4,qty:10.5},4:{cols:2,name:8.1,qty:10.5},5:{cols:3,name:7.5,qty:9.5}}[PPP];
+    var pages=[];for(var i=0;i<orders.length;i+=PPP)pages.push(orders.slice(i,i+PPP));
+    var css='@page{size:A4 portrait;margin:4mm}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,sans-serif;color:#111}.page{width:100%;break-after:page;page-break-after:always}.page:last-child{break-after:auto;page-break-after:auto}.pg-head{text-align:center;font-size:7pt;color:#666;border-bottom:1px solid #bbb;padding:1mm 0;margin-bottom:2mm}.pg-foot{text-align:center;font-size:6.5pt;color:#888;margin-top:2mm}.grid{display:grid;grid-template-columns:repeat('+cfg.cols+',minmax(0,1fr));gap:2mm;align-items:start}.ob{border:1.5px solid #1a3a6e;border-radius:4px;overflow:hidden;break-inside:avoid;page-break-inside:avoid}.oh{background:#1a3a6e;color:#fff;padding:2mm;display:flex;justify-content:space-between;gap:2mm}.dn{font-size:9pt;font-weight:800;overflow-wrap:anywhere}.dm{font-size:6pt;white-space:nowrap}.or{display:grid;grid-template-columns:5mm minmax(0,1fr) 9mm;gap:1mm;align-items:center;padding:1.2mm 1.5mm;border-bottom:.3mm solid #ddd}.or:last-child{border-bottom:none}.idx{font-size:6pt;color:#777;text-align:center}.nm{font-size:'+cfg.name+'pt;line-height:1.12;overflow-wrap:anywhere;word-break:break-word}.qty{font-size:'+cfg.qty+'pt;font-weight:900;text-align:center;color:#1a3a6e}';
+    var html='<!doctype html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body>';
+    pages.forEach(function(pg,pi){html+='<section class="page"><div class="pg-head">Floor Stock Dispensing Orders · '+fmtDate(nowISO())+' · Page '+(pi+1)+'/'+pages.length+'</div><div class="grid">';pg.forEach(function(o){var dname=(o.dept&&o.dept.name)||o.r.deptId;html+='<article class="ob"><div class="oh"><span class="dn">'+esc(dname)+'</span><span class="dm">'+fmtDate(o.r.fulfilledAt||o.r.created)+'</span></div>';o.items.forEach(function(d,j){var m=o.ms.find(function(x){return x.id===d.medId});html+='<div class="or"><span class="idx">'+(j+1)+'</span><span class="nm">'+esc(m?m.name:d.medId)+'</span><span class="qty">'+d.qty+'</span></div>'});html+='</article>'});html+='</div><div class="pg-foot">By Ali Abudahash</div></section>'});
+    html+='<script>window.onload=function(){setTimeout(function(){window.print()},250)}<\/script></body></html>';
+    sel.forEach(function(id){var r=gr().find(function(x){return x.id===id});if(r)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:nowISO()})});
+    var w=window.open('','_blank');w.document.open();w.document.write(html);w.document.close();renderPrint();
+  };
+
+  /* Expiry QR routes are intentionally processed before sign-in by boot(). Keep login hidden on those routes. */
+  function enforcePublicExpiryRoute(){
+    var v=new URLSearchParams(location.search).get('view');
+    if(v==='expiry'||v==='controlled-expiry'){
+      var auth=byId('auth'),app=byId('app');if(auth)auth.style.display='none';if(app)app.style.display='none';
+    }
+  }
+  document.addEventListener('DOMContentLoaded',function(){syncOfficialHeaderButton();enforcePublicExpiryRoute();setTimeout(syncOfficialHeaderButton,500)});
+  setInterval(syncOfficialHeaderButton,1800);
+})();
+</script>
 </body>
 </html>
