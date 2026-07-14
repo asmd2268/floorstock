@@ -1035,9 +1035,9 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="card"><div class="ch"><span class="ct">Dispensing records / سجل الصرف</span><button class="btn bg bsm" onclick="printCtlAnalytics()">🖨 Print</button></div><div class="tw"><table><thead><tr><th>Date</th><th>Medicine</th><th>Qty</th><th>Source</th><th>Type</th><th>Department</th><th>Recipient</th><th>By</th></tr></thead><tbody id="ctl-an-table"></tbody></table></div></div>
   </div>
 
-  <div class="pg" id="pg-expiry">
-    <div class="stitle">Expiry Dates / &#x62A;&#x648;&#x627;&#x631;&#x64A;&#x62E; &#x627;&#x644;&#x627;&#x646;&#x62A;&#x647;&#x627;&#x621;</div>
-    <div class="ssub" id="exp-sub">Manage expiry dates and alerts for your department</div>
+  <div class="pg" id="pg-alertsettings">
+    <div class="stitle">Alert Settings / إعدادات التنبيهات</div>
+    <div class="ssub" id="exp-sub">Configure expiry alerts and manage medication expiry batches for your department</div>
     <div class="g2" style="margin-bottom:14px">
       <div class="card">
         <div class="ch"><span class="ct">&#x1F514; Alert Settings</span></div>
@@ -1057,7 +1057,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div id="exp-alerts-dept"></div>
     <div class="card">
       <div class="ch">
-        <span class="ct">&#x1F4C5; Drug Expiry Dates — Batches / &#x62F;&#x641;&#x639;&#x627;&#x62A;</span>
+        <span class="ct">&#x1F4C5; Expiry Batches / دفعات وتواريخ الانتهاء</span>
         <div class="fl g8 ic">
           <select id="exp-filter" class="psel" onchange="renderExpiry()">
             <option value="all">All / &#x627;&#x644;&#x643;&#x644;</option>
@@ -1158,7 +1158,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
       <div class="tw"><table>
         <thead><tr>
           <th style="width:38px"><input type="checkbox" id="shelf-med-all" onchange="toggleAllShelfMedications(this.checked)"></th>
-          <th style="width:52px">#</th><th>Medication</th><th>Category</th><th>Classification</th><th>Current drawer</th><th style="width:110px">Min</th><th style="width:110px">Max</th>
+          <th style="width:52px">#</th><th>Medication</th><th>Category</th><th>Classification</th><th>Current drawer</th><th>Expiry dates / تواريخ الانتهاء</th><th style="width:110px">Min</th><th style="width:110px">Max</th>
         </tr></thead>
         <tbody id="shelf-med-db"></tbody>
       </table></div>
@@ -2226,7 +2226,7 @@ function buildNav(){
     ?[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']]
     :[['pg-newreq','New Request / \u0637\u0644\u0628 \u062C\u062F\u064A\u062F'],
       ['pg-myreqs','My Requests / \u0637\u0644\u0628\u0627\u062A\u064A'],
-      ['pg-expiry','Expiry Dates / \u062A\u0648\u0627\u0631\u064A\u062E'],
+      ['pg-alertsettings','🔔 Alert Settings / إعدادات التنبيهات'],
       ['pg-shelves','\uD83D\uDCE6 Shelves / \u0623\u0631\u0641\u0641'],
       ['pg-notes-dept','\uD83D\uDCDD Notes / \u0645\u0644\u0627\u062D\u0638\u0627\u062A'],
       ['pg-deptprint','\uD83D\uDDA8 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
@@ -2245,7 +2245,7 @@ function refreshCurrentPage(){
     'pg-dash':renderDash,'pg-inv':renderInv,'pg-reqs':renderReqs,
     'pg-analytics':renderAn,'pg-users':renderUsers,'pg-newreq':renderReqForm,
     'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
-    'pg-expiry':renderExpiry,'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
+    'pg-alertsettings':renderExpiry,'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
     'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule,'pg-controlled':renderControlled,'pg-ctl-analytics':renderCtlAnalytics,'pg-deptinventory':renderDeptInventory,'pg-crashcart':renderCrashCarts
   };
   populateInvDeptSel();fillDS();
@@ -2262,7 +2262,7 @@ function showPg(id){
     'pg-dash':renderDash,'pg-inv':renderInv,'pg-reqs':renderReqs,
     'pg-analytics':renderAn,'pg-users':renderUsers,'pg-newreq':renderReqForm,
     'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
-    'pg-expiry':renderExpiry,'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
+    'pg-alertsettings':renderExpiry,'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
     'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule,'pg-controlled':renderControlled,'pg-ctl-analytics':renderCtlAnalytics,'pg-deptinventory':renderDeptInventory,'pg-crashcart':renderCrashCarts
   };
   if(map[id])map[id]();
@@ -2802,7 +2802,7 @@ function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open
 // ── EXPIRY DATES ─────────────────────────────────────────
 function renderExpiry(){
   if(!CU||CU.role!=='department')return;
-  el('exp-sub').textContent=CU.deptName+' — Expiry dates and alerts';
+  el('exp-sub').textContent=CU.deptName+' — Alert settings and expiry management';
   var cfg=getAlertSettings(CU.deptId);
   el('alert-days1').value=cfg.d1||30;
   el('alert-days2').value=cfg.d2||7;
@@ -5939,6 +5939,19 @@ function shelfMedMatches(m){
   if(f!=='all'&&f!=='__none__'&&m.shelfId!==f)return false;
   return true;
 }
+function shelfExpiryCell(medId){
+  var cfg=getAlertSettings(CU.deptId)||{d1:30,d2:7};
+  var batches=getExpiry(CU.deptId).filter(function(b){return b.medId===medId;}).sort(function(a,b){return String(a.date||'').localeCompare(String(b.date||''));});
+  if(!batches.length)return '<span style="color:var(--tx3)">—</span>';
+  return batches.map(function(b){
+    var days=daysUntil(b.date),cls='exp-ok',label='';
+    if(days!==null&&days<=0){cls='exp-red';label='Expired';}
+    else if(days!==null&&days<=Number(cfg.d2||7)){cls='exp-red';label='Urgent';}
+    else if(days!==null&&days<=Number(cfg.d1||30)){cls='exp-yellow';label='Soon';}
+    else{label='OK';}
+    return '<div class="'+cls+'" style="white-space:nowrap"><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <span style="font-size:10px">('+label+')</span></div>';
+  }).join('');
+}
 function renderShelfMedicationDatabase(){
   if(!CU||CU.role!=='department'||!el('shelf-med-db'))return;
   var shelves=getShelves(CU.deptId),meds=getMeds(CU.deptId),shown=meds.filter(shelfMedMatches);
@@ -5949,8 +5962,9 @@ function renderShelfMedicationDatabase(){
     return '<tr><td><input type="checkbox" '+(SHELF_MED_SELECTED[m.id]?'checked':'')+' data-mid="'+m.id+'" onchange="toggleShelfMedication(this.dataset.mid,this.checked)"></td>'
       +'<td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b>'+requestColdMarker(m)+'</td><td>'+esc(m.category||'—')+'</td><td>'+bdg(m)+'</td>'
       +'<td>'+(m.shelfId?'<span class="shelf-badge">'+esc(getShelfName(m.shelfId))+'</span>':'<span class="badge bgr">Unassigned</span>')+'</td>'
+      +'<td>'+shelfExpiryCell(m.id)+'</td>'
       +'<td style="text-align:center">'+esc(m.min==null?'—':m.min)+'</td><td style="text-align:center">'+esc(m.max==null?'—':m.max)+'</td></tr>';
-  }).join('')||'<tr><td colspan="8" style="text-align:center;padding:26px;color:var(--tx2)">No medications match this search.</td></tr>';
+  }).join('')||'<tr><td colspan="9" style="text-align:center;padding:26px;color:var(--tx2)">No medications match this search.</td></tr>';
   var ids=shelfSelectedIds(),bar=el('shelf-bulk-bar');if(bar)bar.style.display=ids.length?'block':'none';
   if(el('shelf-selected-count'))el('shelf-selected-count').textContent=ids.length+' selected';
   var all=el('shelf-med-all');if(all){all.checked=shown.length>0&&shown.every(function(m){return !!SHELF_MED_SELECTED[m.id]});all.indeterminate=!all.checked&&shown.some(function(m){return !!SHELF_MED_SELECTED[m.id]})}
