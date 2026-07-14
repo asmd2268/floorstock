@@ -1259,6 +1259,15 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     </div>
   </div>
 
+  <div class="pg" id="pg-crashcart">
+    <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
+      <div><div class="stitle">Crash Cart / عربة الطوارئ</div><div class="ssub" style="margin:0">Pharmacy manages carts and expiry dates. Departments see only carts assigned to them.</div></div>
+      <button class="btn bp" id="crash-add-btn" onclick="crashAddCart()">+ Add Crash Cart</button>
+    </div>
+    <div id="crash-open-alerts"></div>
+    <div id="crash-list"></div>
+  </div>
+
   <div class="pg" id="pg-controlled-stats">
     <div class="stitle">Controlled Medicines Statistics / إحصائيات الأدوية المخدرة</div>
     <div class="ssub">Dispensing and warehouse receipts by selected period</div>
@@ -2678,7 +2687,7 @@ function ctlSetView(v){CTL_VIEW=v;renderControlled()}
 function ctlCurrentDept(){var s=el('ctl-dept');return s&&s.value?s.value:(CU.deptId||'')}
 function ctlTabs(){
   var tabs=[];
-  if(ctlIsWarehouse())tabs=[['catalog','Shared catalogue'],['warehouse','Warehouse custody'],['pharmacy','Pharmacy (read only)']];
+  if(ctlIsWarehouse())tabs=[['warehouse','My warehouse custody'],['catalog','Shared medicines list'],['pharmacy','Pharmacy custody (read only)']];
   else if(ctlIsOfficer())tabs=[['catalog','Shared catalogue'],['warehouse','Warehouse (read only)'],['pharmacy','Pharmacy custody'],['departments','Inpatient departments']];
   else if(CU.role==='pharmacy')tabs=[['catalog','Shared catalogue'],['warehouse','Warehouse'],['pharmacy','Pharmacy'],['departments','Departments']];
   else tabs=[['departments','My controlled list']];
@@ -2686,13 +2695,13 @@ function ctlTabs(){
   el('ctl-tabs').innerHTML=tabs.map(function(x){return '<button class="tbtn '+(CTL_VIEW===x[0]?'on':'')+'" onclick="ctlSetView(\''+x[0]+'\')">'+x[1]+'</button>'}).join('');
 }
 function renderControlled(){
-  if(!CU)return;ctlTabs();
+  if(!CU)return;if(ctlIsWarehouse()&&CTL_VIEW==='overview')CTL_VIEW='warehouse';ctlTabs();
   ['catalog','warehouse','pharmacy','departments'].forEach(function(v){var node=el('ctl-'+v+'-view');if(node)node.style.display=CTL_VIEW===v?'block':'none'});
   var canCatalog=ctlCanEditCatalog();
   if(el('ctl-import-card'))el('ctl-import-card').style.display=canCatalog?'block':'none';
   if(el('ctl-add-med-btn'))el('ctl-add-med-btn').style.display=canCatalog?'inline-flex':'none';
   var note=el('ctl-permission-note');
-  if(CU.role==='department'){note.style.display='block';note.innerHTML='Read-only access: the controlled-medicines pharmacy officer manages quantities and expiry dates for your department.';}else note.style.display='none';
+  if(CU.role==='department'){note.style.display='block';note.innerHTML='Read-only access: the controlled-medicines pharmacy officer manages quantities and expiry dates for your department.';}else if(ctlIsWarehouse()){note.style.display='block';note.innerHTML='Warehouse access: edit warehouse system quantity, outside-system quantity, and warehouse expiry batches only. Inpatient department lists are not available to this role.';}else note.style.display='none';
   renderCtlCatalog();renderCtlWarehouse();renderCtlPharmacy();renderCtlDepartments();renderCtlPending();renderCtlLog();
 }
 function renderCtlCatalog(){
@@ -2701,13 +2710,14 @@ function renderCtlCatalog(){
 }
 function renderCtlWarehouse(){
   var wh=ctlWarehouse(),ph=ctlPharmacy(),can=ctlIsWarehouse();
-  el('ctl-warehouse-table').innerHTML=ctlCatalog().map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(w.system)+'</td><td>'+ctlNum(w.outside)+'</td><td>'+ctlBatchText(w.batches)+'</td><td>'+ctlNum(p.qty)+'<br>'+ctlBatchText(p.batches)+'</td><td>'+(can?'<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button> <button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join('');
+  el('ctl-warehouse-table').innerHTML=ctlCatalog().map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(w.system)+'</td><td>'+ctlNum(w.outside)+'</td><td>'+ctlBatchText(w.batches)+'</td><td>'+ctlNum(p.qty)+'<br>'+ctlBatchText(p.batches)+'</td><td>'+(can?'<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit my quantity & expiry</button> <button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join('');
 }
 function renderCtlPharmacy(){
   var wh=ctlWarehouse(),ph=ctlPharmacy(),can=ctlIsOfficer();
   el('ctl-pharmacy-table').innerHTML=ctlCatalog().map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td>'+ctlNum(p.qty)+'</td><td>'+ctlBatchText(p.batches)+'</td><td>'+ctlNum(w.system)+' / '+ctlNum(w.outside)+'</td><td>'+(can?'<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>':'<span class="chip">Read only</span>')+'</td></tr>'}).join('');
 }
 function renderCtlDepartments(){
+  if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
   var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
   if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
   else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
@@ -4925,6 +4935,7 @@ async function ctlEditPharmacyStock(id){
   if(b===null)return;all[id]={qty:qty,batches:b};await ctlSetPharmacy(all);ctlMove({type:'pharmacy_stock_edit',medId:id,note:'Pharmacy custody balance/expiry updated'});renderControlled();
 }
 function renderCtlDepartments(){
+  if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
   var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
   if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
   else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
@@ -5407,6 +5418,7 @@ async function ctlApplyBulkShelf(){
 }
 
 function renderCtlDepartments(){
+  if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
   var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
   if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
   else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
@@ -6000,6 +6012,7 @@ function crashPrint(id){
   var w=window.open('','_blank');w.document.write('<html><head><meta charset="utf-8"><style>body{font-family:Arial;padding:18px}table{width:100%;border-collapse:collapse}th,td{border:1px solid #333;padding:6px}h1,h2{text-align:center}</style></head><body><h1>'+esc(c.name)+'</h1><h2>'+esc((dept||{}).name||'')+'</h2><table><tr><th>#</th><th>Item</th><th>Qty</th><th>Expiry batches</th></tr>'+rows+'</table><p>Printed by: '+esc(actualActorName())+'</p><script>window.onload=function(){window.print()}<\/script></body></html>');w.document.close();auditAction('crash_cart_print',{cartId:id});
 }
 function renderCrashCarts(){
+  if(!el('crash-list')||!el('crash-open-alerts')||!el('crash-add-btn'))return;
   var carts=crashCarts().filter(function(c){return CU.role==='department'?c.deptId===CU.deptId:true}),reports=crashReports();
   el('crash-add-btn').style.display=canManageCrashCart()?'inline-flex':'none';
   var open=reports.filter(function(r){return r.status==='open'&&(CU.role==='department'?r.deptId===CU.deptId:true)});
