@@ -6108,5 +6108,115 @@ setTimeout(function(){
   if(alerts.length)toast('&#x26A0; Expiry alert: '+alerts.slice(0,3).join(', ')+(alerts.length>3?' +more':''),'info');
 },1200);
 </script>
+
+<script>
+/* ── Controlled medicines organised shared lists + role-specific filters ── */
+function ctlMyCustodyScope(){
+  return (CU&&CU.role==='warehouse')?'warehouse':'pharmacy';
+}
+function ctlMyCustodyLabel(){
+  return ctlMyCustodyScope()==='warehouse'?'Warehouse stock / مخزون المستودع':'Pharmacy custody / عهدة الصيدلية';
+}
+function ctlWarehouseQtyForFilter(w){return ctlNum((w||{}).system)+ctlNum((w||{}).outside)}
+function ctlPharmacyQtyForFilter(p){return ctlNum((p||{}).qty)}
+function ctlHasSoonBatch(batches){
+  var limit=ctlAlertDays();
+  return (batches||[]).some(function(b){var d=daysUntil(b.expiry);return d!==null&&d>=0&&d<=limit});
+}
+function ctlSharedFilterMatch(m,w,p,filter){
+  var wo=ctlWarehouseQtyForFilter(w)<=0,po=ctlPharmacyQtyForFilter(p)<=0;
+  if(filter==='warehouse_out')return wo;
+  if(filter==='pharmacy_out')return po;
+  if(filter==='both_out')return wo&&po;
+  if(filter==='soon_my')return ctlHasSoonBatch(ctlMyCustodyScope()==='warehouse'?(w||{}).batches:(p||{}).batches);
+  return true;
+}
+function ctlControlledActions(m){
+  var actions=[];
+  if(ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Warehouse</button>');
+  if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Pharmacy</button>');
+  if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>');
+  if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button>');
+  return actions.join(' ')||'<span class="chip">Read only</span>';
+}
+function ctlBuildSharedListCard(cls,title,icon){
+  return '<div class="card ctl-shared-list" data-class="'+cls+'">'
+   +'<div class="ch" style="align-items:flex-start">'
+   +'<div><span class="ct">'+icon+' '+title+'</span><div class="fhint">Shared list with warehouse and pharmacy availability</div></div>'
+   +'<span class="badge '+(cls==='narcotic'?'brd':'byl')+'" id="ctl-'+cls+'-count">0</span>'
+   +'</div>'
+   +'<div class="cb" style="padding-bottom:10px">'
+   +'<div class="fl g8 ic" style="flex-wrap:wrap">'
+   +'<select id="ctl-'+cls+'-filter" class="psel" onchange="renderCtlOverview()">'
+   +'<option value="all">All medicines / كل الأدوية</option>'
+   +'<option value="warehouse_out">Unavailable in warehouse / غير متوفر بالمستودع</option>'
+   +'<option value="pharmacy_out">Unavailable in pharmacy custody / غير متوفر بعهدة الصيدلية</option>'
+   +'<option value="both_out">Unavailable in both / غير متوفر في كليهما</option>'
+   +'<option value="soon_my">Expiring soon in my custody / قريب الانتهاء في عهدي</option>'
+   +'</select>'
+   +'<input id="ctl-'+cls+'-search" placeholder="Search this list..." style="margin:0;max-width:280px" oninput="renderControlledDebounced()">'
+   +'<span class="chip">Expiry scope: <b>'+ctlMyCustodyLabel()+'</b></span>'
+   +'</div></div>'
+   +'<div class="tw"><table><thead><tr>'
+   +'<th>#</th><th>Medicine</th><th>Flags</th><th>Min / Max</th>'
+   +'<th class="ctl-wh-head">Warehouse qty</th><th class="ctl-wh-head">Warehouse expiry</th>'
+   +'<th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th>'
+   +'<th>Availability</th><th></th>'
+   +'</tr></thead><tbody id="ctl-'+cls+'-table"></tbody></table></div></div>';
+}
+function ctlEnsureOrganisedOverview(){
+  var root=el('ctl-overview-view');if(!root)return;
+  if(root.getAttribute('data-organised')==='1')return;
+  root.setAttribute('data-organised','1');
+  root.innerHTML=
+    '<div class="card"><div class="ch" style="flex-wrap:wrap;gap:10px">'
+   +'<div><span class="ct">Controlled medicines stock / مخزون الأدوية الخاضعة</span><div class="fhint">Two shared lists. Each list has identical availability and expiry filters.</div></div>'
+   +'<div class="fl g8 ic" style="flex-wrap:wrap"><label style="margin:0">Alert before expiry</label><input id="ctl-alert-days" type="number" min="1" value="60" style="width:90px;margin:0" onchange="ctlSaveAlertDays()"><span class="chip">days</span><button class="btn bp bsm" id="ctl-add-overview-btn" onclick="ctlAddCatalogMedicine()">+ Add medicine</button></div>'
+   +'</div><div id="ctl-global-alerts" class="cb"></div></div>'
+   +ctlBuildSharedListCard('narcotic','Narcotic medicines / الأدوية المخدرة','🔴')
+   +ctlBuildSharedListCard('psychotropic','Psychotropic medicines / الأدوية النفسية','🟡')
+   +'<div class="card"><div class="ch"><span class="ct">Pending warehouse deliveries / الاستلامات المعلقة</span></div><div id="ctl-pending" class="cb"></div></div>';
+}
+function ctlAvailabilityBadge(w,p){
+  var wo=ctlWarehouseQtyForFilter(w)<=0,po=ctlPharmacyQtyForFilter(p)<=0;
+  if(wo&&po)return '<span class="badge brd">Both unavailable</span>';
+  if(wo)return '<span class="badge byl">Warehouse unavailable</span>';
+  if(po)return '<span class="badge bpu">Pharmacy unavailable</span>';
+  return '<span class="badge bgn">Available</span>';
+}
+function ctlRenderOneSharedList(cls){
+  var table=el('ctl-'+cls+'-table');if(!table)return;
+  var wh=ctlWarehouse(),ph=ctlPharmacy();
+  var filter=(el('ctl-'+cls+'-filter')||{}).value||'all';
+  var q=((el('ctl-'+cls+'-search')||{}).value||'').toLowerCase().trim();
+  var rows=ctlCatalog().filter(function(m){return (m.classification||'narcotic')===cls})
+    .filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)})
+    .map(function(m){return {m:m,w:wh[m.id]||{},p:ph[m.id]||{}}})
+    .filter(function(x){return ctlSharedFilterMatch(x.m,x.w,x.p,filter)})
+    .sort(function(a,b){return String(a.m.name||'').localeCompare(String(b.m.name||''),'en',{sensitivity:'base'})});
+  var count=el('ctl-'+cls+'-count');if(count)count.textContent=rows.length;
+  table.innerHTML=rows.length?rows.map(function(x,i){
+    var m=x.m,w=x.w,p=x.p;
+    var wqty=ctlWarehouseQtyForFilter(w),pqty=ctlPharmacyQtyForFilter(p);
+    return '<tr><td>'+(i+1)+'</td>'
+      +'<td class="ctl-wide-med"><b>'+esc(m.name||'')+'</b><div class="fhint">MOH: '+esc(m.moh||'—')+' · NUPCO: '+esc(m.nupco||'—')+'</div></td>'
+      +'<td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td>'
+      +'<td class="'+ctlWarehouseCellClass(w)+'">'+wqty+'<div class="fhint">System '+ctlNum(w.system)+' · Outside '+ctlNum(w.outside)+'</div></td>'
+      +'<td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td>'
+      +'<td class="'+ctlPharmacyCellClass(p)+'">'+pqty+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td>'
+      +'<td>'+ctlAvailabilityBadge(w,p)+'</td><td style="white-space:nowrap">'+ctlControlledActions(m)+'</td></tr>';
+  }).join(''):'<tr><td colspan="10" style="text-align:center;padding:28px;color:var(--tx2)">No medicines match this filter.</td></tr>';
+}
+renderCtlOverview=function(){
+  ctlEnsureOrganisedOverview();
+  if(el('ctl-alert-days'))el('ctl-alert-days').value=ctlAlertDays();
+  var scope=ctlMyCustodyScope(),stock=scope==='warehouse'?ctlWarehouse():ctlPharmacy(),soon=[];
+  ctlCatalog().forEach(function(m){var x=stock[m.id]||{};if(ctlHasSoonBatch(x.batches))soon.push(m.name)});
+  var alerts=el('ctl-global-alerts');
+  if(alerts)alerts.innerHTML=soon.length?'<div class="alert-banner-y"><b>Expiring soon in '+ctlMyCustodyLabel()+':</b> '+soon.slice(0,12).map(esc).join(' · ')+(soon.length>12?' · +'+(soon.length-12):'')+'</div>':'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ No medicines expiring within '+ctlAlertDays()+' days in '+ctlMyCustodyLabel()+'.</div>';
+  ctlRenderOneSharedList('narcotic');
+  ctlRenderOneSharedList('psychotropic');
+};
+</script>
 </body>
 </html>
