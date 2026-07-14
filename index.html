@@ -1037,52 +1037,17 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 
   <div class="pg" id="pg-alertsettings">
     <div class="stitle">Alert Settings / إعدادات التنبيهات</div>
-    <div class="ssub" id="exp-sub">Configure expiry alerts and manage medication expiry batches for your department</div>
-    <div class="g2" style="margin-bottom:14px">
-      <div class="card">
-        <div class="ch"><span class="ct">&#x1F514; Alert Settings</span></div>
-        <div class="cb">
-          <div class="frow">
-            <div class="fg"><label>Alert 1 — Days before expiry / &#x62A;&#x646;&#x628;&#x64A;&#x647; 1</label><input type="number" id="alert-days1" value="30" min="1"><div class="fhint">e.g. 30 days = 1 month</div></div>
-            <div class="fg"><label>Alert 2 — Days before expiry / &#x62A;&#x646;&#x628;&#x64A;&#x647; 2</label><input type="number" id="alert-days2" value="7" min="1"><div class="fhint">e.g. 7 days = urgent</div></div>
-          </div>
-          <button class="btn bp bsm" onclick="saveAlertSettings()">Save Settings</button>
+    <div class="ssub" id="exp-sub">Set your department expiry-alert periods. Expiry batches are managed from Shelves.</div>
+    <div class="card" style="max-width:900px">
+      <div class="ch"><span class="ct">🔔 Department Alert Periods / مدد تنبيهات القسم</span></div>
+      <div class="cb">
+        <div class="frow">
+          <div class="fg"><label>Early alert — Days before expiry / التنبيه المبكر</label><input type="number" id="alert-days1" value="30" min="1" max="1095"><div class="fhint">Example: 90 means show an early warning 90 days before expiry.</div></div>
+          <div class="fg"><label>Urgent alert — Days before expiry / التنبيه العاجل</label><input type="number" id="alert-days2" value="7" min="1" max="1095"><div class="fhint">The urgent period must be shorter than the early-alert period.</div></div>
         </div>
+        <button class="btn bp" onclick="saveAlertSettings()">Save Settings / حفظ الإعدادات</button>
+        <div class="next-window-info" style="margin-top:14px;margin-bottom:0">These settings are controlled by the department and are applied to expiry dates shown in Shelves.</div>
       </div>
-      <div class="card">
-        <div class="ch"><span class="ct">&#x1F4CA; Summary</span></div>
-        <div class="cb" id="exp-summary" style="font-size:13px;color:var(--tx2)">Select a medication to see summary.</div>
-      </div>
-    </div>
-    <div id="exp-alerts-dept"></div>
-    <div class="card">
-      <div class="ch">
-        <span class="ct">&#x1F4C5; Expiry Batches / دفعات وتواريخ الانتهاء</span>
-        <div class="fl g8 ic">
-          <select id="exp-filter" class="psel" onchange="renderExpiry()">
-            <option value="all">All / &#x627;&#x644;&#x643;&#x644;</option>
-            <option value="expired">Expired / &#x645;&#x646;&#x62A;&#x647;&#x64A;&#x629;</option>
-            <option value="soon">Expiring Soon / &#x642;&#x631;&#x64A;&#x628;&#x629;</option>
-            <option value="ok">OK / &#x633;&#x627;&#x631;&#x64A;&#x629;</option>
-          </select>
-          <div class="fl g8 ic">
-          <button class="btn bp bsm" onclick="openAddExpiry()">&#x270F; Manual</button>
-          <button class="btn bp bsm" onclick="openScanExpiry()">&#x1F4F7; Scan</button>
-        </div>
-        </div>
-      </div>
-      <div class="tw"><table>
-        <thead><tr>
-          <th style="width:48px;text-align:center">#</th>
-          <th>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</th>
-          <th>Batch / Lot / &#x627;&#x644;&#x62F;&#x641;&#x639;&#x629;</th>
-          <th>Expiry / &#x62A;&#x627;&#x631;&#x64A;&#x62E; &#x627;&#x644;&#x627;&#x646;&#x62A;&#x647;&#x627;&#x621;</th>
-          <th>Status / &#x627;&#x644;&#x62D;&#x627;&#x644;&#x629;</th>
-          <th>Days / &#x627;&#x644;&#x623;&#x64A;&#x627;&#x645;</th>
-          <th></th>
-        </tr></thead>
-        <tbody id="exptbl"></tbody>
-      </table></div>
     </div>
   </div>
 
@@ -1103,8 +1068,8 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
           <div class="fl ic g8">
             <label style="margin:0;white-space:nowrap">Expiry print:</label>
             <select id="dpopt-expiry" class="psel">
-              <option value="date-barcode" selected>Write-in date + expiry barcode</option>
-              <option value="barcode">Expiry barcode only</option>
+              <option value="date-barcode" selected>Existing expiry dates + write-in line + barcode</option>
+              <option value="barcode">Existing expiry dates + barcode</option>
             </select>
           </div>
           <button class="btn bp" onclick="doDeptPrint()">&#x1F5A8; Print</button>
@@ -1859,12 +1824,12 @@ function gu(){return S.g('users')||[]}
 function gr(){return S.g('requests')||[]}
 
 // ── DATE HELPERS ─────────────────────────────────────────
-// Always Gregorian (en-GB locale = DD Mon YYYY)
+// Always Gregorian numeric format: DD/MM/YYYY
 function fmtDate(iso){
   if(!iso)return '—';
   var d=new Date(iso);
   if(isNaN(d))return iso;
-  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
 }
 function fmtDateShort(iso){
   if(!iso)return '—';
@@ -1876,7 +1841,7 @@ function fmtDateTime(iso){
   if(!iso)return '—';
   var d=new Date(iso);
   if(isNaN(d))return iso;
-  return d.toLocaleString('en-GB',{day:'2-digit',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return d.toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 function daysUntil(iso){
   if(!iso)return null;
@@ -2802,63 +2767,17 @@ function printControlledCurrent(){if(CTL_VIEW!=='departments')return toast('Open
 // ── EXPIRY DATES ─────────────────────────────────────────
 function renderExpiry(){
   if(!CU||CU.role!=='department')return;
-  el('exp-sub').textContent=CU.deptName+' — Alert settings and expiry management';
+  if(el('exp-sub'))el('exp-sub').textContent=CU.deptName+' — Set the expiry-alert periods used in Shelves';
   var cfg=getAlertSettings(CU.deptId);
-  el('alert-days1').value=cfg.d1||30;
-  el('alert-days2').value=cfg.d2||7;
-  var ms=getMeds(CU.deptId);
-  var batches=getExpiry(CU.deptId);
-  var d1=+(el('alert-days1').value)||30,d2=+(el('alert-days2').value)||7;
-  var filterVal=(el('exp-filter')||{value:'all'}).value||'all';
-  // Build alerts
-  var alerts='',expCount=0,soonCount=0,okCount=0;
-  batches.forEach(function(b){
-    var days=daysUntil(b.date);
-    if(days===null)return;
-    if(days<=0)expCount++;
-    else if(days<=d1)soonCount++;
-    else okCount++;
-  });
-  if(expCount)alerts+='<div class="alert-banner">&#x1F6A8; <b>'+expCount+' EXPIRED batches</b></div>';
-  if(soonCount)alerts+='<div class="alert-banner-y">&#x1F514; <b>'+soonCount+' batches expiring within '+d1+' days</b></div>';
-  el('exp-alerts-dept').innerHTML=alerts;
-  el('exp-summary').innerHTML='Total batches: <b>'+batches.length+'</b> &nbsp;|&nbsp; Expired: <b style="color:var(--rdl)">'+expCount+'</b> &nbsp;|&nbsp; Expiring soon: <b style="color:var(--yll)">'+soonCount+'</b> &nbsp;|&nbsp; OK: <b style="color:var(--gnl)">'+okCount+'</b>';
-  // Filter and render table
-  var filtered=batches.filter(function(b){
-    var days=daysUntil(b.date);
-    if(filterVal==='expired')return days!==null&&days<=0;
-    if(filterVal==='soon')return days!==null&&days>0&&days<=d1;
-    if(filterVal==='ok')return days!==null&&days>d1;
-    return true;
-  });
-  var rows=filtered.map(function(b,index){
-    var m=ms.find(function(x){return x.id===b.medId});
-    var days=daysUntil(b.date);
-    var statusTxt='',dayCls='exp-ok';
-    if(days===null){statusTxt='<span class="badge bgr">No date</span>';}
-    else if(days<=0){statusTxt='<span class="badge brd">EXPIRED</span>';dayCls='exp-red';}
-    else if(days<=d2){statusTxt='<span class="badge brd">Urgent</span>';dayCls='exp-red';}
-    else if(days<=d1){statusTxt='<span class="badge byl">Soon</span>';dayCls='exp-yellow';}
-    else{statusTxt='<span class="badge bgn">OK</span>';}
-    var rc=m?rowCls(m):'';
-    return '<tr class="batch-row '+rc+'">'
-      +'<td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td>'
-      +'<td style="font-weight:500">'+(m?m.name:(b.medId||'Unknown'))+'</td>'
-      +'<td style="font-family:var(--mono)">'+(b.batch||'—')+'</td>'
-      +'<td>'+fmtDate(b.date)+'</td>'
-      +'<td>'+statusTxt+'</td>'
-      +'<td class="'+dayCls+'" style="font-family:var(--mono)">'+(days!==null?days+'d':'—')+'</td>'
-      +'<td style="white-space:nowrap">'
-        +'<button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+(b.medId||'')+'" data-batch="'+(b.batch||'')+'" data-date="'+(b.date||'')+'" onclick="openEditExpiry(this)">&#x270F;</button> '
-        +'<button class="btn bd2c bxs" data-bid="'+b.id+'" onclick="delBatch(this.getAttribute(&#x27;data-bid&#x27;))">&#x2715;</button>'
-      +'</td></tr>';
-  });
-  el('exptbl').innerHTML=rows.join('')||'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--tx2)">No batches '+(filterVal!=='all'?'matching filter':'— click + Add Batch')+'</td></tr>';
+  if(el('alert-days1'))el('alert-days1').value=cfg.d1||30;
+  if(el('alert-days2'))el('alert-days2').value=cfg.d2||7;
 }
 function saveAlertSettings(){
   if(!CU)return;
-  setAlertSettings(CU.deptId,{d1:+(el('alert-days1').value)||30,d2:+(el('alert-days2').value)||7});
-  toast('Settings saved &#x2713;','succ');renderExpiry();
+  var d1=Math.max(1,+(el('alert-days1').value)||30),d2=Math.max(1,+(el('alert-days2').value)||7);
+  if(d2>=d1)return toast('Urgent alert must be shorter than early alert','err');
+  setAlertSettings(CU.deptId,{d1:d1,d2:d2});
+  toast('Department alert periods saved ✓','succ');renderExpiry();
 }
 function openAddExpiry(){
   el('mexpiry-title').textContent='Add Batch / إضافة دفعة';
@@ -3566,14 +3485,13 @@ async function doDeptPrint(){
   var qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getAppUrl());
   var qrExpUrl='https://api.qrserver.com/v1/create-qr-code/?size=55x55&data='+encodeURIComponent(getPublicExpiryUrl(CU.deptId));
   var expiryPrintBlock='<div style="text-align:center;max-width:260px;margin:18px auto 8px;padding:10px;border:1px solid #bbb;border-radius:6px;page-break-inside:avoid"><div style="font-size:8pt;font-weight:700;margin-bottom:5px">Expiry Monitor / متابعة الصلاحية</div><img src="'+qrExpUrl+'" width="110" height="110" alt="Expiry monitor QR code"><div style="font-size:7pt;color:#555;margin-top:3px">Scan to open the public expiry monitor</div>'
-    +(includeExpiryDate?'<div style="font-size:7pt;color:#333;margin-top:5px;white-space:nowrap">Expiry Date / تاريخ الصلاحية: ____________</div>':'')
-    +'</div>';
+        +'</div>';
   // Group meds
   var grp={};
   ms.forEach(function(m){if(!grp[m.category])grp[m.category]=[];grp[m.category].push(m)});
   var rows='',medNumber=0;
   Object.keys(grp).sort().forEach(function(cat){
-    rows+='<tr class="cat-row"><td colspan="5" style="background:#e8e8e8;font-weight:700;font-size:7pt;text-transform:uppercase;letter-spacing:.5px;padding:4px 6px;border:1px solid #ccc">'+cat+' / '+catAr(cat)+'</td></tr>';
+    rows+='<tr class="cat-row"><td colspan="6" style="background:#e8e8e8;font-weight:700;font-size:7pt;text-transform:uppercase;letter-spacing:.5px;padding:4px 6px;border:1px solid #ccc">'+cat+' / '+catAr(cat)+'</td></tr>';
     grp[cat].forEach(function(m){
       medNumber++;
       var bc=m.high_alert?'#da3633':m.hazard?'#d29922':m.lasa?'#8957e5':'transparent';
@@ -3583,12 +3501,16 @@ async function doDeptPrint(){
       else if(m.high_alert){flagTxt='HIGH ALERT / تنبيه عالي';flagColor='#da3633';}
       else if(m.hazard){flagTxt='HAZARD / خطر';flagColor='#b07d00';}
       else if(m.lasa){flagTxt='LASA';flagColor='#6639ba';}
+      var medBatches=getExpiry(CU.deptId).filter(function(b){return b.medId===m.id;}).sort(function(a,b){return String(a.date||'').localeCompare(String(b.date||''));});
+      var expText=medBatches.length?medBatches.map(function(b){return fmtDate(b.date)+(b.batch?' — '+b.batch:'');}).join('<br>'):'—';
+      if(includeExpiryDate)expText+='<div style="margin-top:4px;white-space:nowrap">Write-in / كتابة: ____/____/________</div>';
       rows+='<tr style="background:'+bg+';border-left:3px solid '+bc+'">'
         +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+medNumber+'</td>'
         +'<td style="padding:3px 5px;border:1px solid #ddd;font-weight:500">'+m.name+'</td>'
         +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700;color:'+flagColor+';font-size:6.5pt">'+flagTxt+'</td>'
         +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+m.min+'</td>'
         +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+m.max+'</td>'
+        +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-size:7pt;line-height:1.45">'+expText+'</td>'
         +'</tr>';
     });
   });
@@ -3628,6 +3550,7 @@ async function doDeptPrint(){
     +'<th>Classification / &#x627;&#x644;&#x62A;&#x635;&#x646;&#x64A;&#x641;</th>'
     +'<th class="c">Min / &#x627;&#x644;&#x623;&#x62F;&#x646;&#x649;</th>'
     +'<th class="c">Max / &#x627;&#x644;&#x623;&#x639;&#x644;&#x649;</th>'
+    +'<th class="c">Expiry dates / تواريخ الانتهاء</th>'
     +'</tr></thead>'
     +'<tbody>'+rows+'</tbody>'
     +'</table>'+expiryPrintBlock
@@ -5942,15 +5865,22 @@ function shelfMedMatches(m){
 function shelfExpiryCell(medId){
   var cfg=getAlertSettings(CU.deptId)||{d1:30,d2:7};
   var batches=getExpiry(CU.deptId).filter(function(b){return b.medId===medId;}).sort(function(a,b){return String(a.date||'').localeCompare(String(b.date||''));});
-  if(!batches.length)return '<span style="color:var(--tx3)">—</span>';
-  return batches.map(function(b){
-    var days=daysUntil(b.date),cls='exp-ok',label='';
+  var rows=batches.map(function(b){
+    var days=daysUntil(b.date),cls='exp-ok',label='OK';
     if(days!==null&&days<=0){cls='exp-red';label='Expired';}
     else if(days!==null&&days<=Number(cfg.d2||7)){cls='exp-red';label='Urgent';}
     else if(days!==null&&days<=Number(cfg.d1||30)){cls='exp-yellow';label='Soon';}
-    else{label='OK';}
-    return '<div class="'+cls+'" style="white-space:nowrap"><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <span style="font-size:10px">('+label+')</span></div>';
+    return '<div class="'+cls+'" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">'
+      +'<span><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <small>('+label+')</small></span>'
+      +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" onclick="openEditExpiry(this)">✎</button> '
+      +'<button class="btn bd2c bxs" data-bid="'+b.id+'" onclick="delBatch(this.dataset.bid);renderShelves()">×</button></span></div>';
   }).join('');
+  return (rows||'<span style="color:var(--tx3)">No expiry batches</span>')
+    +'<div style="margin-top:5px"><button class="btn bg bxs" data-mid="'+medId+'" onclick="openAddExpiryForMed(this.dataset.mid)">+ Add expiry</button></div>';
+}
+function openAddExpiryForMed(medId){
+  openAddExpiry();
+  if(el('exp-med-sel'))el('exp-med-sel').value=medId;
 }
 function renderShelfMedicationDatabase(){
   if(!CU||CU.role!=='department'||!el('shelf-med-db'))return;
