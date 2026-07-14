@@ -7547,5 +7547,137 @@ body.role-department #ctl-log{pointer-events:none}
   document.addEventListener('DOMContentLoaded',function(){setTimeout(applyDeptReadOnlyView,300)});
 })();
 </script>
+
+
+<!-- v1.2 definitive fix: working public Crash Cart QR + true department custodian read-only page -->
+<style>
+#ctl-dept-public-panel{display:none}
+#ctl-dept-public-panel .ctl-rulebar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
+#ctl-dept-public-panel .ctl-rulebar .fg{margin:0;min-width:150px}
+#ctl-dept-public-panel .ctl-rulebar input{margin:0;width:120px}
+#ctl-dept-public-panel .ctl-summary{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+#ctl-dept-public-panel .expired td{background:rgba(218,54,51,.10)!important}
+#ctl-dept-public-panel .soon td{background:rgba(210,153,34,.10)!important}
+@media(max-width:700px){#ctl-dept-public-panel .ctl-summary{grid-template-columns:1fr}}
+</style>
+<script>
+(function(){
+  function E(id){return document.getElementById(id)}
+  function isDept(){return !!window.CU&&CU.role==='department'}
+  function n(v){v=Number(v);return isFinite(v)?v:0}
+  function baseUrl(){var u=new URL(window.location.href);u.search='';u.hash='';return u.toString()}
+  function deptRuleKey(){return 'controlled_dept_alert_days_'+(CU&&CU.deptId||'')}
+  function deptRule(){var v=n(S.g(deptRuleKey())||60);return v>0?Math.floor(v):60}
+  function medName(id){var m=typeof ctlMedicine==='function'?ctlMedicine(id):null;return m||{}}
+  function minDays(x){var out=null;(x.batches||[]).forEach(function(b){var d=daysUntil(b.expiry);if(d!==null&&(out===null||d<out))out=d});return out}
+  function expText(x){return (x.batches||[]).map(function(b){var d=daysUntil(b.expiry),label=d===null?'':(d<0?'Expired '+Math.abs(d)+'d':d+'d');return '<div class="'+(d!==null&&d<=0?'exp-red':(d!==null&&d<=deptRule()?'exp-yellow':'exp-ok'))+'">'+esc(b.qty==null?'—':b.qty)+' → '+esc(fmtDate(b.expiry))+(b.lot?' · '+esc(b.lot):'')+(label?' <small>('+esc(label)+')</small>':'')+'</div>'}).join('')||'—'}
+  window.CTL_DEPT_ONLY_SOON=!!window.CTL_DEPT_ONLY_SOON;
+
+  function buildDeptPanel(){
+    if(!isDept())return false;
+    var pg=E('pg-controlled');if(!pg)return false;
+    var old=E('ctl-department-original');
+    if(!old){old=document.createElement('div');old.id='ctl-department-original';while(pg.firstChild)old.appendChild(pg.firstChild);pg.appendChild(old)}
+    old.style.display='none';
+    var panel=E('ctl-dept-public-panel');
+    if(!panel){panel=document.createElement('div');panel.id='ctl-dept-public-panel';pg.appendChild(panel)}
+    panel.style.display='block';
+    var list=ctlDeptList(CU.deptId)||[],days=deptRule(),soon=0,expired=0;
+    list.forEach(function(x){var d=minDays(x);if(d!==null&&d<=0)expired++;else if(d!==null&&d<=days)soon++});
+    var filtered=list.filter(function(x){var d=minDays(x);return !window.CTL_DEPT_ONLY_SOON||(d!==null&&d<=days)});
+    var rows=filtered.map(function(x,i){var m=medName(x.medId),d=minDays(x),cls=d!==null&&d<=0?'expired':(d!==null&&d<=days?'soon':'');return '<tr class="'+cls+'"><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td><b>'+esc(m.name||'')+'</b></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+n(x.qty)+'</td><td>'+expText(x)+'</td></tr>'}).join('')||'<tr><td colspan="7" style="text-align:center;padding:24px">No medicines match the current rule.</td></tr>';
+    panel.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div><div class="stitle">Controlled Custody — '+esc(CU.deptName||'Department')+'</div><div class="ssub" style="margin:0">Read-only list, expiry monitoring and printing only</div></div><span class="badge bbl">View only</span></div>'+
+      '<div class="card"><div class="cb"><div class="ctl-rulebar"><div class="fg"><label>Near-expiry rule (days)</label><input id="ctl-dept-final-days" type="number" min="1" value="'+days+'"></div><button class="btn bp" onclick="ctlDeptFinalApply()">Apply rule</button><button class="btn bg" onclick="ctlDeptFinalToggle()">'+(window.CTL_DEPT_ONLY_SOON?'Show all medicines':'Show near-expiry only')+'</button><button class="btn bg" onclick="ctlDeptFinalPrint()">🖨 Print list</button></div><div class="ctl-summary"><div class="sc"><div class="sl">Total medicines</div><div class="sv">'+list.length+'</div></div><div class="sc"><div class="sl">Near expiry ≤ '+days+' days</div><div class="sv">'+soon+'</div></div><div class="sc"><div class="sl">Expired</div><div class="sv">'+expired+'</div></div></div></div></div>'+
+      '<div class="card"><div class="ch"><span class="ct">Department controlled medicines list</span></div><div class="tw"><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+    return true;
+  }
+  window.ctlDeptFinalApply=async function(){if(!isDept())return;var v=Math.floor(n((E('ctl-dept-final-days')||{}).value));if(v<1)return toast('Enter a valid number of days.','err');await S.s(deptRuleKey(),v);buildDeptPanel();toast('Expiry rule saved ✓','succ')};
+  window.ctlDeptFinalToggle=function(){window.CTL_DEPT_ONLY_SOON=!window.CTL_DEPT_ONLY_SOON;buildDeptPanel()};
+  window.ctlDeptFinalPrint=function(){if(!isDept())return;var days=deptRule(),list=(ctlDeptList(CU.deptId)||[]).filter(function(x){var d=minDays(x);return !window.CTL_DEPT_ONLY_SOON||(d!==null&&d<=days)}),rows=list.map(function(x,i){var m=medName(x.medId);return '<tr><td>'+(i+1)+'</td><td>'+esc(m.moh||'—')+'</td><td>'+esc(m.nupco||'—')+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlClassLabel(m.classification)+'</td><td>'+n(x.qty)+'</td><td>'+expText(x)+'</td></tr>'}).join(''),w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print.','err');w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(CU.deptName||'Controlled Custody')+'</title><style>@page{size:A4;margin:10mm}body{font-family:Arial,Tahoma,sans-serif;direction:ltr;color:#111}h1,h2{text-align:center}table{width:100%;border-collapse:collapse}th,td{border:1px solid #444;padding:6px;text-align:left;font-size:11px}.note{border:1px solid #777;padding:8px;margin:10px 0}</style></head><body>'+officialPrintHeaderHTML()+'<h1>Controlled Custody</h1><h2>'+esc(CU.deptName||'')+'</h2><div class="note">Near-expiry rule: '+days+' days'+(window.CTL_DEPT_ONLY_SOON?' — Near-expiry medicines only':' — Full list')+'</div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.onload=function(){window.print()}<\/script></body></html>');w.document.close()};
+
+  var prevRender=window.renderControlled;
+  window.renderControlled=function(){if(isDept())return buildDeptPanel();return prevRender&&prevRender.apply(this,arguments)};
+  var prevShow=window.showPg;
+  window.showPg=function(id){var r=prevShow&&prevShow.call(this,id);if(id==='pg-controlled'&&isDept())setTimeout(buildDeptPanel,0);return r};
+
+  function crashPublicData(c){var dept=(gd()||[]).find(function(d){return d.id===c.deptId})||{};return {cartId:c.id,name:c.name||'',department:dept.name||c.deptId||'',seal:c.seal||'',updatedAt:c.updatedAt||c.stockUpdatedAt||nowISO(),items:(c.items||[]).map(function(it){var req=n(it.qty),av=n(it.present==null?it.qty:it.present);return {name:it.name||'',strength:it.strength||'',required:req,available:av,status:av<=0?'Out of stock':(av<req?'Less than required':'Available'),batches:(it.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':n(b.qty),lot:b.lot||''}})}})} }
+  async function publishCrash(c){if(!window.FB_DB)throw new Error('Firebase is not initialized');var data=crashPublicData(c);await FB_DB.collection('public_controlled_expiry').doc('crash_'+String(c.id)).set(data,{merge:false});return data}
+  function crashShortUrl(c){return baseUrl()+'?view=crash-cart-public&id='+encodeURIComponent(c.id)}
+
+  async function renderCrashPublicFromId(){var p=new URLSearchParams(location.search);if(p.get('view')!=='crash-cart-public'||!p.get('id'))return false;E('auth')&&(E('auth').style.display='none');E('app')&&(E('app').style.display='none');document.body.style.background='#fff';var root=document.createElement('main');root.id='public-crash-cart';root.innerHTML='<h2>Loading Crash Cart information...</h2>';document.body.appendChild(root);try{var snap=await FB_DB.collection('public_controlled_expiry').doc('crash_'+p.get('id')).get();if(!snap.exists)throw new Error('Crash Cart public record was not found. Print a new QR from the system.');var d=snap.data(),rows=(d.items||[]).map(function(it,i){return '<tr><td>'+(i+1)+'</td><td>'+esc(it.name||'')+'</td><td>'+esc(it.strength||'—')+'</td><td>'+n(it.required)+'</td><td>'+n(it.available)+'</td><td>'+esc(it.status||'')+'</td><td>'+((it.batches||[]).map(function(b){return esc(fmtDate(b.expiry))+' → '+esc(b.qty===''?'—':b.qty)+(b.lot?' · '+esc(b.lot):'')}).join('<br>')||'—')+'</td></tr>'}).join('');root.innerHTML='<h1>'+esc(d.name||'Crash Cart')+'</h1><h2>'+esc(d.department||'')+'</h2><p><b>Seal number:</b> '+esc(d.seal||'—')+'</p><p><b>Last update:</b> '+esc(new Date(d.updatedAt).toLocaleString('en-GB',{calendar:'gregory',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</p><table><thead><tr><th>#</th><th>Medication</th><th>Strength</th><th>Required</th><th>Available</th><th>Status</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table>'}catch(err){root.innerHTML='<div class="alert-banner"><b>Could not open Crash Cart QR.</b><br>'+esc(err.message||String(err))+'</div>'}return true}
+
+  var params=new URLSearchParams(location.search);
+  if(params.get('view')==='crash-cart-public'&&params.get('id')){setTimeout(renderCrashPublicFromId,0)}
+
+  window.finalCrashPrintRun=async function(){var id=(E('final-crash-id')||{}).value,mode=(E('final-crash-mode')||{}).value,c=crashCart(id);if(!c)return toast('Crash Cart not found.','err');if(!mode)return toast('Select a print mode.','err');try{await publishCrash(c)}catch(err){return toast('Public QR could not be published: '+(err.message||err),'err')}CM('mfinal-crash-print');var dept=(gd()||[]).find(function(d){return d.id===c.deptId})||{},url=crashShortUrl(c),qr='https://api.qrserver.com/v1/create-qr-code/?size=240x240&data='+encodeURIComponent(url),showExpiry=mode==='expiry',qrOnly=mode==='qr_only',rows=(c.items||[]).map(function(it,i){var req=n(it.qty),av=n(it.present==null?it.qty:it.present),st=av<=0?'Out of stock':(av<req?'Less than required':'Available'),exp=(it.batches||[]).map(function(b){return esc(fmtDate(b.expiry))+' → '+esc(b.qty==null?'—':b.qty)}).join('<br>')||'—';return '<tr><td>'+(i+1)+'</td><td>'+esc(it.name||'')+'</td><td>'+esc(it.strength||'—')+'</td><td>'+req+'</td><td>'+av+'</td><td>'+st+'</td>'+(showExpiry?'<td>'+exp+'</td>':'')+'</tr>'}).join(''),w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print.','err');var qrBlock='<div class="qr"><div><b>Public Crash Cart information</b><br>Opens without login and shows the latest published seal, quantities and expiry dates.</div><img src="'+qr+'"></div>',table=qrOnly?'':'<table><thead><tr><th>#</th><th>Medication</th><th>Strength</th><th>Required Qty</th><th>Available Qty</th><th>Stock Status</th>'+(showExpiry?'<th>Expiry date → Qty</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table>';w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+esc(c.name||'Crash Cart')+'</title><style>@page{size:A4;margin:10mm}html,body{direction:ltr!important}body{font-family:Arial,Tahoma,sans-serif;color:#111;text-align:left}h1,h2{text-align:center;margin:4px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:8px;border:1px solid #777;padding:9px;margin:10px 0}.qr{display:flex;align-items:center;justify-content:space-between;border:1px solid #777;padding:12px;margin:10px 0}.qr img{width:155px;height:155px}table{width:100%;border-collapse:collapse;direction:ltr!important}th,td{border:1px solid #333;padding:6px;text-align:left!important}</style></head><body>'+officialPrintHeaderHTML()+'<h1>'+esc(c.name||'Crash Cart')+'</h1><h2>'+esc(dept.name||'')+'</h2><div class="meta"><div><b>Seal number:</b> '+esc(c.seal||'—')+'</div><div><b>Printed:</b> '+esc(new Date().toLocaleString('en-GB',{calendar:'gregory',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}))+'</div></div>'+((mode==='qr'||qrOnly)?qrBlock:'')+table+'<script>window.onload=function(){setTimeout(function(){window.print()},700)}<\/script></body></html>');w.document.close();auditAction('crash_cart_print',{cartId:c.id,mode:mode,publicUrl:url})};
+
+  document.addEventListener('DOMContentLoaded',function(){if(isDept())setTimeout(buildDeptPanel,250)});
+})();
+</script>
+
+
+<!-- v1.2 controlled-list print layout correction -->
+<script>
+(function(){
+  function ctlGregorianPrintDate(){
+    var d=new Date();
+    return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()+' '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+
+  /* Controlled print pages: full-width A4 landscape, left-to-right, Gregorian dates. */
+  window.ctlPrintHTML=function(title,body){
+    var w=window.open('','_blank');
+    if(!w){toast('Allow pop-ups to print.','err');return;}
+    w.document.write('<!doctype html><html dir="ltr"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+ 
+      '@page{size:A4 landscape;margin:5mm}'+
+      '*{box-sizing:border-box}html,body{width:100%;margin:0;padding:0;direction:ltr!important}'+
+      'body{font-family:Arial,Tahoma,sans-serif;color:#111;text-align:left;padding:0}'+
+      '.print-page{width:100%;max-width:none;margin:0}'+
+      'h1,h2{text-align:center;margin:2px 0;direction:ltr}'+
+      '.head{display:grid;grid-template-columns:105px minmax(0,1fr) 105px;align-items:center;width:100%;gap:8px}'+
+      '.logo{max-width:95px;max-height:68px}.qr{width:88px;height:88px}'+
+      '.printed-date{text-align:left;font-size:9px;margin:4px 0 6px;direction:ltr}'+
+      'table{width:100%!important;max-width:none;border-collapse:collapse;table-layout:auto;margin:6px 0 0;direction:ltr!important}'+
+      'thead{display:table-header-group}tr{break-inside:avoid}'+
+      'th,td{border:1px solid #333;padding:4px 5px;text-align:left!important;font-size:9.5px;line-height:1.25;direction:ltr!important;vertical-align:middle}'+
+      'th{background:#e8eef7;font-weight:700}'+
+      'th:first-child,td:first-child{width:30px;text-align:center!important}'+
+      '.med{width:auto!important;min-width:230px;text-align:left!important;font-weight:bold}'+
+      '.expiry{text-align:left!important;line-height:1.45;white-space:normal}'+
+      '.signs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:16px;direction:ltr}'+
+      '.sig{text-align:center;border-top:1px solid #222;padding-top:5px;margin-top:24px}'+
+      '.by{font-size:8px;text-align:center;margin-top:8px}.handover{margin:8px 0;padding:7px;border:1px solid #444}.ltr{direction:ltr!important}'+
+      '</style></head><body><div class="print-page">'+officialPrintHeaderHTML()+body+'<div class="by">By Ali Abudahash</div></div><script>window.onload=function(){setTimeout(function(){window.print()},500)}<\\/script></body></html>');
+    w.document.close();
+  };
+
+  window.finalControlledPrintRun=async function(){
+    var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';
+    if(!dept)return toast('Select a department first.','err');
+    var codeMode=($e('final-ctl-code')||{}).value,expiryMode=($e('final-ctl-expiry')||{}).value;
+    if(!codeMode||!expiryMode)return toast('Select both print options.','err');
+    var name=typeof ctlDeptName==='function'?ctlDeptName(dept):dept,
+        s=typeof ctlPrintSettings==='function'?ctlPrintSettings(dept):{},
+        logo=typeof ctlLogo==='function'?ctlLogo():'';
+    if(typeof ctlPublishDept==='function')await ctlPublishDept(dept);
+    var url=typeof ctlPublicUrl==='function'?ctlPublicUrl(dept):(location.origin+location.pathname+'?view=controlled-expiry&dept='+encodeURIComponent(dept));
+    var qr='https://api.qrserver.com/v1/create-qr-code/?size=190x190&data='+encodeURIComponent(url);
+    var showExpiry=expiryMode==='show';
+    var rows=(ctlDeptList(dept)||[]).map(function(x,i){
+      var m=ctlMedicine(x.medId)||{},code=codeMode==='moh'?m.moh:(codeMode==='nupco'?m.nupco:'');
+      var exp=(x.batches||[]).map(function(b){return (b.qty?esc(b.qty)+' → ':'')+ctlFmtDMY(b.expiry)+(b.lot?' — '+esc(b.lot):'')}).join('<br>')||'—';
+      return '<tr><td>'+(i+1)+'</td>'+(codeMode==='none'?'':'<td>'+esc(code||'—')+'</td>')+'<td class="med">'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td>'+(showExpiry?'<td class="expiry">'+exp+'</td>':'')+'</tr>';
+    }).join('');
+    var body='<div class="head"><div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div><div><h1>Controlled Medicines List</h1><h2>قائمة الأدوية المخدرة والمقيدة</h2><h2>'+esc(name)+'</h2></div><div><img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Public list & expiry<br>بدون تسجيل دخول</div></div></div>'+ 
+      '<div class="printed-date"><b>Printed (Gregorian):</b> '+ctlGregorianPrintDate()+'</div>'+ 
+      (showExpiry?'':'<div style="border:1px solid #555;padding:7px;margin:6px 0;text-align:center"><b>Expiry dates are available through the public QR code.</b><br>تواريخ الانتهاء متاحة عبر رمز الاستجابة السريعة</div>')+
+      '<table dir="ltr"><thead><tr><th>#</th>'+(codeMode==='none'?'':'<th>'+(codeMode==='moh'?'MOH Code':'NUPCO Code')+'</th>')+'<th class="med">Medicine / اسم الدواء</th><th>Qty / الكمية</th>'+(showExpiry?'<th>Expiry date → Qty (Gregorian DD/MM/YYYY)</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table>'+ 
+      '<div class="signs"><div class="sig">Head Nurse<br>رئيس تمريض القسم<br><b>'+esc(s.nursingHead||'')+'</b></div><div class="sig">Controlled Medicines Custodian<br>أمين عهدة الأدوية المخدرة<br><b>'+esc(s.controlledCustodian||'')+'</b></div><div class="sig">Pharmacy Manager<br>مدير الصيدلية<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div>';
+    CM('mfinal-ctl-print');
+    ctlPrintHTML(name,body);
+    if(typeof auditAction==='function')auditAction('controlled_group_print',{deptId:dept,expiryMode:expiryMode,codeMode:codeMode});
+  };
+})();
+</script>
 </body>
 </html>
