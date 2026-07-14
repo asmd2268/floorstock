@@ -906,7 +906,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
         <div class="stitle">Controlled Medicines / الأدوية المخدرة والمقيدة</div>
         <div class="ssub" id="ctl-sub">Unified warehouse and pharmacy comparison with inpatient-department expiry monitoring</div>
       </div>
-      <button class="btn bg" onclick="printControlledCurrent()">🖨 Print department list</button>
+      <button class="btn bg" id="ctl-main-print-btn" onclick="printControlledCurrent()">🖨 Print controlled stock</button>
     </div>
 
     <div class="tgrp" id="ctl-tabs"></div>
@@ -6570,6 +6570,100 @@ crashPrint=function(id){
     var summary='<div class="crash-summary"><div class="sc"><div class="sl">Carts</div><div class="sv">'+carts.length+'</div></div><div class="sc"><div class="sl">Items</div><div class="sv">'+totalItems+'</div></div><div class="sc"><div class="sl">Expiring soon</div><div class="sv">'+soon+'</div></div><div class="sc"><div class="sl">Expired</div><div class="sv">'+expired+'</div></div></div>';
     list.innerHTML=summary+(carts.map(function(c){var dept=(gd()||[]).find(function(d){return d.id===c.deptId})||{},openRep=reports.find(function(r){return r.cartId===c.id&&r.status==='open'}),st=crashStatus(c);var rows=['up','down'].map(function(sec){var xs=(c.items||[]).filter(function(i){return (i.section||'up')===sec});if(!xs.length)return'';return '<tr class="crash-section-label"><td colspan="8">'+(sec==='up'?'UP / الجزء العلوي':'DOWN / IV Solutions')+'</td></tr>'+xs.map(function(it,i){return '<tr><td>'+(i+1)+'</td><td><b>'+esc(it.name)+'</b></td><td>'+esc(it.strength||'—')+'</td><td>'+esc(it.dosageForm||'—')+'</td><td>'+esc(it.concentration||'—')+'</td><td>'+ctlNum(it.qty)+'</td><td>'+ctlNum(it.present!=null?it.present:it.qty)+'</td><td>'+esc((it.batches||[]).map(function(b){return (b.qty==null?'':b.qty+' × ')+fmtDate(b.expiry)}).join(' / ')||'—')+'</td></tr>';}).join('');}).join('');var actions='<button class="btn bg bsm" onclick="crashPrint(\''+c.id+'\')">Print</button>';if(canManageCrashCart())actions+='<button class="btn bp bsm" onclick="crashOpenImportPro(\''+c.id+'\')">Import UP / DOWN</button><button class="btn bg bsm" onclick="crashAddItem(\''+c.id+'\')">Add item</button>';if(CU.role==='department'&&!openRep)actions+='<button class="btn bd2c bsm" onclick="crashReportOpen(\''+c.id+'\')">Report opened cart</button>';if(canManageCrashCart()&&openRep)actions+='<button class="btn bs bsm" onclick="crashCloseReport(\''+openRep.id+'\')">Replace & close</button>';return '<div class="card crash-cart-card '+(openRep?'crash-open':'')+'"><div class="ch"><div><span class="ct">'+esc(c.name)+'</span><div class="fhint">'+esc(dept.name||c.deptId)+' · Cart '+esc(c.number||'—')+' · '+esc(c.location||'—')+' · Seal '+esc(c.seal||'—')+'</div><div class="fhint">'+(st.expired?'🔴 '+st.expired+' expired · ':'')+(st.soon?'🟡 '+st.soon+' soon · ':'')+(st.missing?'⚪ '+st.missing+' without expiry':'')+'</div></div><div class="crash-toolbar">'+actions+'</div></div><div class="tw"><table class="crash-table"><thead><tr><th>#</th><th>Generic name</th><th>Strength</th><th>Form</th><th>Conc.</th><th>Std.</th><th>Present</th><th>Expiry dates</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>';}).join('')||'<div class="card"><div class="cb" style="text-align:center;color:var(--tx2)">No crash carts configured.</div></div>');
   };
+})();
+</script>
+
+<style>
+#wh-receive-card{border:1px solid rgba(168,85,247,.55)}
+#wh-receive-card .ch{background:rgba(168,85,247,.08)}
+.wh-receive-grid{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(120px,1fr));gap:12px;align-items:end}
+.wh-receive-results{max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}
+.wh-receive-result{padding:9px 11px;border-bottom:1px solid var(--bd);cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.wh-receive-result:last-child{border-bottom:0}.wh-receive-result:hover{background:var(--s3)}
+.wh-receive-result.on{outline:1px solid var(--ac);background:rgba(31,111,235,.10)}
+.wh-receive-meta{font-size:11px;color:var(--tx2)}
+@media(max-width:850px){.wh-receive-grid{grid-template-columns:1fr 1fr}.wh-receive-grid .wide{grid-column:1/-1}}
+</style>
+
+<div class="modal-bg" id="mwh-receive">
+  <div class="modal" style="width:760px">
+    <div class="mh"><span class="mt">Receive medicines into warehouse / استلام أدوية للمستودع</span><button class="xbtn" onclick="CM('mwh-receive')">✕</button></div>
+    <div class="fg"><label>Search shared medicine list / البحث في القائمة المشتركة</label><input id="wh-receive-search" type="text" placeholder="Medication name, MOH or NUPCO code..." oninput="whReceiveRenderSearch()"></div>
+    <div id="wh-receive-results" class="wh-receive-results"></div>
+    <input type="hidden" id="wh-receive-med-id">
+    <div id="wh-receive-selected" class="alert-banner-y" style="display:none;margin-top:12px"></div>
+    <div class="wh-receive-grid" style="margin-top:14px">
+      <div><label>Quantity received / الكمية الواردة</label><input id="wh-receive-qty" type="number" min="1" step="1" value="1"></div>
+      <div><label>Stock type / نوع الرصيد</label><select id="wh-receive-source"><option value="system">Inside system / داخل النظام</option><option value="outside">Outside system / خارج النظام</option></select></div>
+      <div><label>Expiry date (optional)</label><input id="wh-receive-expiry" type="date"></div>
+      <div><label>Batch / Lot (optional)</label><input id="wh-receive-lot" type="text" placeholder="Batch number"></div>
+    </div>
+    <div class="fhint" style="margin-top:6px">If an expiry date is entered, the received quantity is linked to that expiry batch. Leaving it blank adds unallocated stock.</div>
+    <div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-receive')">Cancel</button><button class="btn bs" onclick="whReceiveSave()">Receive & save / استلام وحفظ</button></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var whSelectedReceiveId='';
+  function medList(){try{return ctlCatalog()||[]}catch(e){return []}}
+  window.whReceiveOpen=function(){
+    if(typeof ctlIsWarehouse==='function'&&!ctlIsWarehouse())return toast('Warehouse permission required','err');
+    whSelectedReceiveId='';
+    var ids=['wh-receive-search','wh-receive-med-id','wh-receive-expiry','wh-receive-lot'];
+    ids.forEach(function(id){var x=document.getElementById(id);if(x)x.value=''});
+    var q=document.getElementById('wh-receive-qty');if(q)q.value='1';
+    var sel=document.getElementById('wh-receive-selected');if(sel){sel.style.display='none';sel.innerHTML=''}
+    whReceiveRenderSearch();OM('mwh-receive');
+  };
+  window.whReceiveRenderSearch=function(){
+    var q=((document.getElementById('wh-receive-search')||{}).value||'').toLowerCase().trim();
+    var rows=medList().filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)}).slice(0,100);
+    var box=document.getElementById('wh-receive-results');if(!box)return;
+    box.innerHTML=rows.length?rows.map(function(m){var on=String(m.id)===String(whSelectedReceiveId)?' on':'';return '<div class="wh-receive-result'+on+'" data-id="'+esc(m.id)+'" onclick="whReceiveSelect(this.dataset.id)"><div><b>'+esc(m.name||'')+'</b><div class="wh-receive-meta">MOH: '+esc(m.moh||'—')+' · NUPCO: '+esc(m.nupco||'—')+'</div></div><span class="chip">Select</span></div>'}).join(''):'<div style="padding:18px;text-align:center;color:var(--tx2)">No matching medicine</div>';
+  };
+  window.whReceiveSelect=function(id){
+    whSelectedReceiveId=id;var m=medList().find(function(x){return String(x.id)===String(id)});var hid=document.getElementById('wh-receive-med-id');if(hid)hid.value=id;
+    var sel=document.getElementById('wh-receive-selected');if(sel&&m){sel.style.display='block';sel.innerHTML='<b>Selected:</b> '+esc(m.name||'')+'<div class="fhint">Current warehouse balance: '+ctlWarehouseQtyForFilter((ctlWarehouse()||{})[id]||{})+'</div>'}
+    whReceiveRenderSearch();
+  };
+  window.whReceiveSave=async function(){
+    if(typeof ctlIsWarehouse==='function'&&!ctlIsWarehouse())return toast('Warehouse permission required','err');
+    var id=(document.getElementById('wh-receive-med-id')||{}).value||whSelectedReceiveId;
+    var qty=Math.max(0,Number((document.getElementById('wh-receive-qty')||{}).value||0));
+    var source=(document.getElementById('wh-receive-source')||{}).value||'system';
+    var expiry=(document.getElementById('wh-receive-expiry')||{}).value||'';
+    var lot=((document.getElementById('wh-receive-lot')||{}).value||'').trim();
+    if(!id)return toast('Select a medicine first','err');if(!(qty>0))return toast('Enter received quantity','err');
+    var all=Object.assign({},ctlWarehouse()),x=Object.assign({system:0,outside:0,batches:[]},all[id]||{});
+    x.system=ctlNum(x.system);x.outside=ctlNum(x.outside);x.batches=(x.batches||[]).slice();
+    if(source==='outside')x.outside+=qty;else x.system+=qty;
+    if(expiry){var same=x.batches.find(function(b){return String(b.expiry||'')===expiry&&String(b.lot||'')===lot});if(same)same.qty=ctlNum(same.qty)+qty;else x.batches.push({qty:qty,expiry:expiry,lot:lot,source:source});}
+    all[id]=x;await ctlSetWarehouse(all);
+    try{var h=S.g('controlled_warehouse_receipts')||[];h.unshift({id:'whr_'+Date.now(),medId:id,qty:qty,source:source,expiry:expiry,lot:lot,at:new Date().toISOString(),by:(CU&&CU.email)||''});await S.s('controlled_warehouse_receipts',h.slice(0,1000));}catch(e){}
+    try{await ctlMove({type:'warehouse_receive',medId:id,qty:qty,note:'Warehouse received stock'+(expiry?' exp '+expiry:'')})}catch(e){}
+    CM('mwh-receive');renderControlled();toast('Medicine received and warehouse balance updated ✓','succ');
+  };
+
+  function applyWarehouseUI(){
+    var isWh=false;try{isWh=ctlIsWarehouse()}catch(e){}
+    var printBtn=document.getElementById('ctl-main-print-btn')||document.querySelector('button[onclick="printControlledCurrent()"]');
+    if(printBtn){if(isWh){printBtn.style.display='none'}else{printBtn.style.display=''}}
+    if(!isWh)return;
+    var pg=document.getElementById('pg-controlled');if(!pg||document.getElementById('wh-receive-card'))return;
+    var anchor=document.getElementById('ctl-tabs')||pg.firstElementChild;
+    var card=document.createElement('div');card.id='wh-receive-card';card.className='card';
+    card.innerHTML='<div class="ch"><div><span class="ct">Warehouse receiving / استلام أدوية المستودع</span><div class="fhint">Search the shared list, enter received quantity, and optionally link it to an expiry date and batch.</div></div><button class="btn bs" onclick="whReceiveOpen()">+ Receive medicine</button></div><div class="cb"><div class="alert-banner-y" style="margin:0">Warehouse print controls are limited to warehouse stock reports. Inpatient department printing is not available for this role.</div></div>';
+    if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(card,anchor.nextSibling);else pg.insertBefore(card,pg.firstChild);
+  }
+  var oldRender=window.renderControlled;
+  if(typeof oldRender==='function')window.renderControlled=function(){var r=oldRender.apply(this,arguments);setTimeout(applyWarehouseUI,0);return r};
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(applyWarehouseUI,400)});
+  setInterval(function(){try{if(document.getElementById('app')&&document.getElementById('app').style.display!=='none')applyWarehouseUI()}catch(e){}},1500);
+
+  // Make Crash Cart import choice explicit without changing data logic.
+  var oldCrash=window.renderCrashCart;
+  if(typeof oldCrash==='function')window.renderCrashCart=function(){var r=oldCrash.apply(this,arguments);setTimeout(function(){document.querySelectorAll('#pg-crashcart button').forEach(function(b){if((b.textContent||'').trim()==='Import UP / DOWN')b.textContent='Import lists: UP or DOWN'})},0);return r};
 })();
 </script>
 </body>
