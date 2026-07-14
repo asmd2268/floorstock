@@ -2153,7 +2153,7 @@ async function doLogin(){
     if(!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
     var profile=profileSnapshot.data();
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(profile.role!=='pharmacy'&&profile.role!=='department'&&profile.role!=='warehouse'&&profile.role!=='controlled_pharmacy')throw new Error('This account has an invalid role.');
+    if(!['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'].includes(profile.role))throw new Error('This account has an invalid role.');
     await S.init();seed();
     var deptId=profile.deptId||null;
     var dept=deptId?gd().find(function(d){return d.id===deptId}):null;
@@ -3732,6 +3732,228 @@ crashPrint=function(id){return toast('Crash Cart print is loading from the lates
 })();
 </script>
 
+
+<script>
+/* ===== Restored users + Master role testing ===== */
+// RESTORED USER MANAGEMENT
+function renderUsers(){
+  var us=gu(),ds=gd();
+  el('utbl').innerHTML=us.length
+    ?us.map(function(u){
+      var d=ds.find(function(x){return x.id===u.deptId});
+      var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department'))));
+      var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
+      var actions='';
+      if(CU&&CU.master===true&&u.id!==CU.id){
+        actions+='<button class="btn bg bxs" data-id="'+u.id+'" data-master="'+(u.master===true?'1':'0')+'" onclick="toggleMasterUser(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-master&#x27;)==&#x27;1&#x27;)">'+(u.master===true?'Remove Master':'Grant Master')+'</button> ';
+        actions+='<button class="btn bd2c bxs" data-id="'+u.id+'" onclick="delUser(this.getAttribute(&#x27;data-id&#x27;))">Delete permanently</button>';
+      }else if(u.id===CU.id){actions='<span style="font-size:11px;color:var(--tx2)">Current user</span>';}
+      else{actions='<span style="font-size:11px;color:var(--tx2)">Master only</span>';}
+      return '<tr><td style="font-family:var(--mono)">'+esc(u.email||'')+'</td>'
+        +'<td>'+roleLabel+masterBadge+(d?' — '+esc(d.name):'')+'</td>'
+        +'<td><span class="badge '+(u.active===false?'brd':'bgn')+'">'+(u.active===false?'Inactive':'Active')+'</span></td>'
+        +'<td>'+actions+'</td></tr>';
+    }).join('')
+    :'<tr><td colspan="4" style="text-align:center;color:var(--tx2);padding:18px">No managed users yet</td></tr>';
+  el('dlst').innerHTML=ds.length
+    ?ds.map(function(d){
+      var medCount=getMeds(d.id).length;
+      var userCount=us.filter(function(u){return u.deptId===d.id}).length;
+      return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--bd);gap:10px">'
+        +'<div style="flex:1"><div style="font-weight:600">'+esc(d.name)+'</div><div style="font-size:11px;color:var(--tx2);margin-top:2px"><span class="chip">'+medCount+' medications</span> <span class="chip">'+userCount+' users</span></div></div>'
+        +'<div style="display:flex;gap:6px;flex-shrink:0"><button class="btn bg bxs" data-id="'+d.id+'" data-name="'+esc(d.name)+'" onclick="renameDept(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-name&#x27;))">&#x270F; Rename</button><button class="btn bp bxs" onclick="showPg(&#x27;pg-inv&#x27;);document.getElementById(&#x27;inv-dept-sel&#x27;).value=&#x27;'+d.id+'&#x27;;renderInv()">&#x1F4CB; View Meds</button><button class="btn bd2c bxs" data-id="'+d.id+'" onclick="delDept(this.getAttribute(&#x27;data-id&#x27;))">&#x1F5D1; Delete</button></div></div>';
+    }).join(''):'<div style="text-align:center;padding:24px;color:var(--tx2)">No departments yet — add one above</div>';
+  var ndcopy=el('ndcopy');
+  if(ndcopy){var curVal=ndcopy.value;ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option><option value="default">Default list (all medications)</option><optgroup label="Copy from existing dept:">'+ds.map(function(d){return '<option value="'+d.id+'">Copy from: '+esc(d.name)+' ('+getMeds(d.id).length+' meds)</option>'}).join('')+'</optgroup>';if(curVal)ndcopy.value=curVal;}
+  el('nudept').innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
+}
+function updateUserRoleFields(){
+  var role=el('nurole').value;
+  el('nudept-wrap').style.display=(role==='warehouse'||role==='pharmacy'||role==='controlled_pharmacy')?'none':'block';
+  el('numaster-wrap').style.display=(CU&&CU.master===true&&role==='pharmacy')?'block':'none';
+  if(role!=='pharmacy')el('numaster').checked=false;
+}
+function openAddUser(){
+  try{
+    if(!CU||CU.role!=='pharmacy'){
+      toast('Only the Pharmacy Manager may create users.','err');
+      return;
+    }
+    var emailInput=el('nuname');
+    var passInput=el('nupass');
+    var roleSelect=el('nurole');
+    var masterInput=el('numaster');
+    var modal=el('muser');
+    if(!emailInput||!passInput||!roleSelect||!masterInput||!modal){
+      throw new Error('Add User form is missing from the current page. Upload the latest index.html and refresh.');
+    }
+    emailInput.value='';
+    passInput.value='';
+    roleSelect.value='department';
+    masterInput.checked=false;
+    var deptSelect=el('nudept');
+    var departments=gd();
+    if(deptSelect){
+      deptSelect.innerHTML=departments.length
+        ? departments.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>';}).join('')
+        : '<option value="">No departments available — add a department first</option>';
+      deptSelect.disabled=!departments.length;
+    }
+    updateUserRoleFields();
+    modal.classList.add('on');
+    setTimeout(function(){emailInput.focus();},50);
+  }catch(err){
+    console.error('openAddUser failed:',err);
+    toast(err.message||'Could not open Add User form.','err');
+  }
+}
+async function saveUser(){
+  if(!CU||CU.role!=='pharmacy')return toast('Only the Pharmacy Manager may create users.','err');
+  var email=el('nuname').value.trim(),password=el('nupass').value,did=el('nudept').value,requestedRole=el('nurole').value,grantMaster=el('numaster').checked===true;
+  if(!email||!password)return toast('Fill all fields','err');
+  if(password.length<8)return toast('Password must be at least 8 characters','err');
+  if((requestedRole==='department')&&!did)return toast('Create a department first, then choose it for this user.','err');
+  if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
+  try{
+    var call=FB_FUNCTIONS.httpsCallable('createManagedUser');
+    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department')?did:null,master:grantMaster});
+    toast('Firebase user created securely ✓','succ');CM('muser');
+    await S.loadUsers();renderUsers();
+  }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}
+}
+async function delUser(id){
+  if(!CU||CU.master!==true)return toast('Only Master can permanently delete users.','err');
+  if(id===CU.id)return toast('You cannot delete your own account.','err');
+  if(!confirm('Permanently delete this user from Firebase Authentication and Firestore?\n\nThis cannot be undone.'))return;
+  try{var call=FB_FUNCTIONS.httpsCallable('deleteManagedUser');await call({uid:id});await S.loadUsers();toast('User permanently deleted','info');renderUsers();}
+  catch(err){console.error(err);toast((err&&err.message)||'Could not delete user','err');}
+}
+async function toggleMasterUser(id,isMaster){
+  if(!CU||CU.master!==true)return toast('Only Master can change Master access.','err');
+  var action=isMaster?'remove Master access from':'grant Master access to';
+  if(!confirm('Are you sure you want to '+action+' this user?'))return;
+  try{var call=FB_FUNCTIONS.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});await S.loadUsers();toast('Master access updated ✓','succ');renderUsers();}
+  catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
+}
+
+function addDept(){
+  var n=el('ndname').value.trim();if(!n)return toast('Enter department name','err');
+  // Generate unique id from name
+  var baseId=n.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,20)||'dept';
+  var id=baseId;var counter=2;
+  while(gd().find(function(d){return d.id===id})){id=baseId+'_'+counter;counter++;}
+  S.push('departments',{id:id,name:n,created:nowISO()});
+  el('ndname').value='';
+  // Seed drug list based on copy option
+  var copyMode=(el('ndcopy')||{value:'empty'}).value||'empty';
+  if(copyMode==='default'&&!getMeds(id).length){
+    var ms=MEDS.map(function(m){
+      return{id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,5)+'_'+m.n.slice(0,2),
+        name:m.n,category:m.c,min:m.mn,max:m.mx,monthly:null,
+        high_alert:!!m.ha,hazard:!!m.hz,lasa:!!m.ls,created:nowISO()};
+    });
+    setMeds(id,ms);
+    toast('"'+n+'" added with default drug list ('+ms.length+' medications) &#x2713;','succ');
+  } else if(copyMode==='empty'){
+    setMeds(id,[]);
+    toast('"'+n+'" added with empty drug list — use Import to add medications &#x2713;','succ');
+  } else {
+    // Copy from another dept
+    var srcMeds=getMeds(copyMode).map(function(m){
+      return Object.assign({},m,{id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,5)});
+    });
+    setMeds(id,srcMeds);
+    var srcName=(gd().find(function(d){return d.id===copyMode})||{name:copyMode}).name;
+    toast('"'+n+'" added — copied '+srcMeds.length+' medications from '+srcName+' &#x2713;','succ');
+  }
+  renderUsers();fillDS();populateInvDeptSel();
+}
+function delDept(id){
+  var dept=gd().find(function(d){return d.id===id});
+  var medCount=getMeds(id).length;
+  if(!confirm('Delete department "'+( dept?dept.name:id)+'"?\n\nThis will also delete:\n- '+medCount+' medications\n- Expiry dates\n- Shelf assignments\n\nThis cannot be undone.'))return;
+  S.del('departments',id);
+  // Clean up dept data
+  S.rm('meds_'+id);
+  S.rm('expiry_'+id);
+  // Remove the separately published, read-only expiry monitor as well.
+  if(FB_DB&&FB_AUTH&&FB_AUTH.currentUser)FB_DB.collection('public_expiry').doc(id).delete().catch(function(err){console.error(err);toast('Public expiry monitor could not be removed.','err');});
+  S.rm('shelves_'+id);
+  S.rm('alerts_'+id);
+  toast('Department deleted','info');
+  renderUsers();fillDS();populateInvDeptSel();
+}
+
+
+var MASTER_ACTUAL=window.MASTER_ACTUAL||null, MASTER_EFFECTIVE=window.MASTER_EFFECTIVE||null;
+function masterActualUser(){return MASTER_ACTUAL||CU}
+function isMasterActual(){var u=masterActualUser();return !!(u&&u.master===true)}
+function masterRoleLabel(role){
+  return role==='pharmacy'?'Pharmacy Manager / مدير الصيدلية'
+    :role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم'
+    :role==='pharmacy_staff'?'Pharmacy Staff / موظف الصيدلية'
+    :role==='controlled_pharmacy'?'Controlled Medicines Officer / مسؤول الأدوية الخاضعة'
+    :role==='warehouse'?'Warehouse Officer / مسؤول المستودع'
+    :role==='department'?'Department User / مستخدم القسم':role;
+}
+function ensureMasterRoleModal(){
+  if(el('mmaster-role'))return;
+  document.body.insertAdjacentHTML('beforeend','<div class="modal-bg" id="mmaster-role"><div class="modal" style="width:600px"><div class="mh"><span class="mt">Test another role / اختبار دور آخر</span><button class="xbtn" onclick="CM(\'mmaster-role\')">×</button></div><div class="fg"><label>Role / الدور</label><select id="master-role-select" onchange="masterRoleChanged()"><option value="pharmacy">Pharmacy Manager</option><option value="inpatient_supervisor">Inpatient Pharmacy Supervisor</option><option value="pharmacy_staff">Pharmacy Staff</option><option value="controlled_pharmacy">Controlled Medicines Officer</option><option value="warehouse">Warehouse Officer</option><option value="department">Department User</option></select></div><div class="fg" id="master-dept-wrap" style="display:none"><label>Department / القسم</label><select id="master-dept-select"></select></div><div class="master-test-detail" id="master-role-preview"></div><div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM(\'mmaster-role\')">Cancel</button><button class="btn bd2c" id="master-reset-role" onclick="masterResetRole()">Return to Master</button><button class="btn bp" onclick="masterApplyRole()">Start Test</button></div></div></div>');
+}
+function openMasterRoleSwitch(){
+  if(!isMasterActual())return;
+  ensureMasterRoleModal();
+  var ds=gd(),sel=el('master-dept-select');sel.innerHTML=ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('')||'<option value="">No departments</option>';
+  el('master-role-select').value=MASTER_EFFECTIVE?MASTER_EFFECTIVE.role:'pharmacy';
+  if(MASTER_EFFECTIVE&&MASTER_EFFECTIVE.deptId)sel.value=MASTER_EFFECTIVE.deptId;
+  el('master-reset-role').style.display=MASTER_EFFECTIVE?'inline-flex':'none';masterRoleChanged();OM('mmaster-role');
+}
+function masterRoleChanged(){
+  var role=el('master-role-select').value,wrap=el('master-dept-wrap');wrap.style.display=role==='department'?'block':'none';
+  el('master-role-preview').innerHTML='<b>Testing permissions:</b> '+esc(masterRoleLabel(role))+(role==='department'?'<br><b>Department:</b> '+esc((el('master-dept-select').selectedOptions[0]||{}).textContent||''):'')+'<br><b>Actual account:</b> '+esc((masterActualUser()||{}).email||'Master');
+}
+function masterApplyRole(){
+  if(!isMasterActual())return;
+  var role=el('master-role-select').value,deptId=role==='department'?el('master-dept-select').value:null,dept=deptId?gd().find(function(d){return d.id===deptId}):null;
+  if(role==='department'&&!dept)return toast('Choose a department','err');
+  if(!MASTER_ACTUAL)MASTER_ACTUAL=Object.assign({},CU);
+  MASTER_EFFECTIVE={role:role,deptId:deptId,deptName:dept?dept.name:''};
+  CU={id:MASTER_ACTUAL.id,email:MASTER_ACTUAL.email,username:MASTER_ACTUAL.username,role:role,master:false,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:role==='department'};
+  CM('mmaster-role');startApp();toast('Test mode: '+masterRoleLabel(role),'info');
+}
+function masterResetRole(){
+  if(MASTER_ACTUAL){CU=Object.assign({},MASTER_ACTUAL);MASTER_ACTUAL=null;MASTER_EFFECTIVE=null;CM('mmaster-role');startApp();toast('Master access restored','succ')}
+}
+function installMasterButton(){
+  var top=el('tuser')&&el('tuser').parentElement;if(!top)return;
+  ['master-switch-btn','master-exit-btn','master-test-status'].forEach(function(id){var n=el(id);if(n)n.remove()});
+  if(!isMasterActual())return;
+  var b=document.createElement('button');b.id='master-switch-btn';b.className='btn bg bsm';b.textContent=MASTER_EFFECTIVE?'Change test role':'🧪 Test role';b.onclick=openMasterRoleSwitch;top.insertBefore(b,el('themeBtn'));
+  if(MASTER_EFFECTIVE){var s=document.createElement('span');s.id='master-test-status';s.className='master-test-banner';s.innerHTML='<strong>TEST MODE</strong>'+esc(masterRoleLabel(MASTER_EFFECTIVE.role))+(MASTER_EFFECTIVE.deptName?'<br>'+esc(MASTER_EFFECTIVE.deptName):'');top.insertBefore(s,b);var x=document.createElement('button');x.id='master-exit-btn';x.className='btn bg bsm master-test-exit';x.textContent='Return to Master';x.onclick=masterResetRole;top.insertBefore(x,b)}
+}
+var __restoredStartApp=startApp;
+startApp=function(){
+  __restoredStartApp();
+  document.body.classList.remove('role-pharmacy_staff','role-inpatient_supervisor');if(CU)document.body.classList.add('role-'+CU.role);
+  installMasterButton();
+};
+var __restoredBuildNav=buildNav;
+buildNav=function(){
+  var nav=el('mnav');nav.innerHTML='';var common=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-controlled','🔒 Controlled custody'],['pg-ctl-analytics','📊 Controlled analytics'],['pg-crashcart','🚑 Crash Carts']];var items;
+  if(CU.role==='pharmacy')items=common.concat((!MASTER_EFFECTIVE&&isMasterActual())?[['pg-users','Users']]:[]);
+  else if(CU.role==='inpatient_supervisor'||CU.role==='pharmacy_staff')items=common;
+  else if(CU.role==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics'],['pg-crashcart','🚑 Crash Carts']];
+  else if(CU.role==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
+  else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
+  if(isMasterActual()){var m=document.createElement('button');m.className='nb';m.innerHTML='🧪 Test role';m.onclick=openMasterRoleSwitch;nav.appendChild(m)}
+  items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
+};
+var __restoredDoLogin=doLogin;
+doLogin=async function(){
+  await __restoredDoLogin();
+  if(CU&&CU.master===true){MASTER_ACTUAL=Object.assign({},CU);MASTER_EFFECTIVE=null;installMasterButton()}
+};
+</script>
 <script>
 document.addEventListener('DOMContentLoaded',function(){
   var btn=document.querySelector('#auth button[onclick="doLogin()"]');
