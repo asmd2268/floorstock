@@ -7588,6 +7588,48 @@ renderCrashCarts=function(){
   var oldCtlRender=renderControlled;
   renderControlled=function(){oldCtlRender();var root=el('pg-controlled');if(!root||!ccCanManage())return;if(el('ctl-responsible-options'))return;var s=S.g('controlled_global_settings')||{},box=document.createElement('div');box.id='ctl-responsible-options';box.className='card';box.innerHTML='<div class="ch"><div><span class="ct">Responsible names & print options / أسماء المسؤولين وخيارات الطباعة</span><div class="fhint">Saved and used in controlled-medicine and warehouse printouts only.</div></div></div><div class="cb g2"><div class="fg"><label>Warehouse Officer / مسؤول المستودع</label><input id="ctl-wh-officer" value="'+esc(s.warehouseOfficer||'')+'"></div><div class="fg"><label>Controlled Medicines Custody Officer / مسؤول عهدة الأدوية المخدرة</label><input id="ctl-custody-officer" value="'+esc(s.controlledCustodyOfficer||'')+'"></div><div style="grid-column:1/-1"><button class="btn bp" onclick="ctlSaveResponsibleNames()">Save names</button> <button class="btn bg" onclick="ctlOpenDepartmentPrintOptions()">Print Department List options</button></div></div>';root.insertBefore(box,root.children[2]||null)};
 })();
+
+
+// ── FIREBASE AUTH READINESS FIX ──────────────────────────
+// Some browsers may execute the page before one of the Firebase compat
+// modules has finished loading. Always wait for app/auth/firestore before login.
+var __firebaseReadyPromise=null;
+function ensureFirebaseReady(){
+  if(FB_AUTH&&FB_DB)return Promise.resolve({auth:FB_AUTH,db:FB_DB});
+  if(__firebaseReadyPromise)return __firebaseReadyPromise;
+  __firebaseReadyPromise=(async function(){
+    async function ensureSdk(key,src,test){
+      if(test())return;
+      await loadScriptOnce(key,src,test);
+      if(!test())throw new Error(key+' failed to initialize');
+    }
+    await ensureSdk('Firebase App','https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js',function(){return !!(window.firebase&&firebase.initializeApp)});
+    await ensureSdk('Firebase Auth','https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js',function(){return !!(window.firebase&&firebase.auth)});
+    await ensureSdk('Firebase Firestore','https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js',function(){return !!(window.firebase&&firebase.firestore)});
+    initFirebase();
+    if(!FB_AUTH||typeof FB_AUTH.signInWithEmailAndPassword!=='function')throw new Error('Firebase Authentication is not ready');
+    if(!FB_DB)throw new Error('Firestore is not ready');
+    return {auth:FB_AUTH,db:FB_DB};
+  })().catch(function(err){__firebaseReadyPromise=null;throw err});
+  return __firebaseReadyPromise;
+}
+
+var __doLoginAfterFirebaseReady=doLogin;
+doLogin=async function(){
+  var errBox=el('aerr');
+  try{
+    if(errBox){errBox.style.display='none';errBox.textContent='';}
+    await ensureFirebaseReady();
+    return await __doLoginAfterFirebaseReady();
+  }catch(err){
+    console.error('Firebase login readiness error:',err);
+    if(errBox){
+      errBox.textContent=(err&&err.message)||'Firebase could not load. Check the internet connection and reload.';
+      errBox.style.display='block';
+    }
+  }
+};
+
 </script>
 </body>
 </html>
