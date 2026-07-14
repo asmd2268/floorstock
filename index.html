@@ -769,12 +769,12 @@ body.role-pharmacy_staff .pg:not(#pg-reqs):not(#pg-print):not(#pg-crashcart) tex
       <div class="fl g8 ic" style="flex-wrap:wrap">
         <label style="margin:0;font-size:13px;color:var(--tx2)">Orders per page</label>
         <div class="fl g6 ic">
-          <button class="tbtn ppp-btn on" data-v="1" onclick="setPPP(1,this)">1</button>
           <button class="tbtn ppp-btn" data-v="2" onclick="setPPP(2,this)">2</button>
           <button class="tbtn ppp-btn" data-v="3" onclick="setPPP(3,this)">3</button>
           <button class="tbtn ppp-btn" data-v="4" onclick="setPPP(4,this)">4</button>
           <button class="tbtn ppp-btn" data-v="5" onclick="setPPP(5,this)">5</button>
         </div>
+        <button class="btn bg" id="purge-old-orders-btn" style="display:none" onclick="cleanupOldOrders(false)">🗑 Delete orders older than 6 months</button>
         <button class="btn bp" onclick="doPrint()">&#x1F5A8; Print selected</button>
       </div>
     </div>
@@ -2980,7 +2980,8 @@ function renderAn(){
   else if(p==='year')from=new Date(now.getFullYear(),0,1);
   else from=new Date(el('rfrom').value||'2000-01-01');
   var to=p==='custom'?new Date(el('rto').value||now):now;
-  var rs=gr().filter(function(r){if(r.status==='pending')return false;var d=new Date(r.created||0);return(!df||r.deptId===df)&&d>=from&&d<=to});
+  var archived=S.g('request_analytics_archive')||[];
+  var rs=gr().concat(archived).filter(function(r){if(r.status==='pending')return false;var d=new Date(r.created||0);return(!df||r.deptId===df)&&d>=from&&d<=to});
   var tot={};
   rs.forEach(function(r){(r.dispensed||[]).forEach(function(d){if(d.qty>0)tot[d.medId]=(tot[d.medId]||0)+d.qty})});
   var srt=Object.keys(tot).map(function(k){return[k,tot[k]]}).sort(function(a,b){return b[1]-a[1]});
@@ -3003,8 +3004,34 @@ function renderAn(){
     :'<tr><td colspan="5" style="text-align:center;color:var(--gnl);padding:18px">All dispensed &#x2713;</td></tr>';
 }
 
+// ── ORDER RETENTION (6 MONTHS) ───────────────────────────
+function orderRetentionCutoff(){var d=new Date();d.setMonth(d.getMonth()-6);return d}
+function requestArchiveRecord(r){
+  return {id:r.id,deptId:r.deptId||'',deptName:r.deptName||'',created:r.created||r.fulfilledAt||nowISO(),fulfilledAt:r.fulfilledAt||'',status:r.status||'fulfilled',dispensed:(r.dispensed||[]).map(function(x){return {medId:x.medId,qty:Number(x.qty)||0}})};
+}
+async function cleanupOldOrders(autoMode){
+  if(!CU||CU.role!=='pharmacy')return;
+  if(!autoMode&&CU.master!==true)return toast('Only Master can delete old orders manually.','err');
+  var cutoff=orderRetentionCutoff(), all=gr(), old=all.filter(function(r){var dt=new Date(r.created||r.fulfilledAt||0);return !isNaN(dt)&&dt<cutoff});
+  if(!old.length){if(!autoMode)toast('No orders older than 6 months.','info');return}
+  if(!autoMode&&!confirm('Delete '+old.length+' orders older than 6 months? Their dispensed quantities will remain in Analytics.'))return;
+  var archive=(S.g('request_analytics_archive')||[]).slice(), ids={};archive.forEach(function(x){ids[x.id]=true});
+  old.forEach(function(r){if(r.status!=='pending'&&!ids[r.id])archive.push(requestArchiveRecord(r))});
+  // Requests are deleted only from order history. Medication, shelf and expiry databases are separate keys and are never touched here.
+  await S.s('request_analytics_archive',archive);
+  await S.s('requests',all.filter(function(r){return old.indexOf(r)<0}));
+  if(!autoMode)toast(old.length+' old orders deleted; analytics preserved.','succ');
+  if(document.querySelector('#pg-print.on'))renderPrint();
+}
+var _orderCleanupStarted=false;
+function scheduleAutomaticOrderCleanup(){
+  if(_orderCleanupStarted||!CU||CU.role!=='pharmacy')return;_orderCleanupStarted=true;
+  setTimeout(function(){cleanupOldOrders(true).catch(function(e){console.error('Automatic order cleanup failed',e)})},1500);
+}
+
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
 function renderPrint(){
+  var purgeBtn=el('purge-old-orders-btn');if(purgeBtn)purgeBtn.style.display=(CU&&CU.master===true)?'inline-flex':'none';
   var rs=gr().filter(function(r){return r.status!=='pending'}).slice().reverse();
   el('ptbl').innerHTML=rs.length
     ?rs.map(function(r){var d=gd().find(function(x){return x.id===r.deptId});var n=(r.dispensed||[]).filter(function(x){return x.qty>0}).length;
@@ -3012,7 +3039,7 @@ function renderPrint(){
     }).join('')
     :'<tr><td colspan="6" style="text-align:center;color:var(--tx2);padding:18px">No fulfilled requests</td></tr>';
 }
-var PPP=1; // orders per page (1-5)
+var PPP=0; // employee must choose 2, 3, 4, or 5 orders per page
 function setPPP(n,btn){
   PPP=n;
   document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
@@ -3021,7 +3048,8 @@ function setPPP(n,btn){
 function doPrint(){
   var sel=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
   if(!sel.length)return toast('Select at least one order','err');
-  var ppp=PPP||1;
+  if([2,3,4,5].indexOf(PPP)<0)return toast('Choose orders per page: 2, 3, 4, or 5','err');
+  var ppp=PPP;
   var today=fmtDate(nowISO());
 
   // Collect order data
@@ -5678,6 +5706,7 @@ startApp=function(){
     var rb=el('rbadge');if(rb)rb.innerHTML='🧪 '+masterRoleLabel(MASTER_EFFECTIVE.role)+(MASTER_EFFECTIVE.deptName?' · '+esc(MASTER_EFFECTIVE.deptName):'');
   }
   addMasterSwitchButton();
+  scheduleAutomaticOrderCleanup();
   if(!canManageUsers()){
     var ub=document.querySelector('[data-pg="pg-users"]');if(ub)ub.remove();
   }
