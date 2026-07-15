@@ -8353,5 +8353,48 @@ body.role-department #ctl-log{pointer-events:none}
   };
 })();
 </script>
+
+
+<!-- v1.2 one-time ICU Floor Stock test cleanup -->
+<script>
+(function(){
+  var CLEANUP_KEY='icu_floorstock_test_cleanup_v12';
+  function norm(v){return String(v||'').trim().toLowerCase().replace(/[^a-z0-9]+/g,'')}
+  function isIcuDept(d){return d && (norm(d.name)==='icu' || norm(d.id)==='icu')}
+  async function cleanupIcuFloorStockTest(){
+    try{
+      if(!window.S || !S.ready || !window.FB_DB || !window.FB_AUTH || !FB_AUTH.currentUser)return false;
+      var isMaster=!!((window.CU&&CU.master)||(window.MASTER_ACTUAL&&MASTER_ACTUAL.master)||(typeof window.isMasterActual==='function'&&window.isMasterActual()));
+      if(!isMaster)return false;
+      if(S.g(CLEANUP_KEY)&&S.g(CLEANUP_KEY).done)return true;
+      var depts=(typeof gd==='function'?gd():S.g('departments')||[]), icu=depts.filter(isIcuDept);
+      var ids=icu.map(function(d){return d.id}).filter(Boolean);
+      if(!ids.length){await S.s(CLEANUP_KEY,{done:true,at:new Date().toISOString(),removed:0});return true}
+      var removedMeds=0,removedExpiry=0,removedRequests=0,removedNotes=0;
+      for(var i=0;i<ids.length;i++){
+        var id=ids[i];
+        removedMeds+=(S.g('meds_'+id)||[]).length;
+        removedExpiry+=(S.g('expiry_'+id)||[]).length;
+        await S.rm('meds_'+id);await S.rm('expiry_'+id);await S.rm('shelves_'+id);await S.rm('alerts_'+id);
+        try{await FB_DB.collection('public_expiry').doc(id).delete()}catch(e){}
+        try{await FB_DB.collection('public_controlled_expiry').doc(id).delete()}catch(e){}
+      }
+      var req=(S.g('requests')||[]),req2=req.filter(function(r){return ids.indexOf(r.deptId)<0});removedRequests=req.length-req2.length;if(removedRequests)await S.s('requests',req2);
+      var notes=(S.g('notes')||[]),notes2=notes.filter(function(n){return ids.indexOf(n.deptId)<0});removedNotes=notes.length-notes2.length;if(removedNotes)await S.s('notes',notes2);
+      var users=(S.g('users')||[]),users2=users.filter(function(u){return ids.indexOf(u.deptId)<0});if(users2.length!==users.length)await S.s('users',users2);
+      await S.s('departments',depts.filter(function(d){return ids.indexOf(d.id)<0}));
+      await S.s(CLEANUP_KEY,{done:true,at:new Date().toISOString(),departmentIds:ids,removedMeds:removedMeds,removedExpiry:removedExpiry,removedRequests:removedRequests,removedNotes:removedNotes});
+      if(typeof renderUsers==='function')renderUsers();if(typeof fillDS==='function')fillDS();if(typeof populateInvDeptSel==='function')populateInvDeptSel();if(typeof refreshCurrentPage==='function')refreshCurrentPage();
+      if(typeof toast==='function')toast('ICU test data cleaned: '+removedMeds+' medicines, '+removedExpiry+' expiry records.','succ');
+      return true;
+    }catch(e){console.error('ICU test cleanup failed',e);if(typeof toast==='function')toast('ICU test cleanup could not finish: '+(e.message||e),'err');return false}
+  }
+  window.cleanupIcuFloorStockTest=cleanupIcuFloorStockTest;
+  function schedule(){setTimeout(function(){cleanupIcuFloorStockTest()},1200)}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule);else schedule();
+  var oldStart=window.startApp;
+  if(typeof oldStart==='function')window.startApp=function(){var r=oldStart.apply(this,arguments);schedule();return r};
+})();
+</script>
 </body>
 </html>
