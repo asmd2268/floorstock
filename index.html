@@ -1784,7 +1784,9 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
       <input type="text" id="new-cat-inp" placeholder="New category name..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')addCategory()">
       <button class="btn bp" onclick="addCategory()">Add</button>
     </div>
-    <div id="cat-list" style="max-height:320px;overflow-y:auto"></div>
+    <div id="dept-cat-context" style="padding:10px 12px;margin-bottom:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:12px"></div>
+    <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Use ↑ and ↓ to set this department’s category order. Solutions is always enabled and fixed at the bottom.</div>
+    <div id="cat-list" style="max-height:360px;overflow-y:auto"></div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn bg" onclick="CM('mcat-mgr')">Close</button>
     </div>
@@ -2736,7 +2738,7 @@ function renderInv(){
   var html='';
   if(!fil.length) html='<tr><td colspan="9" style="text-align:center;color:var(--tx2);padding:22px">No medications found</td></tr>';
   var medNumber=0;
-  Object.keys(grp).sort().forEach(function(cat){
+  sortDeptInventoryCategories(deptId,Object.keys(grp)).forEach(function(cat){
     html+='<tr><td colspan="9" class="cath">&#x1F4C1; '+cat+' <span style="color:var(--tx3);font-size:10px">('+grp[cat].length+')</span></td></tr>';
     grp[cat].forEach(function(m){
       medNumber++;
@@ -9340,6 +9342,88 @@ window.doPrint=function(){
     return r;
   };
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(addMasterCleanupButton,0)});else setTimeout(addMasterCleanupButton,0);
+})();
+</script>
+
+<script id="department-category-order-patch">
+(function(){
+  var SOL='Solutions';
+  function uniq(arr){return (arr||[]).filter(function(v,i,a){return v&&a.indexOf(v)===i})}
+  function allDeptCats(deptId){
+    var base=typeof getCategories==='function'?getCategories().slice():[];
+    var meds=deptId&&typeof getMeds==='function'?getMeds(deptId):[];
+    meds.forEach(function(m){if(m.category&&base.indexOf(m.category)<0)base.push(m.category)});
+    base=uniq(base.filter(function(c){return c!==SOL}));base.push(SOL);return base;
+  }
+  window.getDeptCategoryConfig=function(deptId){
+    if(!deptId)return {order:allDeptCats(deptId),enabled:allDeptCats(deptId)};
+    var saved=S.g('dept_category_config_'+deptId)||{};
+    var all=allDeptCats(deptId);
+    var order=uniq((saved.order||[]).concat(all)).filter(function(c){return all.indexOf(c)>-1&&c!==SOL});
+    order.push(SOL);
+    var enabled=Array.isArray(saved.enabled)?saved.enabled.slice():all.slice();
+    enabled=uniq(enabled.filter(function(c){return all.indexOf(c)>-1&&c!==SOL}));enabled.push(SOL);
+    return {order:order,enabled:enabled};
+  };
+  window.setDeptCategoryConfig=function(deptId,cfg){
+    if(!deptId)return;
+    cfg.order=uniq((cfg.order||[]).filter(function(c){return c!==SOL}));cfg.order.push(SOL);
+    cfg.enabled=uniq((cfg.enabled||[]).filter(function(c){return c!==SOL}));cfg.enabled.push(SOL);
+    S.s('dept_category_config_'+deptId,cfg);
+  };
+  window.sortDeptInventoryCategories=function(deptId,cats){
+    var cfg=getDeptCategoryConfig(deptId), order=cfg.order;
+    return cats.slice().sort(function(a,b){
+      if(a===SOL&&b!==SOL)return 1;if(b===SOL&&a!==SOL)return -1;
+      var ai=order.indexOf(a),bi=order.indexOf(b);
+      if(ai<0)ai=999;if(bi<0)bi=999;
+      return ai-bi||String(a).localeCompare(String(b));
+    });
+  };
+  function activeDept(){var s=document.getElementById('inv-dept-sel');return s&&s.value||''}
+  window.openManageCats=function(){
+    var deptId=activeDept();
+    if(!deptId)return toast('Select a department first','err');
+    renderCatList();OM('mcat-mgr');
+  };
+  window.renderCatList=function(){
+    var deptId=activeDept(), dept=(gd()||[]).find(function(d){return d.id===deptId}), cfg=getDeptCategoryConfig(deptId), all=allDeptCats(deptId);
+    var ctx=document.getElementById('dept-cat-context');
+    if(ctx)ctx.innerHTML='<b>Department:</b> '+esc((dept&&dept.name)||deptId)+'<br><span style="color:var(--tx2)">Choose which categories this department uses and arrange their display order.</span>';
+    var ordered=cfg.order.concat(all.filter(function(c){return cfg.order.indexOf(c)<0&&c!==SOL}));
+    ordered=uniq(ordered.filter(function(c){return c!==SOL}));ordered.push(SOL);
+    var box=document.getElementById('cat-list');if(!box)return;
+    box.innerHTML=ordered.map(function(c,i){
+      var fixed=c===SOL, checked=fixed||cfg.enabled.indexOf(c)>-1;
+      return '<div style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--bd)" data-cat="'+esc(c)+'">'
+        +'<input type="checkbox" '+(checked?'checked':'')+' '+(fixed?'disabled':'')+' onchange="toggleDeptCategory(\''+String(c).replace(/'/g,"\\'")+'\',this.checked)" style="margin:0;width:16px;height:16px">'
+        +'<div><b>'+esc(c)+'</b>'+(fixed?'<div style="font-size:10px;color:var(--tx2)">Always last / ثابت في الأسفل</div>':'')+'</div>'
+        +'<div style="display:flex;gap:4px"><button class="btn bg bxs" '+(fixed||i===0?'disabled':'')+' onclick="moveDeptCategory(\''+String(c).replace(/'/g,"\\'")+'\',-1)">↑</button>'
+        +'<button class="btn bg bxs" '+(fixed||i>=ordered.length-2?'disabled':'')+' onclick="moveDeptCategory(\''+String(c).replace(/'/g,"\\'")+'\',1)">↓</button></div></div>';
+    }).join('');
+  };
+  window.toggleDeptCategory=function(cat,on){
+    var deptId=activeDept(),cfg=getDeptCategoryConfig(deptId);
+    if(cat===SOL)return;
+    cfg.enabled=cfg.enabled.filter(function(c){return c!==cat});if(on)cfg.enabled.push(cat);
+    setDeptCategoryConfig(deptId,cfg);refreshDeptCategorySelectors();renderCatList();renderInv();
+  };
+  window.moveDeptCategory=function(cat,dir){
+    var deptId=activeDept(),cfg=getDeptCategoryConfig(deptId),arr=cfg.order.filter(function(c){return c!==SOL});
+    var i=arr.indexOf(cat);if(i<0)return;var j=i+dir;if(j<0||j>=arr.length)return;
+    var t=arr[i];arr[i]=arr[j];arr[j]=t;cfg.order=arr.concat([SOL]);setDeptCategoryConfig(deptId,cfg);renderCatList();renderInv();
+  };
+  window.refreshDeptCategorySelectors=function(){
+    var deptId=activeDept();if(!deptId)return;var cfg=getDeptCategoryConfig(deptId),cats=cfg.order.filter(function(c){return cfg.enabled.indexOf(c)>-1});
+    ['dcat','bulk-cat-sel'].forEach(function(id){var sel=document.getElementById(id);if(!sel)return;var cur=sel.value;var prefix=id==='bulk-cat-sel'?'<option value="">Change category to...</option>':'';sel.innerHTML=prefix+cats.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>'}).join('');if(cats.indexOf(cur)>-1)sel.value=cur});
+  };
+  var oldOpenAdd=window.openAddDrug;
+  window.openAddDrug=function(){if(oldOpenAdd)oldOpenAdd.apply(this,arguments);setTimeout(refreshDeptCategorySelectors,0)};
+  var oldOpenEdit=window.openEditDrug;
+  window.openEditDrug=function(){if(oldOpenEdit)oldOpenEdit.apply(this,arguments);setTimeout(refreshDeptCategorySelectors,0)};
+  var oldRefresh=window.refreshCatSelectors;
+  window.refreshCatSelectors=function(){if(oldRefresh)oldRefresh.apply(this,arguments);refreshDeptCategorySelectors()};
+  var invSel=document.getElementById('inv-dept-sel');if(invSel)invSel.addEventListener('change',function(){setTimeout(refreshDeptCategorySelectors,0)});
 })();
 </script>
 </body>
