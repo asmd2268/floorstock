@@ -617,7 +617,7 @@ body.light .login-attribution{color:#6b7280}
       if(!b){b=document.createElement('button');b.id='zebra-labels-nav';b.type='button';b.className='nb';b.dataset.pg='pg-zebra-labels';b.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';b.onclick=function(){if(window.showPg)window.showPg('pg-zebra-labels')};n.appendChild(b)}
       b.style.display='';
     }
-    function watch(){var n=document.getElementById('mnav');if(!n)return;add();if(window.MutationObserver)new MutationObserver(function(){setTimeout(add,0)}).observe(n,{childList:true});setInterval(add,500)}
+    function watch(){add()}
     if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch);else watch();
     window.__ensureZebraNavEarly=add;
   })();
@@ -7324,6 +7324,7 @@ crashPrint=function(id){
     else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
+    if((typeof isMasterActual==='function'&&isMasterActual())||(CU&&CU.role==='pharmacy')){var zb=document.createElement('button');zb.id='zebra-labels-nav';zb.className='nb';zb.dataset.pg='pg-zebra-labels';zb.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';zb.onclick=function(){showPg('pg-zebra-labels')};nav.appendChild(zb)}
     setTimeout(ccUpdateBadges,0);
   };
 
@@ -7960,80 +7961,16 @@ body.role-department #ctl-log{pointer-events:none}
 </script>
 
 
-<!-- v1.2 Zebra navigation definitive in-document fix -->
+<!-- v1.2 Zebra navigation lightweight guard -->
 <script>
 (function(){
-  function zebraAllowed(){
-    try{
-      if(!window.CU)return false;
-      if(CU.role==='pharmacy')return true;
-      if(CU.master===true)return true;
-      if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
-      if(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)return true;
-      return false;
-    }catch(e){return false}
-  }
-  function ensureZebraNav(){
-    var nav=document.getElementById('mnav');
-    if(!nav)return;
-    var existing=nav.querySelector('#zebra-labels-nav,[data-pg="pg-zebra-labels"]');
-    if(!zebraAllowed()){
-      if(existing)existing.remove();
-      return;
-    }
-    if(existing){
-      existing.id='zebra-labels-nav';
-      existing.style.display='';
-      return;
-    }
-    var b=document.createElement('button');
-    b.type='button';
-    b.id='zebra-labels-nav';
-    b.className='nb';
-    b.setAttribute('data-pg','pg-zebra-labels');
-    b.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';
-    b.onclick=function(){if(typeof window.showPg==='function')window.showPg('pg-zebra-labels')};
-    var crash=nav.querySelector('[data-pg="pg-crashcart"]');
-    if(crash&&crash.nextSibling)nav.insertBefore(b,crash.nextSibling);else nav.appendChild(b);
-  }
-  function installHooks(){
-    if(window.__zebraNavHooksInstalled)return;
-    window.__zebraNavHooksInstalled=true;
-    var oldBuild=window.buildNav;
-    window.buildNav=function(){
-      var r=oldBuild&&oldBuild.apply(this,arguments);
-      ensureZebraNav();
-      setTimeout(ensureZebraNav,0);
-      setTimeout(ensureZebraNav,100);
-      return r;
-    };
-    var oldStart=window.startApp;
-    window.startApp=function(){
-      var r=oldStart&&oldStart.apply(this,arguments);
-      ensureZebraNav();
-      setTimeout(ensureZebraNav,0);
-      setTimeout(ensureZebraNav,200);
-      return r;
-    };
-    var oldShow=window.showPg;
-    window.showPg=function(id){
-      if(id==='pg-zebra-labels'&&!zebraAllowed())id='pg-dash';
-      var r=oldShow&&oldShow.call(this,id);
-      ensureZebraNav();
-      return r;
-    };
-  }
-  function boot(){
-    installHooks();
-    ensureZebraNav();
-    var nav=document.getElementById('mnav');
-    if(nav&&window.MutationObserver){
-      new MutationObserver(function(){ensureZebraNav()}).observe(nav,{childList:true});
-    }
-    var tries=0,t=setInterval(function(){ensureZebraNav();if(++tries>30)clearInterval(t)},250);
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-  window.ensureZebraNav=ensureZebraNav;
+  window.ensureZebraNav=function(){
+    var nav=document.getElementById('mnav');if(!nav||!window.CU)return;
+    var allowed=(CU.role==='pharmacy')||(typeof window.isMasterActual==='function'&&window.isMasterActual());
+    var b=nav.querySelector('#zebra-labels-nav');
+    if(!allowed){if(b)b.remove();return}
+    if(!b&&typeof window.buildNav==='function')window.buildNav();
+  };
 })();
 </script>
 </body>
