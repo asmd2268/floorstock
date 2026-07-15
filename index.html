@@ -6223,10 +6223,13 @@ function shelfExpiryCell(medId){
   var cfg=getAlertSettings(CU.deptId)||{d1:30,d2:7};
   var batches=getExpiry(CU.deptId).filter(function(b){return b.medId===medId;}).sort(function(a,b){return String(a.date||'').localeCompare(String(b.date||''));});
   var rows=batches.map(function(b){
-    var days=daysUntil(b.date),cls='exp-ok',label='OK';
-    if(days!==null&&days<=0){cls='exp-red';label='Expired';}
-    else if(days!==null&&days<=Number(cfg.d2||7)){cls='exp-red';label='Urgent';}
-    else if(days!==null&&days<=Number(cfg.d1||30)){cls='exp-yellow';label='Soon';}
+    var days=daysUntil(b.date),cls='exp-ok',label='—';
+    if(days!==null&&days<=0){cls='exp-red';label=(days===0?'Expires today':'Expired '+Math.abs(days)+' day'+(Math.abs(days)===1?'':'s')+' ago');}
+    else if(days!==null){
+      label=days+' day'+(days===1?'':'s')+' remaining';
+      if(days<=Number(cfg.d2||7))cls='exp-red';
+      else if(days<=Number(cfg.d1||30))cls='exp-yellow';
+    }
     return '<div class="'+cls+'" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">'
       +'<span><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <small>('+label+')</small></span>'
       +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" onclick="openEditExpiry(this)">✎</button> '
