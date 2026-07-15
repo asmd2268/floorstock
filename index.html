@@ -8607,8 +8607,8 @@ body.role-department #ctl-log{pointer-events:none}
       '.print-page{width:290mm;height:203mm;max-height:203mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}',
       '.print-page:last-child{page-break-after:auto;break-after:auto}',
       '.page-top{height:4mm;line-height:4mm;text-align:center;font-size:4.5pt;color:#555;border-bottom:.18mm solid #999;flex:0 0 auto}',
-      '.flow{flex:1;min-height:0;column-fill:auto;column-gap:0;column-rule:.28mm solid #333;overflow:hidden;padding:0}',
-      '.order-block{display:block;break-inside:auto;page-break-inside:auto;margin:0;padding:0 1.1mm .8mm;border:0}',
+      '.flow{flex:1;min-height:0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0;overflow:hidden;padding:0;border-left:.28mm solid #333}',
+      '.order-block{display:block;min-width:0;min-height:0;overflow:hidden;margin:0;padding:0 1.1mm .8mm;border-right:.28mm solid #333}',
       '.order-block:nth-of-type(even){background:#e7e7e7}',
       '.order-head{break-after:avoid;display:flex;align-items:center;justify-content:space-between;gap:1mm;min-height:5mm;padding:.45mm .8mm;border-top:.35mm solid #111;border-bottom:.22mm solid #555}',
       '.order-block:first-child .order-head{border-top:0}',
@@ -8628,19 +8628,19 @@ body.role-department #ctl-log{pointer-events:none}
     var html='<!doctype html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body>';
 
     groups.forEach(function(group,pageIndex){
-      var totalItems=group.reduce(function(sum,o){return sum+Math.max(1,o.items.length)},0);
+      var totalItems=group.reduce(function(sum,o){return sum+Math.max(1,o.items.length)},0);var maxPerOrder=Math.max.apply(null,group.map(function(o){return Math.max(1,o.items.length)}));
       var columns=perPage;
       if(totalItems<=18)columns=Math.max(2,Math.min(perPage,2));
       else if(totalItems<=40)columns=Math.max(2,Math.min(perPage,3));
       else columns=perPage;
 
-      var baseNamePt=totalItems<=18?12.8:totalItems<=35?10.8:totalItems<=55?8.9:7.2;
+      var baseNamePt=maxPerOrder<=10?12.8:maxPerOrder<=20?10.8:maxPerOrder<=35?8.9:7.2;
       var baseStrengthPt=Math.max(5.2,baseNamePt*.62);
       var baseQtyPt=Math.max(8.3,baseNamePt*1.05);
 
       html+='<section class="print-page" data-columns="'+columns+'">'
         +'<div class="page-top">Floor Stock Dispensing Orders · '+fmtDate(nowISO())+' · '+(pageIndex+1)+'/'+groups.length+'</div>'
-        +'<div class="flow" style="column-count:'+columns+';font-size:'+baseNamePt+'pt">';
+        +'<div class="flow" style="grid-template-columns:repeat('+columns+',minmax(0,1fr));font-size:'+baseNamePt+'pt">';
 
       group.forEach(function(o){
         html+='<section class="order-block">'
@@ -8669,23 +8669,20 @@ body.role-department #ctl-log{pointer-events:none}
 window.onload=function(){
   setTimeout(function(){
     document.querySelectorAll('.print-page').forEach(function(page){
-      var flow=page.querySelector('.flow');
       var tries=0;
-      while(flow.scrollHeight>flow.clientHeight && tries<30){
-        var current=parseFloat(flow.style.fontSize)||8;
-        flow.style.fontSize=(current*0.96)+'pt';
-        flow.querySelectorAll('.drug-name').forEach(function(el){
-          el.style.fontSize=(parseFloat(el.style.fontSize||current)*0.96)+'pt';
-        });
-        flow.querySelectorAll('.strength').forEach(function(el){
-          el.style.fontSize=(parseFloat(el.style.fontSize||5.5)*0.96)+'pt';
-        });
-        flow.querySelectorAll('.qty').forEach(function(el){
+      while(page.scrollHeight>page.clientHeight && tries<30){
+        page.querySelectorAll('.drug-name').forEach(function(el){
           el.style.fontSize=(parseFloat(el.style.fontSize||8)*0.96)+'pt';
         });
-        flow.querySelectorAll('.item').forEach(function(el){
-          el.style.paddingTop='0.35mm';
-          el.style.paddingBottom='0.35mm';
+        page.querySelectorAll('.strength').forEach(function(el){
+          el.style.fontSize=(parseFloat(el.style.fontSize||5.5)*0.96)+'pt';
+        });
+        page.querySelectorAll('.qty').forEach(function(el){
+          el.style.fontSize=(parseFloat(el.style.fontSize||8)*0.96)+'pt';
+        });
+        page.querySelectorAll('.item').forEach(function(el){
+          el.style.paddingTop='0.3mm';
+          el.style.paddingBottom='0.3mm';
         });
         tries++;
       }
