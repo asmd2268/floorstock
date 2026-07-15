@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ASDHealth — Pharmacy Operations</title>
+<title>ASDHealth Pharmacy Pilot v1.2 (Development)</title>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
@@ -616,6 +616,9 @@ body.light .login-attribution{color:#6b7280}
 @media print{.unit-qty-notice{display:none!important}}
 </style>
 
+
+/* v1.2 print cells fit content */
+
 </head>
 <body>
 
@@ -838,6 +841,13 @@ body.light .login-attribution{color:#6b7280}
     <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
       <div><div class="stitle">Print Orders</div><div class="ssub" style="margin:0">You may print any fulfilled request again whenever needed</div></div>
       <div class="fl g8 ic" style="flex-wrap:wrap">
+        <label style="margin:0;font-size:13px;color:var(--tx2)">Print mode</label>
+        <select id="print-solution-mode" class="psel" style="min-width:280px">
+          <option value="all">1 — Print complete orders</option>
+          <option value="nonSolutions">2 — Print all medicines except Solutions</option>
+          <option value="solutions">3 — Print Solutions only</option>
+          <option value="split">4 — Split selected departments: non-Solutions page + Solutions page</option>
+        </select>
         <label style="margin:0;font-size:13px;color:var(--tx2)">Orders per page</label>
         <div class="fl g6 ic">
           <button class="tbtn ppp-btn" data-v="2" onclick="setPPP(2,this)">2</button>
@@ -847,6 +857,9 @@ body.light .login-attribution{color:#6b7280}
         </div>
         <button class="btn bg" id="purge-old-orders-btn" style="display:none" onclick="cleanupOldOrders(false)">🗑 Delete orders older than 6 months</button>
         <button class="btn bp" onclick="doPrint()">&#x1F5A8; Print selected</button>
+        <span style="font-size:11px;color:var(--yll);font-weight:700">
+          ⚠ Maximum 140 items per printed page. Split into 2 different orders if exceeded.
+        </span>
       </div>
     </div>
     <div class="card">
@@ -3066,7 +3079,63 @@ function printControlledCurrent(){
   var qr='https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url.toString());
   var w=window.open('','_ctlprint');
   if(!w)return toast('Allow pop-ups to print.','err');
-  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script></body></html>');
+  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script>
+<script>
+(function(){
+  function isSolutionMed(m){
+    if(!m)return false;
+    var c=String(m.category||'').toLowerCase();
+    var cls=String(m.classification||'').toLowerCase();
+    return m.solution===true || c==='solutions' || cls==='solutions';
+  }
+  window.__sortSolutionsLast=function(arr){
+    return (arr||[]).slice().sort(function(a,b){
+      var sa=isSolutionMed(a), sb=isSolutionMed(b);
+      if(sa!==sb)return sa?1:-1;
+      return String(a.name||'').localeCompare(String(b.name||''));
+    });
+  };
+
+  var origRenderInv=window.renderInv;
+  if(typeof origRenderInv==='function'){
+    window.renderInv=function(){
+      try{
+        var deptSel=document.getElementById('inv-dept-sel');
+        var deptId=deptSel&&deptSel.value;
+        if(deptId && typeof getMeds==='function'){
+          var meds=getMeds(deptId);
+          meds.sort(function(a,b){
+            var sa=isSolutionMed(a),sb=isSolutionMed(b);
+            if(sa!==sb)return sa?1:-1;
+            return String(a.name||'').localeCompare(String(b.name||''));
+          });
+        }
+      }catch(e){}
+      return origRenderInv.apply(this,arguments);
+    };
+  }
+
+  var origOpenReq=window.openReq;
+  if(typeof origOpenReq==='function'){
+    window.openReq=function(){
+      var res=origOpenReq.apply(this,arguments);
+      setTimeout(function(){
+        document.querySelectorAll('.modal.on tbody').forEach(function(tb){
+          var rows=Array.from(tb.children);
+          rows.sort(function(a,b){
+            var at=(a.textContent||'').toLowerCase().includes('solution');
+            var bt=(b.textContent||'').toLowerCase().includes('solution');
+            return at===bt?0:(at?1:-1);
+          }).forEach(function(r){tb.appendChild(r)});
+        });
+      },50);
+      return res;
+    };
+  }
+})();
+</script>
+
+</body></html>');
   w.document.close();
 }
 </script>
@@ -8583,17 +8652,56 @@ body.role-department #ctl-log{pointer-events:none}
         return Number.isFinite(Number(x.qty));
       }).map(function(x){
         var med=meds.find(function(m){return m.id===x.medId});
+        var category=String((med&&med.category)||x.category||'').toLowerCase();
+        var classification=String((med&&med.classification)||x.classification||'').toLowerCase();
         return {
           name:(med&&med.name)||x.name||x.medId||'Unknown medication',
           strength:(med&&med.strength)||x.strength||'',
-          qty:Number(x.qty)
+          qty:Number(x.qty),
+          refrigerated:!!(med&&med.refrigerated),
+          lookAlike:!!(med&&(med.lasa||med.look_alike||med.lookAlike)),
+          highAlert:!!(med&&(med.high_alert||med.highAlert)),
+          hazard:!!(med&&(med.hazard||med.hazardous)),
+          solution:!!(med&&(med.solution===true||category==='solutions'||classification==='solutions'))
         };
+      }).sort(function(a,b){
+        if(a.solution!==b.solution)return a.solution?1:-1;
+        return String(a.name||'').localeCompare(String(b.name||''));
       });
       return {request:request,dept:dept,items:items};
     }).filter(Boolean);
 
-    var groups=[];
-    for(var i=0;i<orders.length;i+=perPage)groups.push(orders.slice(i,i+perPage));
+    var mode=(document.getElementById('print-solution-mode')||{}).value||'all';
+    var sets=[];
+
+    function cloneWithFilter(order,filterFn){
+      return {request:order.request,dept:order.dept,items:order.items.filter(filterFn)};
+    }
+
+    if(mode==='nonSolutions'){
+      sets=[{label:'All medicines except Solutions',orders:orders.map(function(o){return cloneWithFilter(o,function(it){return !it.solution})})}];
+    }else if(mode==='solutions'){
+      sets=[{label:'Solutions only',orders:orders.map(function(o){return cloneWithFilter(o,function(it){return it.solution})})}];
+    }else if(mode==='split'){
+      sets=[
+        {label:'All medicines except Solutions',orders:orders.map(function(o){return cloneWithFilter(o,function(it){return !it.solution})})},
+        {label:'Solutions only',orders:orders.map(function(o){return cloneWithFilter(o,function(it){return it.solution})})}
+      ];
+    }else{
+      sets=[{label:'Complete orders',orders:orders}];
+    }
+
+    var pages=[];
+    sets.forEach(function(set){
+      for(var i=0;i<set.orders.length;i+=perPage){
+        var pageOrders=set.orders.slice(i,i+perPage);
+        var pageItems=pageOrders.reduce(function(sum,o){return sum+o.items.length},0);
+        if(pageItems>140){
+          throw new Error('PAGE_LIMIT|'+set.label+'|'+pageItems);
+        }
+        pages.push({label:set.label,orders:pageOrders,totalItems:pageItems});
+      }
+    });
 
     function escHtml(v){return esc(String(v==null?'':v))}
     function requestName(o){
@@ -8606,56 +8714,59 @@ body.role-department #ctl-log{pointer-events:none}
       'html,body{margin:0;padding:0;width:100%;font-family:Arial,Tahoma,sans-serif;color:#000;background:#fff}',
       '.print-page{width:290mm;height:203mm;max-height:203mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}',
       '.print-page:last-child{page-break-after:auto;break-after:auto}',
-      '.page-top{height:4mm;line-height:4mm;text-align:center;font-size:4.5pt;color:#555;border-bottom:.18mm solid #999;flex:0 0 auto}',
-      '.flow{flex:1;min-height:0;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:0;overflow:hidden;padding:0;border-left:.28mm solid #333}',
-      '.order-block{display:block;min-width:0;min-height:0;overflow:hidden;margin:0;padding:0 1.1mm .8mm;border-right:.28mm solid #333}',
-      '.order-block:nth-of-type(even){background:#e7e7e7}',
-      '.order-head{break-after:avoid;display:flex;align-items:center;justify-content:space-between;gap:1mm;min-height:5mm;padding:.45mm .8mm;border-top:.35mm solid #111;border-bottom:.22mm solid #555}',
-      '.order-block:first-child .order-head{border-top:0}',
-      '.dept{font-size:5.3pt;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:70%}',
-      '.date{font-size:4.2pt;color:#444;white-space:nowrap;text-align:right;max-width:30%;overflow:hidden;text-overflow:ellipsis}',
-      '.item{break-inside:avoid;display:flex;align-items:flex-start;justify-content:flex-start;gap:.8mm;padding:.5mm .75mm;border-bottom:.16mm solid #b8b8b8;line-height:1.06}',
-      '.item:last-child{border-bottom:0}',
-      '.drug{min-width:0;display:flex;flex-direction:column;line-height:1.06}',
-      '.drug-name{font-weight:800;white-space:normal;word-break:break-word;line-height:1.06}',
-      '.strength{font-weight:700;color:#111;white-space:normal;line-height:1.05;margin-top:.15mm}',
-      '.qty{flex:0 0 auto;font-weight:900;color:#000;border:.38mm solid #000;border-radius:1.2mm;line-height:1;min-width:7mm;text-align:center;padding:.45mm .8mm;margin-top:0;white-space:nowrap}',
-      '.no-items{font-size:7pt;padding:3mm;text-align:center;color:#555}',
-      '.foot{height:2.7mm;line-height:2.7mm;text-align:center;font-size:4pt;color:#777;flex:0 0 auto}',
+      '.page-top{height:4mm;line-height:4mm;text-align:center;font-size:4.5pt;color:#444;border-bottom:.18mm solid #888;flex:0 0 auto}',
+      '.flow{flex:1;min-height:0;column-fill:auto;column-gap:0;column-rule:.28mm solid #333;overflow:hidden;padding:0}',
+      '.order-block{display:block;margin:0;padding:0;break-inside:auto;box-decoration-break:clone;-webkit-box-decoration-break:clone}',
+      '.order-block.tone-white{background:#fff}',
+      '.order-block.tone-gray{background:#e3e3e3}',
+      '.order-head{display:flex;align-items:center;justify-content:space-between;gap:.8mm;min-height:4.8mm;padding:.35mm .55mm;border-top:.35mm solid #111;border-bottom:.22mm solid #555;break-after:avoid;column-span:none}',
+      '.dept{font-size:5.2pt;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:72%}',
+      '.date{font-size:4.1pt;color:#444;white-space:nowrap;text-align:right;max-width:28%;overflow:hidden;text-overflow:ellipsis}',
+      '.item{break-inside:avoid;display:flex;align-items:center;justify-content:flex-start;gap:.15mm;padding:.18mm .35mm;border-bottom:.13mm solid #aaa;line-height:1;width:fit-content;max-width:100%}',
+      '.drug{display:inline-flex;flex-direction:column;flex:0 1 auto;min-width:0;width:fit-content;max-width:calc(100% - 9mm);line-height:1}',
+      '.drug-name,.strength{font-size:8pt;line-height:1;width:fit-content;max-width:100%;white-space:normal;word-break:break-word}',
+      '.drug-name{font-weight:900}',
+      '.strength{font-weight:700;margin-top:.08mm}',
+      '.qty{position:relative;flex:0 0 auto;font-size:8pt;font-weight:900;color:#000;border:.35mm solid #000;border-radius:1mm;line-height:1;min-width:7mm;min-height:6.4mm;width:max-content;text-align:center;padding:.55mm .7mm;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}',
+      '.qty.look-alike{border-radius:50%;width:8.5mm;height:8.5mm;min-width:8.5mm;min-height:8.5mm;padding:0}',
+      '.qty.refrigerated:before{content:"❄";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:16pt;line-height:1;opacity:.20;z-index:0}',
+      '.qty-number{position:relative;z-index:1}',
+      '.item.high-alert .drug-name{text-decoration:underline;text-decoration-thickness:.42mm;text-underline-offset:.4mm}',
+      '.tone-white .item.high-alert{background:#d4d4d4}',
+      '.tone-gray .item.high-alert{background:#fff}',
+      '.item.high-alert{outline:.16mm solid #777;outline-offset:-.16mm}',
+      '.item.hazard .drug-name{display:inline;padding:.12mm .25mm;background:repeating-linear-gradient(90deg,#b7b7b7 0,#b7b7b7 2mm,#fff 2mm,#fff 4mm);box-decoration-break:clone;-webkit-box-decoration-break:clone}',
+      '.tone-gray .item.hazard .drug-name{background:repeating-linear-gradient(90deg,#fff 0,#fff 2mm,#c4c4c4 2mm,#c4c4c4 4mm)}',
+      '.no-items{font-size:6pt;padding:1.5mm .8mm;color:#555;border-bottom:.13mm solid #aaa}',
+      '.foot{height:2.7mm;line-height:2.7mm;text-align:center;font-size:4.3pt;font-weight:700;color:#555;flex:0 0 auto}',
       '@media print{html,body{overflow:hidden!important}.print-page{margin:0!important}}'
     ].join('');
 
     var html='<!doctype html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body>';
 
-    groups.forEach(function(group,pageIndex){
-      var totalItems=group.reduce(function(sum,o){return sum+Math.max(1,o.items.length)},0);var maxPerOrder=Math.max.apply(null,group.map(function(o){return Math.max(1,o.items.length)}));
+    pages.forEach(function(pageInfo,pageIndex){
       var columns=perPage;
-      if(totalItems<=18)columns=Math.max(2,Math.min(perPage,2));
-      else if(totalItems<=40)columns=Math.max(2,Math.min(perPage,3));
-      else columns=perPage;
+      html+='<section class="print-page">'
+        +'<div class="page-top">Floor Stock Dispensing Orders · '+escHtml(pageInfo.label)+' · '+pageInfo.totalItems+' items · '+fmtDate(nowISO())+' · '+(pageIndex+1)+'/'+pages.length+'</div>'
+        +'<div class="flow" style="column-count:'+columns+'">';
 
-      var baseNamePt=maxPerOrder<=10?12.8:maxPerOrder<=20?10.8:maxPerOrder<=35?8.9:7.2;
-      var baseStrengthPt=Math.max(5.2,baseNamePt*.62);
-      var baseQtyPt=Math.max(8.3,baseNamePt*1.05);
-
-      html+='<section class="print-page" data-columns="'+columns+'">'
-        +'<div class="page-top">Floor Stock Dispensing Orders · '+fmtDate(nowISO())+' · '+(pageIndex+1)+'/'+groups.length+'</div>'
-        +'<div class="flow" style="grid-template-columns:repeat('+columns+',minmax(0,1fr));font-size:'+baseNamePt+'pt">';
-
-      group.forEach(function(o){
-        html+='<section class="order-block">'
+      pageInfo.orders.forEach(function(o,orderIndex){
+        var tone=orderIndex%2===0?'tone-white':'tone-gray';
+        html+='<section class="order-block '+tone+'">'
           +'<div class="order-head"><span class="dept">'+escHtml(requestName(o))+'</span>'
           +'<span class="date">'+escHtml(fmtDateTime(o.request.fulfilledAt||o.request.created))+'</span></div>';
 
         if(!o.items.length){
-          html+='<div class="no-items">No dispensed items</div>';
+          html+='<div class="no-items">No items in this section</div>';
         }else{
           o.items.forEach(function(item){
-            html+='<div class="item">'
-              +'<span class="drug"><span class="drug-name" style="font-size:'+baseNamePt+'pt">'+escHtml(item.name)+'</span>'
-              +(item.strength?'<span class="strength" style="font-size:'+baseStrengthPt+'pt">'+escHtml(item.strength)+'</span>':'')
+            var itemClass='item'+(item.highAlert?' high-alert':'')+(item.hazard?' hazard':'');
+            var qtyClass='qty'+(item.lookAlike?' look-alike':'')+(item.refrigerated?' refrigerated':'');
+            html+='<div class="'+itemClass+'">'
+              +'<span class="drug"><span class="drug-name">'+escHtml(item.name)+'</span>'
+              +(item.strength?'<span class="strength">'+escHtml(item.strength)+'</span>':'')
               +'</span>'
-              +'<span class="qty" style="font-size:'+baseQtyPt+'pt">'+escHtml(item.qty)+'</span>'
+              +'<span class="'+qtyClass+'"><span class="qty-number">'+escHtml(item.qty)+'</span></span>'
               +'</div>';
           });
         }
@@ -8669,22 +8780,9 @@ body.role-department #ctl-log{pointer-events:none}
 window.onload=function(){
   setTimeout(function(){
     document.querySelectorAll('.print-page').forEach(function(page){
-      var tries=0;
-      while(page.scrollHeight>page.clientHeight && tries<30){
-        page.querySelectorAll('.drug-name').forEach(function(el){
-          el.style.fontSize=(parseFloat(el.style.fontSize||8)*0.96)+'pt';
-        });
-        page.querySelectorAll('.strength').forEach(function(el){
-          el.style.fontSize=(parseFloat(el.style.fontSize||5.5)*0.96)+'pt';
-        });
-        page.querySelectorAll('.qty').forEach(function(el){
-          el.style.fontSize=(parseFloat(el.style.fontSize||8)*0.96)+'pt';
-        });
-        page.querySelectorAll('.item').forEach(function(el){
-          el.style.paddingTop='0.3mm';
-          el.style.paddingBottom='0.3mm';
-        });
-        tries++;
+      var flow=page.querySelector('.flow');
+      if(flow.scrollWidth>flow.clientWidth+2){
+        page.setAttribute('data-overflow','true');
       }
     });
     window.print();
@@ -8708,6 +8806,20 @@ window.onload=function(){
       PPP=0;
       document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
     },0);
+  };
+
+  var original=window.doPrint;
+  window.doPrint=function(){
+    try{return original.apply(this,arguments)}
+    catch(e){
+      var msg=String(e&&e.message||e);
+      if(msg.indexOf('PAGE_LIMIT|')===0){
+        var p=msg.split('|');
+        return toast('⚠ '+p[1]+' contains '+p[2]+' items. Maximum is 140 items per page. Split it into 2 different orders.','err');
+      }
+      console.error(e);
+      return toast('Unable to prepare print layout.','err');
+    }
   };
 })();
 </script>
@@ -8735,5 +8847,46 @@ window.onload=function(){
   };
 })();
 </script>
+<script>
+/* ASDHealth Pharmacy Pilot v1.2 (Development) — A4 adaptive continuous-flow print engine */
+(function(){
+'use strict';
+window.doPrint=function(){
+  var selected=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
+  if(!selected.length)return toast('Select at least one order','err');
+  var orders=selected.map(function(id){
+    var request=gr().find(function(x){return x.id===id}); if(!request)return null;
+    var meds=getMeds(request.deptId||''), dept=gd().find(function(d){return d.id===request.deptId});
+    var items=(request.dispensed||[]).filter(function(x){return Number.isFinite(Number(x.qty));}).map(function(x){
+      var med=meds.find(function(m){return m.id===x.medId});
+      var category=String((med&&med.category)||x.category||'').toLowerCase();
+      var classification=String((med&&med.classification)||x.classification||'').toLowerCase();
+      return {name:(med&&med.name)||x.name||x.medId||'Unknown medication',strength:(med&&med.strength)||x.strength||'',qty:Number(x.qty),refrigerated:!!(med&&med.refrigerated),lookAlike:!!(med&&(med.lasa||med.look_alike||med.lookAlike)),highAlert:!!(med&&(med.high_alert||med.highAlert)),hazard:!!(med&&(med.hazard||med.hazardous)),solution:!!(med&&(med.solution===true||category==='solutions'||classification==='solutions'))};
+    }).sort(function(a,b){if(a.solution!==b.solution)return a.solution?1:-1;return String(a.name||'').localeCompare(String(b.name||''));});
+    return {request:request,dept:dept,items:items};
+  }).filter(Boolean);
+  var mode=(document.getElementById('print-solution-mode')||{}).value||'all';
+  function filtered(label,fn){return {label:label,orders:orders.map(function(o){return {request:o.request,dept:o.dept,items:o.items.filter(fn)};})};}
+  var sets=mode==='nonSolutions'?[filtered('All medicines except Solutions',function(x){return !x.solution;})]:mode==='solutions'?[filtered('Solutions only',function(x){return x.solution;})]:mode==='split'?[filtered('All medicines except Solutions',function(x){return !x.solution;}),filtered('Solutions only',function(x){return x.solution;})]:[{label:'Complete orders',orders:orders}];
+  var MAX_ITEMS_PER_PAGE=170;
+  for(var setIndex=0;setIndex<sets.length;setIndex++){var setTotal=sets[setIndex].orders.reduce(function(sum,o){return sum+o.items.length;},0);if(setTotal>MAX_ITEMS_PER_PAGE)return toast('⚠ '+sets[setIndex].label+' contains '+setTotal+' items. Maximum allowed is '+MAX_ITEMS_PER_PAGE+' items per A4 page at minimum 11pt. Split the selection.','err');}
+  function eh(v){return esc(String(v==null?'':v));}
+  function deptName(o){return (o.dept&&o.dept.name)||o.request.deptName||o.request.deptId||'Department';}
+  function orderHtml(o,idx){
+    var out='<section class="order-block '+(idx%2?'tone-gray':'tone-white')+'"><div class="order-head"><span class="dept">'+eh(deptName(o))+'</span><span class="date">'+eh(fmtDateTime(o.request.fulfilledAt||o.request.created))+'</span></div>';
+    if(!o.items.length)out+='<div class="no-items">No items in this section</div>'; else o.items.forEach(function(it){
+      out+='<div class="item'+(it.highAlert?' high-alert':'')+(it.hazard?' hazard':'')+'"><span class="drug"><span class="drug-name">'+eh(it.name)+'</span>'+(it.strength?'<span class="strength">'+eh(it.strength)+'</span>':'')+'</span><span class="qty'+(it.lookAlike?' look-alike':'')+(it.refrigerated?' refrigerated':'')+'"><span class="qty-number">'+eh(it.qty)+'</span></span></div>';
+    }); return out+'</section>';
+  }
+  var css='@page{size:A4 landscape;margin:3mm}*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;font-family:Arial,Tahoma,sans-serif;color:#000;background:#fff}.print-page{width:291mm;height:204mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}.print-page:last-child{page-break-after:auto;break-after:auto}.page-top{height:4mm;line-height:4mm;text-align:center;font-size:5pt;color:#333;border-bottom:.18mm solid #777;flex:0 0 auto}.flow{--fs:13pt;--cols:4;flex:1;min-height:0;column-count:var(--cols);column-fill:auto;column-gap:0;column-rule:.16mm solid #777;overflow:hidden}.order-block{display:block;margin:0;padding:0;break-inside:auto;box-decoration-break:clone;-webkit-box-decoration-break:clone}.tone-gray{background:#d0d0d0}.order-head{display:flex;align-items:center;justify-content:space-between;gap:.5mm;min-height:4.2mm;padding:.25mm .4mm;border:.10mm solid #aaa;border-top:.32mm solid #111;border-bottom:.18mm solid #555;break-after:avoid}.dept{font-size:calc(var(--fs)*.52);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76%}.date{font-size:calc(var(--fs)*.40);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:24%}.item{break-inside:avoid;display:flex;align-items:center;justify-content:flex-start;gap:0;padding:.08mm .22mm;border:.10mm solid #b8b8b8;border-top:0;line-height:1;max-width:100%;min-height:calc(var(--fs)*1.38)}.drug{display:inline-flex;flex-direction:column;flex:0 1 auto;min-width:0;max-width:calc(100% - 7mm);line-height:1}.drug-name,.strength{font-size:var(--fs);line-height:1;max-width:100%;white-space:normal;overflow-wrap:anywhere}.drug-name{font-weight:900}.strength{font-weight:700;margin-top:0}.qty{position:relative;flex:0 0 auto;font-size:var(--fs);font-weight:900;border:.32mm solid #000;border-radius:.8mm;line-height:1;min-width:6.5mm;min-height:calc(var(--fs)*1.28);padding:.25mm .4mm;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}.qty.look-alike{border-radius:50%;width:calc(var(--fs)*1.55);height:calc(var(--fs)*1.55);min-width:calc(var(--fs)*1.55);min-height:calc(var(--fs)*1.55);padding:0}.qty.refrigerated{background:#777;border-color:#000;color:#fff;box-shadow:inset 0 0 0 .18mm #fff}.qty.refrigerated:before{content:"❄";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--fs)*1.42);font-weight:900;color:#fff;opacity:.55}.qty-number{position:relative;z-index:1;text-shadow:0 0 .35mm #000}.item.high-alert .drug{padding:.22mm .45mm;border:.35mm solid #000;border-radius:.7mm}.tone-white .item.high-alert .drug{background:#4a4a4a;color:#fff}.tone-gray .item.high-alert .drug{background:#fff;color:#000}.tone-white .item.high-alert .strength{color:#fff}.tone-gray .item.high-alert .strength{color:#000}.item.high-alert .drug-name{text-decoration:none}.item.hazard .drug-name{display:inline;background:repeating-linear-gradient(90deg,#bbb 0,#bbb 2mm,#fff 2mm,#fff 4mm)}.no-items{font-size:8pt;padding:1mm .5mm}.foot{height:2.5mm;line-height:2.5mm;text-align:center;font-size:4.2pt;font-weight:700;flex:0 0 auto}@media print{html,body{overflow:hidden!important}.print-page{margin:0!important}}';
+  var html='<!doctype html><html><head><meta charset="utf-8"><title>ASDHealth Pharmacy Pilot v1.2 (Development) — A4 Flow Print</title><style>'+css+'</style></head><body>';
+  sets.forEach(function(set,si){var total=set.orders.reduce(function(s,o){return s+o.items.length;},0);html+='<section class="print-page"><div class="page-top" data-label="'+eh(set.label)+'" data-items="'+total+'">Preparing optimal A4 layout (minimum 11pt · maximum 170 items)…</div><div class="flow">';set.orders.forEach(function(o,i){html+=orderHtml(o,i);});html+='</div><div class="foot">By Ali Abudahash</div></section>';});
+  html+='<script>window.onload=function(){setTimeout(function(){var sizes=[13,12,11];document.querySelectorAll(".print-page").forEach(function(page){var flow=page.querySelector(".flow"),top=page.querySelector(".page-top"),chosen=null;for(var s=0;s<sizes.length&&!chosen;s++){for(var c=1;c<=6;c++){flow.style.setProperty("--fs",sizes[s]+"pt");flow.style.setProperty("--cols",c);void flow.offsetHeight;if(flow.scrollWidth<=flow.clientWidth+1){chosen={font:sizes[s],cols:c};break;}}}if(!chosen){chosen={font:11,cols:6};flow.style.setProperty("--fs","11pt");flow.style.setProperty("--cols",6);page.setAttribute("data-overflow","true");}top.textContent="Floor Stock Dispensing Orders · "+top.dataset.label+" · "+top.dataset.items+" Items · Font "+chosen.font+"pt · "+chosen.cols+" columns";});setTimeout(function(){window.print();},250);},250);};<\\/script></body></html>';
+  selected.forEach(function(id){var r=gr().find(function(x){return x.id===id});if(r)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:nowISO()});});
+  var w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print orders.','err');w.document.open();w.document.write(html);w.document.close();renderPrint();
+};
+})();
+</script>
+
 </body>
 </html>
