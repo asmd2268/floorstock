@@ -627,6 +627,27 @@ body.light .login-attribution{color:#6b7280}
   .adaptive-flow-column:last-child,.flow-column:last-child,.print-flow-column:last-child{border-inline-end:0!important;}
 }
 </style>
+
+<style id="ctl-pdf-receipt-style">
+#ctl-pdf-receipt-card{display:none}
+.ctl-pdf-drop{border:2px dashed var(--bd2);border-radius:10px;padding:16px;text-align:center;background:var(--s2)}
+.ctl-pdf-drop.drag{border-color:var(--ac);background:rgba(31,111,235,.08)}
+.ctl-pdf-summary{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+.ctl-pdf-review{max-height:440px;overflow:auto;border:1px solid var(--bd);border-radius:8px}
+.ctl-pdf-review table{table-layout:fixed;min-width:920px}
+.ctl-pdf-review th,.ctl-pdf-review td{padding:6px 7px;font-size:11px;vertical-align:middle}
+.ctl-pdf-review input[type=number],.ctl-pdf-review input[type=date]{margin:0;padding:5px 6px;font-size:11px}
+.ctl-pdf-review input[type=checkbox]{width:16px;height:16px;margin:0}
+.ctl-pdf-match-ok{background:rgba(46,160,67,.08)}
+.ctl-pdf-match-miss{background:rgba(218,54,51,.08)}
+.ctl-pdf-status{font-size:10px;font-weight:700;padding:2px 6px;border-radius:10px;display:inline-flex;border:1px solid}
+.ctl-pdf-status.ok{color:var(--gnl);border-color:var(--gn)}
+.ctl-pdf-status.miss{color:var(--rdl);border-color:var(--rd)}
+.ctl-pdf-pending-row{display:grid;grid-template-columns:minmax(180px,1fr) 100px 150px 110px;gap:8px;align-items:center;padding:8px;border-bottom:1px solid var(--bd)}
+.ctl-pdf-pending-row:last-child{border-bottom:none}
+@media(max-width:760px){.ctl-pdf-pending-row{grid-template-columns:1fr 80px}.ctl-pdf-pending-row input,.ctl-pdf-pending-row button{width:100%}}
+@media print{#ctl-pdf-receipt-card{display:none!important}}
+</style>
 </head>
 <body>
 
@@ -1012,6 +1033,46 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 
     <div class="tgrp" id="ctl-tabs"></div>
     <div id="ctl-permission-note" class="alert-banner-y" style="display:none"></div>
+
+    <div class="card" id="ctl-pdf-receipt-card">
+      <div class="ch" style="flex-wrap:wrap;gap:8px">
+        <div>
+          <span class="ct">استلام مخزون من PDF / Warehouse PDF Receipt</span>
+          <div class="fhint">يقرأ جميع صفحات التقرير ويطابق Item مع MOH أو NUPCO ثم يستخرج Quantity.</div>
+        </div>
+        <span class="chip">Warehouse only</span>
+      </div>
+      <div class="cb">
+        <div id="ctl-pdf-drop" class="ctl-pdf-drop" ondragover="ctlPdfDrag(event,true)" ondragleave="ctlPdfDrag(event,false)" ondrop="ctlPdfDrop(event)">
+          <div style="font-size:28px">📄</div>
+          <b>اختر ملف PDF أو اسحبه هنا</b>
+          <div class="fhint">يدعم صفحة واحدة أو عدة صفحات. الأعمدة المستخدمة: Item و Quantity فقط.</div>
+          <input type="file" id="ctl-pdf-receipt-file" accept="application/pdf,.pdf" style="margin:10px auto 0;max-width:420px" onchange="ctlParseReceiptPdf(this.files[0])">
+        </div>
+        <div id="ctl-pdf-progress" class="fhint" style="margin-top:8px"></div>
+        <div id="ctl-pdf-review-wrap" style="display:none">
+          <div id="ctl-pdf-summary" class="ctl-pdf-summary"></div>
+          <div class="fl jb ic" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
+            <label style="margin:0;display:flex;align-items:center;gap:6px"><input type="checkbox" id="ctl-pdf-select-all" onchange="ctlPdfToggleAll(this.checked)"> تحديد كل الأصناف المطابقة</label>
+            <div class="fl g8" style="flex-wrap:wrap">
+              <button class="btn bg bsm" onclick="ctlPdfClearReview()">إلغاء الملف</button>
+              <button class="btn bp bsm" onclick="ctlApprovePdfReceipt(false)">موافقة جزئية (المحدد فقط)</button>
+              <button class="btn bs bsm" onclick="ctlApprovePdfReceipt(true)">موافقة كلية (كل المطابق)</button>
+            </div>
+          </div>
+          <div class="ctl-pdf-review"><table>
+            <thead><tr><th style="width:38px">✓</th><th style="width:45px">#</th><th style="width:125px">Item code</th><th>Medicine</th><th style="width:100px">PDF Qty</th><th style="width:115px">Approved Qty</th><th style="width:150px">Expiry (optional)</th><th style="width:95px">Match</th></tr></thead>
+            <tbody id="ctl-pdf-review-body"></tbody>
+          </table></div>
+          <div class="fhint" style="margin-top:8px">الموافقة تضيف الكمية إلى رصيد Warehouse system. يمكن تعديل الكمية قبل الموافقة، وإضافة تاريخ الانتهاء الآن أو لاحقاً.</div>
+        </div>
+      </div>
+      <div id="ctl-pdf-pending-expiry-wrap" class="cb" style="border-top:1px solid var(--bd);display:none">
+        <div class="fl jb ic" style="margin-bottom:8px;gap:8px;flex-wrap:wrap"><b>كميات مقبولة تنتظر تاريخ الانتهاء</b><span class="badge byl" id="ctl-pdf-pending-count">0</span></div>
+        <div id="ctl-pdf-pending-expiry"></div>
+      </div>
+    </div>
+
 
     <div id="ctl-overview-view">
       <div class="card">
@@ -1943,6 +2004,7 @@ function loadScriptOnce(key,src,test){
   return _lazyScripts[key];
 }
 function ensureXLSX(){return loadScriptOnce('Excel','https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',function(){return typeof XLSX!=='undefined'})}
+function ensurePDFJS(){return loadScriptOnce('PDF','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',function(){return typeof pdfjsLib!=='undefined'}).then(function(){if(pdfjsLib&&pdfjsLib.GlobalWorkerOptions)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';return pdfjsLib})}
 function ensureZXing(){return loadScriptOnce('Barcode scanner','https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js',function(){return typeof ZXing!=='undefined'})}
 function ensureFirebaseFunctions(){return loadScriptOnce('Firebase Functions','https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js',function(){return !!(window.firebase&&firebase.functions)}).then(function(){FB_FUNCTIONS=firebase.functions();return FB_FUNCTIONS})}
 function debounce(fn,wait){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},wait)}}
@@ -5422,6 +5484,100 @@ function ctlStatus(m,w,p){
   if((min>0&&wqty<min)||(min>0&&pqty<min))return {key:'low',html:'<span class="badge byl">Below minimum</span>'};
   return {key:'ok',html:'<span class="badge bgn">OK</span>'};
 }
+
+
+// ── WAREHOUSE PDF RECEIPT IMPORT ─────────────────────────────
+var CTL_PDF_REVIEW=[];
+function ctlPdfReceipts(){return S.g('controlled_pdf_receipts')||[]}
+function ctlSetPdfReceipts(v){return S.s('controlled_pdf_receipts',v)}
+function ctlPdfNormalizeCode(v){return String(v==null?'':v).replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'')}
+function ctlPdfCanUse(){return !!(CU&&(ctlIsWarehouse()||ctlIsMaster()))}
+function ctlPdfDrag(e,on){e.preventDefault();var z=el('ctl-pdf-drop');if(z)z.classList.toggle('drag',!!on)}
+function ctlPdfDrop(e){e.preventDefault();ctlPdfDrag(e,false);var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)ctlParseReceiptPdf(f)}
+function ctlPdfClearReview(){CTL_PDF_REVIEW=[];if(el('ctl-pdf-receipt-file'))el('ctl-pdf-receipt-file').value='';if(el('ctl-pdf-review-wrap'))el('ctl-pdf-review-wrap').style.display='none';if(el('ctl-pdf-progress'))el('ctl-pdf-progress').textContent=''}
+function ctlPdfFindMedicine(code){
+  var c=ctlPdfNormalizeCode(code);if(!c)return null;
+  return ctlCatalog().find(function(m){return ctlPdfNormalizeCode(m.moh)===c||ctlPdfNormalizeCode(m.nupco)===c})||null;
+}
+function ctlPdfRowsFromItems(items,pageNo){
+  var groups=[];
+  items.forEach(function(it){
+    var str=String(it.str||'').trim();if(!str)return;
+    var y=Math.round((it.transform&&it.transform[5]||0)*2)/2,x=it.transform&&it.transform[4]||0,g=null;
+    for(var i=0;i<groups.length;i++)if(Math.abs(groups[i].y-y)<=2.5){g=groups[i];break}
+    if(!g){g={y:y,t:[]};groups.push(g)}g.t.push({x:x,s:str});
+  });
+  var out=[];
+  groups.sort(function(a,b){return b.y-a.y}).forEach(function(g){
+    g.t.sort(function(a,b){return a.x-b.x});
+    var ts=g.t,codeToken=null;
+    for(var i=0;i<ts.length;i++){var n=ctlPdfNormalizeCode(ts[i].s);if(/^\d{8,14}$/.test(n)){codeToken={code:n,index:i,x:ts[i].x};break}}
+    if(!codeToken)return;
+    var qtyToken=null;
+    for(var j=ts.length-1;j>codeToken.index;j--){var raw=ts[j].s.replace(/,/g,'').trim();if(/^\d+(?:\.\d+)?$/.test(raw)){qtyToken={qty:Number(raw),index:j};break}}
+    if(!qtyToken||!isFinite(qtyToken.qty))return;
+    var desc=ts.slice(codeToken.index+1,qtyToken.index).map(function(x){return x.s}).join(' ').trim();
+    out.push({page:pageNo,code:codeToken.code,description:desc,qty:qtyToken.qty});
+  });
+  return out;
+}
+async function ctlParseReceiptPdf(file){
+  if(!ctlPdfCanUse())return toast('Warehouse permission required','err');
+  if(!file||!/\.pdf$/i.test(file.name||''))return toast('Choose a PDF file','err');
+  var pr=el('ctl-pdf-progress');if(pr)pr.textContent='جاري قراءة الملف...';
+  try{
+    await ensurePDFJS();
+    var data=await file.arrayBuffer(),doc=await pdfjsLib.getDocument({data:data}).promise,raw=[];
+    for(var p=1;p<=doc.numPages;p++){
+      if(pr)pr.textContent='جاري قراءة الصفحة '+p+' من '+doc.numPages+'...';
+      var page=await doc.getPage(p),content=await page.getTextContent({normalizeWhitespace:true});
+      raw=raw.concat(ctlPdfRowsFromItems(content.items,p));
+    }
+    var seen={};raw=raw.filter(function(r){var k=r.page+'|'+r.code+'|'+r.qty;if(seen[k])return false;seen[k]=1;return true});
+    CTL_PDF_REVIEW=raw.map(function(r,i){var med=ctlPdfFindMedicine(r.code);return {id:'pdfrow_'+Date.now()+'_'+i,page:r.page,code:r.code,description:r.description,pdfQty:ctlNum(r.qty),approvedQty:ctlNum(r.qty),expiry:'',selected:!!med,medId:med?med.id:'',medName:med?med.name:'',matched:!!med}});
+    if(pr)pr.textContent='تمت قراءة '+doc.numPages+' صفحة من '+file.name;
+    ctlRenderPdfReview();
+    if(!CTL_PDF_REVIEW.length)toast('لم يتم العثور على صفوف Item / Quantity قابلة للقراءة','err');
+  }catch(err){console.error(err);if(pr)pr.textContent='';toast(err.message||'تعذر قراءة PDF','err')}
+}
+function ctlRenderPdfReview(){
+  var wrap=el('ctl-pdf-review-wrap'),body=el('ctl-pdf-review-body');if(!wrap||!body)return;
+  wrap.style.display=CTL_PDF_REVIEW.length?'block':'none';
+  var matched=CTL_PDF_REVIEW.filter(function(r){return r.matched}).length,miss=CTL_PDF_REVIEW.length-matched,total=CTL_PDF_REVIEW.reduce(function(a,r){return a+ctlNum(r.pdfQty)},0);
+  el('ctl-pdf-summary').innerHTML='<span class="chip">Rows: <b>'+CTL_PDF_REVIEW.length+'</b></span><span class="chip">Matched: <b>'+matched+'</b></span><span class="chip">Unmatched: <b>'+miss+'</b></span><span class="chip">Total PDF Qty: <b>'+total+'</b></span>';
+  body.innerHTML=CTL_PDF_REVIEW.map(function(r,i){return '<tr class="'+(r.matched?'ctl-pdf-match-ok':'ctl-pdf-match-miss')+'"><td><input type="checkbox" '+(r.selected?'checked':'')+' '+(r.matched?'':'disabled')+' onchange="ctlPdfSetField('+i+',\'selected\',this.checked)"></td><td>'+(i+1)+'</td><td><b>'+esc(r.code)+'</b><div class="fhint">Page '+r.page+'</div></td><td><b>'+esc(r.medName||r.description||'Unknown')+'</b>'+(r.medName&&r.description?'<div class="fhint">PDF: '+esc(r.description)+'</div>':'')+'</td><td>'+ctlNum(r.pdfQty)+'</td><td><input type="number" min="0" step="1" value="'+ctlNum(r.approvedQty)+'" '+(r.matched?'':'disabled')+' onchange="ctlPdfSetField('+i+',\'approvedQty\',this.value)"></td><td><input type="date" value="'+esc(r.expiry||'')+'" '+(r.matched?'':'disabled')+' onchange="ctlPdfSetField('+i+',\'expiry\',this.value)"></td><td><span class="ctl-pdf-status '+(r.matched?'ok':'miss')+'">'+(r.matched?'Matched':'Not found')+'</span></td></tr>'}).join('');
+  var all=el('ctl-pdf-select-all');if(all){var ok=CTL_PDF_REVIEW.filter(function(r){return r.matched});all.checked=!!ok.length&&ok.every(function(r){return r.selected})}
+}
+function ctlPdfSetField(i,k,v){var r=CTL_PDF_REVIEW[i];if(!r)return;if(k==='approvedQty')v=Math.max(0,ctlNum(v));r[k]=v;if(k==='selected'&&v&&ctlNum(r.approvedQty)<=0)r.approvedQty=r.pdfQty}
+function ctlPdfToggleAll(checked){CTL_PDF_REVIEW.forEach(function(r){if(r.matched)r.selected=checked});ctlRenderPdfReview()}
+async function ctlApprovePdfReceipt(allMatched){
+  if(!ctlPdfCanUse())return;
+  var chosen=CTL_PDF_REVIEW.filter(function(r){return r.matched&&(allMatched||r.selected)&&ctlNum(r.approvedQty)>0});
+  if(!chosen.length)return toast('حدد صنفاً مطابقاً واحداً على الأقل','err');
+  var msg=allMatched?'اعتماد جميع الأصناف المطابقة وإضافتها إلى رصيد المستودع؟':'اعتماد الأصناف المحددة فقط وإضافتها إلى رصيد المستودع؟';
+  if(!await uiConfirm(msg))return;
+  var wh=Object.assign({},ctlWarehouse()),receipt={id:'pdfreceipt_'+Date.now(),fileName:(el('ctl-pdf-receipt-file')&&el('ctl-pdf-receipt-file').files[0]?el('ctl-pdf-receipt-file').files[0].name:'PDF'),created:nowISO(),by:CU.username,status:'approved',rows:[]};
+  chosen.forEach(function(r){var w=Object.assign({},wh[r.medId]||{});w.system=ctlNum(w.system)+ctlNum(r.approvedQty);w.outside=ctlNum(w.outside);w.batches=(w.batches||[]).slice();if(r.expiry)w.batches.push({qty:ctlNum(r.approvedQty),expiry:ctlDate(r.expiry)||r.expiry,lot:'PDF receipt'});wh[r.medId]=w;receipt.rows.push({id:r.id,medId:r.medId,code:r.code,medName:r.medName,pdfQty:r.pdfQty,qty:ctlNum(r.approvedQty),expiry:r.expiry||'',expiryBatches:r.expiry?[{qty:ctlNum(r.approvedQty),expiry:r.expiry}]:[],expiryAllocatedQty:r.expiry?ctlNum(r.approvedQty):0,expiryPending:!r.expiry,page:r.page})});
+  var receipts=ctlPdfReceipts().slice();receipts.unshift(receipt);
+  await Promise.all([ctlSetWarehouse(wh),ctlSetPdfReceipts(receipts)]);
+  ctlMove({type:'warehouse_pdf_receipt',qty:chosen.reduce(function(a,r){return a+ctlNum(r.approvedQty)},0),note:'PDF warehouse receipt approved: '+chosen.length+' line(s)'});
+  toast('تم اعتماد '+chosen.length+' صنف وإضافة الكميات للمستودع ✓','succ');ctlPdfClearReview();renderControlled();
+}
+function ctlPendingPdfExpiryRows(){var out=[];ctlPdfReceipts().forEach(function(rec){(rec.rows||[]).forEach(function(r){var allocated=ctlNum(r.expiryAllocatedQty);if(!allocated&&(r.expiryBatches||[]).length)allocated=(r.expiryBatches||[]).reduce(function(a,b){return a+ctlNum(b.qty)},0);var remaining=Math.max(ctlNum(r.qty)-allocated,0);r.expiryAllocatedQty=allocated;r.expiryPending=remaining>0;if(remaining>0)out.push({receipt:rec,row:r,remaining:remaining})})});return out}
+function renderCtlPdfReceiptPanel(){
+  var card=el('ctl-pdf-receipt-card');if(!card)return;card.style.display=ctlPdfCanUse()?'block':'none';if(!ctlPdfCanUse())return;
+  var rows=ctlPendingPdfExpiryRows(),wrap=el('ctl-pdf-pending-expiry-wrap'),box=el('ctl-pdf-pending-expiry');if(!wrap||!box)return;
+  wrap.style.display=rows.length?'block':'none';if(el('ctl-pdf-pending-count'))el('ctl-pdf-pending-count').textContent=rows.length;
+  box.innerHTML=rows.map(function(x,i){return '<div class="ctl-pdf-pending-row"><div><b>'+esc(x.row.medName||x.row.code)+'</b><div class="fhint">Total '+ctlNum(x.row.qty)+' · Remaining '+ctlNum(x.remaining)+' · '+esc(x.receipt.fileName||'PDF')+'</div></div><input type="number" min="1" max="'+ctlNum(x.remaining)+'" value="'+ctlNum(x.remaining)+'" id="ctl-pdf-expqty-'+i+'"><input type="date" id="ctl-pdf-exp-'+i+'"><button class="btn bp bxs" onclick="ctlSavePendingPdfExpiry(\''+esc(x.receipt.id)+'\',\''+esc(x.row.id)+'\','+i+')">حفظ الدفعة</button></div>'}).join('');
+}
+async function ctlSavePendingPdfExpiry(receiptId,rowId,index){
+  var inp=el('ctl-pdf-exp-'+index),date=inp&&inp.value,qty=ctlNum(el('ctl-pdf-expqty-'+index)&&el('ctl-pdf-expqty-'+index).value);if(!date)return toast('اختر تاريخ الانتهاء','err');
+  var receipts=ctlPdfReceipts().slice(),rec=receipts.find(function(x){return x.id===receiptId}),row=rec&&(rec.rows||[]).find(function(x){return x.id===rowId});if(!row)return toast('Receipt row not found','err');
+  var allocated=ctlNum(row.expiryAllocatedQty),remaining=Math.max(ctlNum(row.qty)-allocated,0);if(qty<=0||qty>remaining)return toast('كمية دفعة الانتهاء يجب ألا تتجاوز المتبقي '+remaining,'err');
+  var wh=Object.assign({},ctlWarehouse()),w=Object.assign({},wh[row.medId]||{});w.batches=(w.batches||[]).slice();w.batches.push({qty:qty,expiry:ctlDate(date)||date,lot:'PDF receipt'});wh[row.medId]=w;row.expiryBatches=(row.expiryBatches||[]).concat([{qty:qty,expiry:date}]);row.expiryAllocatedQty=allocated+qty;row.expiryPending=row.expiryAllocatedQty<ctlNum(row.qty);row.expiry=row.expiryPending?'':date;
+  await Promise.all([ctlSetWarehouse(wh),ctlSetPdfReceipts(receipts)]);ctlMove({type:'warehouse_pdf_expiry_added',medId:row.medId,qty:row.qty,note:'Expiry added later for PDF receipt'});toast('تم حفظ تاريخ الانتهاء ✓','succ');renderControlled();
+}
+
 function ctlTabs(){
   var tabs;
   if(CU.role==='department')tabs=[['departments','My controlled list']];
@@ -5444,7 +5600,7 @@ function renderControlled(){
     note.style.display='block';
     note.innerHTML='Read-only access: Master or the controlled-medicines pharmacy officer manages your department list, quantities and expiry dates.';
   }else note.style.display='none';
-  renderCtlOverview();renderCtlCatalog();renderCtlDepartments();renderCtlPending();renderCtlLog();
+  renderCtlOverview();renderCtlCatalog();renderCtlDepartments();renderCtlPending();renderCtlLog();renderCtlPdfReceiptPanel();
 }
 function renderCtlOverview(){
   var body=el('ctl-overview-table');if(!body)return;
@@ -8899,5 +9055,93 @@ window.doPrint=function(){
 })();
 </script>
 
+
+<style id="wh-bulk-rx-dx-style">
+.wh-bulk-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.wh-bulk-table th,.wh-bulk-table td{border:1px solid var(--bd);padding:6px;vertical-align:middle}
+.wh-bulk-table th{font-size:10px;background:var(--s3);text-transform:none;letter-spacing:0}
+.wh-bulk-table input{margin:0;padding:7px 8px;font-size:12px}
+.wh-bulk-table .code{width:22%}.wh-bulk-table .match{width:29%}.wh-bulk-table .qty{width:12%}.wh-bulk-table .exp{width:17%}.wh-bulk-table .lot{width:15%}.wh-bulk-table .act{width:5%}
+.wh-match-ok{color:var(--gnl);font-weight:700}.wh-match-bad{color:var(--rdl);font-weight:700}.wh-match-pending{color:var(--tx2)}
+.wh-bulk-toolbar{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:10px 0}
+.wh-bulk-scroll{max-height:55vh;overflow:auto;border:1px solid var(--bd);border-radius:8px}
+@media(max-width:850px){.wh-bulk-table{min-width:900px}.wh-bulk-scroll{overflow:auto}}
+</style>
+
+<div class="modal-bg" id="mwh-bulk-receive">
+ <div class="modal" style="width:min(1180px,98vw);max-width:98vw">
+  <div class="mh"><span class="mt">Bulk warehouse receiving / استلام عدة أدوية للمستودع</span><button class="xbtn" onclick="CM('mwh-bulk-receive')">✕</button></div>
+  <div class="alert-banner-y">Enter either a NUPCO code or MOH code in the first column. The system identifies the code automatically. Add as many rows as needed.</div>
+  <div class="wh-bulk-toolbar"><button class="btn bg bsm" type="button" onclick="whBulkAddReceiveRow()">+ Add row / إضافة صف</button><span class="fhint">Expiry and batch may be left blank and added later.</span></div>
+  <div class="wh-bulk-scroll"><table class="wh-bulk-table"><thead><tr><th class="code">NUPCO or MOH code</th><th class="match">Matched medicine</th><th class="qty">Received qty</th><th class="exp">Expiry (optional)</th><th class="lot">Batch (optional)</th><th class="act"></th></tr></thead><tbody id="wh-bulk-receive-rows"></tbody></table></div>
+  <div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-bulk-receive')">Cancel</button><button class="btn bs" onclick="whBulkReceiveSave()">Receive matched rows / استلام الصفوف المطابقة</button></div>
+ </div>
+</div>
+
+<div class="modal-bg" id="mwh-bulk-dispense">
+ <div class="modal" style="width:min(1180px,98vw);max-width:98vw">
+  <div class="mh"><span class="mt">Bulk dispense to pharmacy custody officer / صرف متعدد لمسؤول أدوية الصيدلية</span><button class="xbtn" onclick="CM('mwh-bulk-dispense')">✕</button></div>
+  <div class="alert-banner-y">Enter either a NUPCO code or MOH code. Each valid row creates a pending warehouse-to-pharmacy transfer for pharmacy acceptance.</div>
+  <div class="wh-bulk-toolbar"><button class="btn bg bsm" type="button" onclick="whBulkAddDispenseRow()">+ Add row / إضافة صف</button><span class="fhint">The quantity cannot exceed the current warehouse balance.</span></div>
+  <div class="wh-bulk-scroll"><table class="wh-bulk-table"><thead><tr><th class="code">NUPCO or MOH code</th><th class="match">Matched medicine / available</th><th class="qty">Dispense qty</th><th class="exp">Expiry</th><th class="lot">Batch (optional)</th><th class="act"></th></tr></thead><tbody id="wh-bulk-dispense-rows"></tbody></table></div>
+  <div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-bulk-dispense')">Cancel</button><button class="btn bp" onclick="whBulkDispenseSave()">Create pending transfers / إنشاء حركات الصرف</button></div>
+ </div>
+</div>
+
+<script id="wh-bulk-rx-dx-script">
+(function(){
+ function norm(v){return String(v==null?'':v).trim().replace(/[\s\-]/g,'').toLowerCase()}
+ function catalog(){try{return ctlCatalog()||[]}catch(e){return []}}
+ function byCode(code){var n=norm(code);if(!n)return null;return catalog().find(function(m){return norm(m.nupco)===n||norm(m.moh)===n})||null}
+ function rowHtml(kind){
+  var reqExp=kind==='dispense'?' required':'';
+  return '<tr class="wh-bulk-row" data-kind="'+kind+'"><td><input class="wh-code" placeholder="NUPCO / MOH" oninput="whBulkResolveRow(this)"></td><td class="wh-match"><span class="wh-match-pending">Enter code</span></td><td><input class="wh-qty-input" type="number" min="1" step="1" placeholder="0"></td><td><input class="wh-exp-input" type="date"'+reqExp+'></td><td><input class="wh-lot-input" placeholder="Optional"></td><td><button class="btn bd2c bxs" type="button" onclick="this.closest(\'tr\').remove()">✕</button></td></tr>'
+ }
+ function add(kind){var box=document.getElementById(kind==='receive'?'wh-bulk-receive-rows':'wh-bulk-dispense-rows');if(box)box.insertAdjacentHTML('beforeend',rowHtml(kind))}
+ window.whBulkAddReceiveRow=function(){add('receive')};
+ window.whBulkAddDispenseRow=function(){add('dispense')};
+ window.whBulkResolveRow=function(input){
+  var row=input.closest('tr'),m=byCode(input.value),cell=row.querySelector('.wh-match');row.dataset.medId=m?m.id:'';
+  if(!m){cell.innerHTML=input.value.trim()?'<span class="wh-match-bad">No matching NUPCO/MOH code</span>':'<span class="wh-match-pending">Enter code</span>';return}
+  var extra='';if(row.dataset.kind==='dispense'){var w=(ctlWarehouse()||{})[m.id]||{},available=ctlWarehouseQtyForFilter(w);row.dataset.available=available;extra=' · Available: <b>'+available+'</b>'}
+  cell.innerHTML='<span class="wh-match-ok">'+esc(m.name||'')+'</span><div class="fhint">MOH: '+esc(m.moh||'—')+' · NUPCO: '+esc(m.nupco||'—')+extra+'</div>';
+ };
+ window.whBulkReceiveOpen=function(){
+  if(typeof ctlIsWarehouse==='function'&&!ctlIsWarehouse())return toast('Warehouse permission required','err');
+  var box=document.getElementById('wh-bulk-receive-rows');box.innerHTML='';for(var i=0;i<5;i++)add('receive');OM('mwh-bulk-receive');
+ };
+ window.whBulkDispenseOpen=function(){
+  if(typeof ctlIsWarehouse==='function'&&!ctlIsWarehouse())return toast('Warehouse permission required','err');
+  var box=document.getElementById('wh-bulk-dispense-rows');box.innerHTML='';for(var i=0;i<5;i++)add('dispense');OM('mwh-bulk-dispense');
+ };
+ function collect(id,kind){
+  var rows=Array.from(document.querySelectorAll('#'+id+' .wh-bulk-row')),valid=[],errors=[];
+  rows.forEach(function(r,i){var code=r.querySelector('.wh-code').value.trim(),medId=r.dataset.medId,qty=Number(r.querySelector('.wh-qty-input').value||0),expiry=r.querySelector('.wh-exp-input').value||'',lot=r.querySelector('.wh-lot-input').value.trim();if(!code&&!qty&&!expiry&&!lot)return;if(!medId)errors.push('Row '+(i+1)+': code not matched');else if(!(qty>0))errors.push('Row '+(i+1)+': quantity required');else if(kind==='dispense'&&!expiry)errors.push('Row '+(i+1)+': expiry required');else if(kind==='dispense'&&qty>Number(r.dataset.available||0))errors.push('Row '+(i+1)+': insufficient warehouse balance');else valid.push({medId:medId,code:code,qty:qty,expiry:expiry,lot:lot});});
+  return {valid:valid,errors:errors};
+ }
+ window.whBulkReceiveSave=async function(){
+  var c=collect('mwh-bulk-receive','receive');if(c.errors.length)return toast(c.errors.slice(0,3).join(' · '),'err');if(!c.valid.length)return toast('Add at least one valid row','err');
+  var all=Object.assign({},ctlWarehouse()),now=new Date().toISOString(),hist=[];
+  c.valid.forEach(function(it){var x=Object.assign({system:0,outside:0,batches:[]},all[it.medId]||{});x.system=ctlNum(x.system)+it.qty;x.outside=ctlNum(x.outside);x.batches=(x.batches||[]).slice();if(it.expiry){var same=x.batches.find(function(b){return String(b.expiry||'')===it.expiry&&String(b.lot||'')===it.lot});if(same)same.qty=ctlNum(same.qty)+it.qty;else x.batches.push({qty:it.qty,expiry:it.expiry,lot:it.lot,source:'system'});}all[it.medId]=x;hist.push({id:'whr_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),medId:it.medId,qty:it.qty,source:'system',expiry:it.expiry,lot:it.lot,at:now,by:(CU&&CU.email)||''});});
+  await ctlSetWarehouse(all);try{var h=S.g('controlled_warehouse_receipts')||[];await S.s('controlled_warehouse_receipts',hist.concat(h).slice(0,5000))}catch(e){}
+  for(var i=0;i<c.valid.length;i++){try{await ctlMove({type:'warehouse_receive',medId:c.valid[i].medId,qty:c.valid[i].qty,expiry:c.valid[i].expiry||'',lot:c.valid[i].lot||'',note:'Bulk warehouse receiving'})}catch(e){}}
+  CM('mwh-bulk-receive');renderControlled();toast(c.valid.length+' medicine(s) received ✓','succ');
+ };
+ window.whBulkDispenseSave=async function(){
+  var c=collect('mwh-bulk-dispense','dispense');if(c.errors.length)return toast(c.errors.slice(0,3).join(' · '),'err');if(!c.valid.length)return toast('Add at least one valid row','err');
+  var wh=Object.assign({},ctlWarehouse());
+  c.valid.forEach(function(it){var x=Object.assign({system:0,outside:0,batches:[]},wh[it.medId]||{}),fromSystem=Math.min(it.qty,ctlNum(x.system));x.system=ctlNum(x.system)-fromSystem;x.outside=ctlNum(x.outside)-(it.qty-fromSystem);wh[it.medId]=x;});
+  await ctlSetWarehouse(wh);
+  for(var i=0;i<c.valid.length;i++){var it=c.valid[i];await ctlMove({type:'warehouse_send',medId:it.medId,qty:it.qty,expiry:it.expiry,lot:it.lot,status:'pending',note:'Bulk sent to pharmacy; awaiting accept/reject'});}
+  CM('mwh-bulk-dispense');renderControlled();toast(c.valid.length+' pending transfer(s) created ✓','succ');
+ };
+ function addButtons(){
+  var card=document.getElementById('wh-receive-card');if(!card)return;var head=card.querySelector('.ch');if(!head||head.querySelector('.wh-bulk-buttons'))return;
+  var wrap=document.createElement('div');wrap.className='fl g8 wh-bulk-buttons';wrap.innerHTML='<button class="btn bs" onclick="whBulkReceiveOpen()">+ Bulk receive / استلام متعدد</button><button class="btn bp" onclick="whBulkDispenseOpen()">⇢ Bulk dispense / صرف متعدد</button>';var old=head.querySelector('button[onclick="whReceiveOpen()"]');if(old)old.replaceWith(wrap);else head.appendChild(wrap);
+ }
+ var oldRender=window.renderControlled;if(typeof oldRender==='function')window.renderControlled=function(){var r=oldRender.apply(this,arguments);setTimeout(addButtons,30);return r};
+ document.addEventListener('DOMContentLoaded',function(){setTimeout(addButtons,700)});setInterval(addButtons,1800);
+})();
+</script>
 </body>
 </html>
