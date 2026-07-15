@@ -568,6 +568,28 @@ body.role-pharmacy_staff .pg:not(#pg-reqs):not(#pg-print):not(#pg-crashcart) tex
 .login-attribution{position:fixed;right:18px;bottom:14px;font-size:11px;color:var(--tx3);z-index:5;letter-spacing:.2px}
 body.light .login-attribution{color:#6b7280}
 
+
+/* Fulfill request: show complete row without horizontal scrolling */
+.fulfill-modal{width:min(1180px,98vw)!important;max-width:98vw!important;padding:22px!important}
+.fulfill-table-wrap{max-height:58vh;overflow-y:auto;overflow-x:hidden;border:1px solid var(--bd);border-radius:9px}
+.fulfill-table{width:100%;table-layout:fixed;font-size:11px}
+.fulfill-table th,.fulfill-table td{padding:7px 5px;white-space:normal;overflow-wrap:anywhere;line-height:1.25}
+.fulfill-table th{font-size:9px;letter-spacing:.2px}
+.fulfill-table .fc-num{width:4%}.fulfill-table .fc-med{width:28%}.fulfill-table .fc-class{width:15%}
+.fulfill-table .fc-min,.fulfill-table .fc-max{width:7%}.fulfill-table .fc-last30{width:13%}
+.fulfill-table .fc-req{width:11%}.fulfill-table .fc-disp{width:15%}
+.fulfill-table input[type=number]{width:100%!important;max-width:92px!important;min-width:0!important;padding:6px 4px!important}
+.fulfill-table .badge{white-space:normal;font-size:9px;padding:2px 5px;text-align:center}
+.fulfill-head-sub{font-size:8px;font-weight:500;text-transform:none;letter-spacing:0}
+@media(max-width:760px){
+ .fulfill-modal{width:99vw!important;max-width:99vw!important;padding:12px 8px!important}
+ .fulfill-table{font-size:9px}
+ .fulfill-table th,.fulfill-table td{padding:5px 2px}
+ .fulfill-table th{font-size:8px}
+ .fulfill-table .fc-num{width:4%}.fulfill-table .fc-med{width:29%}.fulfill-table .fc-class{width:14%}
+ .fulfill-table .fc-min,.fulfill-table .fc-max{width:6%}.fulfill-table .fc-last30{width:13%}
+ .fulfill-table .fc-req{width:12%}.fulfill-table .fc-disp{width:16%}
+}
 </style>
 </head>
 <body>
@@ -1456,11 +1478,11 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 </div>
 
 <div class="modal-bg" id="mfulfill">
-  <div class="modal" style="width:700px">
+  <div class="modal fulfill-modal">
     <div class="mh"><span class="mt" id="fulfill-title">Fulfill Request</span><button class="xbtn" onclick="CM('mfulfill')">&#x2715;</button></div>
     <p id="fulfill-hint" style="font-size:12px;color:var(--tx2);margin-bottom:13px">Enter actual quantity to dispense. 0 = skip.</p>
-    <div class="tw" style="max-height:380px;overflow-y:auto">
-      <table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="text-align:center">Dispensed to dept<br><span style="font-size:9px;font-weight:500;text-transform:none">Last 30 days</span></th><th style="text-align:center">Requested</th><th>Dispense Qty</th></tr></thead><tbody id="ftbl"></tbody></table>
+    <div class="fulfill-table-wrap">
+      <table class="fulfill-table"><colgroup><col class="fc-num"><col class="fc-med"><col class="fc-class"><col class="fc-min"><col class="fc-max"><col class="fc-last30"><col class="fc-req"><col class="fc-disp"></colgroup><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="text-align:center">Last 30 days<br><span class="fulfill-head-sub">to this dept</span></th><th style="text-align:center">Requested</th><th style="text-align:center">Dispense</th></tr></thead><tbody id="ftbl"></tbody></table>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn bg" onclick="CM('mfulfill')">Cancel</button>
