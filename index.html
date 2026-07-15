@@ -7973,5 +7973,75 @@ body.role-department #ctl-log{pointer-events:none}
   };
 })();
 </script>
+
+<!-- v1.2 final safe master-to-department role transition fix -->
+<script>
+(function(){
+  function E(id){return document.getElementById(id)}
+  function safeDepartmentNav(){
+    var nav=E('mnav');if(!nav)return;
+    nav.innerHTML='';
+    var items=[
+      ['pg-newreq','New Request / طلب جديد'],
+      ['pg-myreqs','My Requests / طلباتي'],
+      ['pg-shelves','📦 Shelves / أرفف'],
+      ['pg-crashcart','🚑 Crash Cart'],
+      ['pg-notes-dept','📝 Notes / ملاحظات'],
+      ['pg-deptprint','🖨 Print Drug List'],
+      ['pg-controlled','🔒 Controlled custody']
+    ];
+    if(typeof window.isMasterActual==='function'&&window.isMasterActual()){
+      var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';
+      mb.textContent='🧪 تغيير الدور الحالي';mb.onclick=window.openMasterRoleSwitch;nav.appendChild(mb);
+    }
+    items.forEach(function(x){
+      var b=document.createElement('button');b.className='nb';b.dataset.pg=x[0];b.innerHTML=x[1];
+      b.onclick=function(){safeDepartmentShow(this.dataset.pg)};nav.appendChild(b);
+    });
+  }
+  function safeDepartmentShow(id){
+    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+    document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.remove('on')});
+    var pg=E(id);if(pg)pg.classList.add('on');
+    var btn=document.querySelector('#mnav [data-pg="'+id+'"]');if(btn)btn.classList.add('on');
+    var renderers={
+      'pg-newreq':'renderReqForm','pg-myreqs':'renderMyReqs','pg-shelves':'renderShelves',
+      'pg-crashcart':'renderCrashCarts','pg-notes-dept':'renderDeptNotes',
+      'pg-deptprint':'renderDeptPrint','pg-controlled':'renderControlled'
+    };
+    var fn=window[renderers[id]];
+    if(typeof fn==='function'){
+      try{fn()}catch(err){console.error('Department page render failed:',id,err);if(typeof toast==='function')toast('تعذر تحميل الصفحة: '+(err.message||err),'err')}
+    }
+  }
+  window.safeStartDepartmentPreview=function(){
+    var auth=E('auth'),app=E('app');if(auth)auth.style.display='none';if(app)app.style.display='block';
+    document.body.classList.remove('role-pharmacy','role-pharmacy_staff','role-inpatient_supervisor','role-controlled_pharmacy','role-warehouse');
+    document.body.classList.add('role-department');
+    var tu=E('tuser');if(tu)tu.textContent='🏢 '+((window.CU&&CU.deptName)||'Department');
+    var rb=E('rbadge');if(rb){rb.innerHTML='🏢 '+((window.CU&&CU.deptName)||'Department');rb.className='trole rdp'}
+    safeDepartmentNav();
+    safeDepartmentShow('pg-newreq');
+    if(typeof window.addMasterSwitchButton==='function')window.addMasterSwitchButton();
+    if(typeof window.updateNotesBadge==='function')setTimeout(window.updateNotesBadge,50);
+  };
+  var previousMasterApply=window.masterApplyRole;
+  window.masterApplyRole=function(){
+    var roleSel=E('master-role-select');
+    if(!roleSel||roleSel.value!=='department')return previousMasterApply&&previousMasterApply.apply(this,arguments);
+    if(typeof window.isMasterActual==='function'&&!window.isMasterActual())return;
+    var deptSel=E('master-dept-select'),deptId=deptSel?deptSel.value:'';
+    var dept=(typeof gd==='function'?(gd()||[]):[]).find(function(d){return d.id===deptId});
+    if(!dept){if(typeof toast==='function')toast('Choose a department first.','err');return}
+    if(!window.MASTER_ACTUAL)window.MASTER_ACTUAL=Object.assign({},window.CU||{});
+    window.MASTER_EFFECTIVE={userId:'master-preview-department',email:(MASTER_ACTUAL.email||MASTER_ACTUAL.username||'Master'),role:'department',deptId:deptId,deptName:dept.name||''};
+    window.CU={id:MASTER_ACTUAL.id,username:MASTER_ACTUAL.username||MASTER_ACTUAL.email||'Master',email:MASTER_ACTUAL.email||'',role:'department',master:false,deptId:deptId,deptName:dept.name||'',controlledCustodian:true};
+    if(typeof auditAction==='function')auditAction('master_role_preview',{role:'department',deptId:deptId});
+    if(typeof CM==='function')CM('mmaster-role');
+    window.safeStartDepartmentPreview();
+    if(typeof toast==='function')toast('Switched to Department Employee / موظف قسم','info');
+  };
+})();
+</script>
 </body>
 </html>
