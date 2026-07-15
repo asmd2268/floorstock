@@ -1460,7 +1460,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt" id="fulfill-title">Fulfill Request</span><button class="xbtn" onclick="CM('mfulfill')">&#x2715;</button></div>
     <p id="fulfill-hint" style="font-size:12px;color:var(--tx2);margin-bottom:13px">Enter actual quantity to dispense. 0 = skip.</p>
     <div class="tw" style="max-height:380px;overflow-y:auto">
-      <table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Requested</th><th>Dispense Qty</th></tr></thead><tbody id="ftbl"></tbody></table>
+      <table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="text-align:center">Requested</th><th>Dispense Qty</th></tr></thead><tbody id="ftbl"></tbody></table>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn bg" onclick="CM('mfulfill')">Cancel</button>
@@ -2502,7 +2502,7 @@ function renderDash(){
     el('exp-alerts').innerHTML=el('exp-alerts').innerHTML+schedHtml;
   }
   el('dptbl').innerHTML=pend.length
-    ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDate(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">Fulfill</button></td></tr>'}).join('')
+    ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">Fulfill</button></td></tr>'}).join('')
     :'<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:20px">No pending requests &#x2713;</td></tr>';
   // Notes alert on dashboard
 var openNotes=getNotes().filter(function(n){return n.status==='open'||n.status==='urgent'});
@@ -2513,7 +2513,7 @@ else if(openNotes.length)notesHtml+='<div class="alert-banner-y" style="cursor:p
 el('exp-alerts').innerHTML=(el('exp-alerts').innerHTML||'')+notesHtml;
 el('dact').innerHTML=rs.slice().reverse().slice(0,20).map(function(r){
     var d=ds.find(function(x){return x.id===r.deptId});
-    return '<div style="padding:9px 16px;border-bottom:1px solid var(--bd);font-size:12px"><div style="font-weight:500">'+((d&&d.name)||r.deptId)+' &mdash; '+(r.status==='pending'?'<span style="color:var(--yll)">Pending</span>':'<span style="color:var(--gnl)">Fulfilled</span>')+'</div><div style="color:var(--tx2)">'+fmtDate(r.created)+' &middot; '+(r.items||[]).length+' items</div></div>';
+    return '<div style="padding:9px 16px;border-bottom:1px solid var(--bd);font-size:12px"><div style="font-weight:500">'+((d&&d.name)||r.deptId)+' &mdash; '+(r.status==='pending'?'<span style="color:var(--yll)">Pending</span>':'<span style="color:var(--gnl)">Fulfilled</span>')+'</div><div style="color:var(--tx2)">'+fmtDateTime(r.created)+' &middot; '+(r.items||[]).length+' items</div></div>';
   }).join('')||'<div style="padding:18px;color:var(--tx2)">No activity yet</div>';
 }
 
@@ -2707,12 +2707,12 @@ function rcard(r,isp){
   var d=gd().find(function(x){return x.id===r.deptId});
   var sm={pending:'byl',fulfilled:'bgn',partial:'bbl'};
   return '<div class="card"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
-    +'<div class="fl g8 ic"><span style="font-size:12px;color:var(--tx2)">'+fmtDate(r.created)+'</span>'
+    +'<div class="fl g8 ic"><span style="font-size:12px;color:var(--tx2)">'+fmtDateTime(r.created)+'</span>'
     +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">Fulfill</button>':'')
     +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">&#x270F; Edit</button>':'')
     +'<button class="btn bg bsm" data-id="'+r.id+'" onclick="viewReq(this.getAttribute(\'data-id\'))">View</button></div></div>'
     +'<div style="padding:9px 18px;font-size:12px;color:var(--tx2)">'+(r.items||[]).length+' items'
-    +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDate(r.fulfilledAt):' &middot; Awaiting fulfillment')
+    +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDateTime(r.fulfilledAt):' &middot; Awaiting fulfillment')
     +(r.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">&#x1F4C5; Scheduled dispense: '+fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' &middot; '+r.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">&#x1F4C5; Dispense time: Not scheduled yet</div>')
     +'</div></div>';
 }
@@ -2721,7 +2721,7 @@ function viewReq(id){
   var d=gd().find(function(x){return x.id===r.deptId});
   el('vdname').textContent=(d&&d.name)||r.deptId;
   var ms=getMeds(r.deptId||'');
-  el('vbody').innerHTML='<p style="font-size:12px;color:var(--tx2);margin-bottom:11px">Submitted: '+fmtDate(r.created)+'</p>'
+  el('vbody').innerHTML='<p style="font-size:12px;color:var(--tx2);margin-bottom:11px">Submitted: '+fmtDateTime(r.created)+'</p>'
     +'<div class="tw"><table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th style="text-align:center">Requested</th><th style="text-align:center">Dispensed</th></tr></thead><tbody>'
     +(r.items||[]).map(function(it,index){
       var m=ms.find(function(x){return x.id===it.medId});
@@ -2745,6 +2745,8 @@ function openFulfill(id){
     if(isEdit){var prev=(r.dispensed||[]).find(function(x){return x.medId===it.medId});if(prev)prevQty=prev.qty;}
     var rowBg=m&&m.high_alert?'background:rgba(218,54,51,.07)':m&&m.hazard?'background:rgba(210,153,34,.06)':'background:rgba(31,111,235,.04)';
     return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
+      +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.min!=null?m.min:'&mdash;')+'</td>'
+      +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.max!=null?m.max:'&mdash;')+'</td>'
       +'<td style="text-align:center;font-family:var(--mono);font-weight:700">'+it.qty+'</td>'
       +'<td><input type="number" min="0" max="'+it.qty+'" value="'+prevQty+'" data-med="'+it.medId+'" style="width:78px;padding:5px 7px;text-align:center;margin:0"></td></tr>';
   }).join('');
@@ -3320,7 +3322,7 @@ function renderPrint(){
   var rs=gr().filter(function(r){return r.status!=='pending'}).slice().reverse();
   el('ptbl').innerHTML=rs.length
     ?rs.map(function(r){var d=gd().find(function(x){return x.id===r.deptId});var n=(r.dispensed||[]).filter(function(x){return x.qty>0}).length;
-      return '<tr><td><input type="checkbox" class="pchk" data-id="'+r.id+'"></td><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDate(r.created)+'</td><td>'+fmtDate(r.fulfilledAt)+'</td><td>'+n+' items</td><td style="text-align:center;font-family:var(--mono)">'+(r.printCount||0)+'</td></tr>'
+      return '<tr><td><input type="checkbox" class="pchk" data-id="'+r.id+'"></td><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+fmtDate(r.fulfilledAt)+'</td><td>'+n+' items</td><td style="text-align:center;font-family:var(--mono)">'+(r.printCount||0)+'</td></tr>'
     }).join('')
     :'<tr><td colspan="6" style="text-align:center;color:var(--tx2);padding:18px">No fulfilled requests</td></tr>';
 }
@@ -7905,7 +7907,7 @@ body.role-department #ctl-log{pointer-events:none}
   }
   function renderCrash(d){var r=publicRoot(),rows=(d.items||[]).map(function(it,i){var st=it.status||((n2(it.available)<=0)?'Out of stock':(n2(it.available)<n2(it.required)?'Less than required':'Available')),cls=st==='Out of stock'?'status-out':(st==='Less than required'?'status-low':'status-ok');return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(it.name||'')+'</b></td><td>'+esc2(it.strength||'—')+'</td><td>'+n2(it.required)+'</td><td>'+n2(it.available)+'</td><td class="'+cls+'">'+esc2(st)+'</td><td>'+((it.batches||[]).map(function(b){return dateOnly(b.expiry)+' → '+esc2(b.qty===''?'—':b.qty)+(b.lot?' · '+esc2(b.lot):'')}).join('<br>')||'—')+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>'+esc2(d.name||'Crash Cart')+'</h1><h2>'+esc2(d.department||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Seal:</b> '+esc2(d.seal||'—')+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Strength</th><th>Required</th><th>Available</th><th>Status</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveCrash(id){var r=publicRoot();r.innerHTML='<h2>Loading latest Crash Cart information…</h2>';return FB_DB.collection('public_controlled_expiry').doc('crash_'+id).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public Crash Cart record was not found.</h2><p>Print a new QR once from the system.</p>';return}renderCrash(s.data()||{})},function(e){r.innerHTML='<h2>Could not load the public Crash Cart page.</h2><p>'+esc2(e.message||e)+'</p>'})}
-  function renderControlled(d){var r=publicRoot(),rows=(d.items||[]).map(function(x,i){var bs=(x.batches||[]).map(function(b){return (b.qty!=null?esc2(b.qty)+' → ':'')+dateOnly(b.expiry)+(b.lot?' · '+esc2(b.lot):'')}).join('<br>')||'—';return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(x.name||'')+'</b></td><td>'+esc2(x.classification||'—')+'</td><td>'+n2(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Controlled Medicines List</h1><h2>'+esc2(d.departmentName||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+  function renderControlled(d){var r=publicRoot(),limit=Number(d.alertDays)||30,soonCount=0,expiredCount=0,rows=(d.items||[]).map(function(x,i){var itemSoon=false,itemExpired=false,bs=(x.batches||[]).map(function(b){var raw=b.expiry||'',dt=new Date(raw),days=isNaN(dt)?null:Math.ceil((dt-new Date())/86400000),cls='status-ok',label='';if(days!==null&&days<0){cls='status-out';label='Expired';itemExpired=true}else if(days!==null&&days<=limit){cls='status-low';label='Near expiry';itemSoon=true}else if(days!==null){label=days+' days'}return '<div class="'+cls+'">'+(b.qty!=null?esc2(b.qty)+' → ':'')+dateOnly(raw)+(b.lot?' · '+esc2(b.lot):'')+(label?' <b>('+esc2(label)+')</b>':'')+'</div>'}).join('')||'—';if(itemExpired)expiredCount++;else if(itemSoon)soonCount++;var rowCls=itemExpired?'status-out':(itemSoon?'status-low':'');return '<tr class="'+rowCls+'"><td>'+(i+1)+'</td><td><b>'+esc2(x.name||'')+'</b></td><td>'+esc2(x.classification||'—')+'</td><td>'+n2(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Controlled Medicines List</h1><h2>'+esc2(d.departmentName||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Near-expiry rule:</b> '+limit+' days</span><span class="live-pill status-low"><b>Near expiry:</b> '+soonCount+'</span><span class="live-pill status-out"><b>Expired:</b> '+expiredCount+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches and status</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveControlled(dept){var r=publicRoot();r.innerHTML='<h2>Loading latest controlled-medicine list…</h2>';return FB_DB.collection('public_controlled_expiry').doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public list was not found.</h2>';return}renderControlled(s.data()||{})},function(e){r.innerHTML='<h2>Could not load the public list.</h2><p>'+esc2(e.message||e)+'</p>'})}
   function renderExpiry(d,dept){var r=publicRoot(),b=d.batches||[],rows=b.map(function(x,i){var dt=x.date||x.expiry||'';return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(x.medication||x.name||'')+'</b></td><td>'+esc2(x.batch||x.lot||'—')+'</td><td>'+dateOnly(dt)+'</td><td>'+esc2(x.qty==null?'—':x.qty)+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Expiry Monitor</h1><h2>'+esc2(d.departmentName||dept||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Batch</th><th>Expiry date</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveExpiry(dept){var r=publicRoot();r.innerHTML='<h2>Loading latest expiry data…</h2>';return FB_DB.collection('public_expiry').doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public expiry list was not found.</h2>';return}renderExpiry(s.data()||{},dept)},function(e){r.innerHTML='<h2>Could not load the public expiry page.</h2><p>'+esc2(e.message||e)+'</p>'})}
@@ -7933,7 +7935,7 @@ body.role-department #ctl-log{pointer-events:none}
   async function publishDept(id){
     if(!window.FB_DB)throw new Error('Firebase is not initialized');
     var items=(typeof ctlDeptList==='function'?ctlDeptList(id):[]).map(function(x){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return {name:m.name||'',classification:m.classification||'narcotic',moh:m.moh||'',nupco:m.nupco||'',qty:numx(x.qty),batches:(x.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':numx(b.qty),lot:b.lot||''}})}});
-    await FB_DB.collection('public_controlled_expiry').doc(id).set({departmentId:id,departmentName:deptName(id),items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
+    var alertDays=(typeof deptRule==='function'&&window.CU&&CU.role==='department'&&CU.deptId===id)?deptRule():((typeof ctlSettingsGlobal==='function'?(ctlSettingsGlobal()||{}):{}).expiryAlertDays||30); await FB_DB.collection('public_controlled_expiry').doc(id).set({departmentId:id,departmentName:deptName(id),alertDays:Number(alertDays)||30,items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
   }
   window.ctlPrintNamesExpiryQR=async function(){
     var id=(window.CU&&CU.role==='department')?CU.deptId:(typeof ctlCurrentDept==='function'?ctlCurrentDept():'');
@@ -8053,6 +8055,42 @@ body.role-department #ctl-log{pointer-events:none}
     window.safeStartDepartmentPreview();
     if(typeof toast==='function')toast('Switched to Department Employee / موظف قسم','info');
   };
+})();
+</script>
+
+
+<!-- v1.2 department list print without expiry; live public QR -->
+<script>
+(function(){
+  function E(id){return document.getElementById(id)}
+  function ex(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v)}
+  function nx(v){v=Number(v);return isFinite(v)?v:0}
+  function deptId(){return (window.CU&&CU.role==='department')?CU.deptId:(typeof ctlCurrentDept==='function'?ctlCurrentDept():'')}
+  function deptLabel(id){return ((typeof gd==='function'?(gd()||[]):[]).find(function(d){return d.id===id})||{}).name||((window.CU&&CU.deptId===id)?CU.deptName:'')||id}
+  function urlFor(id){var u=new URL(location.href);u.search='';u.hash='';u.searchParams.set('view','controlled-expiry');u.searchParams.set('dept',id);return u.toString()}
+  async function syncDept(id){
+    if(!id||!window.FB_DB)throw new Error('Firebase is not initialized');
+    var items=(typeof ctlDeptList==='function'?ctlDeptList(id):[]).map(function(x){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return {name:m.name||'',classification:m.classification||'narcotic',moh:m.moh||'',nupco:m.nupco||'',qty:nx(x.qty),batches:(x.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':nx(b.qty),lot:b.lot||''}})}});
+    var rule=(window.CU&&CU.role==='department'&&CU.deptId===id&&typeof deptRule==='function')?deptRule():((typeof ctlSettingsGlobal==='function'?(ctlSettingsGlobal()||{}):{}).expiryAlertDays||30);
+    await FB_DB.collection('public_controlled_expiry').doc(id).set({departmentId:id,departmentName:deptLabel(id),alertDays:Number(rule)||30,items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
+  }
+  window.ctlPrintNamesOnlyQR=async function(){
+    var id=deptId();if(!id)return toast('Select a department first.','err');
+    try{await syncDept(id)}catch(e){return toast('Could not update the public QR list: '+(e.message||e),'err')}
+    var u=urlFor(id),qr=typeof makeReadableQR==='function'?makeReadableQR(u):('https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(u));
+    var rows=(typeof ctlDeptList==='function'?ctlDeptList(id):[]).map(function(x,i){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return '<tr><td>'+(i+1)+'</td><td><b>'+ex(m.name||'')+'</b></td><td>'+ex(typeof ctlClassLabel==='function'?ctlClassLabel(m.classification):m.classification||'—')+'</td><td>'+nx(x.qty)+'</td></tr>'}).join('')||'<tr><td colspan="4" style="text-align:center">No medicines</td></tr>';
+    var w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print.','err');
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+ex(deptLabel(id))+' - Controlled Custody</title><style>@page{size:A4 landscape;margin:8mm}html,body{direction:ltr}body{font-family:Arial,Tahoma,sans-serif;color:#111}h1,h2{text-align:center;margin:4px}.head{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;gap:12px}.qr{text-align:center}.qr img{width:180px;height:180px;background:#fff;border:3px solid #000;padding:9px;image-rendering:pixelated}.note{border:1px solid #333;padding:9px;margin:8px 0;text-align:center;font-weight:700}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid}th,td{border:1px solid #222;padding:7px;text-align:left;font-size:12px}th{background:#eee}th:nth-child(1){width:6%}th:nth-child(2){width:56%}th:nth-child(3){width:22%}th:nth-child(4){width:16%}</style></head><body>'+(typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'')+'<div class="head"><div></div><div><h1>Controlled Custody</h1><h2>'+ex(deptLabel(id))+'</h2></div><div class="qr"><img src="'+qr+'"><div><b>Latest expiry information</b><br>Public — no login required</div></div></div><div class="note">Expiry dates are intentionally not printed. Scan the QR code to view the latest expiry batches and near-expiry status directly from the database.</div><table><thead><tr><th>#</th><th>Medicine name</th><th>Class</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.onload=function(){setTimeout(function(){window.print()},900)}<\/script></body></html>');w.document.close();
+    if(typeof auditAction==='function')auditAction('controlled_names_only_qr_print',{deptId:id,publicUrl:u});
+  };
+  function add(){
+    var panel=E('ctl-dept-public-panel'),bar=panel&&panel.querySelector('.ctl-rulebar');
+    if(bar&&!E('ctl-print-names-only-qr')){var b=document.createElement('button');b.id='ctl-print-names-only-qr';b.className='btn bs';b.textContent='🖨 Print list without expiry + QR';b.onclick=window.ctlPrintNamesOnlyQR;bar.appendChild(b)}
+  }
+  var queued=false;new MutationObserver(function(){if(queued)return;queued=true;requestAnimationFrame(function(){queued=false;add()})}).observe(document.body||document.documentElement,{subtree:true,childList:true});
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(add,250)});setTimeout(add,0);
+  var oldCatalog=window.ctlSetCatalog;
+  if(typeof oldCatalog==='function')window.ctlSetCatalog=async function(v){var out=await oldCatalog.apply(this,arguments);try{var ids=(typeof gd==='function'?(gd()||[]):[]).map(function(d){return d.id});await Promise.all(ids.map(syncDept))}catch(e){console.error('Public controlled list catalog sync failed',e)}return out};
 })();
 </script>
 </body>
