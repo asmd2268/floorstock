@@ -3066,7 +3066,11 @@ function printControlledCurrent(){
   var qr='https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url.toString());
   var w=window.open('','_ctlprint');
   if(!w)return toast('Allow pop-ups to print.','err');
-  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script>
+  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script></body></html>');
+  w.document.close();
+}
+</script>
+
 <script>
 (function(){
   function ensureFulfillUnitNotice(){
@@ -3196,10 +3200,6 @@ function printControlledCurrent(){
 })();
 </script>
 
-</body></html>');
-  w.document.close();
-}
-</script>
 
 <!-- v1.2 Experimental Zebra Label Center -->
 <style>
@@ -8630,6 +8630,29 @@ body.role-department #ctl-log{pointer-events:none}
     var w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print orders.','err');
     w.document.open();w.document.write(html);w.document.close();renderPrint();
     setTimeout(function(){PPP=0;document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')})},0);
+  };
+})();
+</script>
+
+<script>
+(function(){
+  'use strict';
+  var prevOpen=window.openFulfill;
+  window.openFulfill=function(id){
+    var result=prevOpen?prevOpen.apply(this,arguments):undefined;
+    try{
+      var req=(typeof gr==='function'?gr():[]).find(function(x){return x.id===id});
+      if(req&&req.status==='fulfilled'){
+        var map={};(req.dispensed||[]).forEach(function(x){map[String(x.medId)]=x.qty});
+        document.querySelectorAll('#ftbl input[data-med]').forEach(function(inp){
+          var key=String(inp.dataset.med||'');
+          if(Object.prototype.hasOwnProperty.call(map,key))inp.value=map[key];
+        });
+        var hint=document.getElementById('fulfill-hint');
+        if(hint)hint.textContent='Previous dispensed quantities are loaded. Change only the item you need, then save.';
+      }
+    }catch(e){console.error('Fulfillment edit prefill failed',e)}
+    return result;
   };
 })();
 </script>
