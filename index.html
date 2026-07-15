@@ -8396,5 +8396,74 @@ body.role-department #ctl-log{pointer-events:none}
   if(typeof oldStart==='function')window.startApp=function(){var r=oldStart.apply(this,arguments);schedule();return r};
 })();
 </script>
+
+<!-- v1.2 final request print layout: parallel order columns -->
+<script>
+(function(){
+  'use strict';
+  window.doPrint=function(){
+    var sel=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
+    if(!sel.length)return toast('Select at least one order','err');
+    var ppp=Number(window.PPP||PPP);
+    if([2,3,4,5].indexOf(ppp)<0)return toast('Choose orders per page: 2, 3, 4, or 5','err');
+
+    var orders=sel.map(function(id){
+      var r=gr().find(function(x){return x.id===id});if(!r)return null;
+      var meds=getMeds(r.deptId||'');
+      var dept=gd().find(function(d){return d.id===r.deptId});
+      var items=(r.dispensed||[]).filter(function(d){return Number.isFinite(Number(d.qty));}).map(function(d){
+        var m=meds.find(function(x){return x.id===d.medId});
+        return {name:(m&&m.name)||d.name||d.medId||'Unknown medication',qty:Number(d.qty)};
+      });
+      return {r:r,dept:dept,items:items};
+    }).filter(Boolean);
+
+    var pages=[];for(var i=0;i<orders.length;i+=ppp)pages.push(orders.slice(i,i+ppp));
+    var maxItems=Math.max.apply(null,orders.map(function(o){return Math.max(1,o.items.length)}));
+    var rowH=Math.max(3.2,Math.min(7.0,166/maxItems));
+    var medPt=Math.max(5.3,Math.min(9.5,rowH*1.35));
+    var qtyPt=Math.max(6.2,Math.min(11,rowH*1.55));
+
+    var css='@page{size:A4 landscape;margin:5mm}*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;height:100%;font-family:Arial,sans-serif;color:#111}'
+      +'.page{width:287mm;height:200mm;overflow:hidden;display:grid;grid-template-rows:8mm 1fr 5mm;page-break-after:always;break-after:page}'
+      +'.page:last-child{page-break-after:auto;break-after:auto}.title{text-align:center;font-size:8pt;font-weight:700;line-height:7mm;border-bottom:.25mm solid #999}'
+      +'.foot{text-align:center;font-size:5.5pt;color:#777;line-height:5mm}'
+      +'.orders{min-height:0;display:grid;grid-template-columns:repeat('+ppp+',minmax(0,1fr));gap:2.2mm;padding-top:2mm;overflow:hidden}'
+      +'.order{min-width:0;min-height:0;border:.45mm solid #1f3f70;border-radius:1.8mm;overflow:hidden;display:grid;grid-template-rows:13mm 1fr;page-break-inside:avoid;break-inside:avoid}'
+      +'.order-head{background:#1f3f70;color:#fff;padding:1.5mm 2mm;display:flex;flex-direction:column;justify-content:center;gap:.8mm;overflow:hidden}'
+      +'.dept{font-size:10pt;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center}'
+      +'.meta{font-size:5.7pt;text-align:center;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+      +'.list{min-height:0;overflow:hidden;display:flex;flex-direction:column}'
+      +'.hdr,.row{display:grid;grid-template-columns:minmax(0,1fr) 15mm;align-items:center;column-gap:1.2mm;padding:0 1.3mm}'
+      +'.hdr{height:7mm;min-height:7mm;background:#eef3fa;border-bottom:.3mm solid #9caabd;font-size:6pt;font-weight:800;text-transform:uppercase}'
+      +'.row{height:'+rowH.toFixed(2)+'mm;min-height:'+rowH.toFixed(2)+'mm;border-bottom:.2mm solid #ddd;overflow:hidden}'
+      +'.row:last-child{border-bottom:none}.med{font-size:'+medPt.toFixed(2)+'pt;font-weight:700;line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}'
+      +'.qty{font-size:'+qtyPt.toFixed(2)+'pt;font-weight:900;text-align:center;color:#173f77;white-space:nowrap}'
+      +'.empty{font-size:7pt;color:#777;text-align:center;padding:5mm}'
+      +'@media print{html,body{overflow:hidden!important}.page{margin:0!important}}';
+
+    var html='<!doctype html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body>';
+    pages.forEach(function(pg,pi){
+      html+='<section class="page"><div class="title">Floor Stock Dispensing Orders · '+fmtDate(nowISO())+' · Page '+(pi+1)+'/'+pages.length+'</div><div class="orders">';
+      pg.forEach(function(o){
+        var dname=(o.dept&&o.dept.name)||o.r.deptName||o.r.deptId||'Department';
+        html+='<article class="order"><div class="order-head"><div class="dept">'+esc(dname)+'</div><div class="meta">Fulfilled: '+fmtDateTime(o.r.fulfilledAt||o.r.created)+'</div></div><div class="list"><div class="hdr"><span>Medication</span><span style="text-align:center">Dispensed Qty</span></div>';
+        if(!o.items.length){html+='<div class="empty">No dispensed items</div>'}
+        else{o.items.forEach(function(it){html+='<div class="row"><span class="med">'+esc(it.name)+'</span><span class="qty">'+it.qty+'</span></div>'})}
+        html+='</div></article>';
+      });
+      /* Keep unused slots blank so the selected column geometry never changes. */
+      for(var k=pg.length;k<ppp;k++)html+='<article class="order" style="visibility:hidden"></article>';
+      html+='</div><div class="foot">By Ali Abudahash</div></section>';
+    });
+    html+='<script>window.onload=function(){setTimeout(function(){window.print()},350)}<\\/script></body></html>';
+
+    sel.forEach(function(id){var r=gr().find(function(x){return x.id===id});if(r)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:nowISO()})});
+    var w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print orders.','err');
+    w.document.open();w.document.write(html);w.document.close();renderPrint();
+    setTimeout(function(){PPP=0;document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')})},0);
+  };
+})();
+</script>
 </body>
 </html>
