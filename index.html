@@ -7952,9 +7952,21 @@ body.role-department #ctl-log{pointer-events:none}
   };
   function addButtons(){
     var panel=E('ctl-dept-public-panel');if(panel){var bar=panel.querySelector('.ctl-rulebar');if(bar&&!E('ctl-print-names-expiry-qr')){var b=document.createElement('button');b.id='ctl-print-names-expiry-qr';b.className='btn bp';b.textContent='🖨 Print names + expiry + QR';b.onclick=window.ctlPrintNamesExpiryQR;bar.appendChild(b);var o=document.createElement('button');o.id='ctl-open-public-names-expiry';o.className='btn bg';o.textContent='📱 Open QR list';o.onclick=window.ctlOpenPublicNamesExpiry;bar.appendChild(o)}}
-    var main=E('ctl-main-print-btn');if(main&&window.CU&&CU.role==='department'){main.textContent='🖨 Print names + expiry + QR';main.onclick=window.ctlPrintNamesExpiryQR}
+    var main=E('ctl-main-print-btn');
+    if(main&&window.CU&&CU.role==='department'&&main.dataset.namesExpiryQrBound!=='1'){
+      main.dataset.namesExpiryQrBound='1';
+      main.textContent='🖨 Print names + expiry + QR';
+      main.onclick=window.ctlPrintNamesExpiryQR;
+    }
   }
-  var obs=new MutationObserver(function(){addButtons()});obs.observe(document.documentElement,{subtree:true,childList:true});document.addEventListener('DOMContentLoaded',function(){setTimeout(addButtons,300)});setTimeout(addButtons,0);
+  var addButtonsQueued=false;
+  var obs=new MutationObserver(function(){
+    if(addButtonsQueued)return;
+    addButtonsQueued=true;
+    requestAnimationFrame(function(){addButtonsQueued=false;addButtons()});
+  });
+  obs.observe(document.body||document.documentElement,{subtree:true,childList:true});
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(addButtons,300)});setTimeout(addButtons,0);
   var oldSet=window.ctlSetDeptList;
   if(typeof oldSet==='function')window.ctlSetDeptList=async function(id,v){var r=await oldSet.apply(this,arguments);try{await publishDept(id)}catch(e){console.error('Controlled Custody public sync failed',e)}return r};
 })();
