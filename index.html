@@ -591,6 +591,31 @@ body.light .login-attribution{color:#6b7280}
  .fulfill-table .fc-req{width:12%}.fulfill-table .fc-disp{width:16%}
 }
 </style>
+
+<style>
+.unit-qty-notice{
+  background:rgba(210,153,34,.13);
+  border:1px solid var(--yl);
+  border-left:4px solid var(--yl);
+  border-radius:10px;
+  padding:12px 14px;
+  margin:0 0 14px;
+  font-size:12px;
+  line-height:1.55;
+  color:var(--tx);
+}
+.unit-qty-notice strong{color:var(--yll)}
+.unit-qty-notice .unit-example{
+  margin-top:6px;
+  padding:8px 10px;
+  background:var(--s2);
+  border:1px solid var(--bd);
+  border-radius:7px;
+}
+.unit-qty-notice .unit-example b{color:var(--acl)}
+@media print{.unit-qty-notice{display:none!important}}
+</style>
+
 </head>
 <body>
 
@@ -923,6 +948,15 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 
   <!-- ══ DEPARTMENT PAGES ══ -->
   <div class="pg" id="pg-newreq">
+
+<div class="unit-qty-notice" id="dept-unit-qty-notice">
+  <strong>⚠ Important — Quantities are individual items (single units), not boxes or cartons.</strong>
+  <div class="unit-example">
+    Example: <b>Sodium Chloride 0.9% w/v 500 ml</b><br>
+    If you need one bottle, enter <b>1</b>. You will receive one bottle — not one box/carton.
+  </div>
+</div>
+
     <div class="stitle">New Request / &#x637;&#x644;&#x628; &#x62C;&#x62F;&#x64A;&#x62F;</div>
     <div class="ssub" id="dnsub">Enter quantities needed</div>
     <div class="card">
@@ -3032,7 +3066,137 @@ function printControlledCurrent(){
   var qr='https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url.toString());
   var w=window.open('','_ctlprint');
   if(!w)return toast('Allow pop-ups to print.','err');
-  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script></body></html>');
+  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script>
+<script>
+(function(){
+  function ensureFulfillUnitNotice(){
+    var modal=document.querySelector('.modal.on .fulfill-modal, .fulfill-modal');
+    if(!modal || modal.querySelector('#fulfill-unit-qty-notice')) return;
+    var head=modal.querySelector('.mh');
+    var notice=document.createElement('div');
+    notice.id='fulfill-unit-qty-notice';
+    notice.className='unit-qty-notice';
+    notice.innerHTML='<strong>⚠ Dispensing reminder — Requested quantities are single items, not boxes or cartons.</strong>'
+      +'<div class="unit-example">Example: <b>Sodium Chloride 0.9% w/v 500 ml</b><br>'
+      +'Requested Qty = <b>1</b> means dispense <b>one bottle</b>, not one box/carton.</div>';
+    if(head && head.nextSibling) head.parentNode.insertBefore(notice,head.nextSibling);
+    else modal.insertBefore(notice,modal.firstChild);
+  }
+
+  document.addEventListener('click',function(e){
+    var t=e.target.closest && e.target.closest('button,[onclick]');
+    if(!t) return;
+    var oc=t.getAttribute('onclick')||'';
+    if(/fulfill/i.test(oc) || /fulfill/i.test(t.textContent||'')){
+      setTimeout(ensureFulfillUnitNotice,80);
+      setTimeout(ensureFulfillUnitNotice,250);
+    }
+  });
+
+  var mo=new MutationObserver(function(){
+    if(document.querySelector('.fulfill-modal')) ensureFulfillUnitNotice();
+  });
+  document.addEventListener('DOMContentLoaded',function(){
+    mo.observe(document.body,{childList:true,subtree:true});
+  });
+})();
+</script>
+
+
+<style>
+.bulk-replace-note{font-size:11px;color:var(--tx2);line-height:1.5;margin-top:5px}
+.med-retired-row td{background:rgba(210,153,34,.08)!important}
+.med-retired-badge{display:inline-flex;margin-top:4px;padding:2px 7px;border:1px solid var(--yl);border-radius:8px;color:var(--yll);font-size:10px;font-weight:700;line-height:1.3}
+.bulk-result-row{padding:8px 10px;border-bottom:1px solid var(--bd);font-size:12px}
+</style>
+<script>
+(function(){
+  'use strict';
+  function E(id){return document.getElementById(id)}
+  function norm(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ')}
+  function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+  function activeExpiry(deptId,medId){
+    var t=todayISO();
+    return (getExpiry(deptId)||[]).filter(function(x){return x.medId===medId&&x.date&&x.date>=t});
+  }
+  function medKey(m){return norm(m.name)+'|'+norm(m.strength||m.dose||'')}
+  function allTemplates(){
+    var map={};
+    (gd()||[]).forEach(function(d){(getMeds(d.id)||[]).forEach(function(m){var k=medKey(m);if(k&&!map[k])map[k]=Object.assign({},m,{_key:k,_sourceDept:d.id})})});
+    return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return String(a.name).localeCompare(String(b.name))});
+  }
+  function replacementAllowed(){return !!(window.CU&&(CU.master||CU.role==='pharmacy'||CU.role==='pharmacy_manager'))}
+  async function cleanRetired(deptId){
+    var meds=(getMeds(deptId)||[]).slice(),exp=(getExpiry(deptId)||[]).slice(),changed=false;
+    var keep=[];
+    meds.forEach(function(m){
+      if(!m.floorStockRetired){keep.push(m);return}
+      if(activeExpiry(deptId,m.id).length){keep.push(m);return}
+      exp=exp.filter(function(x){return x.medId!==m.id});changed=true;
+    });
+    if(changed){await setMeds(deptId,keep);setExpiry(deptId,exp)}
+    return changed;
+  }
+  async function cleanAllRetired(){for(var d of (gd()||[])){await cleanRetired(d.id)}}
+  window.bulkReplacementCleanup=cleanAllRetired;
+
+  function ensureButton(){
+    if(!replacementAllowed())return;
+    var pg=E('pg-inv');if(!pg||E('bulk-replace-med-btn'))return;
+    var top=pg.querySelector('.fl.ic.jb.mb14 .fl.g8.ic')||pg.querySelector('.fl.g8.ic');if(!top)return;
+    var b=document.createElement('button');b.id='bulk-replace-med-btn';b.className='btn bg';b.innerHTML='⇄ Bulk Replacement';b.onclick=openBulkReplacement;top.appendChild(b);
+  }
+  function ensureModal(){
+    if(E('mbulk-replacement'))return;
+    var bg=document.createElement('div');bg.className='modal-bg';bg.id='mbulk-replacement';
+    bg.innerHTML='<div class="modal" style="width:820px;max-width:97vw"><div class="mh"><span class="mt">⇄ Bulk Floor Stock Medication Replacement</span><button class="xbtn" onclick="CM(\'mbulk-replacement\')">✕</button></div>'+
+      '<div class="frow"><div class="fg"><label>Medication to replace</label><select id="br-old"><option value="">Choose old medication...</option></select></div><div class="fg"><label>Replacement medication</label><select id="br-new"><option value="">Choose new medication...</option></select></div></div>'+
+      '<div class="card" style="margin-bottom:12px"><div class="cb" style="padding:12px"><label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="br-override" style="width:auto;margin:0" onchange="bulkReplacementToggleLimits()"> Override inherited Min / Max for every department</label><div class="frow" id="br-limits" style="display:none;margin-top:10px"><div><label>New Min</label><input type="number" id="br-min" min="0" placeholder="Leave blank to inherit"></div><div><label>New Max</label><input type="number" id="br-max" min="0" placeholder="Leave blank to inherit"></div></div></div></div>'+
+      '<div class="alert-banner-y" style="font-size:12px"><b>Expiry rule:</b> If the old medication still has an active expiry batch in a department, the new medication is added but the old one remains marked <b>Not available for Floor Stock requests</b>. It is removed automatically after the final expiry date passes or is deleted.</div>'+
+      '<div id="br-preview" style="max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:8px;margin-bottom:12px"></div>'+
+      '<div class="fl jb"><button class="btn bg" onclick="CM(\'mbulk-replacement\')">Cancel</button><button class="btn bp" onclick="runBulkReplacement()">Apply replacement</button></div></div>';
+    document.body.appendChild(bg);
+    E('br-old').addEventListener('change',renderBulkReplacementPreview);E('br-new').addEventListener('change',renderBulkReplacementPreview);
+  }
+  window.bulkReplacementToggleLimits=function(){E('br-limits').style.display=E('br-override').checked?'grid':'none'};
+  window.openBulkReplacement=function(){
+    ensureModal();var list=allTemplates(),opts=list.map(function(m){return '<option value="'+esc(m._key)+'">'+esc(m.name)+(m.strength?' — '+esc(m.strength):'')+'</option>'}).join('');
+    E('br-old').innerHTML='<option value="">Choose old medication...</option>'+opts;E('br-new').innerHTML='<option value="">Choose new medication...</option>'+opts;E('br-preview').innerHTML='<div style="padding:14px;color:var(--tx2)">Choose both medications to preview affected departments.</div>';E('br-override').checked=false;bulkReplacementToggleLimits();OM('mbulk-replacement');
+  };
+  window.renderBulkReplacementPreview=function(){
+    var ok=E('br-old').value,nk=E('br-new').value,root=E('br-preview');if(!ok||!nk){root.innerHTML='<div style="padding:14px;color:var(--tx2)">Choose both medications.</div>';return}
+    if(ok===nk){root.innerHTML='<div class="alert-banner" style="margin:8px">Old and replacement medications cannot be the same.</div>';return}
+    var rows=[];(gd()||[]).forEach(function(d){var old=(getMeds(d.id)||[]).find(function(m){return medKey(m)===ok});if(!old)return;var ex=activeExpiry(d.id,old.id);rows.push('<div class="bulk-result-row"><b>'+esc(d.name||d.id)+'</b> · Min '+esc(old.min)+' / Max '+esc(old.max)+' · '+(ex.length?'<span style="color:var(--yll)">'+ex.length+' active expiry batch(es): add replacement and retire old item</span>':'<span style="color:var(--gnl)">Full replacement</span>')+'</div>')});
+    root.innerHTML=rows.join('')||'<div style="padding:14px;color:var(--tx2)">The old medication is not present in any department.</div>';
+  };
+  window.runBulkReplacement=async function(){
+    var ok=E('br-old').value,nk=E('br-new').value;if(!ok||!nk||ok===nk)return toast('Choose two different medications.','err');
+    var tmpl=allTemplates().find(function(m){return m._key===nk});if(!tmpl)return toast('Replacement template was not found.','err');
+    var override=E('br-override').checked,omin=E('br-min').value,omax=E('br-max').value,results=[];
+    for(var d of (gd()||[])){
+      var meds=(getMeds(d.id)||[]).slice(),idx=meds.findIndex(function(m){return medKey(m)===ok});if(idx<0)continue;
+      var old=meds[idx],existing=meds.find(function(m){return medKey(m)===nk}),ex=activeExpiry(d.id,old.id),limits={min:override&&omin!==''?Number(omin):Number(old.min||0),max:override&&omax!==''?Number(omax):Number(old.max||0)};
+      if(limits.max<limits.min){return toast('Max cannot be less than Min.','err')}
+      if(!existing){var nm=Object.assign({},tmpl,{id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),min:limits.min,max:limits.max,monthly:old.monthly||'',shelfId:old.shelfId||'',floorStockReplacementOf:old.id});delete nm._key;delete nm._sourceDept;meds.push(nm);existing=nm}else{existing.min=limits.min;existing.max=limits.max}
+      if(ex.length){meds[idx]=Object.assign({},old,{floorStockRetired:true,requestDisabled:true,replacedById:existing.id,replacedByName:existing.name,retiredAt:nowISO(),retiredMessage:'This medication is no longer available in the Floor Stock list and cannot be requested. Use '+existing.name+'.'});results.push((d.name||d.id)+': replacement added; old item retained until expiry clears')}
+      else{meds.splice(idx,1);results.push((d.name||d.id)+': fully replaced')}
+      await setMeds(d.id,meds);syncPublicExpiry(d.id,getExpiry(d.id));
+    }
+    await cleanAllRetired();CM('mbulk-replacement');renderInv();toast('Bulk replacement completed.','succ');
+    await uiInfo('Bulk replacement result',results.length?results.join('\n'):'No departments contained the selected old medication.');
+  };
+
+  function decorateInventory(){
+    var deptId=getInvDept&&getInvDept();if(!deptId)return;(getMeds(deptId)||[]).filter(function(m){return m.floorStockRetired}).forEach(function(m){var row=E('inv-row-'+m.id);if(!row)return;row.classList.add('med-retired-row');var cell=row.cells&&row.cells[2];if(cell&&!cell.querySelector('.med-retired-badge'))cell.insertAdjacentHTML('beforeend','<div class="med-retired-badge">Not available for Floor Stock requests · Replacement: '+esc(m.replacedByName||'new medication')+'</div>')});
+  }
+  var _renderInv=window.renderInv;window.renderInv=function(){var r=_renderInv&&_renderInv.apply(this,arguments);ensureButton();decorateInventory();cleanAllRetired();return r};
+  var _renderReqForm=window.renderReqForm;window.renderReqForm=function(){var r=_renderReqForm&&_renderReqForm.apply(this,arguments);if(window.CU&&CU.role==='department'){(getMeds(CU.deptId)||[]).filter(function(m){return m.floorStockRetired||m.requestDisabled}).forEach(function(m){var inp=document.querySelector('.rqi[data-mid="'+m.id+'"]');if(!inp)return;inp.disabled=true;inp.value='';var tr=inp.closest('tr');if(tr){tr.classList.add('med-retired-row');var td=tr.cells&&tr.cells[1];if(td&&!td.querySelector('.med-retired-badge'))td.insertAdjacentHTML('beforeend','<div class="med-retired-badge">This medication is no longer in Floor Stock and cannot be requested. Use '+esc(m.replacedByName||'the replacement medication')+'.</div>')}})}return r};
+  var _setExpiry=window.setExpiry;window.setExpiry=function(deptId,arr){var r=_setExpiry.call(this,deptId,arr);Promise.resolve(r).then(function(){cleanRetired(deptId).then(function(ch){if(ch){try{renderInv();if(window.CU&&CU.role==='department')renderReqForm()}catch(e){}}})});return r};
+  document.addEventListener('DOMContentLoaded',function(){ensureModal();ensureButton();setTimeout(cleanAllRetired,1200)});
+})();
+</script>
+
+</body></html>');
   w.document.close();
 }
 </script>
@@ -8397,7 +8561,7 @@ body.role-department #ctl-log{pointer-events:none}
 })();
 </script>
 
-<!-- v1.2 final request print layout: compact parallel order columns -->
+<!-- v1.2 final request print layout: continuous newspaper flow -->
 <script>
 (function(){
   'use strict';
@@ -8413,58 +8577,54 @@ body.role-department #ctl-log{pointer-events:none}
       var dept=gd().find(function(d){return d.id===r.deptId});
       var items=(r.dispensed||[]).filter(function(d){return Number.isFinite(Number(d.qty));}).map(function(d){
         var m=meds.find(function(x){return x.id===d.medId});
-        return {
-          name:(m&&m.name)||d.name||d.medId||'Unknown medication',
-          strength:(m&&m.strength)||d.strength||'',
-          qty:Number(d.qty)
-        };
+        return {name:(m&&m.name)||d.name||d.medId||'Unknown medication',strength:(m&&m.strength)||d.strength||'',qty:Number(d.qty)};
       });
       return {r:r,dept:dept,items:items};
     }).filter(Boolean);
 
     var pages=[];for(var i=0;i<orders.length;i+=ppp)pages.push(orders.slice(i,i+ppp));
-    var maxItems=Math.max.apply(null,orders.map(function(o){return Math.max(1,o.items.length)}));
-    var rowH=Math.max(4.1,Math.min(9.0,181/maxItems));
-    var medPt=Math.max(6.5,Math.min(12.2,rowH*1.30));
-    var subPt=Math.max(4.7,Math.min(7.0,medPt*.62));
-    var qtyPt=Math.max(7.5,Math.min(13.5,rowH*1.48));
+    var maxCount=0;pages.forEach(function(pg){var c=0;pg.forEach(function(o){c+=1+Math.max(1,o.items.length)});if(c>maxCount)maxCount=c});
+    var perCol=Math.ceil(maxCount/ppp);
+    var medPt=Math.max(6.0,Math.min(10.8,10.8-(Math.max(0,perCol-28)*0.12)));
+    var strengthPt=Math.max(4.8,medPt*0.66);
+    var qtyPt=Math.max(7.0,medPt*1.08);
+    var rowMm=Math.max(3.7,Math.min(6.2,183/Math.max(1,perCol)));
 
     var css='@page{size:A4 landscape;margin:4mm}*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;height:100%;font-family:Arial,sans-serif;color:#111}'
-      +'.page{width:289mm;height:202mm;max-height:202mm;overflow:hidden;display:grid;grid-template-rows:3.5mm 1fr 2.5mm;page-break-after:always;break-after:page}'
-      +'.page:last-child{page-break-after:auto;break-after:auto}.title{text-align:center;font-size:4.8pt;font-weight:600;line-height:4mm;border-bottom:.18mm solid #bbb;color:#444}'
-      +'.foot{text-align:center;font-size:4.3pt;color:#888;line-height:3mm}'
-      +'.orders{min-height:0;display:grid;grid-template-columns:repeat('+ppp+',minmax(0,1fr));gap:0;padding:0;overflow:hidden;border:.28mm solid #444}'
-      +'.order{min-width:0;min-height:0;max-height:196mm;border:0;border-right:.28mm solid #444;overflow:hidden;display:grid;grid-template-rows:6mm 1fr;page-break-inside:avoid;break-inside:avoid}'
-      +'.order:last-child{border-right:0}.order-head{background:#f3f3f3;color:#111;padding:.55mm 1mm;display:flex;align-items:center;justify-content:space-between;gap:1mm;overflow:hidden;border-bottom:.22mm solid #666}'
-      +'.dept{font-size:5.8pt;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:68%}'
-      +'.meta{font-size:4.6pt;text-align:right;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:32%}'
-      +'.list{min-height:0;max-height:190mm;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-start}'
-      +'.row{height:auto;min-height:'+rowH.toFixed(2)+'mm;min-height:'+rowH.toFixed(2)+'mm;border-bottom:.18mm solid #cfcfcf;overflow:hidden;display:flex;align-items:center;justify-content:flex-start;gap:.8mm;padding:.45mm 1mm}'
-      +'.row:last-child{border-bottom:0}.medwrap{min-width:0;max-width:calc(100% - 8mm);display:flex;flex-direction:column;justify-content:center;line-height:1.08}'
-      +'.med{font-size:'+medPt.toFixed(2)+'pt;font-weight:800;line-height:1.08;white-space:normal;overflow:visible;text-overflow:clip;word-break:break-word}'
-      +'.strength{font-size:'+subPt.toFixed(2)+'pt;font-weight:700;line-height:1.08;color:#111;white-space:normal;overflow:visible;text-overflow:clip;margin-top:.2mm}'
-      +'.qty{margin-left:.6mm;font-size:'+qtyPt.toFixed(2)+'pt;font-weight:900;text-align:left;color:#173f77;white-space:nowrap;flex:0 0 auto;line-height:1}'
-      +'.empty{font-size:7pt;color:#777;text-align:center;padding:5mm}'
+      +'.page{width:289mm;height:202mm;overflow:hidden;display:grid;grid-template-rows:3.5mm 1fr 2.5mm;page-break-after:always;break-after:page}'
+      +'.page:last-child{page-break-after:auto;break-after:auto}.title{text-align:center;font-size:4.5pt;font-weight:600;line-height:3.5mm;border-bottom:.18mm solid #aaa;color:#444}'
+      +'.foot{text-align:center;font-size:4.1pt;color:#888;line-height:2.5mm}'
+      +'.flow{height:196mm;column-count:'+ppp+';column-gap:0;column-rule:.28mm solid #444;column-fill:auto;border:.28mm solid #444;overflow:hidden;background:#fff}'
+      +'.order{display:block;break-inside:auto;-webkit-column-break-inside:auto;padding:0;margin:0;box-decoration-break:clone;-webkit-box-decoration-break:clone}'
+      +'.order.alt0{background:#fff}.order.alt1{background:#e7e7e7}'
+      +'.order-head{break-after:avoid;page-break-after:avoid;padding:.45mm .8mm;border-top:.26mm solid #333;border-bottom:.2mm solid #666;display:flex;align-items:center;justify-content:space-between;gap:.8mm;line-height:1.05}'
+      +'.order:first-child .order-head{border-top:0}.dept{font-size:5.4pt;font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:67%}'
+      +'.meta{font-size:4.2pt;color:#555;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:33%;text-align:right}'
+      +'.item{min-height:'+rowMm.toFixed(2)+'mm;padding:.35mm .8mm;border-bottom:.16mm solid #c7c7c7;display:flex;align-items:center;justify-content:flex-start;gap:.7mm;break-inside:avoid;page-break-inside:avoid;line-height:1.05}'
+      +'.medwrap{min-width:0;max-width:calc(100% - 8mm);display:flex;flex-direction:column;justify-content:center}'
+      +'.med{font-size:'+medPt.toFixed(2)+'pt;font-weight:900;line-height:1.05;white-space:normal;word-break:break-word}'
+      +'.strength{font-size:'+strengthPt.toFixed(2)+'pt;font-weight:700;line-height:1.04;color:#111;margin-top:.1mm;white-space:normal;word-break:break-word}'
+      +'.qty{font-size:'+qtyPt.toFixed(2)+'pt;font-weight:900;color:#111;white-space:nowrap;flex:0 0 auto;margin-left:.3mm}'
+      +'.empty{font-size:6pt;padding:2mm;color:#666;border-bottom:.16mm solid #c7c7c7}'
       +'@media print{html,body{overflow:hidden!important}.page{margin:0!important}}';
 
     var html='<!doctype html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body>';
     pages.forEach(function(pg,pi){
-      html+='<section class="page"><div class="title">Floor Stock Dispensing Orders · '+fmtDate(nowISO())+' · '+(pi+1)+'/'+pages.length+'</div><div class="orders">';
-      pg.forEach(function(o){
+      html+='<section class="page"><div class="title">Floor Stock Dispensing Orders · '+fmtDate(nowISO())+' · '+(pi+1)+'/'+pages.length+'</div><div class="flow">';
+      pg.forEach(function(o,oi){
         var dname=(o.dept&&o.dept.name)||o.r.deptName||o.r.deptId||'Department';
-        html+='<article class="order"><div class="order-head"><div class="dept">'+esc(dname)+'</div><div class="meta">'+fmtDateTime(o.r.fulfilledAt||o.r.created)+'</div></div><div class="list">';
+        html+='<section class="order alt'+(oi%2)+'"><div class="order-head"><span class="dept">'+esc(dname)+'</span><span class="meta">'+fmtDateTime(o.r.fulfilledAt||o.r.created)+'</span></div>';
         if(!o.items.length){html+='<div class="empty">No dispensed items</div>'}
         else{o.items.forEach(function(it){
-          html+='<div class="row"><span class="medwrap"><span class="med">'+esc(it.name)+'</span>'
+          html+='<div class="item"><span class="medwrap"><span class="med">'+esc(it.name)+'</span>'
             +(it.strength?'<span class="strength">'+esc(it.strength)+'</span>':'')
             +'</span><span class="qty">'+it.qty+'</span></div>';
         })}
-        html+='</div></article>';
+        html+='</section>';
       });
-      for(var k=pg.length;k<ppp;k++)html+='<article class="order" style="visibility:hidden"></article>';
       html+='</div><div class="foot">By Ali Abudahash</div></section>';
     });
-    html+='<script>window.onload=function(){setTimeout(function(){window.print()},350)}<\\/script></body></html>';
+    html+='<script>window.onload=function(){setTimeout(function(){window.print()},450)}<\\/script></body></html>';
 
     sel.forEach(function(id){var r=gr().find(function(x){return x.id===id});if(r)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:nowISO()})});
     var w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print orders.','err');
