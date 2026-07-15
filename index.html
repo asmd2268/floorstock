@@ -6231,7 +6231,7 @@ function shelfExpiryCell(medId){
       else if(days<=Number(cfg.d1||30))cls='exp-yellow';
     }
     return '<div class="'+cls+'" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">'
-      +'<span><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <small>('+label+')</small></span>'
+      +'<span><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <small style="white-space:nowrap">('+label+')</small></span>'
       +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" onclick="openEditExpiry(this)">✎</button> '
       +'<button class="btn bd2c bxs" data-bid="'+b.id+'" onclick="delBatch(this.dataset.bid);renderShelves()">×</button></span></div>';
   }).join('');
