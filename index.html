@@ -648,6 +648,22 @@ body.light .login-attribution{color:#6b7280}
 @media(max-width:760px){.ctl-pdf-pending-row{grid-template-columns:1fr 80px}.ctl-pdf-pending-row input,.ctl-pdf-pending-row button{width:100%}}
 @media print{#ctl-pdf-receipt-card{display:none!important}}
 </style>
+
+<style id="expiry-top-filter-style">
+.expiry-top-filter{width:100%;margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)}
+.expiry-filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.expiry-view-select{margin:0!important;min-width:245px}
+.expiry-dept-picker{position:relative}
+.expiry-dept-picker>summary{list-style:none;cursor:pointer;border:1px solid var(--bd);background:var(--s2);border-radius:7px;padding:7px 10px;font-size:12px;color:var(--tx);min-width:190px;white-space:nowrap}
+.expiry-dept-picker>summary::-webkit-details-marker{display:none}
+.expiry-dept-menu{position:absolute;z-index:120;top:calc(100% + 5px);left:0;width:280px;max-height:310px;overflow:auto;background:var(--s);border:1px solid var(--bd2);border-radius:9px;padding:8px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+.expiry-dept-actions{display:flex;gap:6px;padding-bottom:7px;margin-bottom:5px;border-bottom:1px solid var(--bd)}
+.expiry-dept-option{display:flex;align-items:center;gap:8px;padding:7px 6px;margin:0;border-radius:6px;cursor:pointer;font-size:12px;color:var(--tx)}
+.expiry-dept-option:hover{background:var(--s2)}
+.expiry-dept-option input{width:15px;height:15px;margin:0}
+.expiry-rules-btn{margin-left:auto}
+@media(max-width:760px){.expiry-filter-row>*{width:100%!important}.expiry-dept-picker>summary{width:100%}.expiry-dept-menu{width:min(92vw,320px)}.expiry-rules-btn{margin-left:0}}
+</style>
 </head>
 <body>
 
@@ -7834,13 +7850,13 @@ crashPrint=function(id){
   window.renderCrashCarts=function(){if(oldRenderCrash)oldRenderCrash();var add=q('crash-add-btn');if(add&&canManageCrashCart()&&!q('cc-bulk-btn')){var b=document.createElement('button');b.id='cc-bulk-btn';b.className='btn bg';b.textContent='Bulk edit one medication';b.onclick=ccOpenBulkEdit;add.parentNode.appendChild(b)}
     if(canManageCrashCart())(crashReports()||[]).filter(function(r){return r.status==='closed'}).forEach(function(r){var card=Array.from(document.querySelectorAll('#crash-list .card')).find(function(x){return (x.textContent||'').includes((crashCart(r.cartId)||{}).name||'__none__')});if(card&&!card.querySelector('[data-edit-report="'+r.id+'"]')){var tb=card.querySelector('.crash-toolbar');if(tb){var e=document.createElement('button');e.className='btn bg bsm';e.dataset.editReport=r.id;e.textContent='Edit last pharmacy response';e.onclick=function(){crashCloseReport(this.dataset.editReport)};tb.appendChild(e)}}});ccUpdateBadges()};
 
-  /* Pharmacy inventory: filter registered department expiry batches by one, some, or all departments. */
+  /* Pharmacy inventory: expiry filtering is integrated into the existing list card. */
   function pharmacyExpiryRules(){
     var x=S.g('pharmacy_department_expiry_rules')||{};
     var urgent=Math.max(1,n(x.urgentDays||7)),near=Math.max(urgent+1,n(x.nearDays||30));
     return {urgentDays:urgent,nearDays:near};
   }
-  window.phExpiryFilter=window.phExpiryFilter||'near';
+  window.phExpiryView=window.phExpiryView||'inventory';
   window.phExpiryDeptIds=Array.isArray(window.phExpiryDeptIds)?window.phExpiryDeptIds:[];
   function allDeptExpiryRows(){
     var rows=[];
@@ -7866,47 +7882,57 @@ crashPrint=function(id){
     var selected=(window.phExpiryDeptIds||[]).map(String).filter(function(id){return known.includes(id)});
     return selected.length?selected:known;
   }
-  window.phExpirySetFilter=function(v){window.phExpiryFilter=v||'all';renderPhExpiryOverview()};
-  window.phExpiryReadDepartmentSelection=function(){
-    var box=q('ph-expiry-dept-select');if(!box)return;
-    window.phExpiryDeptIds=Array.from(box.selectedOptions||[]).map(function(o){return String(o.value)});
-    renderPhExpiryOverview();
+  window.phExpirySetView=function(v){window.phExpiryView=v||'inventory';renderPhExpiryIntegrated()};
+  window.phExpiryToggleDept=function(id,checked){
+    var known=phExpiryKnownDeptIds(),cur=(window.phExpiryDeptIds||[]).map(String).filter(function(x){return known.includes(x)});
+    if(!cur.length)cur=known.slice();
+    if(checked&&!cur.includes(String(id)))cur.push(String(id));
+    if(!checked)cur=cur.filter(function(x){return x!==String(id)});
+    window.phExpiryDeptIds=cur.length===known.length?[]:cur;
+    renderPhExpiryIntegrated();
   };
-  window.phExpirySelectAllDepartments=function(){window.phExpiryDeptIds=[];renderPhExpiryOverview()};
-  window.phExpiryClearDepartments=function(){
-    window.phExpiryDeptIds=['__none__'];
-    renderPhExpiryOverview();
-  };
+  window.phExpirySelectAllDepartments=function(){window.phExpiryDeptIds=[];renderPhExpiryIntegrated()};
+  window.phExpiryClearDepartments=function(){window.phExpiryDeptIds=['__none__'];renderPhExpiryIntegrated()};
   window.phExpiryEditRules=async function(){
     if(!window.CU||!['pharmacy','inpatient_supervisor'].includes(CU.role))return toast('No permission','err');
     var r=pharmacyExpiryRules(),u=+(await uiPrompt('Urgent expiry threshold in days / حد العاجل بالأيام',r.urgentDays)||r.urgentDays),nDays=+(await uiPrompt('Near-expiry threshold in days / حد قريب الانتهاء بالأيام',r.nearDays)||r.nearDays);
     u=Math.max(1,u||7);nDays=Math.max(u+1,nDays||30);
     await S.s('pharmacy_department_expiry_rules',{urgentDays:u,nearDays:nDays,updatedAt:nowISO(),updatedBy:actualActorName()});
     auditAction('pharmacy_department_expiry_rules_edit',{urgentDays:u,nearDays:nDays});
-    renderPhExpiryOverview();toast('Expiry rules updated ✓','succ');
+    renderPhExpiryIntegrated();toast('Expiry rules updated ✓','succ');
   };
-  function renderPhExpiryOverview(){
+  function phExpiryEnsureIntegratedUI(){
+    var body=q('itbl'),originalWrap=body&&body.closest('.tw'),card=originalWrap&&originalWrap.closest('.card'),head=card&&card.querySelector('.ch');
+    if(!card||!head)return null;
+    var bar=q('ph-expiry-top-filter');
+    if(!bar){
+      bar=document.createElement('div');bar.id='ph-expiry-top-filter';bar.className='expiry-top-filter';head.appendChild(bar);
+    }
+    var result=q('ph-expiry-integrated-results');
+    if(!result){result=document.createElement('div');result.id='ph-expiry-integrated-results';result.className='tw';result.style.display='none';originalWrap.insertAdjacentElement('afterend',result)}
+    return {bar:bar,result:result,originalWrap:originalWrap};
+  }
+  function renderPhExpiryIntegrated(){
     if(!q('pg-inv')||!window.CU||!['pharmacy','inpatient_supervisor'].includes(CU.role))return;
-    var old=q('ph-expiry-overview');if(old)old.remove();
-    var rules=pharmacyExpiryRules(),allRows=allDeptExpiryRows(),filter=window.phExpiryFilter||'near';
-    var depts=gd()||[],rawSel=(window.phExpiryDeptIds||[]).map(String),noneSelected=rawSel.includes('__none__');
+    var ui=phExpiryEnsureIntegratedUI();if(!ui)return;
+    var view=window.phExpiryView||'inventory',rules=pharmacyExpiryRules(),depts=gd()||[];
+    var rawSel=(window.phExpiryDeptIds||[]).map(String),noneSelected=rawSel.includes('__none__');
     var selectedIds=noneSelected?[]:phExpirySelectedDeptIds();
-    var all=allRows.filter(function(x){return selectedIds.includes(String(x.deptId))});
+    var all=allDeptExpiryRows().filter(function(x){return selectedIds.includes(String(x.deptId))});
     var counts={all:all.length,urgent:0,near:0,expired:0};
     all.forEach(function(x){var st=phExpiryStatus(x.days,rules);if(st==='urgent')counts.urgent++;else if(st==='near')counts.near++;else if(st==='expired')counts.expired++});
-    var rows=all.filter(function(x){var st=phExpiryStatus(x.days,rules);return filter==='all'||st===filter});
-    var selectionLabel=noneSelected?'No departments selected':(selectedIds.length===depts.length?'All departments':selectedIds.length+' department(s) selected');
-    var options=depts.map(function(d){return '<option value="'+esc(d.id)+'" '+(selectedIds.includes(String(d.id))?'selected':'')+'>'+esc(d.name)+'</option>'}).join('');
-    var card=document.createElement('div');card.id='ph-expiry-overview';
-    card.innerHTML='<div class="card"><div class="ch"><div><span class="ct">Department expiry filter / فلتر تواريخ انتهاء الأقسام</span><div class="fhint">Uses expiry dates entered by departments. Urgent ≤ '+rules.urgentDays+' days; Near expiry '+(rules.urgentDays+1)+'–'+rules.nearDays+' days.</div></div><button class="btn bg bsm" onclick="phExpiryEditRules()">⚙ Expiry rules</button></div>'+
-      '<div class="cb" style="padding-bottom:8px"><div style="display:grid;grid-template-columns:minmax(230px,360px) 1fr;gap:12px;align-items:end">'+
-      '<div><label style="margin-bottom:5px">Departments / الأقسام</label><select id="ph-expiry-dept-select" multiple size="'+Math.min(6,Math.max(3,depts.length))+'" onchange="phExpiryReadDepartmentSelection()" style="margin:0;min-height:92px">'+options+'</select><div class="fhint">اختر قسمًا واحدًا أو استخدم Ctrl/⌘ لاختيار عدة أقسام.</div><div class="fl g8" style="margin-top:6px"><button class="btn bg bxs" onclick="phExpirySelectAllDepartments()">All departments</button><button class="btn bg bxs" onclick="phExpiryClearDepartments()">Clear</button></div></div>'+
-      '<div><div class="fhint" style="margin-bottom:7px"><b>'+selectionLabel+'</b> — applies to the complete list and every status filter.</div><div class="fl g8 ic" style="flex-wrap:wrap"><button class="tbtn '+(filter==='all'?'on':'')+'" onclick="phExpirySetFilter(\'all\')">All ('+counts.all+')</button><button class="tbtn '+(filter==='urgent'?'on':'')+'" onclick="phExpirySetFilter(\'urgent\')">Urgent ('+counts.urgent+')</button><button class="tbtn '+(filter==='near'?'on':'')+'" onclick="phExpirySetFilter(\'near\')">Near expiry ('+counts.near+')</button><button class="tbtn '+(filter==='expired'?'on':'')+'" onclick="phExpirySetFilter(\'expired\')">Expired ('+counts.expired+')</button></div></div></div></div>'+
-      '<div class="tw"><table><thead><tr><th>Department</th><th>Medication</th><th>Strength</th><th>Qty</th><th>Expiry</th><th>Days</th><th>Status</th></tr></thead><tbody>'+rows.map(function(x){var st=phExpiryStatus(x.days,rules),label=st==='urgent'?'Urgent':st==='near'?'Near expiry':st==='expired'?'Expired':st==='normal'?'Normal':'Unknown',cls=st==='urgent'||st==='expired'?'exp-red':st==='near'?'exp-yellow':'';return '<tr class="'+(st==='urgent'||st==='expired'?'rha':st==='near'?'rhz':'')+'"><td class="exp-dept">'+esc(x.dept)+'</td><td>'+esc(x.med)+'</td><td>'+esc(x.strength||'—')+'</td><td>'+esc(x.qty==null?'—':x.qty)+'</td><td>'+esc(fmtDate(x.date))+'</td><td class="'+cls+'">'+esc(x.days==null?'—':x.days)+'</td><td><span class="badge '+(st==='urgent'||st==='expired'?'brd':st==='near'?'byl':'bgr')+'">'+label+'</span></td></tr>'}).join('')+(rows.length?'':'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected departments and status filter.</td></tr>')+'</tbody></table></div></div>';
-    q('pg-inv').appendChild(card);
+    var selectedLabel=noneSelected?'No departments':(selectedIds.length===depts.length?'All departments':selectedIds.length+' departments');
+    var deptChecks=depts.map(function(d){var checked=!noneSelected&&selectedIds.includes(String(d.id));return '<label class="expiry-dept-option"><input type="checkbox" '+(checked?'checked':'')+' onchange="phExpiryToggleDept(\''+esc(d.id)+'\',this.checked)"><span>'+esc(d.name)+'</span></label>'}).join('');
+    ui.bar.innerHTML='<div class="expiry-filter-row">'+
+      '<select class="psel expiry-view-select" onchange="phExpirySetView(this.value)"><option value="inventory" '+(view==='inventory'?'selected':'')+'>Medication list / قائمة الأدوية</option><option value="all" '+(view==='all'?'selected':'')+'>All expiry records ('+counts.all+')</option><option value="urgent" '+(view==='urgent'?'selected':'')+'>Urgent ('+counts.urgent+')</option><option value="near" '+(view==='near'?'selected':'')+'>Near expiry ('+counts.near+')</option><option value="expired" '+(view==='expired'?'selected':'')+'>Expired ('+counts.expired+')</option></select>'+
+      '<details class="expiry-dept-picker" '+(view==='inventory'?'style="display:none"':'')+'><summary>Departments: '+selectedLabel+'</summary><div class="expiry-dept-menu"><div class="expiry-dept-actions"><button type="button" class="btn bg bxs" onclick="phExpirySelectAllDepartments()">All</button><button type="button" class="btn bg bxs" onclick="phExpiryClearDepartments()">Clear</button></div>'+deptChecks+'</div></details>'+
+      '<button type="button" class="btn bg bsm expiry-rules-btn" '+(view==='inventory'?'style="display:none"':'')+' onclick="phExpiryEditRules()">⚙ Rules: urgent ≤ '+rules.urgentDays+'d · near ≤ '+rules.nearDays+'d</button></div>';
+    if(view==='inventory'){ui.originalWrap.style.display='';ui.result.style.display='none';return}
+    ui.originalWrap.style.display='none';ui.result.style.display='block';
+    var rows=all.filter(function(x){var st=phExpiryStatus(x.days,rules);return view==='all'||st===view});
+    ui.result.innerHTML='<table><thead><tr><th>Department</th><th>Medication</th><th>Strength</th><th>Qty</th><th>Expiry</th><th>Days</th><th>Status</th></tr></thead><tbody>'+rows.map(function(x){var st=phExpiryStatus(x.days,rules),label=st==='urgent'?'Urgent':st==='near'?'Near expiry':st==='expired'?'Expired':st==='normal'?'Normal':'Unknown',cls=st==='urgent'||st==='expired'?'exp-red':st==='near'?'exp-yellow':'';return '<tr class="'+(st==='urgent'||st==='expired'?'rha':st==='near'?'rhz':'')+'"><td>'+esc(x.dept)+'</td><td>'+esc(x.med)+'</td><td>'+esc(x.strength||'—')+'</td><td>'+esc(x.qty==null?'—':x.qty)+'</td><td>'+esc(fmtDate(x.date))+'</td><td class="'+cls+'">'+esc(x.days==null?'—':x.days)+'</td><td><span class="badge '+(st==='urgent'||st==='expired'?'brd':st==='near'?'byl':'bgr')+'">'+label+'</span></td></tr>'}).join('')+(rows.length?'':'<tr><td colspan="7" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected filters.</td></tr>')+'</tbody></table>';
   }
-  var oldRenderInv=window.renderInv;window.renderInv=function(){if(oldRenderInv)oldRenderInv();renderPhExpiryOverview()};
-
+  var oldRenderInv=window.renderInv;window.renderInv=function(){if(oldRenderInv)oldRenderInv();renderPhExpiryIntegrated()};
   /* Modernize simple alert messages globally without breaking synchronous confirm/prompt logic. */
   window.alert=function(msg){try{toast(String(msg||''),'info')}catch(e){console.log(msg)}};
   document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){ccUpdateBadges();if(q('pg-inv')&&q('pg-inv').classList.contains('on'))renderPhExpiryOverview()},700)});
