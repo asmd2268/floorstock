@@ -2758,7 +2758,7 @@ function openFulfill(id){
   var d=gd().find(function(x){return x.id===r.deptId});
   var isEdit=r.status==='fulfilled';
   el('fulfill-title').textContent=(isEdit?'Edit Fulfillment':'Fulfill Request')+' — '+((d&&d.name)||r.deptId);
-  el('fulfill-hint').textContent=isEdit?'Editing previously dispensed quantities.':'Enter actual quantity to dispense. 0 = skip.';
+  el('fulfill-hint').textContent='Enter the dispensed quantity for every item. Enter 0 when an item is not dispensed.';
   el('fulfill-btn').textContent=isEdit?'Update ✓':'Confirm ✓';
   var ms=getMeds(r.deptId||'');
   var thirtyDayCutoff=Date.now()-(30*24*60*60*1000);
@@ -2775,20 +2775,35 @@ function openFulfill(id){
   el('ftbl').innerHTML=(r.items||[]).map(function(it,index){
     var m=ms.find(function(x){return x.id===it.medId});
     var last30=dispensedLast30Days(it.medId);
-    var prevQty=it.qty;
-    if(isEdit){var prev=(r.dispensed||[]).find(function(x){return x.medId===it.medId});if(prev)prevQty=prev.qty;}
     var rowBg=m&&m.high_alert?'background:rgba(218,54,51,.07)':m&&m.hazard?'background:rgba(210,153,34,.06)':'background:rgba(31,111,235,.04)';
     return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.min!=null?m.min:'&mdash;')+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.max!=null?m.max:'&mdash;')+'</td>'
       +'<td style="text-align:center"><span class="badge bbl" style="font-family:var(--mono);font-size:11px">'+last30+'</span></td>'
       +'<td style="text-align:center;font-family:var(--mono);font-weight:700">'+it.qty+'</td>'
-      +'<td><input type="number" min="0" max="'+it.qty+'" value="'+prevQty+'" data-med="'+it.medId+'" style="width:78px;padding:5px 7px;text-align:center;margin:0"></td></tr>';
+      +'<td><input type="number" min="0" max="'+it.qty+'" value="" placeholder="Enter qty" required data-med="'+it.medId+'" data-requested="'+it.qty+'" style="width:100%;min-width:72px;padding:5px 7px;text-align:center;margin:0"></td></tr>';
   }).join('');
+  Array.from(el('ftbl').querySelectorAll('input[data-med]')).forEach(function(inp){
+    inp.addEventListener('input',function(){this.style.borderColor='';this.style.boxShadow=''});
+  });
   OM('mfulfill');
 }
 function submitFulfill(){
-  var dispensed=Array.from(el('ftbl').querySelectorAll('input')).map(function(inp){return{medId:inp.dataset.med,qty:+inp.value}});
+  var inputs=Array.from(el('ftbl').querySelectorAll('input[data-med]'));
+  inputs.forEach(function(inp){inp.style.borderColor='';inp.style.boxShadow=''});
+  var missing=inputs.find(function(inp){return String(inp.value).trim()===''});
+  if(missing){
+    missing.style.borderColor='var(--rd)';missing.style.boxShadow='0 0 0 2px rgba(218,54,51,.22)';
+    missing.focus();
+    return toast('Please enter the dispensed quantity for every requested item. Enter 0 if an item was not dispensed.','err');
+  }
+  var invalid=inputs.find(function(inp){var q=Number(inp.value),mx=Number(inp.dataset.requested);return !Number.isFinite(q)||q<0||q>mx});
+  if(invalid){
+    invalid.style.borderColor='var(--rd)';invalid.style.boxShadow='0 0 0 2px rgba(218,54,51,.22)';
+    invalid.focus();
+    return toast('Dispensed quantity must be between 0 and the requested quantity.','err');
+  }
+  var dispensed=inputs.map(function(inp){return{medId:inp.dataset.med,qty:Number(inp.value)}});
   S.upd('requests',FRID,{dispensed:dispensed,status:'fulfilled',fulfilledAt:nowISO()});
   toast('Saved &#x2713;','succ');CM('mfulfill');renderReqs();renderDash();
 }
