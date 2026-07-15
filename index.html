@@ -1460,7 +1460,7 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
     <div class="mh"><span class="mt" id="fulfill-title">Fulfill Request</span><button class="xbtn" onclick="CM('mfulfill')">&#x2715;</button></div>
     <p id="fulfill-hint" style="font-size:12px;color:var(--tx2);margin-bottom:13px">Enter actual quantity to dispense. 0 = skip.</p>
     <div class="tw" style="max-height:380px;overflow-y:auto">
-      <table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="text-align:center">Requested</th><th>Dispense Qty</th></tr></thead><tbody id="ftbl"></tbody></table>
+      <table><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="text-align:center">Dispensed to dept<br><span style="font-size:9px;font-weight:500;text-transform:none">Last 30 days</span></th><th style="text-align:center">Requested</th><th>Dispense Qty</th></tr></thead><tbody id="ftbl"></tbody></table>
     </div>
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
       <button class="btn bg" onclick="CM('mfulfill')">Cancel</button>
@@ -2739,14 +2739,27 @@ function openFulfill(id){
   el('fulfill-hint').textContent=isEdit?'Editing previously dispensed quantities.':'Enter actual quantity to dispense. 0 = skip.';
   el('fulfill-btn').textContent=isEdit?'Update ✓':'Confirm ✓';
   var ms=getMeds(r.deptId||'');
+  var thirtyDayCutoff=Date.now()-(30*24*60*60*1000);
+  function dispensedLast30Days(medId){
+    return gr().reduce(function(total,req){
+      if(!req||req.id===r.id||req.deptId!==r.deptId)return total;
+      if(req.status!=='fulfilled'&&req.status!=='partial')return total;
+      var dt=new Date(req.fulfilledAt||req.updatedAt||req.created||0).getTime();
+      if(!isFinite(dt)||dt<thirtyDayCutoff||dt>Date.now())return total;
+      var line=(req.dispensed||[]).find(function(x){return x.medId===medId});
+      return total+(line?Number(line.qty)||0:0);
+    },0);
+  }
   el('ftbl').innerHTML=(r.items||[]).map(function(it,index){
     var m=ms.find(function(x){return x.id===it.medId});
+    var last30=dispensedLast30Days(it.medId);
     var prevQty=it.qty;
     if(isEdit){var prev=(r.dispensed||[]).find(function(x){return x.medId===it.medId});if(prev)prevQty=prev.qty;}
     var rowBg=m&&m.high_alert?'background:rgba(218,54,51,.07)':m&&m.hazard?'background:rgba(210,153,34,.06)':'background:rgba(31,111,235,.04)';
     return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.min!=null?m.min:'&mdash;')+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.max!=null?m.max:'&mdash;')+'</td>'
+      +'<td style="text-align:center"><span class="badge bbl" style="font-family:var(--mono);font-size:11px">'+last30+'</span></td>'
       +'<td style="text-align:center;font-family:var(--mono);font-weight:700">'+it.qty+'</td>'
       +'<td><input type="number" min="0" max="'+it.qty+'" value="'+prevQty+'" data-med="'+it.medId+'" style="width:78px;padding:5px 7px;text-align:center;margin:0"></td></tr>';
   }).join('');
