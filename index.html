@@ -683,6 +683,44 @@ tr.rha.rhz:hover td{
 .expiry-rules-btn{margin-left:auto}
 @media(max-width:760px){.expiry-filter-row>*{width:100%!important}.expiry-dept-picker>summary{width:100%}.expiry-dept-menu{width:min(92vw,320px)}.expiry-rules-btn{margin-left:0}}
 </style>
+
+<style id="horizontal-classification-colors-v12">
+/* Independent badges and clear horizontal classification bands. */
+.badge.bfr{color:#f3e8ff;border-color:#9333ea;background:rgba(147,51,234,.34)}
+body.light .badge.bfr{color:#581c87;border-color:#7e22ce;background:rgba(147,51,234,.22)}
+
+/* Stronger single-class colours. */
+tr.rha:not(.rhz):not(.rls):not(.rrf) td{background:rgba(239,68,68,.24)!important}
+tr.rhz:not(.rha):not(.rls):not(.rrf) td{background:rgba(234,179,8,.30)!important}
+tr.rls:not(.rha):not(.rhz):not(.rrf) td{background:rgba(14,165,233,.25)!important}
+tr.rrf:not(.rha):not(.rhz):not(.rls) td{background:rgba(147,51,234,.25)!important}
+
+/* Two horizontal bands. */
+tr.rha.rhz:not(.rls):not(.rrf) td{background:linear-gradient(180deg,rgba(239,68,68,.34) 0 50%,rgba(234,179,8,.38) 50% 100%)!important}
+tr.rha.rls:not(.rhz):not(.rrf) td{background:linear-gradient(180deg,rgba(239,68,68,.34) 0 50%,rgba(14,165,233,.34) 50% 100%)!important}
+tr.rha.rrf:not(.rhz):not(.rls) td{background:linear-gradient(180deg,rgba(239,68,68,.34) 0 50%,rgba(147,51,234,.34) 50% 100%)!important}
+tr.rhz.rls:not(.rha):not(.rrf) td{background:linear-gradient(180deg,rgba(234,179,8,.38) 0 50%,rgba(14,165,233,.34) 50% 100%)!important}
+tr.rhz.rrf:not(.rha):not(.rls) td{background:linear-gradient(180deg,rgba(234,179,8,.38) 0 50%,rgba(147,51,234,.34) 50% 100%)!important}
+tr.rls.rrf:not(.rha):not(.rhz) td{background:linear-gradient(180deg,rgba(14,165,233,.34) 0 50%,rgba(147,51,234,.34) 50% 100%)!important}
+
+/* Three horizontal bands, always in the requested order: red, yellow, blue, purple. */
+tr.rha.rhz.rls:not(.rrf) td{background:linear-gradient(180deg,rgba(239,68,68,.36) 0 33.333%,rgba(234,179,8,.40) 33.333% 66.666%,rgba(14,165,233,.36) 66.666% 100%)!important}
+tr.rha.rhz.rrf:not(.rls) td{background:linear-gradient(180deg,rgba(239,68,68,.36) 0 33.333%,rgba(234,179,8,.40) 33.333% 66.666%,rgba(147,51,234,.36) 66.666% 100%)!important}
+tr.rha.rls.rrf:not(.rhz) td{background:linear-gradient(180deg,rgba(239,68,68,.36) 0 33.333%,rgba(14,165,233,.36) 33.333% 66.666%,rgba(147,51,234,.36) 66.666% 100%)!important}
+tr.rhz.rls.rrf:not(.rha) td{background:linear-gradient(180deg,rgba(234,179,8,.40) 0 33.333%,rgba(14,165,233,.36) 33.333% 66.666%,rgba(147,51,234,.36) 66.666% 100%)!important}
+
+/* All four classifications: top red, then yellow, blue, and purple. */
+tr.rha.rhz.rls.rrf td{background:linear-gradient(180deg,rgba(239,68,68,.40) 0 25%,rgba(234,179,8,.44) 25% 50%,rgba(14,165,233,.40) 50% 75%,rgba(147,51,234,.40) 75% 100%)!important}
+
+/* Keep row separators and make the four categories visible without vertical splitting. */
+tr.rha td,tr.rhz td,tr.rls td,tr.rrf td{border-left:0!important;border-right:0!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.14)}
+tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(1.18) contrast(1.04)}
+
+@media print{
+  .badge.bfr{color:#000!important;border-color:#000!important;background:#e2e2e2!important}
+  tr.rha td,tr.rhz td,tr.rls td,tr.rrf td{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+}
+</style>
 </head>
 <body>
 
@@ -2429,18 +2467,20 @@ function toast(msg,type){
 function bdg(m){
   if(!m)return '';
   var b='';
-  if(m.high_alert&&m.hazard)b+='<span class="badge brd">&#x1F534; High Alert + Hazard</span> ';
-  else if(m.high_alert)b+='<span class="badge brd">&#x1F534; High Alert</span> ';
-  else if(m.hazard)b+='<span class="badge byl">&#x26A0; Hazard</span> ';
+  if(m.high_alert)b+='<span class="badge brd">&#x1F534; High Alert</span> ';
+  if(m.hazard)b+='<span class="badge byl">&#x26A0; Hazard</span> ';
   if(m.lasa)b+='<span class="badge bpu">&#x1F535; LASA</span> ';
+  if(m.refrigerated)b+='<span class="badge bfr">&#x2744; Refrigerated</span> ';
   return b||'<span class="badge bgr">Std</span>';
 }
 function rowCls(m){
   if(!m)return '';
-  if(m.high_alert)return 'rha'+(m.hazard?' rhz':'');
-  if(m.hazard)return 'rhz';
-  if(m.lasa)return 'rls';
-  return '';
+  var c=[];
+  if(m.high_alert)c.push('rha');
+  if(m.hazard)c.push('rhz');
+  if(m.lasa)c.push('rls');
+  if(m.refrigerated)c.push('rrf');
+  return c.join(' ');
 }
 function OM(id){document.getElementById(id).classList.add('on')}
 function el(id){return document.getElementById(id)}
