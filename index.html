@@ -9572,5 +9572,165 @@ window.doPrint=function(){
   window.ensurePsychotropicSharedList=ensurePsychotropicSharedList;
 })();
 </script>
+
+<script id="pharmacy-narcotic-stock-and-independent-list-mode-v12">
+(function(){
+  'use strict';
+  var PHARMACY_NARCOTIC_STOCK_SEED=[{"moh":"545031626","nupco":"","name":"ALPRAZOLAM .5 MG","qty":0,"batches":[]},{"moh":"545071900","nupco":"5115160400200","name":"BENZOHXOLE 2 MG","qty":438,"batches":[{"qty":438,"expiry":"31/09/2028","lot":""}]},{"moh":"549551905","nupco":"5136150100000","name":"CHLORAL HYDRATE 100MG/1ML","qty":0,"batches":[]},{"moh":"545051785","nupco":"5114150200200","name":"CLONAZEPAM 2 MG TAB","qty":787,"batches":[{"qty":787,"expiry":"31/06/2028","lot":""}]},{"moh":"545054595","nupco":"5114150200300","name":"CLONAZEPAM 2.5 MG DROP","qty":0,"batches":[]},{"moh":"545064870","nupco":"5114192000300","name":"DIAZEPAM 10 MG INJ","qty":34,"batches":[{"qty":34,"expiry":"31/11/2028","lot":""}]},{"moh":"545031370","nupco":"5114192000500","name":"DIAZEPAM 5 MG TAB","qty":722,"batches":[{"qty":722,"expiry":"2029-01-31","lot":""}]},{"moh":"545031365","nupco":"5114192000000","name":"DIAZEPAM 5 MG TUBE","qty":0,"batches":[]},{"moh":"544094615","nupco":"5139171700000","name":"EPHIDRINE 50 MG","qty":0,"batches":[]},{"moh":"545024065","nupco":"5137230500300","name":"FENTANYL 100 MCG","qty":479,"batches":[{"qty":479,"expiry":"2027-12-31","lot":""}]},{"moh":"545024064","nupco":"5137230500400","name":"FENTANYL 500 MCG","qty":162,"batches":[{"qty":162,"expiry":"2027-12-31","lot":""}]},{"moh":"545051784","nupco":"5114151700000","name":"GABAPENTINE 300","qty":1850,"batches":[{"qty":1850,"expiry":"31/11/2028","lot":""}]},{"moh":"545044670","nupco":"5127220400000","name":"KETAMINE 10 mg/1ml/20 ml","qty":0,"batches":[]},{"moh":"545031350","nupco":"5114191600100","name":"LORAZEPAM 1 MG T","qty":115,"batches":[{"qty":100,"expiry":"31/04/2028","lot":""},{"qty":15,"expiry":"31/09/2028","lot":""}]},{"moh":"545021064","nupco":"5114261800100","name":"METHYPHENEDATE 36 MG","qty":0,"batches":[]},{"moh":"545021065","nupco":"5114261800200","name":"METHYPHENEDATE 18 MG","qty":0,"batches":[]},{"moh":"545034625","nupco":"5114154200100","name":"MIDAZOLAM 15 MG","qty":175,"batches":[{"qty":175,"expiry":"2027-03-31","lot":""}]},{"moh":"545024051","nupco":"5114220600300","name":"MORPHINE 10 MG","qty":49,"batches":[{"qty":49,"expiry":"2028-06-30","lot":""}]},{"moh":"545024060","nupco":"5137180300000","name":"PETHIDINE 100 MG","qty":96,"batches":[{"qty":96,"expiry":"2027-12-31","lot":""}]},{"moh":"545024055","nupco":"5137180300100","name":"PETHIDINE 50 MG","qty":171,"batches":[{"qty":171,"expiry":"2026-12-31","lot":""}]},{"moh":"545051700","nupco":"5114150500000","name":"PHENO 10 MG TAB","qty":1384,"batches":[{"qty":1384,"expiry":"2027-03-30","lot":""}]},{"moh":"545051715","nupco":"5114150500900","name":"PHENO 100 MG TAB","qty":1196,"batches":[{"qty":1196,"expiry":"2027-01-31","lot":""}]},{"moh":"545054730","nupco":"5114150500700","name":"PHENO 200 MG INJ","qty":48,"batches":[{"qty":48,"expiry":"31/11/2027","lot":""}]},{"moh":"545054725","nupco":"5114150500800","name":"PHENO 40-60 MG INJ","qty":0,"batches":[]},{"moh":"545051710","nupco":"5114150500200","name":"PHENO 50 MG TAB","qty":264,"batches":[{"qty":264,"expiry":"2027-03-30","lot":""}]},{"moh":"545051812","nupco":"5114153400000","name":"PREGABALINE 150 MG","qty":1679,"batches":[{"qty":1679,"expiry":"2027-08-31","lot":""}]},{"moh":"545051816","nupco":"5114153400100","name":"PREGABALINE 75 MG","qty":970,"batches":[{"qty":970,"expiry":"2028-08-31","lot":""}]},{"moh":"545071902","nupco":"5115160300000","name":"PROCYCLIDINE 5 MG","qty":555,"batches":[{"qty":555,"expiry":"2028-08-31","lot":""}]},{"moh":"545044658","nupco":"5114294100000","name":"PROPOFOL","qty":0,"batches":[]},{"moh":"545046696","nupco":"5114294200100","name":"SEVOFLORAN","qty":0,"batches":[]},{"moh":"545044650","nupco":"5114292100000","name":"THIOPENTAL 500 MG","qty":0,"batches":[]},{"moh":"545024089","nupco":"5137160100300","name":"TRAMADOL 100 MG INJ","qty":4,"batches":[{"qty":4,"expiry":"2029-05-31","lot":""}]},{"moh":"545021091","nupco":"5137160100100","name":"TRAMADOL 50 MG C","qty":737,"batches":[{"qty":737,"expiry":"2026-12-31","lot":""}]}];
+  var MIGRATION_KEY='v1_2_pharmacy_narcotic_stock_from_workbook_20260716';
+
+  function norm(v){return String(v==null?'':v).trim().replace(/\.0+$/,'');}
+  function userModeKey(){
+    var role=(window.CU&&CU.role)||'guest';
+    var user=(window.CU&&(CU.username||CU.email||CU.uid))||'anonymous';
+    return 'controlled_shared_list_mode_'+role+'_'+String(user).toLowerCase().replace(/[^a-z0-9_-]+/g,'_');
+  }
+  function getListMode(){
+    try{return localStorage.getItem(userModeKey())==='merged'?'merged':'separate';}catch(e){return 'separate';}
+  }
+  window.ctlSetSharedListMode=function(mode){
+    mode=mode==='merged'?'merged':'separate';
+    try{localStorage.setItem(userModeKey(),mode);}catch(e){}
+    if(typeof window.renderCtlOverview==='function')window.renderCtlOverview();
+  };
+
+  function seedPharmacyNarcoticStock(){
+    try{
+      if(localStorage.getItem(MIGRATION_KEY)==='done')return;
+      var catalog=typeof ctlCatalog==='function'?ctlCatalog():[];
+      var pharmacy=typeof ctlPharmacy==='function'?ctlPharmacy():{};
+      var changedCatalog=false,changedStock=false;
+      PHARMACY_NARCOTIC_STOCK_SEED.forEach(function(src){
+        var med=catalog.find(function(m){
+          return (src.nupco&&norm(m.nupco)===norm(src.nupco))||(src.moh&&norm(m.moh)===norm(src.moh));
+        });
+        if(!med){
+          var id=typeof ctlKey==='function'?ctlKey(src.moh,src.nupco,src.name):('cm_'+(src.moh||src.nupco||Date.now()));
+          med={id:id,moh:src.moh||'',nupco:src.nupco||'',name:src.name||'',classification:'narcotic',min:0,max:0};
+          catalog.push(med);changedCatalog=true;
+        }else{
+          if(!med.moh&&src.moh){med.moh=src.moh;changedCatalog=true;}
+          if(!med.nupco&&src.nupco){med.nupco=src.nupco;changedCatalog=true;}
+          med.classification='narcotic';
+        }
+        pharmacy[med.id]={
+          qty:Number(src.qty)||0,
+          batches:(src.batches||[]).map(function(b){return {qty:Number(b.qty)||0,expiry:b.expiry||'',lot:b.lot||''};}),
+          updatedAt:(typeof nowISO==='function'?nowISO():new Date().toISOString()),
+          source:'Uploaded narcotic and psychotropic availability workbook'
+        };
+        changedStock=true;
+      });
+      if(changedCatalog&&typeof ctlSetCatalog==='function')ctlSetCatalog(catalog);
+      if(changedStock&&typeof ctlSetPharmacy==='function')ctlSetPharmacy(pharmacy);
+      localStorage.setItem(MIGRATION_KEY,'done');
+    }catch(e){console.error('Pharmacy narcotic stock seed failed',e);}
+  }
+
+  function filterOptions(){
+    return '<option value="all">All medicines / كل الأدوية</option>'
+      +'<option value="warehouse_unavailable">Unavailable in warehouse / غير متوفر بالمستودع</option>'
+      +'<option value="pharmacy_unavailable">Unavailable in pharmacy / غير متوفر بالصيدلية</option>'
+      +'<option value="both_unavailable">Unavailable in both / غير متوفر في كليهما</option>'
+      +'<option value="near_mine">Expiring soon in my custody / قريب الانتهاء في عهدتي</option>';
+  }
+  function isNear(batches){
+    return (batches||[]).some(function(b){
+      var d=typeof daysUntil==='function'?daysUntil(b.expiry):null;
+      return d!==null&&d<=30;
+    });
+  }
+  function matches(m,w,p,filter){
+    var wq=(Number(w.system)||0)+(Number(w.outside)||0),pq=Number(p.qty)||0;
+    if(filter==='warehouse_unavailable')return wq<=0;
+    if(filter==='pharmacy_unavailable')return pq<=0;
+    if(filter==='both_unavailable')return wq<=0&&pq<=0;
+    if(filter==='near_mine'){
+      if(window.CU&&CU.role==='warehouse')return isNear(w.batches);
+      if(window.CU&&CU.role==='controlled_pharmacy')return isNear(p.batches);
+      return isNear(w.batches)||isNear(p.batches);
+    }
+    return true;
+  }
+  function actionsFor(m){
+    var actions=[];
+    if(typeof ctlCanEditWarehouse==='function'&&ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');
+    if(typeof ctlCanEditPharmacy==='function'&&ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>');
+    if(typeof ctlIsWarehouse==='function'&&ctlIsWarehouse())actions.push('<button class="btn bs bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Dispense to pharmacy</button>');
+    return actions.join(' ')||'<span class="chip">Read only</span>';
+  }
+  function rowHtml(x,i){
+    var m=x.m,w=x.w,p=x.p,s=x.status;
+    var whClass=typeof ctlWarehouseCellClass==='function'?ctlWarehouseCellClass(w):'';
+    var phClass=typeof ctlPharmacyCellClass==='function'?ctlPharmacyCellClass(p):'';
+    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name||'')+'</b><div class="fhint">'+esc(m.moh||'')+(m.nupco?' · '+esc(m.nupco):'')+'</div></td>'
+      +'<td>'+((m.classification||'narcotic')==='psychotropic'?'Psychotropic / نفسي':'Narcotic / مخدر')+'</td>'
+      +'<td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td>'
+      +'<td class="'+whClass+'">'+(ctlNum(w.system)+ctlNum(w.outside))+'<div class="fhint">System '+ctlNum(w.system)+' · Outside '+ctlNum(w.outside)+'</div></td>'
+      +'<td class="'+whClass+'">'+ctlBatchText(w.batches)+'</td>'
+      +'<td class="'+phClass+'">'+ctlNum(p.qty)+'</td>'
+      +'<td class="'+phClass+'">'+ctlBatchText(p.batches)+'</td>'
+      +'<td>'+s.html+'</td><td>'+actionsFor(m)+'</td></tr>';
+  }
+  function tableCard(id,title,subtitle,filterId,searchId){
+    return '<div class="card" id="'+id+'"><div class="ch"><div><span class="ct">'+title+'</span><div class="fhint">'+subtitle+'</div></div>'
+      +'<div class="fl g8 ic" style="flex-wrap:wrap"><select id="'+filterId+'" class="psel" onchange="renderCtlOverview()">'+filterOptions()+'</select>'
+      +'<input id="'+searchId+'" placeholder="Search medicine..." style="margin:0;width:220px" oninput="renderControlledDebounced()"></div></div>'
+      +'<div class="tw"><table><thead><tr><th>#</th><th>Medicine</th><th>List</th><th>Min / Max</th><th class="ctl-wh-head">Warehouse qty</th><th class="ctl-wh-head">Warehouse expiry</th><th class="ctl-ph-head">Pharmacy qty</th><th class="ctl-ph-head">Pharmacy expiry</th><th>Status</th><th>Actions</th></tr></thead><tbody data-stock-body></tbody></table></div></div>';
+  }
+
+  window.renderCtlOverview=function(){
+    seedPharmacyNarcoticStock();
+    var root=document.getElementById('ctl-overview-view');if(!root)return;
+    var mode=getListMode();
+    root.innerHTML='<div id="ctl-global-alerts"></div>'
+      +'<div class="card"><div class="cb fl jb ic" style="gap:12px;flex-wrap:wrap"><div><b>Shared-list display / عرض القوائم المشتركة</b><div class="fhint">This choice is saved independently for each warehouse or pharmacy custodian and does not change the other user’s view.</div></div>'
+      +'<select id="ctl-shared-list-mode" class="psel" style="margin:0;min-width:260px" onchange="ctlSetSharedListMode(this.value)"><option value="separate" '+(mode==='separate'?'selected':'')+'>Separate narcotic and psychotropic lists / فصل القائمتين</option><option value="merged" '+(mode==='merged'?'selected':'')+'>Merge both lists / دمج القائمتين</option></select></div></div>'
+      +(mode==='merged'
+        ?tableCard('ctl-merged-card','Narcotic & psychotropic medicines / الأدوية المخدرة والنفسية','One combined view. Warehouse and pharmacy balances remain independent.','ctl-merged-filter','ctl-merged-search')
+        :tableCard('ctl-narcotic-card','Narcotic medicines / الأدوية المخدرة','Pharmacy quantities are updated from the uploaded availability workbook.','ctl-narcotic-filter','ctl-narcotic-search')
+         +tableCard('ctl-psychotropic-card','Psychotropic medicines / الأدوية النفسية','Shared psychotropic list with independent warehouse and pharmacy balances.','ctl-psychotropic-filter','ctl-psychotropic-search'))
+      +'<div class="card"><div class="ch"><span class="ct">Pending warehouse deliveries / الاستلامات المعلقة</span></div><div id="ctl-pending" class="cb"></div></div>';
+
+    var wh=ctlWarehouse(),ph=ctlPharmacy(),catalog=ctlCatalog(),allRows=[];
+    function renderCard(cardId,classification,filterId,searchId){
+      var card=document.getElementById(cardId);if(!card)return;
+      var filter=(document.getElementById(filterId)||{}).value||'all';
+      var q=((document.getElementById(searchId)||{}).value||'').toLowerCase();
+      var rows=catalog.filter(function(m){
+        return (!classification||String(m.classification||'narcotic').toLowerCase()===classification)&&(!q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q));
+      }).map(function(m){
+        var w=wh[m.id]||{},p=ph[m.id]||{};
+        return {m:m,w:w,p:p,status:ctlStatus(m,w,p)};
+      }).filter(function(x){return matches(x.m,x.w,x.p,filter);});
+      var body=card.querySelector('[data-stock-body]');
+      body.innerHTML=rows.length?rows.map(rowHtml).join(''):'<tr><td colspan="10" style="text-align:center;padding:22px;color:var(--tx2)">No medicines match this filter.</td></tr>';
+      allRows=allRows.concat(rows);
+    }
+    if(mode==='merged')renderCard('ctl-merged-card',null,'ctl-merged-filter','ctl-merged-search');
+    else{
+      renderCard('ctl-narcotic-card','narcotic','ctl-narcotic-filter','ctl-narcotic-search');
+      renderCard('ctl-psychotropic-card','psychotropic','ctl-psychotropic-filter','ctl-psychotropic-search');
+    }
+    var count=catalog.filter(function(m){var w=wh[m.id]||{},p=ph[m.id]||{};return ctlStatus(m,w,p).key!=='ok';}).length;
+    var a=document.getElementById('ctl-global-alerts');
+    if(a)a.innerHTML=count?'<div class="alert-banner-y"><b>'+count+'</b> medicine(s) require stock or expiry review.</div>':'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ No current stock or expiry alerts.</div>';
+    if(typeof renderCtlPending==='function')renderCtlPending();
+  };
+
+  var priorRenderControlled=window.renderControlled;
+  if(typeof priorRenderControlled==='function'){
+    window.renderControlled=function(){
+      seedPharmacyNarcoticStock();
+      var r=priorRenderControlled.apply(this,arguments);
+      if(window.CU&&CU.role!=='department'&&window.CTL_VIEW==='overview')window.renderCtlOverview();
+      return r;
+    };
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',seedPharmacyNarcoticStock);
+  else seedPharmacyNarcoticStock();
+})();
+</script>
+
 </body>
 </html>
