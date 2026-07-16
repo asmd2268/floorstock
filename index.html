@@ -8801,7 +8801,7 @@ body.role-department #ctl-log{pointer-events:none}
 
     var orders=sel.map(function(id){
       var r=gr().find(function(x){return x.id===id});if(!r)return null;
-      return {r:r,dept:gd().find(function(d){return d.id===r.deptId}),ms:getMeds(r.deptId||''),items:(r.dispensed||[]).filter(function(d){return Number(d.qty)>=0})};
+      return {r:r,dept:gd().find(function(d){return d.id===r.deptId}),ms:getMeds(r.deptId||''),items:(r.dispensed||[]).filter(function(d){return Number.isFinite(Number(d.qty))&&Number(d.qty)>0})};
     }).filter(Boolean);
 
     var pages=[];for(var i=0;i<orders.length;i+=ppp)pages.push(orders.slice(i,i+ppp));
@@ -8907,7 +8907,8 @@ body.role-department #ctl-log{pointer-events:none}
       var meds=getMeds(request.deptId||'');
       var dept=gd().find(function(d){return d.id===request.deptId});
       var items=(request.dispensed||[]).filter(function(x){
-        return Number.isFinite(Number(x.qty));
+        var qty=Number(x.qty);
+        return Number.isFinite(qty)&&qty>0;
       }).map(function(x){
         var med=meds.find(function(m){return m.id===x.medId});
         var category=String((med&&med.category)||x.category||'').toLowerCase();
@@ -9115,7 +9116,7 @@ window.doPrint=function(){
   var orders=selected.map(function(id){
     var request=gr().find(function(x){return x.id===id}); if(!request)return null;
     var meds=getMeds(request.deptId||''), dept=gd().find(function(d){return d.id===request.deptId});
-    var items=(request.dispensed||[]).filter(function(x){return Number.isFinite(Number(x.qty));}).map(function(x){
+    var items=(request.dispensed||[]).filter(function(x){var qty=Number(x.qty);return Number.isFinite(qty)&&qty>0;}).map(function(x){
       var med=meds.find(function(m){return m.id===x.medId});
       var category=String((med&&med.category)||x.category||'').toLowerCase();
       var classification=String((med&&med.classification)||x.classification||'').toLowerCase();
