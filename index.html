@@ -3865,6 +3865,30 @@ function clearImport(){
   renderImport();
 }
 
+// Standalone-friendly Excel loader: try several mirrors before asking for paste mode.
+async function ensureXLSX(){
+  if(typeof XLSX!=='undefined')return true;
+  var urls=[
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js',
+    'https://unpkg.com/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  var lastErr=null;
+  for(var i=0;i<urls.length;i++){
+    try{
+      await new Promise(function(resolve,reject){
+        var sc=document.createElement('script');
+        sc.src=urls[i];sc.async=true;
+        sc.onload=function(){typeof XLSX!=='undefined'?resolve(true):reject(new Error('XLSX unavailable'))};
+        sc.onerror=function(){reject(new Error('Excel library source '+(i+1)+' failed'))};
+        document.head.appendChild(sc);
+      });
+      if(typeof XLSX!=='undefined')return true;
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error('Excel library unavailable');
+}
+
 // ── XLSX UPLOAD HANDLER ──────────────────────────────────
 function handleXlsxDrop(e){
   e.preventDefault();
@@ -3873,13 +3897,13 @@ function handleXlsxDrop(e){
 }
 async function handleXlsxFile(file){
   if(!file)return;
-  try{await ensureXLSX()}catch(e){toast('Excel library not loaded. Try paste mode.','err');return;}
+  try{await ensureXLSX()}catch(e){toast('تعذر تحميل قارئ Excel. تأكد من الاتصال بالإنترنت أو استخدم Paste mode.','err');return;}
   var dz=el('xlsx-drop-zone');
   if(dz){dz.querySelector('div:nth-child(2)').textContent='Reading: '+file.name;}
   var reader=new FileReader();
   reader.onload=function(e){
     try{
-      if(file.name.endsWith('.csv')){
+      if(String(file.name).toLowerCase().endsWith('.csv')){
         parseCsvData(e.target.result);
       } else {
         parseXlsxData(e.target.result);
@@ -3888,12 +3912,12 @@ async function handleXlsxFile(file){
       toast('Error reading file: '+err.message,'err');
     }
   };
-  if(file.name.endsWith('.csv')) reader.readAsText(file);
+  if(String(file.name).toLowerCase().endsWith('.csv')) reader.readAsText(file);
   else reader.readAsArrayBuffer(e.target.result||file);
 }
 async function handleXlsxFile(file){
   if(!file)return;
-  try{await ensureXLSX()}catch(e){toast('Excel library not loaded. Try paste mode.','err');return;}
+  try{await ensureXLSX()}catch(e){toast('تعذر تحميل قارئ Excel. تأكد من الاتصال بالإنترنت أو استخدم Paste mode.','err');return;}
   var ext=file.name.split('.').pop().toLowerCase();
   var dz=el('xlsx-drop-zone');
   if(dz){var h2=dz.querySelector('.upload-status');if(!h2){h2=document.createElement('div');h2.className='upload-status';h2.style.cssText='font-size:12px;color:var(--acl);margin-top:8px';dz.appendChild(h2);}h2.textContent='⏳ Reading: '+file.name;}
@@ -3957,19 +3981,19 @@ function parseXlsxData(buffer,fname){
   }
 
   function getCellText(addr){
-    var c=ws[addr];if(!c)return null;
+    var c=ws[addr];if(!c||c.t==='e')return null;
     var v=c.v;if(v===undefined||v===null)return null;
-    var s=String(v);
-    if(s.startsWith('=')||s.startsWith('#REF')||s.startsWith('#'))return null;
+    var s=String(v).trim();
+    if(!s||/^#(REF|VALUE|NAME|DIV\/0|N\/A|NUM|NULL)/i.test(s))return null;
     return s.replace(/\n/g,' ').replace(/\r/g,' ').replace(/\s+/g,' ').trim()||null;
   }
   function getCellNum(addr){
-    var c=ws[addr];if(!c)return null;
-    var v=c.v;if(v===undefined||v===null)return null;
-    var s=String(v);
-    if(s.startsWith('=')||s.startsWith('#'))return null;
-    var n=parseFloat(s);
-    return isNaN(n)?null:n;
+    var c=ws[addr];if(!c||c.t==='e')return null;
+    var v=c.v;if(v===undefined||v===null||v==='')return null;
+    var s=String(v).trim();
+    if(!s||/^#|^=/i.test(s))return null;
+    var n=Number(s.replace(/,/g,''));
+    return Number.isFinite(n)?n:null;
   }
 
   var drugs=[];
@@ -3992,11 +4016,14 @@ function parseXlsxData(buffer,fname){
     if(!aText&&bNum===null)continue;
 
     // ── Category header row? ──
+    // Category rows in real hospital files may contain 0/0 formulas or #REF! in Min/Max.
+    // A recognized category name is therefore always treated as a heading, never a medicine.
     var catFromName=aText?recognizeCat(aText):null;
-    if((isCatHdr(aBg)||catFromName)&&bNum===null&&cNum===null&&aText){
-      if(catFromName)currentCat=catFromName;
+    if(catFromName&&aText){
+      currentCat=catFromName;
       continue;
     }
+    if(isCatHdr(aBg)&&aText&&(bNum===null||bNum===0)&&(cNum===null||cNum===0))continue;
 
     // ── Must have a name to be a drug row ──
     if(!aText||aText.length<2)continue;
@@ -4053,15 +4080,17 @@ function parseXlsxData(buffer,fname){
 }
 
 function recognizeCat(name){
-  var n=name.toLowerCase();
-  if(/^inject/i.test(n)||n==='injections')return 'Injections';
-  if(/^inhaler/i.test(n)||n==='inhalers')return 'Inhalers';
-  if(/^tablet/i.test(n)||n==='tablets')return 'Tablets';
-  if(/^syrup/i.test(n)||n==='syrups')return 'Syrups';
-  if(/^topical/i.test(n)||n==='topical')return 'Topical';
-  if(/^solution/i.test(n)||n==='solutions')return 'Solutions';
-  if(/^supposi/i.test(n))return 'Suppositories';
-  if(/ointment|drop/i.test(n))return 'Ointments & Drops';
+  var n=String(name||'').toLowerCase().replace(/\s+/g,' ').trim();
+  // Match section headings only. Do not treat medicine names containing words
+  // such as "eye drop", "ointment", "injection" or "solution" as headings.
+  if(/^(injection|injections)$/.test(n))return 'Injections';
+  if(/^(inhaler|inhalers)$/.test(n))return 'Inhalers';
+  if(/^(tablet|tablets)$/.test(n))return 'Tablets';
+  if(/^(syrup|syrups)$/.test(n))return 'Syrups';
+  if(/^topicals?$/.test(n))return 'Topical';
+  if(/^(solution|solutions)$/.test(n))return 'Solutions';
+  if(/^(suppository|suppositories)$/.test(n))return 'Suppositories';
+  if(/^(ointment|ointments|drop|drops|ointments?\s*&\s*drops?(?:\s*&\s*suppositor(?:y|ies))?)$/.test(n))return 'Ointments & Drops';
   return null;
 }
 function makeDrug(name,min,max,ha,hz,cat){
@@ -9799,5 +9828,170 @@ window.doPrint=function(){
 })();
 </script>
 
+
+<script id="category-management-final-v12">
+(function(){
+  'use strict';
+  var SOL='Solutions';
+  var CAT_SCOPE='pharmacy';
+  function uniq(a){return (a||[]).filter(function(v,i,x){return v&&x.indexOf(v)===i});}
+  function canManageCategoryNames(){
+    try{return !!(window.CU&&(CU.master===true||CU.role==='pharmacy'||CU.role==='inpatient_supervisor')||(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||(typeof window.isMasterActual==='function'&&window.isMasterActual()));}catch(e){return false;}
+  }
+  function selectedDept(){var s=document.getElementById('inv-dept-sel');return s&&s.value||'';}
+  function allCats(){
+    var a=typeof getCategories==='function'?getCategories().slice():[];
+    (typeof gd==='function'?gd():[]).forEach(function(d){(typeof getMeds==='function'?getMeds(d.id):[]).forEach(function(m){if(m.category&&a.indexOf(m.category)<0)a.push(m.category);});});
+    a=uniq(a.filter(function(c){return c!==SOL;}));a.push(SOL);return a;
+  }
+  function normalizeConfig(cfg){
+    var all=allCats();cfg=cfg||{};
+    var order=uniq((cfg.order||[]).concat(all)).filter(function(c){return c!==SOL&&all.indexOf(c)>=0;});order.push(SOL);
+    var enabled=Array.isArray(cfg.enabled)?uniq(cfg.enabled.filter(function(c){return c!==SOL&&all.indexOf(c)>=0;})):all.filter(function(c){return c!==SOL;});enabled.push(SOL);
+    return {order:order,enabled:enabled};
+  }
+  function getScopeConfig(){
+    if(CAT_SCOPE==='department'){
+      var id=selectedDept();if(!id)return normalizeConfig({});
+      return typeof getDeptCategoryConfig==='function'?normalizeConfig(getDeptCategoryConfig(id)):normalizeConfig(S.g('dept_category_config_'+id)||{});
+    }
+    return typeof getPharmacyCategoryConfig==='function'?normalizeConfig(getPharmacyCategoryConfig(selectedDept())):normalizeConfig(S.g('pharmacy_category_config')||{});
+  }
+  function saveScopeConfig(cfg){
+    cfg=normalizeConfig(cfg);
+    if(CAT_SCOPE==='department'){
+      var id=selectedDept();if(!id)return false;
+      if(typeof setDeptCategoryConfig==='function')setDeptCategoryConfig(id,cfg);else S.s('dept_category_config_'+id,cfg);
+    }else{
+      if(typeof setPharmacyCategoryConfig==='function')setPharmacyCategoryConfig(cfg);else S.s('pharmacy_category_config',cfg);
+    }
+    return true;
+  }
+  function updateConfigsRename(oldName,newName){
+    var pc=normalizeConfig(S.g('pharmacy_category_config')||{});
+    pc.order=pc.order.map(function(c){return c===oldName?newName:c;});pc.enabled=pc.enabled.map(function(c){return c===oldName?newName:c;});S.s('pharmacy_category_config',normalizeConfig(pc));
+    (typeof gd==='function'?gd():[]).forEach(function(d){var key='dept_category_config_'+d.id,cfg=normalizeConfig(S.g(key)||{});cfg.order=cfg.order.map(function(c){return c===oldName?newName:c;});cfg.enabled=cfg.enabled.map(function(c){return c===oldName?newName:c;});S.s(key,normalizeConfig(cfg));});
+  }
+  function updateConfigsRemove(name){
+    var pc=normalizeConfig(S.g('pharmacy_category_config')||{});pc.order=pc.order.filter(function(c){return c!==name;});pc.enabled=pc.enabled.filter(function(c){return c!==name;});S.s('pharmacy_category_config',normalizeConfig(pc));
+    (typeof gd==='function'?gd():[]).forEach(function(d){var key='dept_category_config_'+d.id,cfg=normalizeConfig(S.g(key)||{});cfg.order=cfg.order.filter(function(c){return c!==name;});cfg.enabled=cfg.enabled.filter(function(c){return c!==name;});S.s(key,normalizeConfig(cfg));});
+  }
+  window.setCategoryOrderScope=function(scope){CAT_SCOPE=scope==='department'?'department':'pharmacy';renderCatList();};
+  window.openManageCats=function(){
+    if(!canManageCategoryNames())return toast('Category management is available only to the Pharmacy Director and Inpatient Pharmacy Supervisor.','err');
+    if(!selectedDept())return toast('Select a department first.','err');
+    renderCatList();OM('mcat-mgr');
+  };
+  window.renderCatList=function(){
+    var box=document.getElementById('cat-list');if(!box)return;
+    var allowed=canManageCategoryNames(),dept=selectedDept(),cfg=getScopeConfig(),ordered=normalizeConfig(cfg).order;
+    var ctx=document.getElementById('dept-cat-context');
+    if(ctx)ctx.innerHTML='<div style="display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap"><div><b>Order shown for:</b> '+(CAT_SCOPE==='pharmacy'?'Pharmacy inventory':'Selected department')+'</div><div style="display:flex;gap:6px"><button class="btn '+(CAT_SCOPE==='pharmacy'?'bp':'bg')+' bsm" onclick="setCategoryOrderScope(\'pharmacy\')">Pharmacy order</button><button class="btn '+(CAT_SCOPE==='department'?'bp':'bg')+' bsm" onclick="setCategoryOrderScope(\'department\')">Department order</button></div></div><div class="fhint" style="margin-top:6px">The two orders are saved independently. Solutions is always fixed last.</div>';
+    var addWrap=document.getElementById('new-cat-inp')&&document.getElementById('new-cat-inp').parentElement;if(addWrap)addWrap.style.display=allowed?'flex':'none';
+    box.innerHTML=ordered.map(function(c,i){
+      var fixed=c===SOL,q=String(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      return '<div class="category-manage-row" style="display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--bd)" data-cat="'+esc(c)+'">'
+       +'<input value="'+esc(c)+'" '+(fixed?'disabled':'')+' style="margin:0;padding:7px 9px;font-weight:600" onchange="renameManagedCategory(\''+q+'\',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur()}">'
+       +'<div style="display:flex;gap:5px"><button type="button" class="btn bg bsm" title="Move up" '+(fixed||i===0?'disabled':'')+' onclick="moveManagedCategory(\''+q+'\',-1)">↑</button><button type="button" class="btn bg bsm" title="Move down" '+(fixed||i>=ordered.length-2?'disabled':'')+' onclick="moveManagedCategory(\''+q+'\',1)">↓</button></div>'
+       +(fixed?'<span class="badge bgr">Always last</span>':'<button type="button" class="btn bd2c bsm" onclick="removeManagedCategory(\''+q+'\')">Delete</button>')+'</div>';
+    }).join('');
+  };
+  window.addCategory=function(){
+    if(!canManageCategoryNames())return toast('Not authorized.','err');
+    var inp=document.getElementById('new-cat-inp'),n=(inp&&inp.value||'').trim();if(!n)return toast('Enter a category name.','err');
+    if(n.toLowerCase()===SOL.toLowerCase())return toast('Solutions already exists and is fixed last.','err');
+    var cats=allCats();if(cats.some(function(c){return c.toLowerCase()===n.toLowerCase();}))return toast('Category already exists.','err');
+    cats=cats.filter(function(c){return c!==SOL;});cats.push(n);cats.push(SOL);setCategories(cats);if(inp)inp.value='';
+    var cfg=getScopeConfig();cfg.order=cfg.order.filter(function(c){return c!==SOL;});cfg.order.push(n,SOL);cfg.enabled=cfg.enabled.filter(function(c){return c!==SOL;});cfg.enabled.push(n,SOL);saveScopeConfig(cfg);
+    if(typeof refreshCatSelectors==='function')refreshCatSelectors();renderCatList();if(typeof renderInv==='function')renderInv();toast('Category added.','succ');
+  };
+  window.renameManagedCategory=function(oldName,newValue){
+    if(!canManageCategoryNames())return;var n=String(newValue||'').trim();if(!n||oldName===SOL)return renderCatList();
+    var cats=allCats();if(cats.some(function(c){return c!==oldName&&c.toLowerCase()===n.toLowerCase();})){toast('Category name already exists.','err');return renderCatList();}
+    var global=typeof getCategories==='function'?getCategories().slice():cats.slice();global=global.map(function(c){return c===oldName?n:c;});global=uniq(global.filter(function(c){return c!==SOL;}));global.push(SOL);setCategories(global);
+    (typeof gd==='function'?gd():[]).forEach(function(d){var ms=getMeds(d.id),changed=false;ms.forEach(function(m){if(m.category===oldName){m.category=n;changed=true;}});if(changed)setMeds(d.id,ms);});
+    updateConfigsRename(oldName,n);if(typeof refreshCatSelectors==='function')refreshCatSelectors();renderCatList();if(typeof renderInv==='function')renderInv();toast('Category renamed everywhere.','succ');
+  };
+  window.moveManagedCategory=function(cat,dir){
+    var cfg=getScopeConfig(),arr=cfg.order.filter(function(c){return c!==SOL;}),i=arr.indexOf(cat),j=i+dir;if(i<0||j<0||j>=arr.length)return;
+    var t=arr[i];arr[i]=arr[j];arr[j]=t;cfg.order=arr.concat([SOL]);saveScopeConfig(cfg);renderCatList();if(typeof renderInv==='function')renderInv();
+  };
+  window.removeManagedCategory=async function(name){
+    if(!canManageCategoryNames()||name===SOL)return;
+    if(!await uiConfirm('Delete category "'+name+'"? Medications will remain and can be reassigned.'))return;
+    var cats=(typeof getCategories==='function'?getCategories():[]).filter(function(c){return c!==name&&c!==SOL;});cats.push(SOL);setCategories(cats);updateConfigsRemove(name);
+    if(typeof refreshCatSelectors==='function')refreshCatSelectors();renderCatList();if(typeof renderInv==='function')renderInv();toast('Category deleted.','info');
+  };
+  function enforceButton(){
+    var b=document.querySelector('#pg-inv button[onclick="openManageCats()"]');if(b)b.style.display=canManageCategoryNames()?'inline-flex':'none';
+  }
+  var oldStart=window.startApp;window.startApp=function(){var r=oldStart&&oldStart.apply(this,arguments);setTimeout(enforceButton,0);return r;};
+  var oldShow=window.showPg;window.showPg=function(id){var r=oldShow&&oldShow.apply(this,arguments);if(id==='pg-inv')setTimeout(enforceButton,0);return r;};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(enforceButton,0);});else setTimeout(enforceButton,0);
+})();
+</script>
+
+<style id="freeze-all-inventory-style">
+.freeze-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 7px;border:1px solid #8c959f;border-radius:12px;background:rgba(110,118,129,.18);font-size:10px;font-weight:700;margin-inline-start:5px}
+.freeze-row td{opacity:.72}.freeze-row td:nth-child(3){text-decoration:line-through;text-decoration-thickness:1px}
+.all-inv-modal{width:min(1400px,98vw)!important;max-width:98vw!important}.all-inv-wrap{max-height:68vh;overflow:auto;border:1px solid var(--bd);border-radius:8px}.all-inv-table{min-width:1050px;table-layout:auto}.all-inv-table th{position:sticky;top:0;background:var(--s);z-index:2}.all-inv-table td{font-size:12px;padding:7px 8px}.all-inv-variant{background:rgba(210,153,34,.10)!important}
+@media print{.freeze-badge{border-color:#000!important;background:#ddd!important;color:#000!important}.freeze-row td{opacity:1!important}}
+</style>
+
+<script id="freeze-all-inventory-feature">
+(function(){
+  function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
+  function freezeMap(){return (window.S&&S.g('global_request_freeze'))||{}}
+  function saveFreezeMap(v){return S.s('global_request_freeze',v)}
+  function canFreeze(){return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
+  function medKey(m){return norm(m&&m.name)}
+  function freezeInfo(m){return freezeMap()[medKey(m)]||null}
+  window.isMedicationRequestFrozen=function(m){return !!freezeInfo(m)};
+  function selectedMeds(){var dept=typeof getInvDept==='function'?getInvDept():'';return (typeof getSelectedMedIds==='function'?getSelectedMedIds():[]).map(function(id){return getMeds(dept).find(function(m){return m.id===id})}).filter(Boolean)}
+  window.bulkFreezeRequest=async function(){
+    if(!canFreeze())return toast('Not authorized.','err');var meds=selectedMeds();if(!meds.length)return toast('Select medications first.','err');
+    var reason=await uiPrompt('سبب التجميد / Freeze reason','Temporarily unavailable');if(reason===null)return;
+    var map=freezeMap(),at=nowISO();meds.forEach(function(m){map[medKey(m)]={name:m.name,reason:String(reason||''),at:at,by:CU.username||''}});saveFreezeMap(map);clearInvSelection();renderInv();toast(meds.length+' medication(s) frozen for all departments.','succ');
+  };
+  window.bulkUnfreezeRequest=async function(){
+    if(!canFreeze())return toast('Not authorized.','err');var meds=selectedMeds();if(!meds.length)return toast('Select medications first.','err');
+    var map=freezeMap();meds.forEach(function(m){delete map[medKey(m)]});saveFreezeMap(map);clearInvSelection();renderInv();toast(meds.length+' medication(s) unfrozen.','succ');
+  };
+  function ensureInventoryButtons(){
+    var bar=document.querySelector('#bulk-bar .fl.g8.ic');if(bar&&!document.getElementById('bulk-freeze-btn')){
+      var f=document.createElement('button');f.id='bulk-freeze-btn';f.className='btn bg bsm';f.innerHTML='⏸ Freeze requests';f.onclick=bulkFreezeRequest;
+      var u=document.createElement('button');u.id='bulk-unfreeze-btn';u.className='btn bg bsm';u.innerHTML='▶ Unfreeze';u.onclick=bulkUnfreezeRequest;
+      var del=bar.querySelector('button[onclick="bulkDelete()"]');bar.insertBefore(f,del);bar.insertBefore(u,del);
+    }
+    var tools=document.querySelector('#pg-inv .stitle')&&document.querySelector('#pg-inv .stitle').parentElement.parentElement.querySelector('.fl.g8.ic');
+    if(tools&&!document.getElementById('all-depts-inv-btn')){var b=document.createElement('button');b.id='all-depts-inv-btn';b.className='btn bg bsm';b.innerHTML='▦ All Departments Inventory';b.onclick=openAllDepartmentsInventory;tools.appendChild(b)}
+    ['bulk-freeze-btn','bulk-unfreeze-btn','all-depts-inv-btn'].forEach(function(id){var e=document.getElementById(id);if(e)e.style.display=canFreeze()?'inline-flex':'none'});
+  }
+  function enhanceInv(){
+    ensureInventoryButtons();var dept=typeof getInvDept==='function'?getInvDept():'';if(!dept)return;var map={};getMeds(dept).forEach(function(m){map[m.id]=m});
+    document.querySelectorAll('#itbl tr[id^="inv-row-"]').forEach(function(tr){var id=tr.id.replace('inv-row-',''),m=map[id],inf=m&&freezeInfo(m);tr.classList.toggle('freeze-row',!!inf);var cell=tr.children[2];if(cell){var old=cell.querySelector('.freeze-badge');if(old)old.remove();if(inf){var s=document.createElement('span');s.className='freeze-badge';s.title=inf.reason||'';s.textContent='⏸ Frozen';cell.appendChild(s)}}});
+  }
+  var originalRenderInv=window.renderInv;window.renderInv=function(){var r=originalRenderInv&&originalRenderInv.apply(this,arguments);setTimeout(enhanceInv,0);return r};
+  function enhanceRequest(){
+    if(!window.CU||CU.role!=='department')return;var meds={};getMeds(CU.deptId).forEach(function(m){meds[m.id]=m});
+    document.querySelectorAll('.rqi').forEach(function(inp){var m=meds[inp.dataset.mid],inf=m&&freezeInfo(m);if(!inf)return;inp.value='';inp.disabled=true;inp.dataset.frozen='1';var tr=inp.closest('tr');if(tr){tr.classList.add('freeze-row');var nameCell=tr.children[1];if(nameCell&&!nameCell.querySelector('.freeze-badge')){var s=document.createElement('span');s.className='freeze-badge';s.title=inf.reason||'';s.textContent='⏸ Frozen'+(inf.reason?' — '+inf.reason:'');nameCell.appendChild(s)}}var lim=inp.parentElement&&inp.parentElement.querySelector('.qlim');if(lim)lim.textContent='Frozen';});
+  }
+  var originalReq=window.renderReqForm;window.renderReqForm=function(){var r=originalReq&&originalReq.apply(this,arguments);setTimeout(enhanceRequest,0);return r};
+  function esc2(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function similarKey(name){return norm(name).replace(/\b(tablet|tablets|tab|capsule|capsules|cap|injection|injections|inj|ampoule|ampoules|amp|vial|vials|mg|ml|mcg|g)\b/g,'').replace(/\s+/g,' ').trim()}
+  window.openAllDepartmentsInventory=function(){
+    if(!canFreeze())return toast('Not authorized.','err');var rows=[];(gd()||[]).forEach(function(d){(getMeds(d.id)||[]).forEach(function(m){rows.push({dept:d.name||d.id,deptId:d.id,med:m,key:similarKey(m.name)})})});
+    var counts={};rows.forEach(function(x){counts[x.key]=(counts[x.key]||0)+1});rows.sort(function(a,b){return a.med.name.localeCompare(b.med.name)||a.dept.localeCompare(b.dept)});
+    var html='<div class="modal-bg on" id="all-inv-modal"><div class="modal all-inv-modal"><div class="mh"><div><div class="mt">All Departments Inventory / جميع قوائم الأقسام</div><div class="fhint">ابحث وقارن الصياغات بين الأقسام لتسهيل توحيد الأسماء مستقبلًا.</div></div><button class="xbtn" onclick="document.getElementById(\'all-inv-modal\').remove()">×</button></div>'+
+      '<div class="fl g8 ic" style="margin-bottom:10px;flex-wrap:wrap"><div class="sbr" style="max-width:520px"><span class="sic">🔎</span><input id="all-inv-search" placeholder="Search medication, department or category..." oninput="filterAllDepartmentsInventory()" style="margin:0"></div><label style="margin:0;display:flex;align-items:center;gap:6px"><input type="checkbox" id="all-inv-variants" style="width:auto;margin:0" onchange="filterAllDepartmentsInventory()"> Show possible naming variants only</label><span class="chip">'+rows.length+' records</span></div>'+
+      '<div class="all-inv-wrap"><table class="all-inv-table"><thead><tr><th>#</th><th>Medication</th><th>Department</th><th>Category</th><th>Classifications</th><th>Min</th><th>Max</th><th>Monthly</th><th>Request status</th></tr></thead><tbody id="all-inv-body">'+rows.map(function(x,i){var inf=freezeInfo(x.med),variant=counts[x.key]>1;return '<tr data-search="'+esc2(norm(x.med.name+' '+x.dept+' '+x.med.category))+'" data-variant="'+(variant?'1':'0')+'" class="'+(variant?'all-inv-variant ':'')+(inf?'freeze-row':'')+'"><td>'+(i+1)+'</td><td><b>'+esc2(x.med.name)+'</b>'+(variant?'<div class="fhint">Possible cross-department variant</div>':'')+'</td><td>'+esc2(x.dept)+'</td><td>'+esc2(x.med.category||'')+'</td><td>'+bdg(x.med)+'</td><td>'+esc2(x.med.min)+'</td><td>'+esc2(x.med.max)+'</td><td>'+esc2(x.med.monthly||'—')+'</td><td>'+(inf?'<span class="freeze-badge" title="'+esc2(inf.reason||'')+'">⏸ Frozen</span>':'Available')+'</td></tr>'}).join('')+'</tbody></table></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+  window.filterAllDepartmentsInventory=function(){var q=norm((document.getElementById('all-inv-search')||{}).value||''),variants=!!(document.getElementById('all-inv-variants')||{}).checked;document.querySelectorAll('#all-inv-body tr').forEach(function(tr){tr.style.display=(!q||tr.dataset.search.indexOf(q)>-1)&&(!variants||tr.dataset.variant==='1')?'':'none'})};
+  var oldStart=window.startApp;window.startApp=function(){var r=oldStart&&oldStart.apply(this,arguments);setTimeout(ensureInventoryButtons,0);return r};
+  var oldShow=window.showPg;window.showPg=function(id){var r=oldShow&&oldShow.apply(this,arguments);if(id==='pg-inv')setTimeout(function(){ensureInventoryButtons();enhanceInv()},0);return r};
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureInventoryButtons,0)});else setTimeout(ensureInventoryButtons,0);
+})();
+</script>
 </body>
 </html>
