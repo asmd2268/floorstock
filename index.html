@@ -9993,5 +9993,148 @@ window.doPrint=function(){
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(ensureInventoryButtons,0)});else setTimeout(ensureInventoryButtons,0);
 })();
 </script>
+
+<style id="inventory-name-merge-style">
+.all-inv-mergebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 10px;margin-bottom:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}
+.all-inv-name-check{width:16px!important;height:16px!important;margin:0!important}
+.all-inv-table th:first-child,.all-inv-table td:first-child{width:34px;text-align:center}
+.merge-canonical-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:8px;background:var(--s2)}
+.merge-canonical-option{display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--bd);border-radius:7px;cursor:pointer}
+.merge-canonical-option:has(input:checked){border-color:var(--ac);background:rgba(31,111,235,.10)}
+</style>
+<script id="inventory-name-merge-feature">
+(function(){
+  function normMerge(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
+  function escMerge(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+  function canMergeNames(){return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
+  function mergeFreezeNames(names,canonical){
+    var map=(window.S&&S.g('global_request_freeze'))||{},chosen=null;
+    names.forEach(function(n){var k=normMerge(n);if(map[k]&&!chosen)chosen=map[k];delete map[k]});
+    if(chosen){chosen.name=canonical;map[normMerge(canonical)]=chosen}
+    return S.s('global_request_freeze',map)
+  }
+  function numberMax(arr,key){return arr.reduce(function(m,x){var n=Number(x[key]);return isFinite(n)?Math.max(m,n):m},0)}
+  function numberSum(arr,key){return arr.reduce(function(s,x){var n=Number(x[key]);return s+(isFinite(n)?n:0)},0)}
+  function firstValue(arr,key){for(var i=0;i<arr.length;i++){if(arr[i][key]!==undefined&&arr[i][key]!==null&&String(arr[i][key]).trim()!=='')return arr[i][key]}return ''}
+  function mergeMedicationRecords(records,canonicalName){
+    var preferred=records.find(function(m){return normMerge(m.name)===normMerge(canonicalName)})||records[0];
+    var merged=Object.assign({},preferred);
+    merged.name=canonicalName;
+    ['high_alert','hazard','lasa','refrigerated'].forEach(function(k){merged[k]=records.some(function(m){return !!m[k]})});
+    merged.min=numberMax(records,'min');merged.max=numberMax(records,'max');merged.monthly=numberMax(records,'monthly');
+    if(records.some(function(m){return m.currentQty!==undefined}))merged.currentQty=numberSum(records,'currentQty');
+    ['category','moh','nupco','unit','strength','shelfId'].forEach(function(k){var v=firstValue([preferred].concat(records),k);if(v!==''&&v!==undefined)merged[k]=v});
+    return merged;
+  }
+  function selectedMergeNames(){
+    var names=[];document.querySelectorAll('#all-inv-body .all-inv-name-check:checked').forEach(function(c){var n=c.dataset.name||'';if(n&&!names.some(function(x){return normMerge(x)===normMerge(n)}))names.push(n)});return names;
+  }
+  window.updateAllInventoryMergeCount=function(){var n=selectedMergeNames().length,el=document.getElementById('all-inv-merge-count');if(el)el.textContent=n+' name(s) selected'};
+  window.toggleAllInventoryVisible=function(chk){document.querySelectorAll('#all-inv-body tr').forEach(function(tr){if(tr.style.display==='none')return;var c=tr.querySelector('.all-inv-name-check');if(c)c.checked=!!chk.checked});updateAllInventoryMergeCount()};
+  window.openMergeInventoryNames=function(){
+    if(!canMergeNames())return toast('Not authorized.','err');var names=selectedMergeNames();if(names.length<2)return toast('Select at least two different medication names.','err');
+    var html='<div class="modal-bg on" id="merge-names-modal"><div class="modal" style="width:620px"><div class="mh"><div><div class="mt">Merge medication names / دمج مسميات الأدوية</div><div class="fhint">اختر الاسم القياسي الذي سيحل محل بقية الأسماء في جميع الأقسام.</div></div><button class="xbtn" onclick="document.getElementById(\'merge-names-modal\').remove()">×</button></div><div class="merge-canonical-list">'+names.map(function(n,i){return '<label class="merge-canonical-option"><input type="radio" name="canonical-med-name" value="'+escMerge(n)+'" '+(i===0?'checked':'')+' style="width:auto;margin:0"><b>'+escMerge(n)+'</b></label>'}).join('')+'</div><div class="alert-banner-y" style="margin-top:12px">سيتم توحيد الاسم في جميع الأقسام. إذا وُجد أكثر من سجل من الأسماء المختارة داخل القسم نفسه فسيُدمج في سجل واحد، مع نقل تواريخ الانتهاء والمحافظة على أعلى حدود Min/Max/Monthly وجمع الرصيد الحالي.</div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" onclick="document.getElementById(\'merge-names-modal\').remove()">Cancel</button><button class="btn bp" onclick="confirmMergeInventoryNames()">Merge names</button></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+  window.confirmMergeInventoryNames=async function(){
+    var names=selectedMergeNames(),radio=document.querySelector('input[name="canonical-med-name"]:checked');if(names.length<2||!radio)return;
+    var canonical=radio.value;if(!(await uiConfirm('Merge '+names.length+' names into “'+canonical+'”? This updates all departments.')))return;
+    var snapshot={id:'merge_'+Date.now(),at:typeof nowISO==='function'?nowISO():new Date().toISOString(),by:(window.CU&&CU.username)||'',canonical:canonical,names:names,departments:{},expiry:{}};
+    var selectedKeys={};names.forEach(function(n){selectedKeys[normMerge(n)]=1});
+    var changedDepartments=0,removedRecords=0;
+    for(var di=0;di<(gd()||[]).length;di++){
+      var dept=gd()[di],meds=(getMeds(dept.id)||[]).slice(),matches=meds.filter(function(m){return selectedKeys[normMerge(m.name)]});if(!matches.length)continue;
+      snapshot.departments[dept.id]=meds;snapshot.expiry[dept.id]=(getExpiry(dept.id)||[]).slice();
+      var survivor=matches.find(function(m){return normMerge(m.name)===normMerge(canonical)})||matches[0],merged=mergeMedicationRecords(matches,canonical),matchIds={};matches.forEach(function(m){matchIds[m.id]=1});merged.id=survivor.id;
+      var next=[],inserted=false;meds.forEach(function(m){if(!matchIds[m.id]){next.push(m);return}if(!inserted){next.push(merged);inserted=true}else removedRecords++});
+      var exp=(getExpiry(dept.id)||[]).map(function(e){return matchIds[e.medId]?Object.assign({},e,{medId:survivor.id}):e});
+      await setMeds(dept.id,next);await setExpiry(dept.id,exp);changedDepartments++;
+    }
+    var history=(S.g('inventory_name_merge_history')||[]).slice();history.unshift(snapshot);if(history.length>20)history.length=20;await S.s('inventory_name_merge_history',history);await mergeFreezeNames(names,canonical);
+    if(typeof auditAction==='function')auditAction('inventory_names_merged',{canonical:canonical,names:names,departments:changedDepartments,removedRecords:removedRecords});
+    var mm=document.getElementById('merge-names-modal');if(mm)mm.remove();var am=document.getElementById('all-inv-modal');if(am)am.remove();toast('Names merged across '+changedDepartments+' department(s).','succ');openAllDepartmentsInventory();
+  };
+  window.undoLatestInventoryNameMerge=async function(){
+    if(!canMergeNames())return;var history=(S.g('inventory_name_merge_history')||[]).slice();if(!history.length)return toast('No merge history available.','info');var h=history[0];if(!(await uiConfirm('Undo latest merge into “'+h.canonical+'”?')))return;
+    var ids=Object.keys(h.departments||{});for(var i=0;i<ids.length;i++){await setMeds(ids[i],h.departments[ids[i]]||[]);await setExpiry(ids[i],(h.expiry||{})[ids[i]]||[])}history.shift();await S.s('inventory_name_merge_history',history);if(typeof auditAction==='function')auditAction('inventory_names_merge_undone',{mergeId:h.id,canonical:h.canonical});var am=document.getElementById('all-inv-modal');if(am)am.remove();toast('Latest name merge undone.','succ');openAllDepartmentsInventory();
+  };
+  var previousOpen=window.openAllDepartmentsInventory;
+  window.openAllDepartmentsInventory=function(){
+    if(!canMergeNames())return toast('Not authorized.','err');var rows=[];(gd()||[]).forEach(function(d){(getMeds(d.id)||[]).forEach(function(m){rows.push({dept:d.name||d.id,deptId:d.id,med:m,key:(typeof similarKey==='function'?similarKey(m.name):normMerge(m.name))})})});
+    var counts={};rows.forEach(function(x){counts[x.key]=(counts[x.key]||0)+1});rows.sort(function(a,b){return a.med.name.localeCompare(b.med.name)||a.dept.localeCompare(b.dept)});
+    function bdgSafe(m){return typeof bdg==='function'?bdg(m):''}
+    function frozen(m){var map=(S.g('global_request_freeze')||{});return map[normMerge(m.name)]||null}
+    var history=(S.g('inventory_name_merge_history')||[]);
+    var html='<div class="modal-bg on" id="all-inv-modal"><div class="modal all-inv-modal"><div class="mh"><div><div class="mt">All Departments Inventory / جميع قوائم الأقسام</div><div class="fhint">حدد صيغتين أو أكثر ثم ادمجها في اسم قياسي واحد.</div></div><button class="xbtn" onclick="document.getElementById(\'all-inv-modal\').remove()">×</button></div>'+
+      '<div class="all-inv-mergebar"><button class="btn bp bsm" onclick="openMergeInventoryNames()">Merge selected names</button><button class="btn bg bsm" onclick="undoLatestInventoryNameMerge()" '+(history.length?'':'disabled')+'>Undo latest merge</button><span class="chip" id="all-inv-merge-count">0 name(s) selected</span><span class="fhint">اختيار الاسم نفسه من أكثر من قسم يُحسب اسمًا واحدًا.</span></div>'+
+      '<div class="fl g8 ic" style="margin-bottom:10px;flex-wrap:wrap"><div class="sbr" style="max-width:520px"><span class="sic">🔎</span><input id="all-inv-search" placeholder="Search medication, department or category..." oninput="filterAllDepartmentsInventory()" style="margin:0"></div><label style="margin:0;display:flex;align-items:center;gap:6px"><input type="checkbox" id="all-inv-variants" style="width:auto;margin:0" onchange="filterAllDepartmentsInventory()"> Show possible naming variants only</label><span class="chip">'+rows.length+' records</span></div>'+
+      '<div class="all-inv-wrap"><table class="all-inv-table"><thead><tr><th><input type="checkbox" class="all-inv-name-check" onchange="toggleAllInventoryVisible(this)" title="Select visible"></th><th>Medication</th><th>Department</th><th>Category</th><th>Classifications</th><th>Min</th><th>Max</th><th>Monthly</th><th>Request status</th></tr></thead><tbody id="all-inv-body">'+rows.map(function(x){var inf=frozen(x.med),variant=counts[x.key]>1;return '<tr data-search="'+escMerge(normMerge(x.med.name+' '+x.dept+' '+x.med.category))+'" data-variant="'+(variant?'1':'0')+'" class="'+(variant?'all-inv-variant ':'')+(inf?'freeze-row':'')+'"><td><input type="checkbox" class="all-inv-name-check" data-name="'+escMerge(x.med.name)+'" onchange="updateAllInventoryMergeCount()"></td><td><b>'+escMerge(x.med.name)+'</b>'+(variant?'<div class="fhint">Possible cross-department variant</div>':'')+'</td><td>'+escMerge(x.dept)+'</td><td>'+escMerge(x.med.category||'')+'</td><td>'+bdgSafe(x.med)+'</td><td>'+escMerge(x.med.min)+'</td><td>'+escMerge(x.med.max)+'</td><td>'+escMerge(x.med.monthly||'—')+'</td><td>'+(inf?'<span class="freeze-badge" title="'+escMerge(inf.reason||'')+'">⏸ Frozen</span>':'Available')+'</td></tr>'}).join('')+'</tbody></table></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+})();
+</script>
+
+<style id="freeze-by-name-filter-style">
+.all-inv-freezebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}
+.all-inv-frozen-only{display:inline-flex;align-items:center;gap:6px;margin:0;padding:5px 9px;border:1px solid var(--bd);border-radius:7px;background:var(--s)}
+.freeze-reason{font-size:10px;color:var(--tx2);margin-top:2px;max-width:280px;white-space:normal}
+</style>
+<script id="freeze-by-name-filter-feature">
+(function(){
+  function normFreezeName(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
+  function canFreezeByName(){return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
+  function selectedInventoryNames(){
+    var names=[];
+    document.querySelectorAll('#all-inv-body .all-inv-name-check:checked').forEach(function(c){
+      var n=String(c.dataset.name||'').trim();
+      if(n&&!names.some(function(x){return normFreezeName(x)===normFreezeName(n)}))names.push(n);
+    });
+    return names;
+  }
+  window.freezeSelectedInventoryNames=async function(){
+    if(!canFreezeByName())return toast('Not authorized.','err');
+    var names=selectedInventoryNames();if(!names.length)return toast('Select one or more medication names first.','err');
+    var reason=await uiPrompt('سبب التجميد / Freeze reason','Temporarily unavailable');if(reason===null)return;
+    var map=(S.g('global_request_freeze')||{}),at=(typeof nowISO==='function'?nowISO():new Date().toISOString());
+    names.forEach(function(name){map[normFreezeName(name)]={name:name,reason:String(reason||''),at:at,by:(CU.username||CU.email||'')}});
+    await S.s('global_request_freeze',map);
+    if(typeof auditAction==='function')auditAction('medication_names_frozen_all_departments',{names:names,reason:String(reason||'')});
+    var m=document.getElementById('all-inv-modal');if(m)m.remove();toast(names.length+' medication name(s) frozen across all departments.','succ');openAllDepartmentsInventory();
+  };
+  window.unfreezeSelectedInventoryNames=async function(){
+    if(!canFreezeByName())return toast('Not authorized.','err');
+    var names=selectedInventoryNames();if(!names.length)return toast('Select one or more medication names first.','err');
+    var map=(S.g('global_request_freeze')||{});names.forEach(function(name){delete map[normFreezeName(name)]});
+    await S.s('global_request_freeze',map);
+    if(typeof auditAction==='function')auditAction('medication_names_unfrozen_all_departments',{names:names});
+    var m=document.getElementById('all-inv-modal');if(m)m.remove();toast(names.length+' medication name(s) unfrozen across all departments.','succ');openAllDepartmentsInventory();
+  };
+  window.filterAllDepartmentsInventory=function(){
+    var q=normFreezeName((document.getElementById('all-inv-search')||{}).value||'');
+    var variants=!!(document.getElementById('all-inv-variants')||{}).checked;
+    var frozenOnly=!!(document.getElementById('all-inv-frozen-only')||{}).checked;
+    document.querySelectorAll('#all-inv-body tr').forEach(function(tr){
+      var ok=(!q||String(tr.dataset.search||'').indexOf(q)>-1)&&(!variants||tr.dataset.variant==='1')&&(!frozenOnly||tr.dataset.frozen==='1');
+      tr.style.display=ok?'':'none';
+    });
+  };
+  window.openAllDepartmentsInventory=function(){
+    if(!canFreezeByName())return toast('Not authorized.','err');
+    var rows=[];(gd()||[]).forEach(function(d){(getMeds(d.id)||[]).forEach(function(m){rows.push({dept:d.name||d.id,deptId:d.id,med:m,key:(typeof similarKey==='function'?similarKey(m.name):normFreezeName(m.name))})})});
+    var counts={};rows.forEach(function(x){counts[x.key]=(counts[x.key]||0)+1});rows.sort(function(a,b){return a.med.name.localeCompare(b.med.name)||a.dept.localeCompare(b.dept)});
+    function escF(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+    function bdgSafe(m){return typeof bdg==='function'?bdg(m):''}
+    function frozen(m){var map=(S.g('global_request_freeze')||{});return map[normFreezeName(m.name)]||null}
+    var history=(S.g('inventory_name_merge_history')||[]);
+    var frozenCount=rows.filter(function(x){return !!frozen(x.med)}).length;
+    var html='<div class="modal-bg on" id="all-inv-modal"><div class="modal all-inv-modal"><div class="mh"><div><div class="mt">All Departments Inventory / جميع قوائم الأقسام</div><div class="fhint">حدد اسمًا واحدًا أو عدة أسماء لتجميدها أو إلغاء تجميدها في جميع الأقسام.</div></div><button class="xbtn" onclick="document.getElementById(\'all-inv-modal\').remove()">×</button></div>'+ 
+      '<div class="all-inv-mergebar"><button class="btn bp bsm" onclick="openMergeInventoryNames()">Merge selected names</button><button class="btn bg bsm" onclick="undoLatestInventoryNameMerge()" '+(history.length?'':'disabled')+'>Undo latest merge</button><span class="chip" id="all-inv-merge-count">0 name(s) selected</span></div>'+ 
+      '<div class="all-inv-freezebar"><button class="btn bg bsm" onclick="freezeSelectedInventoryNames()">⏸ Freeze selected names — all departments</button><button class="btn bg bsm" onclick="unfreezeSelectedInventoryNames()">▶ Unfreeze selected names</button><label class="all-inv-frozen-only"><input type="checkbox" id="all-inv-frozen-only" style="width:auto;margin:0" onchange="filterAllDepartmentsInventory()"> Frozen medicines only</label><span class="chip">'+frozenCount+' frozen record(s)</span></div>'+ 
+      '<div class="fl g8 ic" style="margin-bottom:10px;flex-wrap:wrap"><div class="sbr" style="max-width:520px"><span class="sic">🔎</span><input id="all-inv-search" placeholder="Search medication, department or category..." oninput="filterAllDepartmentsInventory()" style="margin:0"></div><label style="margin:0;display:flex;align-items:center;gap:6px"><input type="checkbox" id="all-inv-variants" style="width:auto;margin:0" onchange="filterAllDepartmentsInventory()"> Show possible naming variants only</label><span class="chip">'+rows.length+' records</span></div>'+ 
+      '<div class="all-inv-wrap"><table class="all-inv-table"><thead><tr><th><input type="checkbox" class="all-inv-name-check" onchange="toggleAllInventoryVisible(this)" title="Select visible"></th><th>Medication</th><th>Department</th><th>Category</th><th>Classifications</th><th>Min</th><th>Max</th><th>Monthly</th><th>Request status</th></tr></thead><tbody id="all-inv-body">'+rows.map(function(x){var inf=frozen(x.med),variant=counts[x.key]>1;return '<tr data-search="'+escF(normFreezeName(x.med.name+' '+x.dept+' '+x.med.category))+'" data-variant="'+(variant?'1':'0')+'" data-frozen="'+(inf?'1':'0')+'" class="'+(variant?'all-inv-variant ':'')+(inf?'freeze-row':'')+'"><td><input type="checkbox" class="all-inv-name-check" data-name="'+escF(x.med.name)+'" onchange="updateAllInventoryMergeCount()"></td><td><b>'+escF(x.med.name)+'</b>'+(variant?'<div class="fhint">Possible cross-department variant</div>':'')+'</td><td>'+escF(x.dept)+'</td><td>'+escF(x.med.category||'')+'</td><td>'+bdgSafe(x.med)+'</td><td>'+escF(x.med.min)+'</td><td>'+escF(x.med.max)+'</td><td>'+escF(x.med.monthly||'—')+'</td><td>'+(inf?'<span class="freeze-badge" title="'+escF(inf.reason||'')+'">⏸ Frozen</span><div class="freeze-reason">'+escF(inf.reason||'No reason entered')+'</div>':'Available')+'</td></tr>'}).join('')+'</tbody></table></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend',html);
+  };
+})();
+</script>
 </body>
 </html>
