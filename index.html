@@ -9426,5 +9426,150 @@ window.doPrint=function(){
   var invSel=document.getElementById('inv-dept-sel');if(invSel)invSel.addEventListener('change',function(){setTimeout(refreshDeptCategorySelectors,0)});
 })();
 </script>
+
+<script id="independent-pharmacy-category-order-patch">
+(function(){
+  var SOL='Solutions';
+  var ORDER_SCOPE='pharmacy';
+  function uniq(a){return (a||[]).filter(function(v,i,x){return v&&x.indexOf(v)===i})}
+  function canUsePharmacyOrder(){
+    try{return !!(window.CU&&(CU.role==='pharmacy'||CU.master===true)||(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||(typeof window.isMasterActual==='function'&&window.isMasterActual()))}catch(e){return false}
+  }
+  function deptId(){var s=document.getElementById('inv-dept-sel');return s&&s.value||''}
+  function allCats(id){
+    var base=typeof getCategories==='function'?getCategories().slice():[];
+    var meds=id&&typeof getMeds==='function'?getMeds(id):[];
+    meds.forEach(function(m){if(m.category&&base.indexOf(m.category)<0)base.push(m.category)});
+    base=uniq(base.filter(function(c){return c!==SOL}));base.push(SOL);return base;
+  }
+  window.getPharmacyCategoryConfig=function(id){
+    var all=allCats(id),saved=S.g('pharmacy_category_config')||{};
+    var order=uniq((saved.order||[]).concat(all)).filter(function(c){return all.indexOf(c)>-1&&c!==SOL});order.push(SOL);
+    var enabled=Array.isArray(saved.enabled)?saved.enabled.slice():all.slice();
+    enabled=uniq(enabled.filter(function(c){return all.indexOf(c)>-1&&c!==SOL}));enabled.push(SOL);
+    return {order:order,enabled:enabled};
+  };
+  window.setPharmacyCategoryConfig=function(cfg){
+    cfg.order=uniq((cfg.order||[]).filter(function(c){return c!==SOL}));cfg.order.push(SOL);
+    cfg.enabled=uniq((cfg.enabled||[]).filter(function(c){return c!==SOL}));cfg.enabled.push(SOL);
+    return S.s('pharmacy_category_config',cfg);
+  };
+  function currentCfg(){return ORDER_SCOPE==='pharmacy'?getPharmacyCategoryConfig(deptId()):getDeptCategoryConfig(deptId())}
+  function saveCfg(cfg){return ORDER_SCOPE==='pharmacy'?setPharmacyCategoryConfig(cfg):setDeptCategoryConfig(deptId(),cfg)}
+  window.setCategoryOrderScope=function(scope){
+    ORDER_SCOPE=scope==='department'?'department':'pharmacy';renderCatList();
+  };
+  window.sortDeptInventoryCategories=function(id,cats){
+    var cfg=canUsePharmacyOrder()?getPharmacyCategoryConfig(id):getDeptCategoryConfig(id),order=cfg.order;
+    return cats.slice().sort(function(a,b){
+      if(a===SOL&&b!==SOL)return 1;if(b===SOL&&a!==SOL)return -1;
+      var ai=order.indexOf(a),bi=order.indexOf(b);if(ai<0)ai=999;if(bi<0)bi=999;
+      return ai-bi||String(a).localeCompare(String(b));
+    });
+  };
+  var previousOpen=window.openManageCats;
+  window.openManageCats=function(){
+    var id=deptId();if(!id)return toast('Select a department first','err');
+    ORDER_SCOPE=canUsePharmacyOrder()?'pharmacy':'department';
+    renderCatList();OM('mcat-mgr');
+  };
+  window.renderCatList=function(){
+    var id=deptId(),dept=(gd()||[]).find(function(d){return d.id===id}),cfg=currentCfg(),all=allCats(id);
+    var ctx=document.getElementById('dept-cat-context');
+    if(ctx){
+      var tabs=canUsePharmacyOrder()?'<div style="display:flex;gap:6px;margin-bottom:10px"><button class="btn bsm '+(ORDER_SCOPE==='pharmacy'?'bp':'bg')+'" onclick="setCategoryOrderScope(\'pharmacy\')">Pharmacy display order / ترتيب الصيدلية</button><button class="btn bsm '+(ORDER_SCOPE==='department'?'bp':'bg')+'" onclick="setCategoryOrderScope(\'department\')">Selected department order / ترتيب القسم</button></div>':'';
+      var label=ORDER_SCOPE==='pharmacy'?'This order is used only when pharmacy or Master views Inventory. It never changes the department arrows or order.':'This order belongs only to '+esc((dept&&dept.name)||id)+'. It never changes the pharmacy order.';
+      ctx.innerHTML=tabs+'<b>'+(ORDER_SCOPE==='pharmacy'?'Pharmacy view':'Department: '+esc((dept&&dept.name)||id))+'</b><br><span style="color:var(--tx2)">'+label+'</span>';
+    }
+    var hint=document.querySelector('#mcat-mgr #dept-cat-context + div');
+    if(hint)hint.textContent='Use ↑ and ↓ to arrange this selected view. Solutions is always enabled and fixed at the bottom.';
+    var ordered=uniq(cfg.order.concat(all.filter(function(c){return cfg.order.indexOf(c)<0&&c!==SOL})).filter(function(c){return c!==SOL}));ordered.push(SOL);
+    var box=document.getElementById('cat-list');if(!box)return;
+    box.innerHTML=ordered.map(function(c,i){
+      var fixed=c===SOL,checked=fixed||cfg.enabled.indexOf(c)>-1,q=String(c).replace(/'/g,"\\'");
+      return '<div style="display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:8px;padding:8px 4px;border-bottom:1px solid var(--bd)" data-cat="'+esc(c)+'">'
+       +'<input type="checkbox" '+(checked?'checked':'')+' '+(fixed?'disabled':'')+' onchange="toggleDeptCategory(\''+q+'\',this.checked)" style="margin:0;width:16px;height:16px">'
+       +'<div><b>'+esc(c)+'</b>'+(fixed?'<div style="font-size:10px;color:var(--tx2)">Always last / ثابت في الأسفل</div>':'')+'</div>'
+       +'<div style="display:flex;gap:4px"><button class="btn bg bxs" '+(fixed||i===0?'disabled':'')+' onclick="moveDeptCategory(\''+q+'\',-1)">↑</button><button class="btn bg bxs" '+(fixed||i>=ordered.length-2?'disabled':'')+' onclick="moveDeptCategory(\''+q+'\',1)">↓</button></div></div>';
+    }).join('');
+  };
+  window.toggleDeptCategory=function(cat,on){
+    if(cat===SOL)return;var cfg=currentCfg();cfg.enabled=cfg.enabled.filter(function(c){return c!==cat});if(on)cfg.enabled.push(cat);saveCfg(cfg);refreshDeptCategorySelectors();renderCatList();renderInv();
+  };
+  window.moveDeptCategory=function(cat,dir){
+    var cfg=currentCfg(),arr=cfg.order.filter(function(c){return c!==SOL}),i=arr.indexOf(cat),j=i+dir;if(i<0||j<0||j>=arr.length)return;
+    var t=arr[i];arr[i]=arr[j];arr[j]=t;cfg.order=arr.concat([SOL]);saveCfg(cfg);renderCatList();renderInv();
+  };
+  window.refreshDeptCategorySelectors=function(){
+    var id=deptId();if(!id)return;var cfg=canUsePharmacyOrder()?getPharmacyCategoryConfig(id):getDeptCategoryConfig(id),cats=cfg.order.filter(function(c){return cfg.enabled.indexOf(c)>-1});
+    ['dcat','bulk-cat-sel'].forEach(function(x){var s=document.getElementById(x);if(!s)return;var cur=s.value,p=x==='bulk-cat-sel'?'<option value="">Change category to...</option>':'';s.innerHTML=p+cats.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>'}).join('');if(cats.indexOf(cur)>-1)s.value=cur});
+  };
+})();
+</script>
+
+<script id="psychotropic-shared-list-v12">
+(function(){
+  var PSYCHOTROPIC_SHARED_SEED=[{"moh":"545051836","nupco":"5114169900100","name":"AGOMELATINE 25MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031410","nupco":"5114160100100","name":"AMITRIPTYLINE 25MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031400","nupco":"5114160100200","name":"AMITRIPTYLINE 10MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031589","nupco":"5114163400200","name":"ARIPIPRAZOLE 10MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031382","nupco":"5114163400100","name":"ARIPIPRAZOLE 15MG","classification":"psychotropic","min":0,"max":0},{"moh":"545021061","nupco":"5112176600000","name":"ATOMOXETINE 10MG","classification":"psychotropic","min":0,"max":0},{"moh":"545071925","nupco":"5115160200000","name":"BENZTROPINE 2MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031402","nupco":"5129340200000","name":"BUPROPION 150MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031500","nupco":"5114179800200","name":"CHLORPROMAZINE 25MG","classification":"psychotropic","min":0,"max":0},{"moh":"545034510","nupco":"5114179800000","name":"CHLORPROMAZINE 50MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031631","nupco":"5129200400000","name":"CITALOPRAM 20MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031430","nupco":"5114161600200","name":"CLOMIPRAMINE 10 MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031435","nupco":"5114161600000","name":"CLOMIPRAMINE 25MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031539","nupco":"5114171500100","name":"CLOZAPINE 100MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031538","nupco":"5114171500200","name":"CLOZAPINE 25 MG","classification":"psychotropic","min":0,"max":0},{"moh":"545064880","nupco":"5115190300000","name":"DANTROLINE 25MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545051830","nupco":"5114153900000","name":"DULOXETINE 60MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031632","nupco":"5114163300000","name":"ESCITALOPRAM 10MG","classification":"psychotropic","min":0,"max":0},{"moh":"545034639","nupco":"5114161800100","name":"FLUPENTHIXOL 25MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031642","nupco":"5114160700100","name":"FLUVOXAMINE 100MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031636","nupco":"5114160700000","name":"FLUVOXAMINE 50MG","classification":"psychotropic","min":0,"max":0},{"moh":"545034638","nupco":"5114161800000","name":"FLUOXETINE 20MG","classification":"psychotropic","min":0,"max":0},{"moh":"545034639","nupco":"5114161800100","name":"FLUOXETINE 20MG/5ML LIQUID","classification":"psychotropic","min":0,"max":0},{"moh":"545034615","nupco":"5114170200600","name":"HALOPERIDOL 5MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031600","nupco":"5114170200700","name":"HALOPERIDOL 1.5MG","classification":"psychotropic","min":0,"max":0},{"moh":"545034618","nupco":"5114170200000","name":"HALOPERIDOL 50MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031605","nupco":"5114170200100","name":"HALOPERIDOL 5MG TAB","classification":"psychotropic","min":0,"max":0},{"moh":"545031450","nupco":"5114162100000","name":"IMIPRAMINE 10 MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031455","nupco":"5114162100100","name":"IMIPRAMINE 25MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031470","nupco":"5114162300000","name":"MAPROTILINE 25MG","classification":"psychotropic","min":0,"max":0},{"moh":"545071926","nupco":"5114154100000","name":"MEMANTINE 10MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031635","nupco":"5114160400000","name":"MIRTAZAPINE 30MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031379","nupco":"5114170300500","name":"OLANZAPINE 10MG TAB","classification":"psychotropic","min":0,"max":0},{"moh":"545031372","nupco":"5114170300000","name":"OLANZAPINE 5MG DIS","classification":"psychotropic","min":0,"max":0},{"moh":"545031378","nupco":"5114170300600","name":"OLANZAPINE 5MG TAB","classification":"psychotropic","min":0,"max":0},{"moh":"545031542","nupco":"5133200300400","name":"PALIPERIDONE 3MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031546","nupco":"5133200300000","name":"PALIPERIDONE 100MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031543","nupco":"5133200300100","name":"PALIPERIDONE 150MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031353","nupco":"5114172200100","name":"QUETIAPINE 100MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031354","nupco":"5114172200200","name":"QUETIAPINE 200MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031356","nupco":"5114172200300","name":"QUETIAPINE 300MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031527","nupco":"5114170400200","name":"RISPERIDONE 25 MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031536","nupco":"5114170400100","name":"RISPERIDONE 2MG TAB","classification":"psychotropic","min":0,"max":0},{"moh":"545031529","nupco":"5114170400300","name":"RISPERIDONE 37.5 MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545031534","nupco":"5114170400400","name":"RISPERIDONE 4MG TAB","classification":"psychotropic","min":0,"max":0},{"moh":"545031525","nupco":"5114170400600","name":"RISPERIDONE 50 MG INJ","classification":"psychotropic","min":0,"max":0},{"moh":"545032550","nupco":"5114170400500","name":"RISPERIDONE 1MG SYRUP","classification":"psychotropic","min":0,"max":0},{"moh":"545031385","nupco":"5133210300000","name":"SULPRIDE 200MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031531","nupco":"5133210300100","name":"SULPRIDE 50MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031580","nupco":"5114179900300","name":"TRIFLUPHENAZINE 1MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031590","nupco":"5114179900100","name":"TRIFLUPHENAZINE 5MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031358","nupco":"5114163600100","name":"VENLAFAXINE 150MG","classification":"psychotropic","min":0,"max":0},{"moh":"545031641","nupco":"5114163600200","name":"VENLAFAXINE 75 MG","classification":"psychotropic","min":0,"max":0},{"moh":"","nupco":"5115151500000","name":"RIVASTIGMINE PATCHES 4.6MG/24H","classification":"psychotropic","min":0,"max":0},{"moh":"","nupco":"5115151500100","name":"RIVASTIGMINE PATCHES 9.5MG/24H","classification":"psychotropic","min":0,"max":0},{"moh":"","nupco":"5112176600200","name":"ATOMOXETINE 25MG","classification":"psychotropic","min":0,"max":0},{"moh":"","nupco":"5114153900100","name":"DULOXETINE 30MG","classification":"psychotropic","min":0,"max":0},{"moh":"","nupco":"5110230200000","name":"AMANTADINE 100MG TAB","classification":"psychotropic","min":0,"max":0},{"moh":"","nupco":"5114153800100","name":"DONEPEZIL 10MG TABLET","classification":"psychotropic","min":0,"max":0}];
+  var _psySeedDone=false,_psySeedBusy=false;
+
+  function psyNorm(v){return String(v==null?'':v).trim().toLowerCase();}
+  function psySame(a,b){
+    if(psyNorm(a.moh)&&psyNorm(b.moh)&&psyNorm(a.moh)===psyNorm(b.moh))return true;
+    if(psyNorm(a.nupco)&&psyNorm(b.nupco)&&psyNorm(a.nupco)===psyNorm(b.nupco)&&psyNorm(a.name)===psyNorm(b.name))return true;
+    return psyNorm(a.name)===psyNorm(b.name)&&psyNorm(a.nupco)===psyNorm(b.nupco);
+  }
+  async function ensurePsychotropicSharedList(){
+    if(_psySeedDone||_psySeedBusy||typeof ctlCatalog!=='function'||typeof ctlSetCatalog!=='function')return false;
+    _psySeedBusy=true;
+    try{
+      var cat=(ctlCatalog()||[]).slice(),changed=false;
+      PSYCHOTROPIC_SHARED_SEED.forEach(function(src){
+        var i=cat.findIndex(function(x){return psySame(x,src)});
+        if(i<0){
+          cat.push(Object.assign({},src,{id:(typeof ctlKey==='function'?ctlKey(src.moh,src.nupco,src.name):('psy_'+src.nupco+'_'+src.name.replace(/\W+/g,'_')))+'_psy'}));
+          changed=true;
+        }else{
+          var old=cat[i],next=Object.assign({},old,{
+            moh:src.moh||old.moh||'',
+            nupco:String(src.nupco||old.nupco||''),
+            name:src.name,
+            classification:'psychotropic'
+          });
+          if(JSON.stringify(old)!==JSON.stringify(next)){cat[i]=next;changed=true;}
+        }
+      });
+      if(changed)await ctlSetCatalog(cat);
+      _psySeedDone=true;
+      return changed;
+    }catch(e){console.error('Psychotropic shared list seed failed',e);return false}
+    finally{_psySeedBusy=false;}
+  }
+
+  // Both custody roles may edit the shared catalogue.
+  window.ctlCanEditCatalog=function(){
+    return !!(window.CU&&(CU.master===true||CU.role==='controlled_pharmacy'||CU.role==='warehouse'));
+  };
+  window.ctlCanAddCatalog=window.ctlCanEditCatalog;
+  window.ctlCanEditWarehouse=function(){
+    return !!(window.CU&&(CU.master===true||CU.role==='warehouse'));
+  };
+  window.ctlCanEditPharmacy=function(){
+    return !!(window.CU&&(CU.master===true||CU.role==='controlled_pharmacy'));
+  };
+
+  // Each officer can edit their custody quantity and add/update expiry batches.
+  var oldRender=window.renderControlled;
+  if(typeof oldRender==='function'){
+    window.renderControlled=function(){
+      var out=oldRender.apply(this,arguments);
+      ensurePsychotropicSharedList().then(function(changed){
+        if(changed&&typeof oldRender==='function')oldRender();
+      });
+      return out;
+    };
+  }
+  window.ensurePsychotropicSharedList=ensurePsychotropicSharedList;
+})();
+</script>
 </body>
 </html>
