@@ -590,6 +590,25 @@ body.light .login-attribution{color:#6b7280}
  .fulfill-table .fc-min,.fulfill-table .fc-max{width:6%}.fulfill-table .fc-last30{width:13%}
  .fulfill-table .fc-req{width:12%}.fulfill-table .fc-disp{width:16%}
 }
+
+/* v1.2 Development — combined High Alert + Hazard visibility */
+tr.rha.rhz td{
+  background:linear-gradient(90deg,rgba(218,54,51,.16) 0 52%,rgba(210,153,34,.18) 52% 100%)!important;
+  border-left:4px solid var(--rd)!important;
+  border-right:4px solid var(--yl)!important;
+}
+tr.rha.rhz:hover td{
+  background:linear-gradient(90deg,rgba(218,54,51,.22) 0 52%,rgba(210,153,34,.24) 52% 100%)!important;
+}
+@media print{
+  tr.rha.rhz td{
+    background:linear-gradient(90deg,#d9d9d9 0 52%,#f1f1f1 52% 100%)!important;
+    border-left:2px solid #000!important;
+    border-right:2px double #000!important;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important;
+  }
+}
 </style>
 
 <style>
@@ -761,7 +780,7 @@ body.light .login-attribution{color:#6b7280}
           <select id="bulk-cat-sel" class="psel" style="min-width:160px">
             <option value="">Change category to...</option>
           </select>
-          <button class="btn bp bsm" onclick="bulkChangeCategory()">&#x1F3F7; Apply Category</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('refrigerated')">❄ Refrigerated</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('lasa')">LASA</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('high_alert')">High Alert</button>
+          <button class="btn bp bsm" onclick="bulkChangeCategory()">&#x1F3F7; Apply Category</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('refrigerated')">❄ Refrigerated</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('lasa')">LASA</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('hazard')">⚠ Hazard</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('high_alert')">High Alert</button>
           <button class="btn bd2c bsm" onclick="bulkDelete()">&#x1F5D1; Delete Selected</button>
           <button class="btn bg bsm" onclick="clearInvSelection()">&#x2715; Clear</button>
         </div>
@@ -1103,6 +1122,8 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
             <span class="chip">days</span>
             <select id="ctl-status-filter" class="psel" onchange="renderControlled()">
               <option value="all">All medicines</option>
+              <option value="warehouse_available">Available in warehouse only / المتوفر بالمستودع</option>
+              <option value="pharmacy_available">Available in pharmacy only / المتوفر بالصيدلية</option>
               <option value="out">Show only out-of-stock section</option>
               <option value="low">Below minimum</option>
               <option value="expired">Expired</option>
@@ -5852,7 +5873,13 @@ function renderCtlOverview(){
     else available.push(row);
   });
 
-  if(filter!=='all'&&filter!=='out'){
+  if(filter==='warehouse_available'){
+    available=available.concat(outRows).filter(function(x){return (ctlNum(x.w.system)+ctlNum(x.w.outside))>0});
+    outRows=[];
+  }else if(filter==='pharmacy_available'){
+    available=available.concat(outRows).filter(function(x){return ctlNum(x.p.qty)>0});
+    outRows=[];
+  }else if(filter!=='all'&&filter!=='out'){
     available=available.filter(function(x){return x.status.key===filter});
   }
   if(filter==='out')available=[];
@@ -6517,7 +6544,7 @@ async function bulkSetMedicationFlag(flag){
   var ids=getSelectedMedIds(),deptId=getInvDept();
   if(!deptId)return toast('Choose a department first','err');
   if(!ids.length)return toast('Select medications first','err');
-  var label=flag==='refrigerated'?'Refrigerated':flag==='lasa'?'LASA':'High Alert';
+  var label=flag==='refrigerated'?'Refrigerated':flag==='lasa'?'LASA':flag==='hazard'?'Hazard':'High Alert';
   var setTo=await uiConfirm('Press OK to mark selected medicines as '+label+'.\nPress Cancel to remove the flag.');
   var meds=getMeds(deptId).map(function(m){if(ids.includes(m.id)){var n=Object.assign({},m);n[flag]=setTo;return n}return m});
   await setMeds(deptId,meds);auditAction('bulk_medication_flag',{deptId:deptId,ids:ids,flag:flag,value:setTo});toast(ids.length+' medicines updated ✓','succ');clearInvSelection();renderInv();
