@@ -2116,6 +2116,11 @@ async function checkPublicControlledExpiry(){
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
 var FIREBASE_CONFIG={apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
 var FB_APP=null,FB_AUTH=null,FB_DB=null,FB_FUNCTIONS=null;
+// Global Firebase handles for injected modules and Safari/WebKit compatibility
+window.FB_APP=null;
+window.FB_AUTH=null;
+window.FB_DB=null;
+window.FB_FUNCTIONS=null;
 var _lazyScripts={};
 function loadScriptOnce(key,src,test){
   if(test&&test())return Promise.resolve();
@@ -2140,6 +2145,9 @@ function initFirebase(){
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
   FB_AUTH=firebase.auth();
   FB_DB=firebase.firestore();
+  window.FB_APP=FB_APP;
+  window.FB_AUTH=FB_AUTH;
+  window.FB_DB=FB_DB;
   // Enable offline persistence so writes survive temporary disconnections and logout
   FB_DB.enablePersistence({synchronizeTabs:true}).catch(function(err){
     if(err.code==='failed-precondition'){
