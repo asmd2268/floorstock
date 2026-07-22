@@ -15,28 +15,34 @@ var FB_DB=window.FB_DB||null;
 var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
 </script>
 <script id="firebase-auth-ready-guard">
-/* Stable Firebase auth bootstrap */
+/* Clean Firebase bootstrap: one path only */
 window.ensureFirebaseAuthReady = async function(){
   if(!window.firebase){
     throw new Error('Firebase SDK is not loaded.');
   }
-  if(!window.FB_AUTH){
-    if(typeof initFirebase === 'function'){
-      initFirebase();
-    }
+
+  if(window.FB_AUTH){
+    return window.FB_AUTH;
   }
-  if(!window.FB_AUTH && window.firebase){
-    if(!firebase.apps.length && typeof FIREBASE_CONFIG !== 'undefined'){
-      firebase.initializeApp(FIREBASE_CONFIG);
-    }
+
+  /* Use existing Firebase app if another bootstrap already created it */
+  if(firebase.apps && firebase.apps.length){
     window.FB_APP = firebase.app();
     window.FB_AUTH = firebase.auth();
     window.FB_DB = firebase.firestore();
+    return window.FB_AUTH;
   }
-  if(!window.FB_AUTH){
-    throw new Error('Firebase authentication is not ready.');
+
+  /* Initialize only when configuration exists */
+  if(typeof FIREBASE_CONFIG !== 'undefined'){
+    firebase.initializeApp(FIREBASE_CONFIG);
+    window.FB_APP = firebase.app();
+    window.FB_AUTH = firebase.auth();
+    window.FB_DB = firebase.firestore();
+    return window.FB_AUTH;
   }
-  return window.FB_AUTH;
+
+  throw new Error('Firebase configuration is missing before login.');
 };
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
