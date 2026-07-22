@@ -15,19 +15,27 @@ var FB_DB=window.FB_DB||null;
 var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
 </script>
 <script id="firebase-auth-ready-guard">
-/* Global auth guard: keeps login available even if later enhancement scripts load out of order. */
-window.ensureFirebaseAuthReady = window.ensureFirebaseAuthReady || async function(){
-  if(!window.firebase) throw new Error('Firebase SDK is not loaded.');
+/* Stable Firebase auth bootstrap */
+window.ensureFirebaseAuthReady = async function(){
+  if(!window.firebase){
+    throw new Error('Firebase SDK is not loaded.');
+  }
   if(!window.FB_AUTH){
     if(typeof initFirebase === 'function'){
       initFirebase();
-    } else if(typeof FIREBASE_CONFIG !== 'undefined'){
-      window.FB_APP = firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
-      window.FB_AUTH = firebase.auth();
-      window.FB_DB = firebase.firestore();
     }
   }
-  if(!window.FB_AUTH) throw new Error('Firebase authentication is not ready.');
+  if(!window.FB_AUTH && window.firebase){
+    if(!firebase.apps.length && typeof FIREBASE_CONFIG !== 'undefined'){
+      firebase.initializeApp(FIREBASE_CONFIG);
+    }
+    window.FB_APP = firebase.app();
+    window.FB_AUTH = firebase.auth();
+    window.FB_DB = firebase.firestore();
+  }
+  if(!window.FB_AUTH){
+    throw new Error('Firebase authentication is not ready.');
+  }
   return window.FB_AUTH;
 };
 </script>
