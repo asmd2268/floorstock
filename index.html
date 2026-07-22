@@ -4,61 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>ASDHealth Floor Stock — Version 13</title>
-<!-- Floorstock structural prelude: configuration, branding, and legacy-loop containment -->
-<script id="floorstock-fb-compat-fix">
-(function(){
-  // Compatibility guard for local-server testing: keep Firebase globals available
-  // before the application boot sequence references them.
-  if(typeof window.FB_AUTH==='undefined'){ window.FB_AUTH=null; }
-  if(typeof window.FB_DB==='undefined'){ window.FB_DB=null; }
-})();
-</script>
-<script id="floorstock-structural-prelude">
-(function(){
-'use strict';
-var DEFAULTS={
-  productName:'Floorstock',
-  companyName:'ASDHealth',
-  productSubtitle:'Pharmacy Operations Module',
-  logoEmoji:'💊',
-  attribution:'By Ali Abudahash',
-  documentTitle:'ASDHealth Floor Stock',
-  whiteLabel:false,
-  hideAttribution:false,
-  tenantId:'default',
-  plan:'internal',
-  features:{announcements:true,zebraLabels:true,controlledMedicines:true,crashCarts:true}
-};
-function safeParse(raw){try{return raw?JSON.parse(raw):{};}catch(e){console.warn('Invalid branding configuration',e);return {};}}
-var stored=safeParse(localStorage.getItem('floorstock.branding.v1'));
-var injected=(window.FLOORSTOCK_BRANDING&&typeof window.FLOORSTOCK_BRANDING==='object')?window.FLOORSTOCK_BRANDING:{};
-window.FLOORSTOCK_CONFIG=Object.freeze(Object.assign({},DEFAULTS,stored,injected,{features:Object.assign({},DEFAULTS.features,stored.features||{},injected.features||{})}));
-window.FloorstockBranding={
-  get:function(){return JSON.parse(JSON.stringify(window.FLOORSTOCK_CONFIG));},
-  set:function(next){localStorage.setItem('floorstock.branding.v1',JSON.stringify(Object.assign({},stored,next||{})));location.reload();},
-  reset:function(){localStorage.removeItem('floorstock.branding.v1');location.reload();}
-};
-/* Retain legitimate timers but block the known legacy UI-repair polling loops. */
-var nativeSetInterval=window.setInterval;
-window.setInterval=function(fn,delay){
-  var source='';try{source=typeof fn==='function'?Function.prototype.toString.call(fn):String(fn);}catch(e){}
-  var legacyRepair=/applyWarehouseUI|zMergeControlledTabs|syncOfficialHeaderButton|addButtons\s*\(/.test(source);
-  if(legacyRepair&&(Number(delay)===1500||Number(delay)===1800)){
-    console.info('[Floorstock] suppressed legacy repair interval',delay);
-    return 0;
-  }
-  return nativeSetInterval.apply(window,arguments);
-};
-})();
-</script>
-<style id="floorstock-structural-shell-style">
-/* Authorization is rendered from one route matrix; CSS is a final fail-closed layer. */
-body:not(.role-department) #pg-newreq{display:none!important}
-body.role-warehouse #pg-announcements,body.role-warehouse #pg-zebra-labels{display:none!important}
-body.role-department #pg-announcements,body.role-department #pg-zebra-labels{display:none!important}
-[data-floorstock-hidden="true"]{display:none!important}
-</style>
-
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
@@ -3177,7 +3122,7 @@ function renderReqForm(){
     infoEl.innerHTML=infoHtml;
   }
   var srch=(el('rsrch')||{value:''}).value.toLowerCase();
-  var ms=FloorstockHide.visible(getMeds(CU.deptId),CU.deptId).filter(function(m){return !srch||m.name.toLowerCase().indexOf(srch)>-1});
+  var ms=getMeds(CU.deptId).filter(function(m){return !srch||m.name.toLowerCase().indexOf(srch)>-1});
   var now=new Date(),ms0=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
   var used={};
   gr().filter(function(r){return r.deptId===CU.deptId&&r.created>=ms0&&r.status!=='pending'})
@@ -3371,25 +3316,7 @@ function printControlledCurrent(){
   var qr='https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url.toString());
   var w=window.open('','_ctlprint');
   if(!w)return toast('Allow pop-ups to print.','err');
-  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script>
-<!-- Floorstock Hide/Unhide test patch v1 -->
-<script id="hide-unhide-test-patch">
-(function(){
-'use strict';
-window.FloorstockHide={
- key:'floorstock.hidden.meds.v1',
- get:function(){try{return JSON.parse(localStorage.getItem(this.key)||'[]')}catch(e){return []}},
- save:function(v){localStorage.setItem(this.key,JSON.stringify(v||[]))},
- hide:function(medId,deptId,reason){var a=this.get();if(!a.some(function(x){return x.medId===medId&&x.deptId===deptId})){a.push({medId:medId,deptId:deptId,reason:reason||'',at:new Date().toISOString()});this.save(a)}},
- unhide:function(medId,deptId){this.save(this.get().filter(function(x){return !(x.medId===medId&&x.deptId===deptId)}))},
- hidden:function(medId,deptId){return this.get().some(function(x){return x.medId===medId&&x.deptId===deptId})},
- visible:function(list,deptId){return (list||[]).filter(function(m){return !window.FloorstockHide.hidden(m.id,deptId)})}
-};
-window.floorstockHideMedication=function(medId,deptId,reason){FloorstockHide.hide(medId,deptId,reason);if(window.renderReqForm)renderReqForm()};
-window.floorstockUnhideMedication=function(medId,deptId){FloorstockHide.unhide(medId,deptId);if(window.renderReqForm)renderReqForm()};
-})();
-</script>
-</body></html>');w.document.close();}
+  w.document.write('<html><head><meta charset="utf-8"><title>'+esc(name)+'</title><style>@page{size:A4 landscape;margin:8mm}body{font-family:Arial;padding:0;direction:ltr;color:#000}table{width:100%;border-collapse:collapse;font-size:11px}th,td{border:1px solid #555;padding:5px;text-align:left}th{background:#eee}.qr{width:115px;height:115px;object-fit:contain;background:#fff;padding:6px}</style></head><body>'+officialPrintHeaderHTML()+'<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px"><div><h2>'+esc(name)+' — Controlled Medicines List</h2><p>Expiry follow-up / متابعة تواريخ الانتهاء</p></div><img class="qr" src="'+qr+'"></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th><th>Expiry batches</th></tr></thead><tbody>'+rows+'</tbody></table><script>setTimeout(function(){window.print()},700)<\/script></body></html>');w.document.close();}
 </script>
 <style id="v13-complete-clean-fix-style">
 .v13-modal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.v13-wide{width:min(1100px,97vw)!important}.v13-review{max-height:55vh;overflow:auto;border:1px solid var(--bd);border-radius:9px}.v13-review table{min-width:850px}.v13-review input,.v13-review select{margin:0}.v13-scope-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;max-height:220px;overflow:auto;padding:8px;border:1px solid var(--bd);border-radius:8px}.v13-scope-list label{display:flex;align-items:center;gap:7px;padding:6px;border-radius:6px;background:var(--s2);margin:0}.v13-scope-list input{width:auto;margin:0}.v13-class-icons{display:inline-flex;gap:4px;margin-inline-start:6px;vertical-align:middle}.v13-ci{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:6px;font-size:10px;font-weight:800;border:1px solid}.v13-ha{color:#fff;background:#dc2626;border-color:#991b1b}.v13-lasa{color:#fff;background:#2563eb;border-color:#1d4ed8}.v13-ref{color:#fff;background:#7c3aed;border-color:#6d28d9}.v13-haz{color:#111;background:#facc15;border-color:#ca8a04}.v13-expired{color:#b91c1c!important;font-weight:800}.v13-soon{color:#b45309!important;font-weight:800}.v13-freeze-summary{padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);line-height:1.65}.v13-crash-filter{min-width:230px;margin:0}.v13-official-footer{margin-top:12mm;border-top:1px solid #555;padding-top:4mm;text-align:center;font-size:10pt;font-weight:700;page-break-inside:avoid}.v13-logo-print{max-width:180px!important;max-height:100px!important}.v13-category-row td{font-size:11pt!important;font-weight:800!important;background:#e5e7eb!important;text-align:left!important;padding:5px 7px!important}.v13-print-compact tr{break-inside:avoid}.v13-print-compact td{padding:3px 5px!important}.v13-bulk-expiry-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--bd)}
@@ -11862,6 +11789,101 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 })();
 </script>
 
+<style id="af-inpatient-request-visibility-fix">
+body.role-inpatient_supervisor #pg-newreq,
+body.role-pharmacy #pg-newreq{display:none}
+body.role-inpatient_supervisor #pg-newreq.af-request-enabled,
+body.role-pharmacy #pg-newreq.af-request-enabled{display:block!important}
+</style>
+<script id="af-inpatient-request-controlled-tabs-fix">
+(function(){
+'use strict';
+window.FLOORSTOCK_BUILD='V13-POST-I-CONSOLIDATED-20260721-AF-INPATIENT-REQUEST-CONTROLLED-TABS-FIX';
+function E(id){return document.getElementById(id)}
+function r(){return window.CU&&CU.role||''}
+function privilegedRequestViewer(){return !!(window.CU&&(CU.master===true||r()==='inpatient_supervisor'))}
+function selectedDeptId(){
+  if(!privilegedRequestViewer())return window.CU&&CU.deptId||'';
+  var s=E('af-request-dept-select');
+  var id=s&&s.value||sessionStorage.getItem('af_request_dept')||'';
+  var ds=typeof gd==='function'?(gd()||[]):[];
+  if(!id||!ds.some(function(d){return String(d.id)===String(id)}))id=ds[0]&&ds[0].id||'';
+  return id;
+}
+function deptObj(id){return (typeof gd==='function'?(gd()||[]):[]).find(function(d){return String(d.id)===String(id)})||null}
+function withDeptContext(fn){
+  if(!window.CU||!privilegedRequestViewer())return fn();
+  var id=selectedDeptId(),d=deptObj(id);if(!id||!d)return;
+  var old={role:CU.role,deptId:CU.deptId,deptName:CU.deptName};
+  CU.role='department';CU.deptId=id;CU.deptName=d.name||id;
+  try{return fn()}finally{CU.role=old.role;CU.deptId=old.deptId;CU.deptName=old.deptName}
+}
+function ensureDeptSelector(){
+  if(!privilegedRequestViewer())return;
+  var page=E('pg-newreq');if(!page)return;
+  page.classList.add('af-request-enabled');
+  var host=E('af-request-dept-host');
+  if(!host){host=document.createElement('div');host.id='af-request-dept-host';host.className='card';host.style.marginBottom='14px';host.innerHTML='<div class="ch"><span class="ct">Request department / قسم الطلب</span></div><div class="cb"><select id="af-request-dept-select" style="margin:0"></select></div>';var anchor=page.querySelector('.stitle,.fl,.card');page.insertBefore(host,anchor||page.firstChild)}
+  var sel=E('af-request-dept-select'),ds=typeof gd==='function'?(gd()||[]):[],current=selectedDeptId();
+  sel.innerHTML=ds.map(function(d){return '<option value="'+esc(String(d.id))+'" '+(String(d.id)===String(current)?'selected':'')+'>'+esc(d.name||d.id)+'</option>'}).join('');
+  sel.onchange=function(){sessionStorage.setItem('af_request_dept',this.value);if(typeof window.renderReqForm==='function')window.renderReqForm();if(typeof window.renderMyReqs==='function')window.renderMyReqs()};
+}
+var baseRenderReq=window.renderReqForm;
+window.renderReqForm=function(){
+  if(!window.CU)return;
+  if(CU.role==='department')return baseRenderReq&&baseRenderReq.apply(this,arguments);
+  if(!privilegedRequestViewer())return;
+  ensureDeptSelector();
+  return withDeptContext(function(){return baseRenderReq&&baseRenderReq()});
+};
+var baseSubmitReq=window.submitReq;
+window.submitReq=function(){
+  if(window.CU&&CU.role==='department')return baseSubmitReq&&baseSubmitReq.apply(this,arguments);
+  if(!privilegedRequestViewer())return;
+  return withDeptContext(function(){return baseSubmitReq&&baseSubmitReq()});
+};
+var baseMyReqs=window.renderMyReqs;
+window.renderMyReqs=function(){
+  if(window.CU&&CU.role==='department')return baseMyReqs&&baseMyReqs.apply(this,arguments);
+  if(!privilegedRequestViewer())return;
+  return withDeptContext(function(){return baseMyReqs&&baseMyReqs()});
+};
+function openRequestPage(){
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+  var page=E('pg-newreq');if(!page)return;
+  page.style.display='';page.classList.add('af-request-enabled','on');
+  document.querySelectorAll('.nb').forEach(function(b){b.classList.toggle('on',b.dataset.pg==='pg-newreq')});
+  ensureDeptSelector();window.renderReqForm();window.renderMyReqs();
+}
+var priorShow=window.showPg;
+window.showPg=function(id){
+  if(id==='pg-newreq'&&privilegedRequestViewer()){openRequestPage();return}
+  return priorShow&&priorShow.apply(this,arguments);
+};
+function ensureRequestNav(){
+  if(!privilegedRequestViewer())return;
+  var nav=E('mnav');if(!nav)return;
+  var b=nav.querySelector('[data-pg="pg-newreq"]');
+  if(!b){b=document.createElement('button');b.className='nb';b.dataset.pg='pg-newreq';b.textContent='New Request / طلب جديد';b.onclick=function(){window.showPg('pg-newreq')};nav.appendChild(b)}
+}
+function ensureControlledDepartmentsTab(){
+  if(!window.CU||!['pharmacy','controlled_pharmacy','inpatient_supervisor'].includes(r())&&!CU.master)return;
+  var host=E('ctl-tabs');if(!host)return;
+  var b=Array.from(host.querySelectorAll('button')).find(function(x){return x.dataset.view==='departments'||/Inpatient Departments|أقسام التنويم|الأقسام/.test(x.textContent||'')});
+  if(!b){b=document.createElement('button');b.className='tbtn';b.dataset.view='departments';b.textContent='Inpatient Departments / أقسام التنويم';b.onclick=function(){if(typeof window.ctlSetView==='function')window.ctlSetView('departments')};host.appendChild(b)}
+  b.style.display='';
+}
+var priorBuild=window.buildNav;
+window.buildNav=function(){var x=priorBuild&&priorBuild.apply(this,arguments);setTimeout(ensureRequestNav,0);return x};
+var priorControlled=window.renderControlled;
+window.renderControlled=function(){var x=priorControlled&&priorControlled.apply(this,arguments);setTimeout(ensureControlledDepartmentsTab,0);setTimeout(ensureControlledDepartmentsTab,120);return x};
+var priorStart=window.startApp;
+window.startApp=function(){var x=priorStart&&priorStart.apply(this,arguments);setTimeout(function(){ensureRequestNav();ensureControlledDepartmentsTab()},150);return x};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){ensureRequestNav();ensureControlledDepartmentsTab()},300)});else setTimeout(function(){ensureRequestNav();ensureControlledDepartmentsTab()},300);
+})();
+</script>
+
+
 <style id="ag-role-request-print-fix-style">
 /* New Request is exclusively for department users. */
 body:not(.role-department) #pg-newreq{display:none!important}
@@ -12289,14 +12311,6 @@ window.doLogin=async function(){
   email=email.trim();
   var btn=document.querySelector('#auth button[onclick*="doLogin"]'),old=btn?btn.innerHTML:'';
   function fail(msg){var a=E('aerr');if(a){a.textContent=msg;a.style.display='block'}}
-  function failWithSetup(uid,userEmail){
-    var a=E('aerr');
-    if(!a)return;
-    a.innerHTML='&#x26A0; This Firebase account has no Floor Stock profile.<br>'
-      +'<small style="color:var(--tx2)">First-time setup: create your master profile to continue.</small><br>'
-      +'<button class="btn bp bsm" style="margin-top:8px" onclick="window._createMasterProfile(\''+uid+'\',\''+userEmail+'\')">&#x2728; Create Master Profile</button>';
-    a.style.display='block';
-  }
   if(E('aerr'))E('aerr').style.display='none';
   if(!email||!password){fail('Enter your Firebase email and password');return}
   if(btn){btn.disabled=true;btn.textContent='Signing in…'}
@@ -12312,54 +12326,22 @@ window.doLogin=async function(){
         [function(){return ref.get({source:'cache'})},2500]
       ];
       for(var i=0;i<attempts.length;i++){
-        try{var snap=await Promise.race([attempts[i][0](),delayReject(attempts[i][1],'Profile attempt timed out.')]);if(snap&&snap.exists)return snap;last=null}catch(e){last=e;console.warn('Profile attempt '+(i+1)+' failed',e)}
+        try{var snap=await Promise.race([attempts[i][0](),delayReject(attempts[i][1],'Profile attempt timed out.')]);if(snap&&snap.exists)return snap;last=new Error('Your Firebase account has no Floor Stock role profile.')}catch(e){last=e;console.warn('Profile attempt '+(i+1)+' failed',e)}
       }
-      return null;
+      throw last||new Error('Unable to load the user profile.');
     }
-    var profileSnapshot=await loadProfile();
-    if(!profileSnapshot){
-      if(btn){btn.disabled=false;btn.innerHTML=old||'Sign In / دخول';}
-      failWithSetup(credential.user.uid, credential.user.email||email);
-      return;
-    }
-    await S.init();seed();
+    var results=await Promise.all([loadProfile(),S.init()]);
+    var profileSnapshot=results[0];seed();
     var profile=profileSnapshot.data()||{};
     if(profile.active===false)throw new Error('This account is inactive.');
     var allowed=['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'];
-    if(allowed.indexOf(profile.role)<0)throw new Error('This account has an invalid role: "'+profile.role+'". Contact the system administrator.');
+    if(allowed.indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
     var deptId=profile.deptId||null,dept=deptId?gd().find(function(d){return d.id===deptId}):null;
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
     CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:!!profile.controlledCustodian};
     if(typeof MASTER_ACTUAL!=='undefined'){MASTER_ACTUAL=CU.master?Object.assign({},CU):null;MASTER_EFFECTIVE=null}
     startApp();
   }catch(err){console.error(err);fail((err&&err.message)||'Unable to sign in');if(btn){btn.disabled=false;btn.innerHTML=old||'Sign In / دخول'}}
-};
-
-/* One-time master profile creator — runs only when Firestore has no profile for this Firebase user */
-window._createMasterProfile=async function(uid,userEmail){
-  var btn=document.querySelector('#aerr button');
-  if(btn){btn.disabled=true;btn.textContent='Creating…';}
-  try{
-    await FB_DB.collection('users').doc(uid).set({
-      email:userEmail,
-      role:'pharmacy',
-      master:true,
-      active:true,
-      displayName:userEmail.split('@')[0],
-      createdAt:firebase.firestore.FieldValue.serverTimestamp()
-    });
-    var a=E('aerr');if(a)a.style.display='none';
-    if(typeof toast==='function')toast('Master profile created — signing you in…','succ');
-    /* Re-run login automatically */
-    await S.init();seed();
-    CU={id:uid,email:userEmail,role:'pharmacy',master:true,username:userEmail.split('@')[0],deptId:null,deptName:'',controlledCustodian:false};
-    if(typeof MASTER_ACTUAL!=='undefined'){MASTER_ACTUAL=Object.assign({},CU);MASTER_EFFECTIVE=null;}
-    startApp();
-  }catch(e){
-    console.error(e);
-    var a=E('aerr');
-    if(a){a.innerHTML='&#x26A0; Could not create profile: '+(e.message||e)+'. Check Firestore rules.';a.style.display='block';}
-  }
 };
 
 /* Expiry dates and batch quantities are mandatory and must exactly equal actual stock. */
@@ -12623,1277 +12605,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 var stamp=E('v13-build-stamp');if(stamp)stamp.textContent=BUILD;
 })();
 </script>
-
-<style id="v13-as-crash-expiry-filter-style">
-#v13-crash-filters .v13as-rule-btn{margin-inline-start:auto}
-.crash-cart-card.v13as-filtered-cart{border:2px solid var(--pri);box-shadow:0 6px 18px rgba(23,54,93,.10)}
-.crash-cart-card .v13as-match-summary{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:6px}
-.crash-cart-card .v13as-match-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:900;background:var(--pri);color:#fff}
-.crash-item-row.v13as-expiry-match{border-inline-start:6px solid var(--v13as-row-color,#f59e0b);background:color-mix(in srgb,var(--v13as-row-color,#f59e0b) 18%,transparent)!important;border-radius:8px;margin:5px 8px;padding:9px 10px!important;box-shadow:0 2px 8px rgba(0,0,0,.05)}
-.crash-item-row .v13as-status{display:inline-flex;align-items:center;padding:3px 7px;border-radius:999px;font-size:10px;font-weight:900;color:#111;background:var(--v13as-row-color,#f59e0b);margin-inline-start:8px;white-space:nowrap}
-#v13as-expiry-rules-modal .modal{max-width:760px}
-#v13as-expiry-rules-modal .v13as-rules-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-#v13as-expiry-rules-modal .v13as-rule-card{border:1px solid var(--bd);border-radius:12px;padding:12px;background:var(--s2)}
-#v13as-expiry-rules-modal .v13as-rule-card input{margin:5px 0 0}
-#v13as-expiry-rules-modal .v13as-color-row{display:grid;grid-template-columns:1fr 70px;gap:10px;align-items:center}
-@media(max-width:700px){#v13as-expiry-rules-modal .v13as-rules-grid{grid-template-columns:1fr}#v13-crash-filters .v13as-rule-btn{margin-inline-start:0;width:100%}}
-</style>
-<script id="v13-as-crash-expiry-filter-rules">
-(function(){
-'use strict';
-var BUILD='V13-POST-I-CONSOLIDATED-20260721-AS-CRASH-EXPIRY-FILTER-RULES';
-function E(id){return document.getElementById(id)}
-function role(){return window.CU&&CU.role||''}
-function pharmacyRole(){return ['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(role())>-1}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function n(v){v=Number(v);return isFinite(v)?v:0}
-var DEFAULTS={days30:30,days60:60,days90:90,expiredColor:'#dc2626',days30Color:'#f97316',days60Color:'#facc15',days90Color:'#38bdf8',missingColor:'#a855f7'};
-function rules(){var r=(window.S&&S.g&&S.g('crash_cart_expiry_rules'))||{};return Object.assign({},DEFAULTS,r)}
-function expiryDays(value){if(!value)return null;if(typeof window.daysUntil==='function'){var d=daysUntil(value);return d==null?null:Number(d)}var x=new Date(value),t=new Date();if(isNaN(x.getTime()))return null;t.setHours(0,0,0,0);x.setHours(0,0,0,0);return Math.floor((x-t)/86400000)}
-function itemState(item){
- var rs=rules(),batches=(item&&item.batches)||[],dates=batches.map(function(b){return {days:expiryDays(b.expiry),expiry:b.expiry,qty:n(b.qty)}}).filter(function(x){return x.expiry&&x.days!==null});
- if(!dates.length)return {kind:'missing',days:null,color:rs.missingColor,label:'Missing expiry / بدون تاريخ انتهاء'};
- var min=Math.min.apply(Math,dates.map(function(x){return x.days}));
- if(min<0)return {kind:'expired',days:min,color:rs.expiredColor,label:'Expired / منتهي'};
- if(min<=n(rs.days30))return {kind:'30',days:min,color:rs.days30Color,label:'Expiring in '+min+' day(s)'};
- if(min<=n(rs.days60))return {kind:'60',days:min,color:rs.days60Color,label:'Expiring in '+min+' day(s)'};
- if(min<=n(rs.days90))return {kind:'90',days:min,color:rs.days90Color,label:'Expiring in '+min+' day(s)'};
- return {kind:'later',days:min,color:'',label:'Expires in '+min+' day(s)'};
-}
-function matchesFilter(state,filter){
- if(filter==='all')return true;
- if(filter==='expired')return state.kind==='expired';
- if(filter==='missing')return state.kind==='missing';
- if(filter==='30')return state.kind==='30';
- if(filter==='60')return state.kind==='30'||state.kind==='60';
- if(filter==='90')return state.kind==='30'||state.kind==='60'||state.kind==='90';
- return true;
-}
-function ensureRulesModal(){
- if(E('v13as-expiry-rules-modal'))return;
- var m=document.createElement('div');m.id='v13as-expiry-rules-modal';m.className='modal-bg';
- m.innerHTML='<div class="modal"><div class="mh"><span class="mt">Crash Cart expiry rules / قواعد انتهاء عربة الطوارئ</span><button class="xbtn" type="button" id="v13as-rules-x">×</button></div><div class="v13as-rules-grid"><div class="v13as-rule-card"><label>Urgent period (days)</label><input id="v13as-days30" type="number" min="1" max="365"></div><div class="v13as-rule-card"><label>Warning period (days)</label><input id="v13as-days60" type="number" min="1" max="365"></div><div class="v13as-rule-card"><label>Watch period (days)</label><input id="v13as-days90" type="number" min="1" max="730"></div><div class="v13as-rule-card v13as-color-row"><label>Expired color</label><input id="v13as-color-expired" type="color"></div><div class="v13as-rule-card v13as-color-row"><label>Urgent color</label><input id="v13as-color-30" type="color"></div><div class="v13as-rule-card v13as-color-row"><label>Warning color</label><input id="v13as-color-60" type="color"></div><div class="v13as-rule-card v13as-color-row"><label>Watch color</label><input id="v13as-color-90" type="color"></div><div class="v13as-rule-card v13as-color-row"><label>Missing expiry color</label><input id="v13as-color-missing" type="color"></div></div><div class="fhint" style="margin-top:12px">Expiry records use date precision, so the rule is measured in days—not minutes. Changes apply to pharmacy users and are stored centrally.</div><div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" type="button" id="v13as-rules-reset">Reset defaults</button><button class="btn bs" type="button" id="v13as-rules-save">Save rules</button></div></div>';
- document.body.appendChild(m);
- E('v13as-rules-x').onclick=closeRules;E('v13as-rules-reset').onclick=function(){fillRules(DEFAULTS)};E('v13as-rules-save').onclick=saveRules;
-}
-function fillRules(r){E('v13as-days30').value=r.days30;E('v13as-days60').value=r.days60;E('v13as-days90').value=r.days90;E('v13as-color-expired').value=r.expiredColor;E('v13as-color-30').value=r.days30Color;E('v13as-color-60').value=r.days60Color;E('v13as-color-90').value=r.days90Color;E('v13as-color-missing').value=r.missingColor}
-function openRules(){if(!pharmacyRole())return;ensureRulesModal();fillRules(rules());E('v13as-expiry-rules-modal').classList.add('on')}
-function closeRules(){var m=E('v13as-expiry-rules-modal');if(m)m.classList.remove('on')}
-async function saveRules(){
- var r={days30:Math.max(1,n(E('v13as-days30').value)),days60:Math.max(1,n(E('v13as-days60').value)),days90:Math.max(1,n(E('v13as-days90').value)),expiredColor:E('v13as-color-expired').value,days30Color:E('v13as-color-30').value,days60Color:E('v13as-color-60').value,days90Color:E('v13as-color-90').value,missingColor:E('v13as-color-missing').value};
- if(!(r.days30<r.days60&&r.days60<r.days90))return window.toast&&toast('Rules must be ascending: urgent < warning < watch.','err');
- try{if(window.S&&S.s)await S.s('crash_cart_expiry_rules',r);closeRules();window.renderCrashCarts();if(window.toast)toast('Crash Cart expiry rules saved ✓','succ')}catch(e){if(window.toast)toast('Could not save expiry rules: '+(e.message||e),'err')}
-}
-function updateFilterBar(){
- var bar=E('v13-crash-filters'),sel=E('v13-cc-exp');if(!bar||!sel)return;var r=rules(),cur=sel.value||window.V13_CC_EXP||'all';
- sel.innerHTML='<option value="all">All medicines</option><option value="expired">Expired only</option><option value="30">Expiring within '+r.days30+' days</option><option value="60">Expiring within '+r.days60+' days</option><option value="90">Expiring within '+r.days90+' days</option><option value="missing">Missing expiry</option>';
- sel.value=Array.from(sel.options).some(function(o){return o.value===cur})?cur:'all';window.V13_CC_EXP=sel.value;
- sel.onchange=function(){window.V13_CC_EXP=this.value;window.renderCrashCarts()};
- var btn=E('v13as-expiry-rules-btn');if(pharmacyRole()&&!btn){btn=document.createElement('button');btn.id='v13as-expiry-rules-btn';btn.type='button';btn.className='btn bg bsm v13as-rule-btn';btn.textContent='Expiry display rules / قواعد العرض';btn.onclick=openRules;bar.appendChild(btn)}else if(btn&&!pharmacyRole())btn.remove();
-}
-function applyItemFilter(){
- updateFilterBar();var list=E('crash-list');if(!list)return;var carts=(typeof window.crashCarts==='function'?crashCarts():[]).filter(function(c){return role()==='department'?String(c.deptId)===String(CU.deptId):true});var cards=Array.from(list.querySelectorAll(':scope > .crash-cart-card'));var dep=window.V13_CC_DEPT||'all',filter=window.V13_CC_EXP||'all';
- var old=E('v13as-item-no-results');if(old)old.remove();
- cards.forEach(function(card,idx){
-   var c=carts[idx];if(!c)return;card.classList.remove('v13as-filtered-cart');var prior=card.querySelector('.v13as-match-summary');if(prior)prior.remove();var rows=Array.from(card.querySelectorAll('.crash-item-row')),matchCount=0;
-   rows.forEach(function(row,i){var item=(c.items||[])[i],st=itemState(item);row.classList.remove('v13as-expiry-match');row.style.removeProperty('--v13as-row-color');var badge=row.querySelector('.v13as-status');if(badge)badge.remove();var yes=matchesFilter(st,filter);row.style.display=yes?'':'none';if(yes){matchCount++;if(filter!=='all'){row.classList.add('v13as-expiry-match');row.style.setProperty('--v13as-row-color',st.color);var b=document.createElement('span');b.className='v13as-status';b.style.setProperty('--v13as-row-color',st.color);b.textContent=st.label;var name=row.querySelector('b')||row.firstElementChild;if(name)name.insertAdjacentElement('afterend',b)}}});
-   var depOk=dep==='all'||String(c.deptId)===String(dep),show=depOk&&(filter==='all'||matchCount>0);card.style.display=show?'':'none';
-   if(show&&filter!=='all'){card.classList.add('v13as-filtered-cart');var head=card.querySelector('.ch>div:first-child')||card.querySelector('.ch');if(head){var sum=document.createElement('div');sum.className='v13as-match-summary';sum.innerHTML='<span class="v13as-match-badge">'+matchCount+' matching medicine(s)</span><span class="fhint">Crash Cart: <b>'+esc(c.name||'—')+'</b></span>';head.appendChild(sum)}}
- });
- var visible=cards.filter(function(c){return c.style.display!=='none'}).length;if(!visible){var empty=document.createElement('div');empty.id='v13as-item-no-results';empty.className='card';empty.innerHTML='<div class="v13-empty">No medicines match the selected department and expiry rule.<br>لا توجد أدوية مطابقة للقسم وفترة الانتهاء المحددة.</div>';list.appendChild(empty)}
-}
-var previous=window.renderCrashCarts;window.renderCrashCarts=function(){var r=previous&&previous.apply(this,arguments);setTimeout(applyItemFilter,80);return r};
-var oldShow=window.showPg;window.showPg=function(id){var r=oldShow&&oldShow.apply(this,arguments);if(id==='pg-crashcart')setTimeout(applyItemFilter,130);return r};
-window.v13ASOpenExpiryRules=openRules;
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){ensureRulesModal();setTimeout(applyItemFilter,300)});else{ensureRulesModal();setTimeout(applyItemFilter,300)}
-var stamp=E('v13-build-stamp');if(stamp)stamp.textContent=BUILD;
-})();
-</script>
-
-
-
-
-
-<!-- AS role UI corrective patch: warehouse visibility + announcements + modal close -->
-<style id="as-role-ui-corrective-style-20260721">
-body.role-warehouse #pg-controlled.on{display:block!important}
-</style>
-<script id="as-role-ui-corrective-20260721">
-(function(){
-  'use strict';
-  var BUILD='AS-ROLE-UI-FIXED-20260721';
-  function E(id){return document.getElementById(id)}
-  function role(){return window.CU&&String(CU.role||'')||''}
-  function master(){
-    try{
-      if(window.CU&&CU.master===true)return true;
-      if(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)return true;
-      return typeof window.isMasterActual==='function'&&window.isMasterActual()===true;
-    }catch(e){return false}
-  }
-  function canAnnouncements(){return master()||['pharmacy','inpatient_supervisor','controlled_pharmacy','pharmacy_staff'].indexOf(role())>=0}
-  function canZebra(){return master()||role()==='pharmacy'}
-  function home(){return role()==='warehouse'||role()==='controlled_pharmacy'?'pg-controlled':role()==='department'?'pg-newreq':'pg-dash'}
-  function ensureAnnouncementNav(){
-    var nav=E('mnav');if(!nav)return;
-    var b=nav.querySelector('[data-pg="pg-announcements"]');
-    if(!canAnnouncements()){if(b)b.remove();return}
-    if(!b){
-      b=document.createElement('button');b.type='button';b.className='nb';b.dataset.pg='pg-announcements';
-      b.innerHTML='📢 Announcements / الإعلانات';
-      b.addEventListener('click',function(){window.showPg('pg-announcements')});
-      nav.appendChild(b);
-    }
-  }
-  function enforceZebra(){
-    var nav=E('mnav');if(!nav)return;
-    nav.querySelectorAll('#zebra-labels-nav,[data-pg="pg-zebra-labels"]').forEach(function(n){if(!canZebra())n.remove()});
-  }
-  function fixWarehousePage(){
-    var pg=E('pg-controlled');
-    if(role()==='warehouse'&&pg&&pg.classList.contains('on'))pg.style.setProperty('display','block','important');
-  }
-  function configureFilter(){
-    var s=E('ctl-status-filter');if(!s)return;
-    var wh=s.querySelector('option[value="warehouse_available"]'),ph=s.querySelector('option[value="pharmacy_available"]');
-    if(wh)wh.hidden=false;if(ph)ph.hidden=false;
-    if(role()==='warehouse'){
-      if(wh)wh.textContent='Available in my warehouse custody / المتوفر في عهدة المستودع';
-      if(ph)ph.hidden=true;
-      if(s.value==='pharmacy_available')s.value='warehouse_available';
-    }else if(role()==='controlled_pharmacy'){
-      if(ph)ph.textContent='Available in my pharmacy custody / المتوفر في عهدة الصيدلية';
-      if(wh)wh.hidden=true;
-      if(s.value==='warehouse_available')s.value='pharmacy_available';
-    }
-  }
-  function sync(){ensureAnnouncementNav();enforceZebra();fixWarehousePage();configureFilter()}
-
-  var oldBuild=window.buildNav;
-  if(typeof oldBuild==='function')window.buildNav=function(){var r=oldBuild.apply(this,arguments);sync();return r};
-
-  var oldShow=window.showPg;
-  if(typeof oldShow==='function')window.showPg=function(id){
-    if(id==='pg-zebra-labels'&&!canZebra())id=home();
-    if(id==='pg-announcements'&&!canAnnouncements())id=home();
-    var r=oldShow.call(this,id);
-    sync();
-    if(id==='pg-announcements'&&typeof window.renderAnnouncements==='function')window.renderAnnouncements();
-    return r;
-  };
-
-  var oldStart=window.startApp;
-  if(typeof oldStart==='function')window.startApp=function(){var r=oldStart.apply(this,arguments);setTimeout(sync,0);return r};
-
-  document.addEventListener('click',function(e){
-    var modal=E('ann-editor');if(!modal)return;
-    if(e.target===modal){modal.remove();return}
-    var b=e.target&&e.target.closest&&e.target.closest('#ann-editor button');if(!b)return;
-    var t=(b.textContent||'').trim().toLowerCase();
-    if(b.classList.contains('xbtn')||t==='cancel'||t==='إلغاء'){e.preventDefault();modal.remove()}
-  },true);
-  document.addEventListener('keydown',function(e){var m=E('ann-editor');if(e.key==='Escape'&&m)m.remove()});
-
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(sync,0)});else setTimeout(sync,0);
-  window.__AS_ROLE_UI_FIX={build:BUILD,sync:sync};
-})();
-</script>
-
-<!-- Authoritative New Request access: department users only -->
-<style id="as-new-request-department-only-style-20260721">
-body:not(.role-department) #pg-newreq{display:none!important}
-</style>
-<script id="as-new-request-department-only-20260721">
-(function(){
-  'use strict';
-  function E(id){return document.getElementById(id)}
-  function currentRole(){return window.CU&&String(CU.role||'')||''}
-  function allowed(){return currentRole()==='department'}
-  function safeHome(){
-    var r=currentRole();
-    return (r==='warehouse'||r==='controlled_pharmacy')?'pg-controlled':'pg-dash';
-  }
-  function removeNewRequestEverywhere(){
-    var nav=E('mnav');
-    if(nav){
-      Array.prototype.forEach.call(nav.querySelectorAll('[data-pg="pg-newreq"],button[onclick*="pg-newreq"]'),function(b){
-        if(!allowed())b.remove();
-      });
-      Array.prototype.forEach.call(nav.querySelectorAll('.nb'),function(b){
-        if(!allowed()&&/new\s*request|طلب\s*جديد/i.test(b.textContent||''))b.remove();
-      });
-    }
-    var page=E('pg-newreq');
-    if(page&&!allowed()){
-      page.classList.remove('on','af-request-enabled');
-      page.style.setProperty('display','none','important');
-    }else if(page&&allowed()){
-      page.style.removeProperty('display');
-    }
-    var oldSelector=E('af-request-dept-host');
-    if(oldSelector)oldSelector.remove();
-  }
-  var previousRolePages=window.rolePages;
-  if(typeof previousRolePages==='function'){
-    window.rolePages=function(r){
-      var rows=previousRolePages.apply(this,arguments)||[];
-      return rows.filter(function(x){return x&&x[0]!=='pg-newreq'||r==='department'});
-    };
-  }
-  var previousBuild=window.buildNav;
-  if(typeof previousBuild==='function'){
-    window.buildNav=function(){
-      var result=previousBuild.apply(this,arguments);
-      removeNewRequestEverywhere();
-      return result;
-    };
-  }
-  var previousShow=window.showPg;
-  if(typeof previousShow==='function'){
-    window.showPg=function(id){
-      if(id==='pg-newreq'&&!allowed())id=safeHome();
-      var result=previousShow.call(this,id);
-      removeNewRequestEverywhere();
-      return result;
-    };
-  }
-  var previousStart=window.startApp;
-  if(typeof previousStart==='function'){
-    window.startApp=function(){
-      var result=previousStart.apply(this,arguments);
-      removeNewRequestEverywhere();
-      setTimeout(removeNewRequestEverywhere,0);
-      setTimeout(removeNewRequestEverywhere,350);
-      return result;
-    };
-  }
-  if(document.readyState==='loading'){
-    document.addEventListener('DOMContentLoaded',function(){
-      removeNewRequestEverywhere();
-      setTimeout(removeNewRequestEverywhere,350);
-    });
-  }else{
-    removeNewRequestEverywhere();
-    setTimeout(removeNewRequestEverywhere,350);
-  }
-  window.__AS_NEW_REQUEST_DEPARTMENT_ONLY={allowed:allowed,enforce:removeNewRequestEverywhere};
-})();
-</script>
-
-
-<!-- Floorstock authoritative application shell: one permission matrix, one router, one startup path -->
-<script id="floorstock-authoritative-kernel-v1">
-(function(){
-'use strict';
-var BUILD='FLOORSTOCK-STRUCTURAL-KERNEL-20260721-1';
-window.FLOORSTOCK_BUILD=BUILD;
-var E=function(id){return document.getElementById(id)};
-var RENDERERS={
-  'pg-dash':'renderDash','pg-inv':'renderInv','pg-reqs':'renderReqs','pg-users':'renderUsers',
-  'pg-analytics':'renderAn','pg-print':'renderPrint','pg-import':'renderImport','pg-newreq':'renderReqForm',
-  'pg-myreqs':'renderMyReqs','pg-shelves':'renderShelves','pg-deptprint':'renderDeptPrint',
-  'pg-notes-dept':'renderDeptNotes','pg-notes-ph':'renderPharmNotes','pg-schedule':'renderSchedule',
-  'pg-controlled':'renderControlled','pg-ctl-analytics':'renderCtlAnalytics','pg-crashcart':'renderCrashCarts',
-  'pg-announcements':'renderAnnouncements','pg-zebra-labels':'initZebraLabelsPage','pg-system-health':'renderSystemHealth'
-};
-var NAV={
-  pharmacy:[
-    ['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],
-    ['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','Users'],
-    ['pg-import','⬇ Import'],['pg-controlled','🔒 Controlled Medicines'],['pg-ctl-analytics','📊 Controlled Analytics'],
-    ['pg-crashcart','🚑 Crash Carts'],['pg-announcements','📢 Announcements'],['pg-zebra-labels','🦓 Zebra Labels']
-  ],
-  inpatient_supervisor:[
-    ['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],
-    ['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],
-    ['pg-controlled','🔒 Controlled Medicines'],['pg-ctl-analytics','📊 Controlled Analytics'],
-    ['pg-crashcart','🚑 Crash Carts'],['pg-announcements','📢 Announcements']
-  ],
-  pharmacy_staff:[
-    ['pg-dash','Dashboard'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],
-    ['pg-crashcart','🚑 Crash Carts'],['pg-announcements','📢 Announcements']
-  ],
-  controlled_pharmacy:[
-    ['pg-controlled','🔒 Controlled Medicines'],['pg-ctl-analytics','📊 Controlled Analytics'],
-    ['pg-announcements','📢 Announcements']
-  ],
-  warehouse:[['pg-controlled','🔒 Warehouse Controlled Custody']],
-  department:[
-    ['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],
-    ['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],
-    ['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],
-    ['pg-controlled','🔒 Controlled Custody / عهدة الأدوية المخدرة والمقيدة']
-  ]
-};
-function role(){return window.CU&&CU.role||'';}
-function actualMaster(){return !!((window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE));}
-function testingMasterRole(){return !!(window.MASTER_ACTUAL&&window.MASTER_EFFECTIVE);}
-function feature(name){var c=window.FLOORSTOCK_CONFIG;return !c||!c.features||c.features[name]!==false;}
-function items(){
-  var list=(NAV[role()]||[]).slice();
-  if(!feature('announcements'))list=list.filter(function(x){return x[0]!=='pg-announcements'});
-  if(!feature('zebraLabels'))list=list.filter(function(x){return x[0]!=='pg-zebra-labels'});
-  return list;
-}
-function allowed(id){
-  if(id==='pg-system-health')return actualMaster()&&!testingMasterRole();
-  return items().some(function(x){return x[0]===id});
-}
-function home(){var x=items();return x.length?x[0][0]:'pg-dash';}
-function setRoleClass(){
-  Array.prototype.slice.call(document.body.classList).forEach(function(c){if(c.indexOf('role-')===0)document.body.classList.remove(c)});
-  if(role())document.body.classList.add('role-'+role());
-}
-function applyBranding(){
-  var c=window.FLOORSTOCK_CONFIG||{};
-  document.title=c.documentTitle||c.productName||'Floorstock';
-  var loginTitle=document.querySelector('.alogo h1');if(loginTitle)loginTitle.textContent=c.companyName||c.productName||'Floorstock';
-  var loginSub=document.querySelector('.alogo span');if(loginSub)loginSub.textContent=c.productSubtitle||'';
-  var loginIcon=document.querySelector('.alogo-ic');if(loginIcon)loginIcon.textContent=c.logoEmoji||'💊';
-  var top=document.querySelector('.tlogo');if(top)top.textContent=(c.companyName||'')+(c.productName&&c.productName!==c.companyName?' · '+c.productName:'');
-  document.querySelectorAll('.app-attribution,.login-attribution').forEach(function(n){n.textContent=c.attribution||'';n.style.display=(c.whiteLabel&&c.hideAttribution)?'none':''});
-}
-function ensureAnnouncementPage(){
-  if(E('pg-announcements')||typeof window.openAnnouncementEditor!=='function')return;
-  var p=document.createElement('div');p.className='pg';p.id='pg-announcements';
-  p.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div><div class="stitle">Announcements / الإعلانات والتنبيهات</div><div class="ssub" style="margin:0">Announcements for all or selected departments.</div></div><button class="btn bp" type="button" data-action="new-announcement">+ New announcement / إعلان جديد</button></div><div id="announcements-list"></div>';
-  E('app').appendChild(p);
-}
-window.buildNav=function(){
-  if(!window.CU)return;
-  ensureAnnouncementPage();
-  var nav=E('mnav');if(!nav)return;nav.replaceChildren();
-  if(actualMaster()){
-    var test=document.createElement('button');test.type='button';test.className='nb';test.id='master-nav-switch';
-    test.textContent=testingMasterRole()?'🧪 Change tested role':'🧪 Test user permissions';
-    test.addEventListener('click',function(){if(typeof window.openMasterRoleSwitch==='function')window.openMasterRoleSwitch()});nav.appendChild(test);
-  }
-  items().forEach(function(item){var b=document.createElement('button');b.type='button';b.className='nb';b.dataset.pg=item[0];b.innerHTML=item[1];nav.appendChild(b)});
-  if(actualMaster()&&!testingMasterRole()){
-    var health=document.createElement('button');health.type='button';health.className='nb';health.dataset.pg='pg-system-health';health.textContent='🩺 System Health';nav.appendChild(health);
-  }
-};
-window.showPg=function(requested){
-  if(!window.CU)return false;
-  var id=allowed(requested)?requested:home();
-  document.querySelectorAll('.pg').forEach(function(p){p.classList.toggle('on',p.id===id)});
-  document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.toggle('on',b.dataset.pg===id)});
-  var fn=window[RENDERERS[id]];
-  if(id==='pg-zebra-labels'&&typeof window.initPage==='function')fn=window.initPage;
-  try{if(typeof fn==='function')fn();}
-  catch(err){console.error('[Floorstock router]',id,err);if(typeof window.toast==='function')window.toast('تعذر تحميل الصفحة: '+(err.message||err),'err')}
-  return id===requested;
-};
-window.refreshCurrentPage=function(){var active=document.querySelector('.pg.on');if(active)window.showPg(active.id)};
-function updateHeader(){
-  var user=E('tuser'),badge=E('rbadge');if(!window.CU)return;
-  if(user)user.textContent=role()==='department'?'🏢 '+(CU.deptName||CU.username):role()==='warehouse'?'📦 '+CU.username:'👤 '+CU.username;
-  if(badge){var labels={pharmacy:'🏥 Pharmacy',controlled_pharmacy:'🔒 Controlled Medicines Pharmacy Officer',warehouse:'📦 Warehouse Custody Officer',inpatient_supervisor:'🏥 Inpatient Pharmacy Supervisor',pharmacy_staff:'💊 Pharmacy Staff',department:'🏢 '+(CU.deptName||'Department')};badge.textContent=(labels[role()]||role())+(CU.master===true?' · Master':'');badge.className='trole '+(role()==='department'||role()==='warehouse'?'rdp':'rph')}
-}
-window.startApp=function(){
-  if(!window.CU)return;
-  E('auth').style.display='none';E('app').style.display='block';
-  setRoleClass();applyBranding();updateHeader();window.buildNav();window.showPg(home());
-  if(typeof window.updateNotesBadge==='function')setTimeout(window.updateNotesBadge,200);
-};
-/* Event delegation keeps navigation policy in one place. */
-document.addEventListener('click',function(ev){
-  var nav=ev.target.closest&&ev.target.closest('#mnav [data-pg]');if(nav){ev.preventDefault();ev.stopImmediatePropagation();window.showPg(nav.dataset.pg);return;}
-  var action=ev.target.closest&&ev.target.closest('[data-action="new-announcement"]');if(action&&allowed('pg-announcements')&&typeof window.openAnnouncementEditor==='function')window.openAnnouncementEditor();
-},true);
-/* Standard modal contract: close button, cancel button, backdrop, and Escape. */
-document.addEventListener('click',function(ev){
-  var backdrop=ev.target.classList&&ev.target.classList.contains('modal-bg')?ev.target:null;
-  var closer=ev.target.closest&&ev.target.closest('[data-modal-close],.xbtn');
-  if(backdrop){backdrop.classList.remove('on');return;}
-  if(closer){var modal=closer.closest('.modal-bg');if(modal)modal.classList.remove('on')}
-});
-document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){var open=document.querySelector('.modal-bg.on');if(open)open.classList.remove('on')}});
-/* Fail closed even when legacy code tries direct page activation. */
-var observer=new MutationObserver(function(){
-  if(!window.CU)return;
-  var active=document.querySelector('.pg.on');if(active&&!allowed(active.id))window.showPg(home());
-  document.querySelectorAll('#mnav [data-pg]').forEach(function(b){if(!allowed(b.dataset.pg))b.remove()});
-});
-function boot(){applyBranding();ensureAnnouncementPage();if(window.CU){setRoleClass();window.buildNav();var active=document.querySelector('.pg.on');window.showPg(active&&allowed(active.id)?active.id:home())}observer.observe(E('mnav')||document.body,{childList:true,subtree:true});var s=E('v13-build-stamp')||E('z-build-label');if(s)s.textContent=BUILD;}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-window.FloorstockArchitecture=Object.freeze({build:BUILD,roles:Object.keys(NAV),allowedPages:function(r){return (NAV[r]||[]).map(function(x){return x[0]})},brandingApi:'FloorstockBranding'});
-})();
-</script>
-<!-- ============================================================
-  V14-ANN-HIDE
-  1. إصلاح تبويب الإعلانات (controlled_pharmacy مفقود من canManage)
-  2. ميزة Hide/Unhide مدعومة بـ Firebase — تعمل على كل الأجهزة
-  BUILD: V14-ANN-HIDE-20260722
-  ============================================================ -->
-<style id="v14-ann-hide-style">
-/* ── شريط الإجراءات فوق جدول المخزون ── */
-#v14-hide-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 12px;border-top:1px solid var(--bd);margin-top:4px}
-#v14-hide-bar select{width:auto;margin:0;font-size:12px}
-/* ── دواء مخفي في قائمة الطلب ── */
-.rqi-row.v14-frozen{opacity:.55;pointer-events:none}
-.rqi-row.v14-frozen .qwrap{display:none}
-.v14-frozen-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fcd34d;margin-inline-start:6px}
-.v14-hidden-row td{opacity:.45;text-decoration:line-through var(--tx2)}
-.v14-hidden-badge{display:inline-flex;align-items:center;padding:1px 6px;border-radius:10px;font-size:10px;font-weight:700;background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db;margin-inline-start:5px}
-/* ── نافذة Hide ── */
-#v14-hide-modal .v14-dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-height:220px;overflow:auto;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}
-#v14-hide-modal .v14-dept-grid label{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:6px;background:var(--s);margin:0;cursor:pointer}
-#v14-hide-modal .v14-dept-grid input{width:auto;margin:0}
-/* ── فلتر الأدوية المخفية ── */
-#v14-hide-filter-btn.active{background:var(--pri);color:#fff}
-</style>
-
-<script id="v14-ann-hide-main">
-(function(){
-'use strict';
-var BUILD='V14-ANN-HIDE-20260722';
-
-/* ── helpers ── */
-function E(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function role(){return window.CU&&CU.role||''}
-function isMgr(){return !!(window.CU&&(CU.master===true||['pharmacy','inpatient_supervisor','controlled_pharmacy'].indexOf(role())>=0))}
-function isCtlOfficer(){return role()==='controlled_pharmacy'}
-function depts(){return typeof window.gd==='function'?(gd()||[]):[]}
-
-/* ══════════════════════════════════════════════════════════════
-   1. إصلاح الإعلانات — KERNEL يمنع controlled_pharmacy من
-      renderAnnouncements لأن canManage() الأصلية لم تشمله
-══════════════════════════════════════════════════════════════ */
-/* اعترض canManage وسع نطاقها */
-var _origCanManage = window.canManage;
-window.canManage = function(){
-  if(isMgr()) return true;
-  return typeof _origCanManage==='function' ? _origCanManage() : false;
-};
-
-/* تأكد أن renderAnnouncements تعمل لكل المخوّلين */
-var _origRenderAnn = window.renderAnnouncements;
-window.renderAnnouncements = function(){
-  if(!isMgr()){
-    var box=E('announcements-list');
-    if(box) box.innerHTML='<div class="card"><div style="text-align:center;padding:24px;color:var(--tx2)">Not authorized to manage announcements.</div></div>';
-    return;
-  }
-  if(typeof _origRenderAnn==='function') return _origRenderAnn.apply(this,arguments);
-};
-
-/* ══════════════════════════════════════════════════════════════
-   2. ميزة Hide/Unhide — Firebase-backed
-      مفتاح البيانات: hidden_meds_v2
-      البنية: { medId: { reason, allDepts:bool, deptIds:[] } }
-══════════════════════════════════════════════════════════════ */
-var HIDE_KEY = 'hidden_meds_v2';
-
-function hiddenMap(){
-  return (window.S&&S.g?S.g(HIDE_KEY):null)||{};
-}
-async function saveHiddenMap(map){
-  if(window.S&&S.s) await S.s(HIDE_KEY, map);
-}
-
-/* هل الدواء مخفي لقسم معين؟ */
-window.isMedHidden = function(medId, deptId){
-  var m=hiddenMap(),entry=m[String(medId)];
-  if(!entry) return false;
-  if(entry.allDepts) return true;
-  return (entry.deptIds||[]).indexOf(String(deptId))>=0;
-};
-
-/* معلومات الإخفاء (للعرض في صفحة الطلب) */
-window.getMedHideInfo = function(medId){
-  return hiddenMap()[String(medId)]||null;
-};
-
-/* ── نافذة الإخفاء ── */
-function ensureHideModal(){
-  if(E('v14-hide-modal')) return;
-  var m=document.createElement('div');
-  m.id='v14-hide-modal';m.className='modal-bg';
-  m.innerHTML=
-    '<div class="modal" style="width:min(700px,97vw)">'
-    +'<div class="mh"><span class="mt" id="v14-hm-title">Hide medication from departments</span>'
-    +'<button class="xbtn" data-modal-close>✕</button></div>'
-    +'<div class="fg"><label>Reason / سبب الإخفاء</label>'
-    +'<textarea id="v14-hm-reason" rows="3" placeholder="e.g. Out of stock, Substituted, Recall..."></textarea></div>'
-    +'<div class="fg"><label style="display:flex;align-items:center;gap:8px;margin-bottom:8px">'
-    +'<input type="checkbox" id="v14-hm-alldepts" style="width:auto;margin:0" onchange="v14HideToggleAll()"> '
-    +'All departments / جميع الأقسام</label>'
-    +'<div id="v14-hm-depts" class="v14-dept-grid"></div></div>'
-    +'<div class="fl g8" style="justify-content:flex-end;margin-top:14px">'
-    +'<button class="btn bg" data-modal-close>Cancel</button>'
-    +'<button class="btn bd2c" onclick="v14ConfirmHide()">Hide medication / إخفاء</button>'
-    +'</div></div>';
-  document.body.appendChild(m);
-}
-
-window.v14HideToggleAll = function(){
-  var all=E('v14-hm-alldepts');
-  document.querySelectorAll('#v14-hm-depts input[type=checkbox]').forEach(function(c){
-    c.disabled=all&&all.checked;
-    if(all&&all.checked) c.checked=false;
-  });
-};
-
-var _hidePendingMedIds=[];
-
-window.v14OpenHide = function(medIds){
-  if(!isMgr()) return typeof toast==='function'?toast('No permission','err'):null;
-  _hidePendingMedIds=Array.isArray(medIds)?medIds:[medIds];
-  ensureHideModal();
-  E('v14-hm-reason').value='';
-  E('v14-hm-alldepts').checked=false;
-  var ds=depts();
-  E('v14-hm-depts').innerHTML=ds.map(function(d){
-    return '<label><input type="checkbox" value="'+esc(d.id)+'"> <span>'+esc(d.name||d.id)+'</span></label>';
-  }).join('');
-  /* اسم الدواء في العنوان */
-  var names=_hidePendingMedIds.map(function(id){
-    var med=typeof getMeds==='function'?(getMeds()||[]).find(function(m){return m.id===id}):null;
-    return med?med.name:id;
-  });
-  E('v14-hm-title').textContent='Hide: '+names.slice(0,3).join(', ')+(names.length>3?' +'+( names.length-3)+' more':'');
-  E('v14-hide-modal').classList.add('on');
-};
-
-window.v14ConfirmHide = async function(){
-  var reason=(E('v14-hm-reason').value||'').trim();
-  if(!reason) return typeof toast==='function'?toast('Enter a reason / أدخل السبب','err'):null;
-  var allDepts=E('v14-hm-alldepts').checked;
-  var deptIds=allDepts?[]:Array.from(document.querySelectorAll('#v14-hm-depts input:checked')).map(function(c){return c.value});
-  if(!allDepts&&!deptIds.length) return typeof toast==='function'?toast('Select at least one department','err'):null;
-  var map=Object.assign({},hiddenMap());
-  _hidePendingMedIds.forEach(function(id){
-    map[String(id)]={reason:reason,allDepts:allDepts,deptIds:deptIds,at:new Date().toISOString(),by:(window.CU&&CU.username)||''};
-  });
-  await saveHiddenMap(map);
-  E('v14-hide-modal').classList.remove('on');
-  if(typeof toast==='function') toast(_hidePendingMedIds.length+' medication(s) hidden ✓','succ');
-  if(typeof renderInv==='function') renderInv();
-  if(typeof window.renderReqForm==='function') window.renderReqForm();
-};
-
-window.v14UnhideMed = async function(medId){
-  if(!isMgr()) return;
-  var map=Object.assign({},hiddenMap());
-  delete map[String(medId)];
-  await saveHiddenMap(map);
-  if(typeof toast==='function') toast('Medication unhidden ✓','succ');
-  if(typeof renderInv==='function') renderInv();
-  if(typeof window.renderReqForm==='function') window.renderReqForm();
-};
-
-/* Unhide من نافذة تعرض كل المخفيين */
-window.v14OpenHiddenList = function(){
-  if(!isMgr()) return;
-  var map=hiddenMap();
-  var keys=Object.keys(map);
-  if(!keys.length) return typeof toast==='function'?toast('No hidden medications','info'):null;
-  var allMeds=[];
-  depts().forEach(function(d){if(typeof getMeds==='function')(getMeds(d.id)||[]).forEach(function(m){if(!allMeds.find(function(x){return x.id===m.id}))allMeds.push(m)})});
-  /* نافذة بسيطة في الـ DOM */
-  var old=E('v14-hiddenlist-modal');if(old)old.remove();
-  var rows=keys.map(function(id){
-    var entry=map[id];
-    var med=allMeds.find(function(m){return m.id===id});
-    var name=med?med.name:id;
-    var scope=entry.allDepts?'All departments':((entry.deptIds||[]).map(function(did){var d=depts().find(function(x){return x.id===did});return d?(d.name||did):did}).join(', ')||'—');
-    return '<tr><td><b>'+esc(name)+'</b></td><td>'+esc(entry.reason||'—')+'</td><td>'+esc(scope)+'</td>'
-      +'<td>'+esc(entry.by||'—')+'</td>'
-      +'<td><button class="btn bg bxs" onclick="v14UnhideMed(\''+esc(id)+'\');E(\'v14-hiddenlist-modal\').classList.remove(\'on\')">Unhide</button></td></tr>';
-  }).join('');
-  var m=document.createElement('div');m.id='v14-hiddenlist-modal';m.className='modal-bg on';
-  m.innerHTML='<div class="modal" style="width:min(900px,97vw)">'
-    +'<div class="mh"><span class="mt">Hidden Medications / الأدوية المخفية</span><button class="xbtn" data-modal-close>✕</button></div>'
-    +'<div class="tw" style="overflow:auto;max-height:65vh"><table>'
-    +'<thead><tr><th>Medication</th><th>Reason</th><th>Scope</th><th>Hidden by</th><th></th></tr></thead>'
-    +'<tbody>'+rows+'</tbody></table></div>'
-    +'<div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" data-modal-close>Close</button></div>'
-    +'</div>';
-  document.body.appendChild(m);
-};
-
-/* ── ربط الـ Hide بزر في Bulk Bar ── */
-function addHideButton(){
-  var bar=document.querySelector('#bulk-bar .fl.g8.ic');
-  if(!bar||E('v14-hide-bulk-btn')||!isMgr()) return;
-  var btn=document.createElement('button');
-  btn.id='v14-hide-bulk-btn';btn.type='button';btn.className='btn bd2c bsm';
-  btn.innerHTML='🚫 Hide from depts…';
-  btn.onclick=function(){
-    var ids=typeof getSelectedMedIds==='function'?getSelectedMedIds():[];
-    if(!ids.length) return typeof toast==='function'?toast('Select at least one medication','err'):null;
-    v14OpenHide(ids);
-  };
-  var viewBtn=document.createElement('button');
-  viewBtn.id='v14-view-hidden-btn';viewBtn.type='button';viewBtn.className='btn bg bsm';
-  viewBtn.innerHTML='👁 Hidden meds';
-  viewBtn.onclick=v14OpenHiddenList;
-  bar.appendChild(btn);
-  bar.appendChild(viewBtn);
-}
-
-/* ── وسم الأدوية المخفية في جدول Inventory ── */
-function markHiddenInInv(){
-  if(!isMgr()) return;
-  var map=hiddenMap();
-  document.querySelectorAll('#inv-table tr[data-mid], #inv-table tr[data-id]').forEach(function(tr){
-    var id=tr.dataset.mid||tr.dataset.id;
-    if(!id) return;
-    var entry=map[String(id)];
-    var old=tr.querySelector('.v14-hidden-badge');if(old)old.remove();
-    tr.classList.toggle('v14-hidden-row',!!entry);
-    if(entry){
-      var cell=tr.querySelector('td:nth-child(3)')||tr.querySelector('td:nth-child(2)');
-      if(cell){
-        var badge=document.createElement('span');badge.className='v14-hidden-badge';
-        badge.title='Hidden: '+( entry.reason||'');
-        badge.textContent='Hidden';
-        cell.appendChild(badge);
-      }
-    }
-  });
-}
-
-/* ── hook renderInv ── */
-var _origRenderInv=window.renderInv;
-window.renderInv=function(){
-  var r=_origRenderInv&&_origRenderInv.apply(this,arguments);
-  setTimeout(function(){addHideButton();markHiddenInInv()},60);
-  return r;
-};
-
-/* ══════════════════════════════════════════════════════════════
-   3. صفحة الطلب — الأدوية المخفية تظهر مقفلة مع السبب
-══════════════════════════════════════════════════════════════ */
-var _origRenderReqForm=window.renderReqForm;
-window.renderReqForm=function(){
-  var r=_origRenderReqForm&&_origRenderReqForm.apply(this,arguments);
-  setTimeout(function(){
-    if(!window.CU||role()!=='department') return;
-    var deptId=String(CU.deptId||'');
-    var map=hiddenMap();
-    /* كل row في جدول الطلب */
-    document.querySelectorAll('#rfbody tr').forEach(function(tr){
-      var inp=tr.querySelector('input.rqi[data-mid]');
-      if(!inp) return;
-      var mid=inp.dataset.mid;
-      var entry=map[String(mid)];
-      var hidden=(entry&&(entry.allDepts||(entry.deptIds||[]).indexOf(deptId)>=0));
-      tr.classList.toggle('v14-frozen',!!hidden);
-      var old=tr.querySelector('.v14-frozen-badge');if(old)old.remove();
-      if(hidden){
-        inp.value='0';inp.disabled=true;
-        var cell=tr.querySelector('td:nth-child(2)');
-        if(cell){
-          var badge=document.createElement('span');badge.className='v14-frozen-badge';
-          badge.textContent='Unavailable: '+(entry.reason||'');
-          cell.appendChild(badge);
-        }
-      } else {
-        inp.disabled=false;
-      }
-    });
-  },80);
-  return r;
-};
-
-/* ── فلتر "show hidden" في صفحة الطلب (اختياري) ── */
-function addReqFilterBar(){
-  if(!isMgr()||E('v14-req-hide-bar')) return;
-  var host=E('dnsub');if(!host) return;
-  var bar=document.createElement('div');bar.id='v14-req-hide-bar';
-  bar.style.cssText='display:flex;align-items:center;gap:8px;margin:8px 0;flex-wrap:wrap';
-  bar.innerHTML='<button id="v14-hide-filter-btn" class="btn bg bsm" onclick="v14ToggleHiddenReqFilter()">👁 Show hidden meds</button>';
-  host.insertAdjacentElement('afterend',bar);
-}
-window.v14ToggleHiddenReqFilter=function(){
-  var btn=E('v14-hide-filter-btn');if(!btn)return;
-  var showing=btn.classList.toggle('active');
-  document.querySelectorAll('#rfbody tr.v14-frozen').forEach(function(tr){
-    tr.style.display=showing?'':'none';
-  });
-  btn.textContent=showing?'👁 Hide frozen meds':'👁 Show hidden meds';
-};
-
-/* ══════════════════════════════════════════════════════════════
-   4. مزامنة البيانات عند تغيير S.cache (Firebase listener)
-══════════════════════════════════════════════════════════════ */
-/* إذا تغيرت hidden_meds_v2 من جهاز آخر، حدّث الواجهة */
-var _origSUpd=window.S&&window.S.upd;
-if(window.S){
-  var _origSSet=window.S.s;
-  window.S.s=async function(key,val){
-    var r=await _origSSet.apply(this,arguments);
-    if(key===HIDE_KEY){
-      if(typeof renderInv==='function')renderInv();
-      if(typeof window.renderReqForm==='function')window.renderReqForm();
-    }
-    return r;
-  };
-}
-
-/* ── build stamp ── */
-(function(){
-  var x=E('v14-ann-hide-stamp');
-  if(!x){x=document.createElement('div');x.id='v14-ann-hide-stamp';
-    x.style.cssText='position:fixed;left:8px;bottom:30px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
-    document.body.appendChild(x);}
-  x.textContent=BUILD;
-})();
-
-})();
-</script>
-
-<!-- ============================================================
-  V14-GROUPS-1-6
-  G1: Controlled — نافذة تعديل min/max/qty/lot واحدة
-  G2: Freeze — يظهر الدواء مقفلاً في صفحة الطلب
-  G3: ترتيب التصنيفات من الصيدلية
-  G4: Bulk Add/Remove للأدوية على الأقسام
-  G5: تعديل New Request خلال ساعتين
-  G6: مشرف الصيدلية يحذف Request مع سبب
-  BUILD: V14-GROUPS-1-6-20260722
-  ============================================================ -->
-<style id="v14-g16-style">
-/* G1 - controlled edit modal */
-#v14-ctl-edit-modal .v14-batch-row{display:grid;grid-template-columns:90px 1fr 120px 34px;gap:8px;align-items:end;padding:8px;border:1px solid var(--bd);border-radius:8px;margin-bottom:8px;background:var(--s2)}
-#v14-ctl-edit-modal .v14-batch-row label{font-size:11px;color:var(--tx2);margin-bottom:3px;display:block}
-/* G2 - frozen in req form */
-.v14-req-frozen td{opacity:.6}
-.v14-req-frozen .qwrap{display:none}
-.v14-freeze-msg{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin-inline-start:6px;white-space:nowrap}
-/* G4 - bulk add/remove modal */
-#v14-bulk-med-modal .v14-dept-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;max-height:200px;overflow:auto;padding:8px;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}
-#v14-bulk-med-modal .v14-dept-grid label{display:flex;align-items:center;gap:6px;padding:5px 7px;border-radius:6px;background:var(--s);margin:0;cursor:pointer;font-size:12px}
-#v14-bulk-med-modal .v14-dept-grid input{width:auto;margin:0}
-#v14-bulk-med-modal .v14-med-search{width:100%;margin-bottom:8px}
-#v14-bulk-med-modal .v14-med-list{max-height:200px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:6px}
-#v14-bulk-med-modal .v14-med-item{display:flex;align-items:center;gap:7px;padding:5px 7px;border-radius:6px;cursor:pointer}
-#v14-bulk-med-modal .v14-med-item:hover{background:var(--s2)}
-#v14-bulk-med-modal .v14-med-item input{width:auto;margin:0}
-/* G5 - editable request */
-.req-edit-live-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:700;background:#d1fae5;color:#065f46;border:1px solid #6ee7b7;margin-inline-start:8px}
-.req-edit-expired-badge{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
-/* G6 - supervisor delete */
-.req-sup-del-btn{margin-inline-start:4px}
-</style>
-
-<script id="v14-g16-main">
-(function(){
-'use strict';
-var BUILD='V14-GROUPS-1-6-20260722';
-function E(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function n(v){var x=Number(v);return isFinite(x)?x:0}
-function role(){return window.CU&&CU.role||''}
-function isCtlOfficer(){return role()==='controlled_pharmacy'||(window.CU&&CU.master===true)}
-function isSupervisor(){return role()==='inpatient_supervisor'}
-function isMgr(){return !!(window.CU&&(CU.master===true||['pharmacy','inpatient_supervisor'].indexOf(role())>=0))}
-function depts(){return typeof window.gd==='function'?(gd()||[]):[]}
-function nowISO(){return (typeof window.nowISO==='function'?window.nowISO():new Date().toISOString())}
-
-/* ══════════════════════════════════════════════════════════════
-   G1: Controlled — نافذة تعديل شاملة (min / max / qty / lot)
-══════════════════════════════════════════════════════════════ */
-function ensureCtlEditModal(){
-  if(E('v14-ctl-edit-modal'))return;
-  var m=document.createElement('div');m.id='v14-ctl-edit-modal';m.className='modal-bg';
-  m.innerHTML=
-    '<div class="modal" style="width:min(720px,97vw)">'
-    +'<div class="mh"><span class="mt" id="v14cem-title">Edit Department Medicine</span>'
-    +'<button class="xbtn" data-modal-close>✕</button></div>'
-    +'<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px">'
-    +'<div><label>Min / الحد الأدنى</label><input id="v14cem-min" type="number" min="0"></div>'
-    +'<div><label>Max / الحد الأقصى</label><input id="v14cem-max" type="number" min="0"></div>'
-    +'<div><label>Total Qty / الكمية الكلية</label><input id="v14cem-qty" type="number" min="0"></div>'
-    +'</div>'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">'
-    +'<b style="font-size:13px">Expiry Batches / تواريخ الانتهاء</b>'
-    +'<button class="btn bp bsm" onclick="v14CEMAddBatch()">+ Add batch</button>'
-    +'</div>'
-    +'<div id="v14cem-batches"></div>'
-    +'<div id="v14cem-sum" style="padding:8px;border:1px solid var(--bd);border-radius:7px;background:var(--s2);font-size:12px;margin:8px 0"></div>'
-    +'<input type="hidden" id="v14cem-medid">'
-    +'<div class="fl g8" style="justify-content:flex-end;margin-top:14px">'
-    +'<button class="btn bg" data-modal-close>Cancel</button>'
-    +'<button class="btn bs" onclick="v14CEMSave()">Save / حفظ</button>'
-    +'</div></div>';
-  document.body.appendChild(m);
-}
-
-function v14CEMBatchHTML(b){
-  b=b||{};
-  return '<div class="v14-batch-row">'
-    +'<div><label>Qty</label><input class="v14b-qty" type="number" min="0" value="'+esc(b.qty==null?'':b.qty)+'" oninput="v14CEMSum()"></div>'
-    +'<div><label>Expiry date</label><input class="v14b-exp" type="date" value="'+esc(b.expiry||'')+'"></div>'
-    +'<div><label>Lot / Batch</label><input class="v14b-lot" value="'+esc(b.lot||'')+'"></div>'
-    +'<div><label style="visibility:hidden">x</label><button class="btn bd2c bsm" onclick="this.closest(\'.v14-batch-row\').remove();v14CEMSum()">✕</button></div>'
-    +'</div>';
-}
-window.v14CEMAddBatch=function(b){
-  var c=E('v14cem-batches');if(!c)return;
-  c.insertAdjacentHTML('beforeend',v14CEMBatchHTML(b||{}));
-  v14CEMSum();
-};
-window.v14CEMSum=function(){
-  var total=n((E('v14cem-qty')||{}).value);
-  var sum=Array.from(document.querySelectorAll('.v14b-qty')).reduce(function(a,x){return a+n(x.value)},0);
-  var el=E('v14cem-sum');if(!el)return;
-  el.textContent='Batch total: '+sum+' / Total qty: '+total;
-  el.style.color=(sum===total||!total)?'var(--tx2)':'var(--rdl)';
-};
-
-window.ctlEditDeptMedicine=function(medId){
-  if(!isCtlOfficer())return typeof toast==='function'?toast('No permission','err'):null;
-  var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';
-  var list=typeof ctlDeptList==='function'?(ctlDeptList(dept)||[]):[];
-  var entry=list.find(function(x){return String(x.medId)===String(medId)});
-  if(!entry)return typeof toast==='function'?toast('Medicine not found','err'):null;
-  var med=typeof ctlMedicine==='function'?(ctlMedicine(medId)||{}):{};
-  ensureCtlEditModal();
-  E('v14cem-title').textContent='Edit: '+(med.name||medId);
-  E('v14cem-medid').value=medId;
-  E('v14cem-min').value=n(entry.min!=null?entry.min:med.min);
-  E('v14cem-max').value=n(entry.max!=null?entry.max:med.max);
-  E('v14cem-qty').value=n(entry.qty);
-  var batches=entry.batches&&entry.batches.length?entry.batches:[{}];
-  E('v14cem-batches').innerHTML='';
-  batches.forEach(function(b){v14CEMAddBatch(b)});
-  v14CEMSum();
-  E('v14-ctl-edit-modal').classList.add('on');
-};
-
-window.v14CEMSave=async function(){
-  if(!isCtlOfficer())return;
-  var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';
-  var list=(typeof ctlDeptList==='function'?(ctlDeptList(dept)||[]):[]).slice();
-  var medId=E('v14cem-medid').value;
-  var idx=list.findIndex(function(x){return String(x.medId)===String(medId)});
-  if(idx<0)return typeof toast==='function'?toast('Medicine not found','err'):null;
-  var rows=Array.from(document.querySelectorAll('.v14-batch-row'));
-  var batches=[];
-  for(var i=0;i<rows.length;i++){
-    var exp=rows[i].querySelector('.v14b-exp').value;
-    var qty=n(rows[i].querySelector('.v14b-qty').value);
-    var lot=(rows[i].querySelector('.v14b-lot').value||'').trim();
-    if(!exp&&!qty&&!lot)continue;
-    if(!exp)return typeof toast==='function'?toast('Each batch needs an expiry date','err'):null;
-    batches.push({expiry:exp,qty:qty,lot:lot});
-  }
-  list[idx]=Object.assign({},list[idx],{
-    min:n(E('v14cem-min').value),
-    max:n(E('v14cem-max').value),
-    qty:n(E('v14cem-qty').value),
-    batches:batches
-  });
-  await (typeof ctlSetDeptList==='function'?ctlSetDeptList(dept,list):Promise.resolve());
-  if(typeof ctlSyncPublicDept==='function')await ctlSyncPublicDept(dept);
-  if(typeof ctlMove==='function')ctlMove({type:'dept_stock_edit',dept:dept,medId:medId,note:'Edited via V14 modal'});
-  E('v14-ctl-edit-modal').classList.remove('on');
-  if(typeof toast==='function')toast('Saved ✓','succ');
-  if(typeof renderControlled==='function')renderControlled();
-};
-
-/* ══════════════════════════════════════════════════════════════
-   G2: Freeze — الأدوية المجمّدة تظهر مقفلة في صفحة الطلب
-   يدعم كلا النظامين: global_request_freeze و freeze_v2
-══════════════════════════════════════════════════════════════ */
-function getFreezeEntry(medName, medId, deptId){
-  /* النظام الجديد (per-dept) */
-  var v2=(window.S&&S.g?S.g('global_request_freeze_v2'):null)||{};
-  var dId=String(deptId||'');
-  /* البحث بالاسم أو الـ id */
-  var found=null;
-  Object.keys(v2).forEach(function(k){
-    var e=v2[k];
-    if(!found&&(k===String(medId)||String(e.name||'').toLowerCase()===String(medName||'').toLowerCase())){
-      if(e.deptIds&&e.deptIds.indexOf(dId)<0)return;
-      found=e;
-    }
-  });
-  if(found)return found;
-  /* النظام القديم (all depts) */
-  var v1=(window.S&&S.g?S.g('global_request_freeze'):null)||{};
-  var key=String(medName||'').toLowerCase().replace(/\s+/g,'_');
-  return v1[key]||null;
-}
-
-var _origRRF2=window.renderReqForm;
-window.renderReqForm=function(){
-  var r=_origRRF2&&_origRRF2.apply(this,arguments);
-  setTimeout(function(){
-    if(!window.CU||role()!=='department')return;
-    var deptId=String(CU.deptId||'');
-    document.querySelectorAll('#rfbody tr').forEach(function(tr){
-      var inp=tr.querySelector('input.rqi[data-mid]');if(!inp)return;
-      var mid=inp.dataset.mid;
-      /* اسم الدواء من الـ label أو td */
-      var nameTd=tr.querySelector('td:nth-child(2) b');
-      var medName=nameTd?nameTd.textContent:'';
-      var freeze=getFreezeEntry(medName,mid,deptId);
-      var oldBadge=tr.querySelector('.v14-freeze-msg');if(oldBadge)oldBadge.remove();
-      tr.classList.toggle('v14-req-frozen',!!freeze);
-      if(freeze){
-        inp.value='0';inp.disabled=true;
-        var cell=tr.querySelector('td:nth-child(2)');
-        if(cell){
-          var badge=document.createElement('span');badge.className='v14-freeze-msg';
-          badge.textContent='⏸ Frozen: '+(freeze.reason||'');
-          cell.appendChild(badge);
-        }
-      } else {
-        inp.disabled=false;
-      }
-    });
-  },90);
-  return r;
-};
-
-/* ══════════════════════════════════════════════════════════════
-   G3: ترتيب التصنيفات في صفحة الطلب والطباعة
-   يتبع ترتيب getCategories() من الصيدلية
-══════════════════════════════════════════════════════════════ */
-function categoryOrder(){
-  return typeof getCategories==='function'?getCategories():[
-    'Inhaler','Tablet','Capsule','Injection','Syrup','Drops','Patch','Other'
-  ];
-}
-function sortGroupsByPharmacyOrder(groups){
-  var order=categoryOrder();
-  return Object.keys(groups).sort(function(a,b){
-    var ia=order.indexOf(a),ib=order.indexOf(b);
-    if(ia<0&&ib<0)return a.localeCompare(b);
-    if(ia<0)return 1;if(ib<0)return -1;
-    return ia-ib;
-  });
-}
-
-/* patch renderReqForm لاستخدام الترتيب الصحيح */
-var _origRRF3=window.renderReqForm;
-window.renderReqForm=function(){
-  /* نعترض buildGroups داخلياً بعد الـ render */
-  var r=_origRRF3&&_origRRF3.apply(this,arguments);
-  setTimeout(function(){
-    /* إعادة ترتيب الـ cath headers في الـ DOM */
-    var host=E('rfbody');if(!host)return;
-    var order=categoryOrder();
-    var pairs=[];
-    var nodes=Array.from(host.childNodes);
-    var i=0;
-    while(i<nodes.length){
-      if(nodes[i]&&nodes[i].classList&&nodes[i].classList.contains('cath')){
-        var catName=nodes[i].textContent||'';
-        var table=nodes[i+1];
-        pairs.push({cat:catName,catNode:nodes[i],tableNode:table});
-        i+=2;
-      } else i++;
-    }
-    if(pairs.length<=1)return;
-    pairs.sort(function(a,b){
-      var ia=order.indexOf(a.cat),ib=order.indexOf(b.cat);
-      if(ia<0&&ib<0)return a.cat.localeCompare(b.cat);
-      if(ia<0)return 1;if(ib<0)return -1;
-      return ia-ib;
-    });
-    pairs.forEach(function(p){host.appendChild(p.catNode);if(p.tableNode)host.appendChild(p.tableNode)});
-  },50);
-  return r;
-};
-
-/* patch doPrint لنفس الترتيب */
-var _origDoPrint=window.doPrint;
-window.doPrint=function(){
-  /* override Object.keys(groups).sort() داخل doPrint بتصنيف الصيدلية */
-  var origSort=Array.prototype.sort;
-  /* لا نمس sort العام — نعتمد على إعادة الترتيب بعد الطباعة */
-  return _origDoPrint&&_origDoPrint.apply(this,arguments);
-};
-
-/* ══════════════════════════════════════════════════════════════
-   G4: Bulk Add / Remove دواء لكل الأقسام أو بعضها
-══════════════════════════════════════════════════════════════ */
-function ensureBulkMedModal(){
-  if(E('v14-bulk-med-modal'))return;
-  var m=document.createElement('div');m.id='v14-bulk-med-modal';m.className='modal-bg';
-  m.innerHTML=
-    '<div class="modal" style="width:min(820px,97vw)">'
-    +'<div class="mh"><span class="mt" id="v14bm-title">Bulk Add / Remove Medicine</span>'
-    +'<button class="xbtn" data-modal-close>✕</button></div>'
-    +'<!-- اختيار الدواء -->'
-    +'<b style="font-size:13px">Medicine / الدواء</b>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0 14px">'
-    +'<div><label>From Inventory / من المخزون</label>'
-    +'<input id="v14bm-inv-search" class="v14-med-search" placeholder="Search by name…" oninput="v14BMSearchInv()">'
-    +'<div id="v14bm-inv-list" class="v14-med-list"></div></div>'
-    +'<div><label>Or enter manually / أو أدخل يدوياً</label>'
-    +'<input id="v14bm-manual-name" placeholder="Medicine name" style="margin-bottom:6px">'
-    +'<input id="v14bm-manual-cat" placeholder="Category / التصنيف"></div>'
-    +'</div>'
-    +'<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:14px">'
-    +'<div><label>Min</label><input id="v14bm-min" type="number" min="0" value="0"></div>'
-    +'<div><label>Max</label><input id="v14bm-max" type="number" min="0" value="0"></div>'
-    +'<div><label>Action / الإجراء</label>'
-    +'<select id="v14bm-action"><option value="add">Add to departments / إضافة</option>'
-    +'<option value="remove">Remove from departments / حذف</option></select></div>'
-    +'</div>'
-    +'<b style="font-size:13px">Target Departments / الأقسام</b>'
-    +'<div style="display:flex;gap:8px;margin:6px 0">'
-    +'<button class="btn bg bsm" onclick="v14BMAll(true)">All / الكل</button>'
-    +'<button class="btn bg bsm" onclick="v14BMAll(false)">Clear</button></div>'
-    +'<div id="v14bm-depts" class="v14-dept-grid"></div>'
-    +'<div class="fl g8" style="justify-content:flex-end;margin-top:14px">'
-    +'<button class="btn bg" data-modal-close>Cancel</button>'
-    +'<button class="btn bs" onclick="v14BMConfirm()">Apply / تطبيق</button>'
-    +'</div></div>';
-  document.body.appendChild(m);
-}
-
-var _v14BMSelectedMed=null;
-window.v14BMSearchInv=function(){
-  var q=(E('v14bm-inv-search').value||'').toLowerCase().trim();
-  var allMeds=[];
-  depts().forEach(function(d){
-    if(typeof getMeds==='function')(getMeds(d.id)||[]).forEach(function(m){if(!allMeds.find(function(x){return x.id===m.id}))allMeds.push(m)});
-  });
-  /* أيضاً من Inventory العام */
-  if(typeof window.getAllMeds==='function')(window.getAllMeds()||[]).forEach(function(m){if(!allMeds.find(function(x){return x.id===m.id}))allMeds.push(m)});
-  var results=q?allMeds.filter(function(m){return String(m.name||'').toLowerCase().indexOf(q)>=0}):allMeds.slice(0,20);
-  E('v14bm-inv-list').innerHTML=results.map(function(m){
-    return '<div class="v14-med-item" onclick="v14BMSelectMed(\''+esc(m.id)+'\',\''+esc(m.name)+'\',\''+esc(m.category||'')+'\')"><span>'+esc(m.name)+'</span><span style="font-size:11px;color:var(--tx2);margin-inline-start:auto">'+esc(m.category||'')+'</span></div>';
-  }).join('')||'<div style="color:var(--tx2);font-size:12px;padding:8px">No results</div>';
-};
-window.v14BMSelectMed=function(id,name,cat){
-  _v14BMSelectedMed={id:id,name:name,category:cat};
-  E('v14bm-inv-search').value=name;
-  E('v14bm-manual-name').value='';
-  E('v14bm-manual-cat').value='';
-  E('v14bm-inv-list').innerHTML='<div style="padding:6px;color:var(--gnl);font-weight:700">✓ '+esc(name)+'</div>';
-};
-window.v14BMAll=function(v){
-  document.querySelectorAll('#v14bm-depts input[type=checkbox]').forEach(function(c){c.checked=v});
-};
-
-window.v14OpenBulkMed=function(){
-  if(!isMgr()&&!isCtlOfficer())return typeof toast==='function'?toast('No permission','err'):null;
-  ensureBulkMedModal();
-  _v14BMSelectedMed=null;
-  E('v14bm-inv-search').value='';E('v14bm-manual-name').value='';E('v14bm-manual-cat').value='';
-  E('v14bm-min').value='0';E('v14bm-max').value='0';
-  E('v14bm-inv-list').innerHTML='';
-  E('v14bm-depts').innerHTML=depts().map(function(d){
-    return '<label><input type="checkbox" value="'+esc(d.id)+'"> <span>'+esc(d.name||d.id)+'</span></label>';
-  }).join('');
-  E('v14-bulk-med-modal').classList.add('on');
-};
-
-window.v14BMConfirm=async function(){
-  var med=_v14BMSelectedMed;
-  if(!med){
-    var manName=(E('v14bm-manual-name').value||'').trim();
-    var manCat=(E('v14bm-manual-cat').value||'').trim();
-    if(!manName)return typeof toast==='function'?toast('Select or enter a medicine name','err'):null;
-    med={id:'manual_'+manName.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now(),name:manName,category:manCat||'Uncategorized'};
-  }
-  var action=E('v14bm-action').value;
-  var min=n(E('v14bm-min').value),max=n(E('v14bm-max').value);
-  var deptIds=Array.from(document.querySelectorAll('#v14bm-depts input:checked')).map(function(c){return c.value});
-  if(!deptIds.length)return typeof toast==='function'?toast('Select at least one department','err'):null;
-  var count=0;
-  for(var i=0;i<deptIds.length;i++){
-    var dId=deptIds[i];
-    /* اجلب قائمة الأدوية للقسم */
-    var list=(typeof window.getMeds==='function'?(getMeds(dId)||[]):[]).slice();
-    var exists=list.findIndex(function(m){return m.id===med.id||String(m.name||'').toLowerCase()===String(med.name||'').toLowerCase()});
-    if(action==='add'){
-      if(exists>=0){
-        /* حدّث min/max فقط */
-        list[exists]=Object.assign({},list[exists],{min:min,max:max});
-      } else {
-        list.push(Object.assign({},med,{min:min,max:max}));
-      }
-    } else {
-      if(exists>=0){list.splice(exists,1);}
-    }
-    await (window.S&&S.s?S.s('meds_'+dId,list):Promise.resolve());
-    count++;
-  }
-  E('v14-bulk-med-modal').classList.remove('on');
-  if(typeof toast==='function')toast(action==='add'?'Added to '+count+' department(s) ✓':'Removed from '+count+' department(s) ✓','succ');
-  if(typeof renderInv==='function')renderInv();
-};
-
-/* زر Bulk Med في الـ inventory toolbar */
-function addBulkMedButton(){
-  var bar=document.querySelector('#bulk-bar .fl.g8.ic');
-  if(!bar||E('v14-bulk-med-btn'))return;
-  if(!isMgr()&&!isCtlOfficer())return;
-  var btn=document.createElement('button');
-  btn.id='v14-bulk-med-btn';btn.type='button';btn.className='btn bs bsm';
-  btn.innerHTML='➕ Bulk Add/Remove to Depts';
-  btn.onclick=v14OpenBulkMed;
-  bar.appendChild(btn);
-}
-var _ri2=window.renderInv;
-window.renderInv=function(){
-  var r=_ri2&&_ri2.apply(this,arguments);
-  setTimeout(addBulkMedButton,70);
-  return r;
-};
-
-/* ══════════════════════════════════════════════════════════════
-   G5: تعديل New Request خلال ساعتين من الإرسال
-   يقفل فور الـ fulfill أو بعد ساعتين
-══════════════════════════════════════════════════════════════ */
-var REQ_EDIT_WINDOW_MS=2*60*60*1000; /* ساعتان */
-
-function canEditRequest(req){
-  if(!req||!window.CU)return false;
-  if(req.status==='fulfilled'||req.status==='cancelled')return false;
-  var created=new Date(req.created||req.createdAt||0).getTime();
-  if(Date.now()-created>REQ_EDIT_WINDOW_MS)return false;
-  /* يمكن الأقسام فقط تعديل طلباتهم */
-  return role()==='department'&&String(req.deptId)===String(CU.deptId||'');
-}
-
-function editMinutesLeft(req){
-  var created=new Date(req.created||req.createdAt||0).getTime();
-  var ms=REQ_EDIT_WINDOW_MS-(Date.now()-created);
-  if(ms<=0)return 0;
-  return Math.ceil(ms/60000);
-}
-
-window.v14OpenEditReq=function(reqId){
-  var reqs=typeof gr==='function'?(gr()||[]):[];
-  var req=reqs.find(function(x){return String(x.id)===String(reqId)});
-  if(!req)return typeof toast==='function'?toast('Request not found','err'):null;
-  if(!canEditRequest(req))return typeof toast==='function'?toast('Edit window closed (2 hours) or request already fulfilled.','err'):null;
-  /* افتح نافذة التعديل - نعيد بناء صفحة الطلب في نافذة */
-  var dId=req.deptId;
-  var meds=typeof getMeds==='function'?(getMeds(dId)||[]):[];
-  var dispensed=req.dispensed||[];
-  var old=E('v14-edit-req-modal');if(old)old.remove();
-  var rows=meds.map(function(m){
-    var di=dispensed.find(function(x){return x.medId===m.id});
-    var max=Math.max(0,n(m.max));
-    var val=di?n(di.qty):0;
-    return '<tr><td><b>'+esc(m.name)+'</b></td>'
-      +'<td>'+n(m.min)+'</td><td>'+max+'</td>'
-      +'<td><div class="qwrap"><input type="number" class="rqi v14er-qty" data-mid="'+esc(m.id)+'" data-max="'+max+'" min="0" max="'+max+'" value="'+val+'" oninput="this.value=Math.min(Math.max(0,+this.value||0),+this.dataset.max)">'
-      +'<span class="qlim">/'+max+'</span></div></td></tr>';
-  }).join('');
-  var mm=document.createElement('div');mm.id='v14-edit-req-modal';mm.className='modal-bg on';
-  mm.innerHTML='<div class="modal" style="width:min(820px,97vw)">'
-    +'<div class="mh"><span class="mt">Edit Request — '+editMinutesLeft(req)+' min left</span>'
-    +'<button class="xbtn" data-modal-close>✕</button></div>'
-    +'<div class="tw" style="overflow:auto;max-height:60vh"><table>'
-    +'<thead><tr><th>Medication</th><th>Min</th><th>Max</th><th>Qty</th></tr></thead>'
-    +'<tbody>'+rows+'</tbody></table></div>'
-    +'<input type="hidden" id="v14er-reqid" value="'+esc(reqId)+'">'
-    +'<div class="fl g8" style="justify-content:flex-end;margin-top:14px">'
-    +'<button class="btn bg" data-modal-close>Cancel</button>'
-    +'<button class="btn bs" onclick="v14SaveEditReq()">Save changes / حفظ التعديلات</button>'
-    +'</div></div>';
-  document.body.appendChild(mm);
-};
-
-window.v14SaveEditReq=async function(){
-  var reqId=(E('v14er-reqid')||{}).value;
-  var reqs=typeof gr==='function'?(gr()||[]):[];
-  var req=reqs.find(function(x){return String(x.id)===String(reqId)});
-  if(!req||!canEditRequest(req))return typeof toast==='function'?toast('Edit window closed.','err'):null;
-  var newDispensed=Array.from(document.querySelectorAll('.v14er-qty')).map(function(inp){
-    return {medId:inp.dataset.mid,qty:n(inp.value)};
-  }).filter(function(x){return x.qty>0});
-  var updated=Object.assign({},req,{dispensed:newDispensed,editedAt:nowISO(),editedBy:(window.CU&&CU.username)||''});
-  await (window.S&&S.s?S.s('requests',reqs.map(function(r){return r.id===reqId?updated:r})):Promise.resolve());
-  var m=E('v14-edit-req-modal');if(m)m.remove();
-  if(typeof toast==='function')toast('Request updated ✓','succ');
-  if(typeof renderMyReqs==='function')renderMyReqs();
-};
-
-/* أضف زر Edit في My Requests */
-var _origRenderMyReqs=window.renderMyReqs;
-window.renderMyReqs=function(){
-  var r=_origRenderMyReqs&&_origRenderMyReqs.apply(this,arguments);
-  setTimeout(function(){
-    if(role()!=='department')return;
-    var reqs=typeof gr==='function'?(gr()||[]):[];
-    document.querySelectorAll('#myreqs-list [data-rid]').forEach(function(card){
-      var rid=card.dataset.rid;
-      var req=reqs.find(function(x){return String(x.id)===String(rid)});
-      if(!req||card.querySelector('.v14-edit-req-btn'))return;
-      var btnArea=card.querySelector('.fl.g8')||card.querySelector('.ch .fl');
-      if(!btnArea)return;
-      if(canEditRequest(req)){
-        var btn=document.createElement('button');btn.type='button';
-        btn.className='btn bg bsm v14-edit-req-btn';
-        btn.textContent='✏ Edit ('+editMinutesLeft(req)+'m left)';
-        btn.onclick=function(){v14OpenEditReq(rid)};
-        btnArea.insertBefore(btn,btnArea.firstChild);
-      }
-    });
-  },80);
-  return r;
-};
-
-/* ══════════════════════════════════════════════════════════════
-   G6: مشرف الصيدلية الداخلية — حذف Request مع سبب
-══════════════════════════════════════════════════════════════ */
-window.v14SupervisorDeleteReq=async function(reqId){
-  if(!isSupervisor()&&!(window.CU&&CU.master===true))
-    return typeof toast==='function'?toast('No permission','err'):null;
-  var reqs=typeof gr==='function'?(gr()||[]):[];
-  var req=reqs.find(function(x){return String(x.id)===String(reqId)});
-  if(!req)return typeof toast==='function'?toast('Request not found','err'):null;
-  var reason=await (typeof uiPrompt==='function'?uiPrompt('Reason for deletion / سبب الحذف',''):'');
-  if(reason===null)return;
-  if(!String(reason||'').trim())return typeof toast==='function'?toast('Reason is required / السبب مطلوب','err'):null;
-  /* حفظ في أرشيف Analytics */
-  if(req.status==='fulfilled'){
-    var archive=(window.S&&S.g?S.g('request_analytics_archive'):[]) ||[];
-    if(!archive.some(function(x){return x.id===req.id}))archive.push(Object.assign({},req,{_deletedBy:CU.username,_deleteReason:reason,_deletedAt:nowISO()}));
-    await (window.S&&S.s?S.s('request_analytics_archive',archive):Promise.resolve());
-  }
-  await (window.S&&S.s?S.s('requests',reqs.filter(function(x){return x.id!==reqId})):Promise.resolve());
-  if(typeof auditAction==='function')auditAction('supervisor_delete_request',{reqId:reqId,reason:reason,by:CU.username});
-  if(typeof toast==='function')toast('Request deleted ✓','succ');
-  if(typeof renderReqs==='function')renderReqs();
-};
-
-/* أضف زر Delete في قائمة الطلبات للمشرف */
-var _origRenderReqs=window.renderReqs;
-window.renderReqs=function(){
-  var r=_origRenderReqs&&_origRenderReqs.apply(this,arguments);
-  setTimeout(function(){
-    if(!isSupervisor()&&!(window.CU&&CU.master===true))return;
-    document.querySelectorAll('#reqs-list [data-rid]').forEach(function(card){
-      var rid=card.dataset.rid;
-      if(card.querySelector('.v14-sup-del-btn'))return;
-      var btnArea=card.querySelector('.fl.g8')||card.querySelector('.ch .fl');
-      if(!btnArea)return;
-      var btn=document.createElement('button');btn.type='button';
-      btn.className='btn bd2c bsm v14-sup-del-btn req-sup-del-btn';
-      btn.textContent='🗑 Delete';btn.title='Supervisor delete with reason';
-      btn.onclick=function(){v14SupervisorDeleteReq(rid)};
-      btnArea.appendChild(btn);
-    });
-  },80);
-  return r;
-};
-
-/* ── Build stamp ── */
-(function(){
-  var x=E('v14-g16-stamp');
-  if(!x){x=document.createElement('div');x.id='v14-g16-stamp';
-    x.style.cssText='position:fixed;right:8px;bottom:18px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
-    document.body.appendChild(x);}
-  x.textContent=BUILD;
-})();
-
-})();
-</script>
-
 </body>
 </html>
