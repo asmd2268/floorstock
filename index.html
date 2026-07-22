@@ -2152,16 +2152,17 @@ var renderInvDebounced=debounce(function(){renderInv()},220);
 var renderReqFormDebounced=debounce(function(){renderReqForm()},220);
 var renderControlledDebounced=debounce(function(){renderControlled()},220);
 
-async function ensureFirebaseAuthReady(){
+window.ensureFirebaseAuthReady = async function(){
   if(!window.firebase) throw new Error('Firebase SDK is not loaded.');
-  if(!FB_AUTH){
+  if(!window.FB_AUTH){
     initFirebase();
   }
+  FB_AUTH = window.FB_AUTH;
   if(!FB_AUTH){
     throw new Error('Firebase authentication is not ready.');
   }
   return FB_AUTH;
-}
+};
 
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
@@ -2172,7 +2173,6 @@ function initFirebase(){
   window.FB_AUTH=FB_AUTH;
   window.FB_DB=FB_DB;
   window.FB_AUTH=FB_AUTH;
-  window.FB_DB=FB_DB;
   // Enable offline persistence so writes survive temporary disconnections and logout
   FB_DB.enablePersistence({synchronizeTabs:true}).catch(function(err){
     if(err.code==='failed-precondition'){
