@@ -14,6 +14,23 @@ var FB_AUTH=window.FB_AUTH||null;
 var FB_DB=window.FB_DB||null;
 var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
 </script>
+<script id="firebase-auth-ready-guard">
+/* Global auth guard: keeps login available even if later enhancement scripts load out of order. */
+window.ensureFirebaseAuthReady = window.ensureFirebaseAuthReady || async function(){
+  if(!window.firebase) throw new Error('Firebase SDK is not loaded.');
+  if(!window.FB_AUTH){
+    if(typeof initFirebase === 'function'){
+      initFirebase();
+    } else if(typeof FIREBASE_CONFIG !== 'undefined'){
+      window.FB_APP = firebase.apps.length ? firebase.app() : firebase.initializeApp(FIREBASE_CONFIG);
+      window.FB_AUTH = firebase.auth();
+      window.FB_DB = firebase.firestore();
+    }
+  }
+  if(!window.FB_AUTH) throw new Error('Firebase authentication is not ready.');
+  return window.FB_AUTH;
+};
+</script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{--bg:#0d1117;--s:#161b22;--s2:#1c2128;--s3:#222831;--bd:#30363d;--bd2:#3d444d;--tx:#e6edf3;--tx2:#8b949e;--tx3:#6e7781;--ac:#1f6feb;--acl:#388bfd;--gn:#2ea043;--gnl:#3fb950;--rd:#da3633;--rdl:#f85149;--yl:#d29922;--yll:#e3b341;--pu:#0ea5e9;--mono:'JetBrains Mono',monospace}
@@ -2148,7 +2165,7 @@ var renderInvDebounced=debounce(function(){renderInv()},220);
 var renderReqFormDebounced=debounce(function(){renderReqForm()},220);
 var renderControlledDebounced=debounce(function(){renderControlled()},220);
 
-async function ensureFirebaseAuthReady(){
+async function window.ensureFirebaseAuthReady(){
   if(!window.firebase) throw new Error('Firebase SDK is not loaded.');
   if(!FB_AUTH){
     initFirebase();
@@ -2664,7 +2681,7 @@ async function doLogin(){
   if(el('aerr'))el('aerr').style.display='none';
   if(!email||!password){setLoginError('Enter your Firebase email and password');if(loginBtn){loginBtn.disabled=false;loginBtn.innerHTML=oldLoginText||'Sign In / دخول';}return;}
   try{
-    var credential=await Promise.race([(await ensureFirebaseAuthReady()).signInWithEmailAndPassword(email,password),timeoutAfter(30000,'Firebase sign-in timed out.')]);
+    var credential=await Promise.race([(await window.ensureFirebaseAuthReady()).signInWithEmailAndPassword(email,password),timeoutAfter(30000,'Firebase sign-in timed out.')]);
     var profileSnapshot=await loadProfile(credential.user.uid);
     if(!profileSnapshot||!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
     var profile=profileSnapshot.data()||{};
@@ -2695,7 +2712,7 @@ async function doLogout(){
     if(!await uiConfirm('تحذير: بعض التغييرات قد لا تكون محفوظة. هل تريد تسجيل الخروج على أي حال؟'))return;
   }
   S.stopRealtime();
-  try{await (await ensureFirebaseAuthReady()).signOut();}catch(err){console.error(err);}
+  try{await (await window.ensureFirebaseAuthReady()).signOut();}catch(err){console.error(err);}
   CU=null;MASTER_ACTUAL=null;MASTER_EFFECTIVE=null;S.cache={};S.ready=false;el('app').style.display='none';el('auth').style.display='flex';el('lgp').value='';
 }
 function startApp(){
@@ -6876,7 +6893,7 @@ doLogin=async function(){
   el('aerr').style.display='none';
   if(!email||!password){el('aerr').textContent='Enter your Firebase email and password';el('aerr').style.display='block';return}
   try{
-    var credential=await Promise.race([(await ensureFirebaseAuthReady()).signInWithEmailAndPassword(email,password),new Promise(function(_,reject){setTimeout(function(){reject(new Error('Firebase sign-in timed out.'));},15000);})]);
+    var credential=await Promise.race([(await window.ensureFirebaseAuthReady()).signInWithEmailAndPassword(email,password),new Promise(function(_,reject){setTimeout(function(){reject(new Error('Firebase sign-in timed out.'));},15000);})]);
     if(loginBtn)loginBtn.textContent='Loading profile…';
     var profileSnapshot=await Promise.race([FB_DB.collection('users').doc(credential.user.uid).get(),new Promise(function(_,reject){setTimeout(function(){reject(new Error('Loading user profile timed out.'));},10000);})]);
     if(!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
@@ -12484,7 +12501,7 @@ window.doLogin=async function(){
   if(!email||!password){fail('Enter your Firebase email and password');return}
   if(btn){btn.disabled=true;btn.textContent='Signing in…'}
   try{
-    var credential=await Promise.race([(await ensureFirebaseAuthReady()).signInWithEmailAndPassword(email,password),delayReject(15000,'Firebase sign-in timed out.')]);
+    var credential=await Promise.race([(await window.ensureFirebaseAuthReady()).signInWithEmailAndPassword(email,password),delayReject(15000,'Firebase sign-in timed out.')]);
     var ref=FB_DB.collection('users').doc(credential.user.uid);
     if(btn)btn.textContent='Loading profile and data…';
     async function loadProfile(){
