@@ -8180,7 +8180,7 @@ crashPrint=function(id){
   function n(v){v=Number(v);return isFinite(v)?v:0}
   function medKey(it){return String((it&&it.name)||'').trim().toLowerCase()}
   function openReports(){return (crashReports()||[]).filter(function(r){return r.status==='open'})}
-  function isPharmacyCrashRole(){return !!window.CU&&['pharmacy','inpatient_supervisor','pharmacy_staff'].includes(CU.role)}
+  function isPharmacyCrashRole(){var rRole=(typeof role==='function'?role():(window.CU&&CU.role));return !!window.CU&&['pharmacy','inpatient_supervisor','pharmacy_staff'].includes(rRole)}
 
   /* Role menus exactly as requested. */
   var previousBuildNav=window.buildNav;
@@ -8189,15 +8189,16 @@ crashPrint=function(id){
     var nav=q('mnav');nav.innerHTML='';
     var commonFull=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-controlled','🔒 Controlled custody'],['pg-ctl-analytics','📊 Controlled analytics'],['pg-crashcart','🚑 Crash Carts']];
     var items;
-    if(CU.role==='pharmacy')items=commonFull.concat([['pg-users','Users']]);
-    else if(CU.role==='inpatient_supervisor')items=commonFull; /* no department New Request */
-    else if(CU.role==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts']];
-    else if(CU.role==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']];
-    else if(CU.role==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
+    var rRole=(typeof role==='function'?role():(window.CU&&CU.role));
+    if(rRole==='pharmacy')items=commonFull.concat([['pg-users','Users']]);
+    else if(rRole==='inpatient_supervisor')items=commonFull; /* no department New Request */
+    else if(rRole==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts']];
+    else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']];
+    else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
     else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody']];
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
-    if((typeof isMasterActual==='function'&&isMasterActual())||(CU&&CU.role==='pharmacy')){var zb=document.createElement('button');zb.id='zebra-labels-nav';zb.className='nb';zb.dataset.pg='pg-zebra-labels';zb.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';zb.onclick=function(){showPg('pg-zebra-labels')};nav.appendChild(zb)}
+    if((typeof isMasterActual==='function'&&isMasterActual())||(CU&&rRole==='pharmacy')){var zb=document.createElement('button');zb.id='zebra-labels-nav';zb.className='nb';zb.dataset.pg='pg-zebra-labels';zb.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';zb.onclick=function(){showPg('pg-zebra-labels')};nav.appendChild(zb)}
     setTimeout(ccUpdateBadges,0);
   };
 
@@ -8454,9 +8455,9 @@ crashPrint=function(id){
   if(renderPublicCrash())return;
 
   /* Remove New Request from pharmacy employee and inpatient pharmacy supervisor everywhere. */
-  function enforceRoleNav(){if(!window.CU||!['pharmacy_staff','inpatient_supervisor'].includes(CU.role))return;document.querySelectorAll('[data-pg="pg-newreq"]').forEach(function(x){x.remove()});if(e('pg-newreq')&&e('pg-newreq').classList.contains('on'))showPg('pg-dash')}
+  function enforceRoleNav(){var rRole=(typeof role==='function'?role():(window.CU&&CU.role));if(!window.CU||!['pharmacy_staff','inpatient_supervisor'].includes(rRole))return;document.querySelectorAll('[data-pg="pg-newreq"]').forEach(function(x){x.remove()});if(e('pg-newreq')&&e('pg-newreq').classList.contains('on'))showPg('pg-dash')}
   var navBase=window.buildNav;window.buildNav=function(){var r=navBase&&navBase.apply(this,arguments);enforceRoleNav();return r};
-  var pgBase=window.showPg;window.showPg=function(id){if(id==='pg-newreq'&&window.CU&&['pharmacy_staff','inpatient_supervisor'].includes(CU.role)){toast('New Request is only available to inpatient departments.','info');id='pg-dash'}return pgBase&&pgBase.call(this,id)};
+  var pgBase=window.showPg;window.showPg=function(id){var rRole=(typeof role==='function'?role():(window.CU&&CU.role));if(id==='pg-newreq'&&window.CU&&['pharmacy_staff','inpatient_supervisor'].includes(rRole)){toast('New Request is only available to inpatient departments.','info');id='pg-dash'}return pgBase&&pgBase.call(this,id)};
   document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){enforceRoleNav();enhanceCrashCards()},500)});
 })();
 </script>
@@ -11348,10 +11349,59 @@ function filterRowsW(){
 window.filterAllDepartmentsInventory=filterRowsW;
 function renderRowsW(){
  var body=el('all-inv-body');if(!body)return;var slice=state.filtered.slice(0,state.shown);
- body.innerHTML=slice.map(function(x){var k=rowIdW(x),checked=state.selected.has(k)?' checked':'';return '<tr><td><input type="checkbox" class="all-inv-name-check v13q-row-check" data-name="'+escW(x.med.name)+'" data-dept="'+escW(x.deptId)+'" data-med="'+escW(x.med.id)+'" onchange="v13InventorySelect(this);if(window.updateAllInventoryMergeCount)updateAllInventoryMergeCount()"'+checked+'></td><td><b>'+escW(x.med.name)+'</b>'+(x.isVariant?'<div class="fhint">Possible naming variant</div>':'')+(x.mismatch?'<div class="v13q-mismatch">Classification differs across departments</div>':'')+'</td><td>'+escW(x.dept)+'</td><td>'+escW(x.med.category||'')+'</td><td>'+classHtmlW(x.med)+'</td><td>'+escW(x.med.min||0)+'</td><td>'+escW(x.med.max||0)+'</td><td>'+escW(x.med.monthly||'—')+'</td></tr>'}).join('');
+ body.innerHTML=slice.map(function(x){var k=rowIdW(x),checked=state.selected.has(k)?' checked':'';var cls=typeof rowCls==='function'?rowCls(x.med):'';return '<tr class="'+cls+'"><td><input type="checkbox" class="all-inv-name-check v13q-row-check" data-name="'+escW(x.med.name)+'" data-dept="'+escW(x.deptId)+'" data-med="'+escW(x.med.id)+'" onchange="v13InventorySelect(this);if(window.updateAllInventoryMergeCount)updateAllInventoryMergeCount()"'+checked+'></td><td><b>'+escW(x.med.name)+'</b>'+(x.isVariant?'<div class="fhint">Possible naming variant</div>':'')+(x.mismatch?'<div class="v13q-mismatch">Classification differs across departments</div>':'')+'</td><td>'+escW(x.dept)+'</td><td>'+escW(x.med.category||'')+'</td><td>'+classHtmlW(x.med)+'</td><td>'+escW(x.med.min||0)+'</td><td>'+escW(x.med.max||0)+'</td><td>'+escW(x.med.monthly||'—')+'</td></tr>'}).join('');
  var info=el('v13w-result-info');if(info)info.textContent='Showing '+slice.length+' of '+state.filtered.length+' records';var more=el('v13w-load-more');if(more)more.style.display=state.shown<state.filtered.length?'inline-flex':'none';selectedCountW()
 }
 window.v13WLoadMore=function(){state.shown=Math.min(state.shown+state.pageSize,state.filtered.length);renderRowsW()};
+
+function ensureBulkModalW(){
+  if(el('v13q-bulk-class-modal'))return;
+  var m=document.createElement('div');
+  m.id='v13q-bulk-class-modal';
+  m.className='modal-bg';
+  m.innerHTML='<div class="modal v13q-modal"><div class="mh"><span class="mt">Bulk classification / تعديل التصنيف بالجملة</span><button class="xbtn" onclick="if(typeof CM===\'function\')CM(\'v13q-bulk-class-modal\')">✕</button></div><div class="fg"><label>Operation</label><select id="v13q-class-op"><option value="replace">Replace classifications</option><option value="add">Add selected classifications</option><option value="remove">Remove selected classifications</option></select></div><div class="v13q-flags"><label><input type="checkbox" value="high_alert"> High Alert</label><label><input type="checkbox" value="lasa"> LASA</label><label><input type="checkbox" value="refrigerated"> Refrigerator</label><label><input type="checkbox" value="hazard"> Hazard</label></div><div class="fhint">Medication names are not changed.</div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" onclick="if(typeof CM===\'function\')CM(\'v13q-bulk-class-modal\')">Cancel</button><button class="btn bp" onclick="v13ApplyBulkClassification()">Save classification</button></div></div>';
+  document.body.appendChild(m);
+}
+
+window.v13OpenBulkClassification=function(){
+  if(!state.selected.size)return toast('Select one or more medications first.','err');
+  ensureBulkModalW();
+  el('v13q-bulk-class-modal').querySelectorAll('input[type=checkbox]').forEach(function(x){x.checked=false});
+  if(typeof OM==='function')OM('v13q-bulk-class-modal');
+};
+
+window.v13ApplyBulkClassification=async function(){
+  var op=el('v13q-class-op').value,
+      chosen=Array.from(el('v13q-bulk-class-modal').querySelectorAll('input[type=checkbox]:checked')).map(function(x){return x.value});
+  if(!chosen.length&&op!=='replace')return toast('Select at least one classification.','err');
+  var byDept={};
+  state.selected.forEach(function(val){
+    (byDept[val.dept]||(byDept[val.dept]=[])).push(val.med);
+  });
+  try{
+    for(var dept in byDept){
+      var ids=new Set(byDept[dept]),
+          meds=(getMeds(dept)||[]).map(function(m){
+            if(!ids.has(String(m.id)))return m;
+            var n=Object.assign({},m),
+                all=['high_alert','lasa','refrigerated','hazard'];
+            if(op==='replace')all.forEach(function(k){n[k]=chosen.indexOf(k)>-1});
+            else if(op==='add')chosen.forEach(function(k){n[k]=true});
+            else chosen.forEach(function(k){n[k]=false});
+            return n;
+          });
+      await setMeds(dept,meds);
+    }
+    if(typeof CM==='function')CM('v13q-bulk-class-modal');
+    window.closeAllDepartmentsInventory();
+    toast('Classifications updated without changing names.','succ');
+    window.openAllDepartmentsInventory();
+  }catch(e){
+    console.error(e);
+    toast(e.message||'Bulk classification failed.','err');
+  }
+};
+
 window.openAllDepartmentsInventory=function(){
  if(!canManageW())return typeof window.toast==='function'?toast('Not authorized.','err'):null;window.closeAllDepartmentsInventory();state.selected.clear();state.rows=buildRowsW();state.filtered=state.rows.slice();state.shown=Math.min(state.pageSize,state.filtered.length);
  var html='<div class="modal-bg on" id="all-inv-modal" role="dialog" aria-modal="true"><div class="modal all-inv-modal"><div class="mh"><div><div class="mt">All Departments Inventory / جميع قوائم الأقسام</div><div class="fhint">Naming comparison, classification consistency, merge and bulk classification.</div></div><button type="button" class="xbtn" id="v13w-all-inv-close">×</button></div><div class="all-inv-mergebar"><button class="btn bp bsm" onclick="openMergeInventoryNames()">Merge selected names</button><button class="btn bg bsm" onclick="undoLatestInventoryNameMerge()">Undo latest merge</button><button class="btn bg bsm" onclick="v13OpenBulkClassification()">Bulk classification</button><span class="chip" id="v13q-selected-count">0 selected</span></div><div class="v13q-toolbar"><div class="sbr" style="max-width:420px"><span class="sic">🔎</span><input id="all-inv-search" placeholder="Search medication, department or category..." style="margin:0"></div><label><input type="checkbox" id="all-inv-variants"> Show possible naming variants only</label><label><input type="checkbox" id="all-inv-hide-identical" checked> Hide identical-name repetitions</label><label><input type="checkbox" id="all-inv-class-mismatch"> Classification mismatch only</label><span class="chip">'+state.rows.length+' records</span></div><div class="all-inv-wrap"><table class="all-inv-table"><thead><tr><th><input type="checkbox" style="width:auto;margin:0" onchange="v13SelectVisibleInventory(this)"></th><th>Medication</th><th>Department</th><th>Category</th><th>Classifications</th><th>Min</th><th>Max</th><th>Monthly</th></tr></thead><tbody id="all-inv-body"></tbody></table></div><div class="v13w-footer"><span class="fhint" id="v13w-result-info"></span><div class="fl g8"><button class="btn bg bsm" id="v13w-load-more" onclick="v13WLoadMore()">Load more</button><button class="btn bg bsm" id="v13w-close-bottom">Close</button></div></div></div></div>';
@@ -13674,6 +13724,7 @@ function v16EnsureRequestNav(){
     }
   }
 }
+window.role = role;
 }
 
 /* ────────────────────────────────────────────────────────────────
