@@ -13827,6 +13827,138 @@ window.FLOORSTOCK_BUILD = 'V15-20260723-NAV-AUTHORITY-V2';
 
 })();
 </script>
+
+<script id="v15-login-crashcart-root-fix">
+(function(){
+'use strict';
+window.V15_LOGIN_CRASHCART_FIX='V15-20260723-LOGIN-CRASHCART-ROOT-FIX';
+
+function waitReject(ms,msg){return new Promise(function(_,reject){setTimeout(function(){reject(new Error(msg));},ms);});}
+function byId(id){return document.getElementById(id);}
+function num(v){v=Number(v);return isFinite(v)?v:0;}
+function field(id){return ((byId(id)||{}).value||'');}
+
+/* Replace the blocking state loader with a cache-first/server-refresh loader.
+   A valid cached snapshot may open the UI immediately; realtime listeners then refresh it. */
+if(window.S){
+  S.init=async function(){
+    S.stopRealtime();
+    S.ready=false;
+    S.cache={};
+    var loaded=false,lastError=null;
+    var col=FB_DB.collection('floorstock_state');
+    async function absorb(promise,timeout,label){
+      try{
+        var snapshot=await Promise.race([promise,waitReject(timeout,label+' timed out')]);
+        if(snapshot){snapshot.forEach(function(doc){S.cache[doc.id]=doc.data().value;});loaded=true;}
+        return true;
+      }catch(err){lastError=err;console.warn(label+' failed:',err);return false;}
+    }
+
+    /* Cache should never delay sign-in. It may be empty on the first device. */
+    await absorb(col.get({source:'cache'}),2200,'Cached Floor Stock data');
+
+    /* Get authoritative data. Default mode can use cache while Firestore reconnects. */
+    var serverLoaded=await absorb(col.get(),12000,'Floor Stock data');
+    if(!serverLoaded && !loaded){
+      serverLoaded=await absorb(col.get({source:'server'}),12000,'Floor Stock server data');
+    }
+    if(!loaded){
+      throw lastError||new Error('Unable to load Floor Stock data. Check Firestore access or network.');
+    }
+
+    /* Users are secondary and must not block the application. */
+    try{
+      await Promise.race([S.loadUsers(),waitReject(6000,'Loading users timed out')]);
+    }catch(err){
+      console.warn('User list was not loaded during sign-in:',err);
+      S.cache.users=S.cache.users||[];
+    }
+    S.ready=true;
+    S.startRealtime();
+  };
+}
+
+/* Replace the pharmacy response save path with one guarded, sequential operation. */
+window.ccSavePharmacyResponse=async function(){
+  var modal=byId('mcc-close');
+  var saveBtn=modal&&Array.from(modal.querySelectorAll('button')).find(function(b){return /حفظ|save/i.test(b.textContent||'');});
+  if(saveBtn&&saveBtn.dataset.saving==='1')return;
+  var oldText=saveBtn?saveBtn.innerHTML:'';
+  try{
+    if(saveBtn){saveBtn.dataset.saving='1';saveBtn.disabled=true;saveBtn.textContent='Saving…';}
+    var id=field('ccc-report-id');
+    var reports=(typeof crashReports==='function'?crashReports():[])||[];
+    var report=reports.find(function(x){return String(x.id)===String(id);});
+    if(!report)throw new Error('Crash Cart report was not found. Reload the page and try again.');
+    var seal=field('ccc-new-seal').trim();
+    if(!seal)throw new Error('Enter the new seal number.');
+
+    var replacements=[];
+    document.querySelectorAll('#ccc-items tr[data-id]').forEach(function(tr){
+      replacements.push({
+        itemId:tr.dataset.id,
+        qty:num((tr.querySelector('.ccc-qty')||{}).value),
+        expiry:(tr.querySelector('.ccc-exp')||{}).value||''
+      });
+    });
+
+    var carts=(typeof crashCarts==='function'?crashCarts():[])||[];
+    var cart=carts.find(function(x){return String(x.id)===String(report.cartId);});
+    if(!cart)throw new Error('The related Crash Cart was not found.');
+
+    /* Work on clones so a rejected write cannot leave the visible cache half-modified. */
+    var nextReports=JSON.parse(JSON.stringify(reports));
+    var nextCarts=JSON.parse(JSON.stringify(carts));
+    var nextReport=nextReports.find(function(x){return String(x.id)===String(id);});
+    var nextCart=nextCarts.find(function(x){return String(x.id)===String(nextReport.cartId);});
+
+    replacements.forEach(function(rep){
+      var item=(nextCart.items||[]).find(function(x){return String(x.id)===String(rep.itemId);});
+      if(!item)return;
+      var used=(nextReport.consumed||[]).find(function(x){return String(x.itemId)===String(rep.itemId);});
+      var current=num(item.present!=null?item.present:item.qty);
+      item.present=Math.max(0,current-num(used&&used.qty)+num(rep.qty));
+      if(rep.expiry&&rep.qty>0){
+        item.batches=item.batches||[];
+        item.batches.push({qty:num(rep.qty),expiry:rep.expiry});
+      }
+    });
+    nextCart.seal=seal;
+    nextReport.status='closed';
+    nextReport.closedAt=typeof nowISO==='function'?nowISO():new Date().toISOString();
+    nextReport.closedBy=typeof actualActorName==='function'?actualActorName():((window.CU&&CU.username)||'');
+    nextReport.newSeal=seal;
+    nextReport.pharmacyNote=field('ccc-note').trim();
+    nextReport.replacements=replacements;
+    nextReport.lastEditedAt=nextReport.closedAt;
+    nextReport.lastEditedBy=nextReport.closedBy;
+
+    /* Save sequentially. If the second write fails, restore the first document. */
+    await setCrashCarts(nextCarts);
+    try{
+      await setCrashReports(nextReports);
+    }catch(reportErr){
+      try{await setCrashCarts(carts);}catch(rollbackErr){console.error('Crash Cart rollback failed:',rollbackErr);}
+      throw reportErr;
+    }
+
+    try{if(typeof auditAction==='function')auditAction('crash_cart_report_closed_or_edited',{reportId:id,newSeal:seal,replacements:replacements});}catch(auditErr){console.warn(auditErr);}
+    if(typeof CM==='function')CM('mcc-close');
+    else if(modal){modal.classList.remove('on');modal.style.display='none';}
+    if(typeof renderCrashCarts==='function')renderCrashCarts();
+    if(typeof ccUpdateBadges==='function')ccUpdateBadges();
+    if(typeof toast==='function')toast('Pharmacy response saved and closed ✓','succ');
+  }catch(err){
+    console.error('Crash Cart pharmacy response save failed:',err);
+    var msg=(err&&err.message)||'Unable to save the pharmacy response.';
+    if(typeof toast==='function')toast(msg,'err');
+  }finally{
+    if(saveBtn){saveBtn.dataset.saving='0';saveBtn.disabled=false;saveBtn.innerHTML=oldText||'حفظ وإغلاق البلاغ';}
+  }
+};
+})();
+</script>
 </body>
 </html>
 
