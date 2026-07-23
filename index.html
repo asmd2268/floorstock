@@ -2122,6 +2122,9 @@ Furosemide 40mg tab&#9;5&#9;20</pre>
 
 
 <script>
+// ── GLOBAL DEFAULT CATEGORIES (must be defined before any UI rendering) ──
+var DEFAULT_CATS=['Injections','Inhalers','Suppositories','Tablets','Syrups','Topical','Ointments & Drops','Solutions'];
+
 
 async function checkPublicControlledExpiry(){
   var params=new URLSearchParams(location.search);if(params.get('view')!=='controlled-expiry')return false;
@@ -5418,7 +5421,9 @@ function CM(id){document.getElementById(id).classList.remove('on');if(id==='mexp
 var DEFAULT_CATS=['Injections','Inhalers','Suppositories','Tablets','Syrups','Topical','Ointments & Drops','Solutions'];
 function getCategories(){
   var saved=S.g('custom_categories');
-  return saved&&saved.length?saved:DEFAULT_CATS.slice();
+  if(saved&&saved.length)return saved;
+  if(typeof DEFAULT_CATS==='undefined'||!DEFAULT_CATS)return ['Injections','Inhalers','Suppositories','Tablets','Syrups','Topical','Ointments & Drops','Solutions'];
+  return DEFAULT_CATS.slice();
 }
 function setCategories(arr){S.s('custom_categories',arr)}
 
