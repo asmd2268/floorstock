@@ -2215,6 +2215,13 @@ var S={
   s:function(k,v){
     var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     S.cache[k]=v;
+    // Reject silent/background writes during startup or while the login screen is visible.
+    // User-triggered saves occur only after CU is established and the app is open.
+    if(!CU||!FB_AUTH||!FB_AUTH.currentUser||!S.ready){
+      if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
+      console.warn('Blocked automatic Firestore write during startup:',k);
+      return Promise.resolve(false);
+    }
     return _wrapSave(FB_DB.collection('floorstock_state').doc(k).set({value:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(err){
       // Rollback cache to previous value on Firestore failure
       if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
@@ -7237,7 +7244,11 @@ function comprehensiveMigration(){
   if(!S.g('crash_cart_reports'))S.s('crash_cart_reports',[]);
 }
 var _seedComprehensive=seed;
-seed=function(){_seedComprehensive();setTimeout(comprehensiveMigration,0)};
+seed=function(){
+  // V7: Automatic seeding and write-migrations are intentionally disabled.
+  // Opening/signing in must be read-only. Defaults are created only through explicit UI actions.
+  return Promise.resolve();
+};
 
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
@@ -14117,7 +14128,7 @@ body:not(.role-department) #pg-newreq {
 <script id="v15-fast-profile-final-authority">
 (function(){
 'use strict';
-window.FLOORSTOCK_BUILD='V15-20260723-PROFILE-NORMAL-READ-V6';
+window.FLOORSTOCK_BUILD='V15-20260723-NO-AUTO-SAVE-V7';
 function E(id){return document.getElementById(id)}
 function timeout(ms,msg){return new Promise(function(_,reject){setTimeout(function(){reject(new Error(msg))},ms)})}
 function validProfile(p){return !!(p&&['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'].indexOf(p.role)>=0)}
@@ -14154,7 +14165,9 @@ async function initDataNonBlocking(){
     await Promise.race([S.init(),timeout(9000,'data startup timeout')]);
   }catch(err){
     console.warn('Floor Stock opened before server refresh:',err);
-    try{S.ready=true;seed();S.startRealtime();}catch(_){ }
+    // Never create or modify Firestore records merely because the application opened.
+    // Continue with the available cache and attach listeners in read-only startup mode.
+    try{S.ready=true;S.startRealtime();}catch(_){ }
   }
 }
 window.doLogin=async function(){
