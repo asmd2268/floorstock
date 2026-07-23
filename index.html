@@ -14006,7 +14006,7 @@ window.ccSavePharmacyResponse=async function(){
 <script id="v15-instant-login-final-authority">
 (function(){
 'use strict';
-window.FLOORSTOCK_BUILD='V15-20260723-LOGIN-AUDITED-V9';
+window.FLOORSTOCK_BUILD='V15-20260723-PROFILE-TRANSPORT-FIXED-V10';
 function E(id){return document.getElementById(id)}
 function delayReject(ms,msg){return new Promise(function(_,reject){setTimeout(function(){reject(new Error(msg))},ms)})}
 function validProfile(p){return !!(p&&['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'].indexOf(p.role)>=0)}
@@ -14014,50 +14014,79 @@ function localProfile(uid){
   try{var p=JSON.parse(localStorage.getItem('fs_profile_'+uid)||'null');return validProfile(p)?p:null}catch(_){return null}
 }
 function saveLocalProfile(uid,p){try{localStorage.setItem('fs_profile_'+uid,JSON.stringify(p))}catch(_){}}
-async function serverProfile(uid){
-  var snap=await Promise.race([
-    FB_DB.collection('users').doc(uid).get(),
-    delayReject(8000,'Profile connection timed out.')
-  ]);
-  if(!snap||!snap.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
-  var p=snap.data()||{};
-  if(!validProfile(p))throw new Error('This account has an invalid role.');
-  if(p.active===false)throw new Error('This account is inactive.');
-  saveLocalProfile(uid,p);
-  return p;
-}
-async function quickProfile(uid){
-  var ref=FB_DB.collection('users').doc(uid),local=localProfile(uid);
-  try{
-    var cached=await Promise.race([ref.get({source:'cache'}),delayReject(900,'Profile cache timeout.')]);
-    if(cached&&cached.exists){
-      var cp=cached.data()||{};
-      if(validProfile(cp)&&cp.active!==false){saveLocalProfile(uid,cp);return cp;}
-    }
-  }catch(_){ }
-  if(local&&local.active!==false){
-    /* Do not block login on a repeat visit. Refresh authorization in the background. */
-    serverProfile(uid).then(function(fresh){
-      if(!window.CU||CU.id!==uid)return;
-      if(fresh.active===false||!validProfile(fresh)){
-        try{FB_AUTH.signOut()}catch(_){}
-        location.reload();
-      }
-    }).catch(function(err){console.warn('Background profile refresh failed:',err)});
-    return local;
+function decodeFirestoreValue(v){
+  if(!v||typeof v!=='object')return null;
+  if(Object.prototype.hasOwnProperty.call(v,'stringValue'))return v.stringValue;
+  if(Object.prototype.hasOwnProperty.call(v,'booleanValue'))return v.booleanValue;
+  if(Object.prototype.hasOwnProperty.call(v,'integerValue'))return Number(v.integerValue);
+  if(Object.prototype.hasOwnProperty.call(v,'doubleValue'))return Number(v.doubleValue);
+  if(Object.prototype.hasOwnProperty.call(v,'timestampValue'))return v.timestampValue;
+  if(Object.prototype.hasOwnProperty.call(v,'nullValue'))return null;
+  if(Object.prototype.hasOwnProperty.call(v,'referenceValue'))return v.referenceValue;
+  if(Object.prototype.hasOwnProperty.call(v,'geoPointValue'))return v.geoPointValue;
+  if(Object.prototype.hasOwnProperty.call(v,'bytesValue'))return v.bytesValue;
+  if(v.arrayValue)return (v.arrayValue.values||[]).map(decodeFirestoreValue);
+  if(v.mapValue){
+    var o={};Object.keys(v.mapValue.fields||{}).forEach(function(k){o[k]=decodeFirestoreValue(v.mapValue.fields[k])});return o;
   }
-  return serverProfile(uid);
+  return null;
+}
+function decodeFirestoreDocument(doc){
+  var o={};Object.keys((doc&&doc.fields)||{}).forEach(function(k){o[k]=decodeFirestoreValue(doc.fields[k])});return o;
+}
+async function restProfile(uid,user){
+  var token=await Promise.race([user.getIdToken(false),delayReject(6000,'Authentication token timed out.')]);
+  var project=(window.FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId)||'floorstock-6ac2d';
+  var url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(project)+'/databases/(default)/documents/users/'+encodeURIComponent(uid);
+  var ctl=typeof AbortController!=='undefined'?new AbortController():null;
+  var timer=ctl?setTimeout(function(){ctl.abort()},10000):null;
+  try{
+    var res=await fetch(url,{method:'GET',headers:{Authorization:'Bearer '+token},signal:ctl?ctl.signal:undefined,cache:'no-store'});
+    var bodyText=await res.text(),body=null;
+    try{body=bodyText?JSON.parse(bodyText):null}catch(_){body=null}
+    if(res.status===404)throw new Error('Your Firebase account has no Floor Stock role profile.');
+    if(res.status===403)throw new Error('Firestore rules denied access to your user profile.');
+    if(!res.ok){
+      var detail=body&&body.error&&body.error.message;
+      throw new Error(detail||('Profile request failed with HTTP '+res.status+'.'));
+    }
+    return decodeFirestoreDocument(body);
+  }catch(err){
+    if(err&&err.name==='AbortError')throw new Error('Profile connection timed out.');
+    throw err;
+  }finally{if(timer)clearTimeout(timer)}
+}
+async function sdkProfile(uid){
+  try{if(FB_DB&&typeof FB_DB.enableNetwork==='function')await Promise.race([FB_DB.enableNetwork(),delayReject(2000,'')])}catch(_){}
+  var snap=await Promise.race([FB_DB.collection('users').doc(uid).get(),delayReject(5000,'Firestore SDK profile request timed out.')]);
+  if(!snap||!snap.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
+  return snap.data()||{};
+}
+async function authoritativeProfile(uid,user){
+  var errors=[];
+  try{
+    var p=await sdkProfile(uid);
+    if(!validProfile(p))throw new Error('This account has an invalid role.');
+    if(p.active===false)throw new Error('This account is inactive.');
+    saveLocalProfile(uid,p);return p;
+  }catch(e){errors.push(e);console.warn('Firestore SDK profile read failed:',e)}
+  try{
+    var rp=await restProfile(uid,user);
+    if(!validProfile(rp))throw new Error('This account has an invalid role.');
+    if(rp.active===false)throw new Error('This account is inactive.');
+    saveLocalProfile(uid,rp);return rp;
+  }catch(e2){errors.push(e2);console.warn('Firestore REST profile read failed:',e2)}
+  var local=localProfile(uid);
+  if(local&&local.active!==false)return local;
+  var meaningful=errors.find(function(e){return e&&e.message&&!/timed out/i.test(e.message)})||errors[errors.length-1];
+  throw meaningful||new Error('Unable to load your profile.');
 }
 function beginDataSync(){
-  /* The UI is already open. Do not race S.init against another listener startup path. */
   Promise.resolve().then(function(){return S.init()}).then(function(){
     try{
       if(CU&&CU.deptId&&typeof gd==='function'){
         var d=(gd()||[]).find(function(x){return x.id===CU.deptId});
-        if(d){
-          CU.deptName=d.name||CU.deptName||'';
-          var u=E('tuser');if(u&&CU.role==='department')u.textContent='🏢 '+CU.deptName;
-        }
+        if(d){CU.deptName=d.name||CU.deptName||'';var u=E('tuser');if(u&&CU.role==='department')u.textContent='🏢 '+CU.deptName;}
       }
       if(typeof refreshCurrentPage==='function')refreshCurrentPage();
     }catch(err){console.warn('Post-login refresh failed:',err)}
@@ -14076,40 +14105,20 @@ window.doLogin=async function(){
   function reset(){loginInFlight=false;if(btn){btn.disabled=false;btn.innerHTML=old}}
   if(E('aerr'))E('aerr').style.display='none';
   if(!email||!password){error('Enter your Firebase email and password');reset();return}
-  loginInFlight=true;
-  if(btn){btn.disabled=true;btn.textContent='Signing in…'}
+  loginInFlight=true;if(btn){btn.disabled=true;btn.textContent='Signing in…'}
   try{
-    if(!window.FB_AUTH||!window.FB_DB){initFirebase()}
-    var credential=await Promise.race([
-      FB_AUTH.signInWithEmailAndPassword(email,password),
-      delayReject(15000,'Firebase sign-in timed out.')
-    ]);
-    signedIn=true;
-    if(btn)btn.textContent='Opening account…';
-    var profile=await quickProfile(credential.user.uid);
-    if(profile.active===false)throw new Error('This account is inactive.');
-    if(!validProfile(profile))throw new Error('This account has an invalid role.');
+    if(!window.FB_AUTH||!window.FB_DB)initFirebase();
+    var credential=await Promise.race([FB_AUTH.signInWithEmailAndPassword(email,password),delayReject(15000,'Firebase sign-in timed out.')]);
+    signedIn=true;if(btn)btn.textContent='Opening account…';
+    var profile=await authoritativeProfile(credential.user.uid,credential.user);
     var deptId=profile.deptId||null;
-    CU={
-      id:credential.user.uid,
-      email:profile.email||credential.user.email,
-      role:profile.role,
-      master:profile.master===true,
-      username:profile.displayName||profile.email||credential.user.email,
-      deptId:deptId,
-      deptName:profile.deptName||profile.departmentName||'',
-      controlledCustodian:!!profile.controlledCustodian
-    };
+    CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:profile.deptName||profile.departmentName||'',controlledCustodian:!!profile.controlledCustodian};
     if(typeof MASTER_ACTUAL!=='undefined'){MASTER_ACTUAL=CU.master?Object.assign({},CU):null;MASTER_EFFECTIVE=null}
-    startApp();
-    loginInFlight=false;
-    beginDataSync();
+    startApp();loginInFlight=false;beginDataSync();
   }catch(err){
     console.error('Login failed:',err);
     if(signedIn){try{await FB_AUTH.signOut()}catch(_){}}
-    CU=null;
-    error((err&&err.message)||'Unable to sign in');
-    reset();
+    CU=null;error((err&&err.message)||'Unable to sign in');reset();
   }
 };
 })();
