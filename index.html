@@ -13527,21 +13527,16 @@ window.v14SetPrintFilter=function(f){
 
 <!-- ═══════════════════════════════════════════════════════════════════
      V15 RADICAL FIXES — 2026-07-23
-     1. New Request page: pharmacy + inpatient_supervisor only
+     1. New Request page: department users only
      2. Freeze & Hide buttons: pharmacy + inpatient_supervisor only
      3. Controlled Medicines print: same detail as controlled stock print
      4. Announcements nav button: master + pharmacy + controlled_pharmacy
         + inpatient_supervisor ONLY (not pharmacy_staff)
 ═══════════════════════════════════════════════════════════════════ -->
 <style id="v15-fixes-style">
-/* ── 1. New Request visibility: show ONLY for pharmacy & inpatient_supervisor ── */
-/* Hide by default for all non-department roles */
-body:not(.role-department) #pg-newreq { display: none !important; }
-/* Show when af-request-enabled class is added (privilegedRequestViewer) */
-body.role-pharmacy #pg-newreq.af-request-enabled,
-body.role-inpatient_supervisor #pg-newreq.af-request-enabled { display: block !important; }
-/* Ensure department role always sees it */
-body.role-department #pg-newreq { display: block !important; }
+/* New Request belongs exclusively to department users. */
+body:not(.role-department) #pg-newreq { display:none !important; }
+body.role-department #pg-newreq { display:block !important; }
 
 /* ── 4. Announcements: hide for pharmacy_staff ── */
 body.role-pharmacy_staff [data-pg="pg-announcements"] { display: none !important; }
@@ -13599,78 +13594,8 @@ window.pharmacyUser = canSeeAnnV15;
 /* canManageAnnouncements used by the inline script at line ~10560 */
 window.canManageAnnouncements = canAddAnnV15;
 
-/* ────────────────────────────────────────────────────────────────
-   FIX 1 — New Request page
-   privilegedRequestViewer was: inpatient_supervisor only
-   → keep: pharmacy + inpatient_supervisor
-   (department role goes through normal renderReqForm)
-──────────────────────────────────────────────────────────────── */
-window.v15PrivilegedRequest = function(){
-  return !!(window.CU&&(isMaster()||['pharmacy','inpatient_supervisor'].indexOf(role())>=0));
-};
-
-/* Patch the af-inpatient script's privilegedRequestViewer if accessible */
-/* We re-patch showPg to intercept pg-newreq for both pharmacy & inpatient_supervisor */
-var _showPgV14 = window.showPg;
-window.showPg = function(id){
-  if(id === 'pg-newreq' && window.CU && window.v15PrivilegedRequest()){
-    /* Force page visible */
-    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
-    var page = E('pg-newreq');
-    if(page){
-      page.style.display = '';
-      page.classList.add('af-request-enabled','on');
-    }
-    document.querySelectorAll('#mnav .nb').forEach(function(b){
-      b.classList.toggle('on', b.dataset.pg === 'pg-newreq');
-    });
-    /* Ensure department selector */
-    var host = E('af-request-dept-host')||E('v13-admin-request-host');
-    if(!host){
-      host = document.createElement('div');
-      host.id = 'af-request-dept-host';
-      host.className = 'card';
-      host.style.marginBottom = '14px';
-      host.innerHTML = '<div class="ch"><span class="ct">Request department / قسم الطلب</span></div>'
-        + '<div class="cb"><select id="af-request-dept-select" style="margin:0"></select></div>';
-      if(page) page.insertBefore(host, page.firstChild);
-    }
-    var sel = E('af-request-dept-select');
-    if(sel){
-      var ds = typeof gd==='function'?(gd()||[]):[];
-      var cur = sel.value || (ds[0]&&ds[0].id) || '';
-      sel.innerHTML = ds.map(function(d){
-        return '<option value="'+d.id+'" '+(String(d.id)===String(cur)?'selected':'')+'>'+d.name+'</option>';
-      }).join('');
-      if(!sel.onchange){
-        sel.onchange = function(){
-          if(typeof window.renderReqForm==='function') window.renderReqForm();
-          if(typeof window.renderMyReqs==='function') window.renderMyReqs();
-        };
-      }
-    }
-    if(typeof window.renderReqForm==='function') window.renderReqForm();
-    if(typeof window.renderMyReqs==='function') window.renderMyReqs();
-    return;
-  }
-  return _showPgV14 && _showPgV14.apply(this, arguments);
-};
-
-/* Ensure New Request nav button appears for pharmacy & inpatient_supervisor */
-function v15EnsureRequestNav(){
-  if(!window.CU || !window.v15PrivilegedRequest()) return;
-  var nav = E('mnav'); if(!nav) return;
-  var b = nav.querySelector('[data-pg="pg-newreq"]');
-  if(!b){
-    b = document.createElement('button');
-    b.className = 'nb';
-    b.dataset.pg = 'pg-newreq';
-    b.textContent = 'New Request / طلب جديد';
-    b.onclick = function(){ window.showPg('pg-newreq'); };
-    nav.appendChild(b);
-  }
-  b.style.display = '';
-}
+/* New Request is intentionally not exposed to pharmacy-side roles.
+   Department navigation already owns pg-newreq; no runtime injection or role mutation is allowed here. */
 
 /* ────────────────────────────────────────────────────────────────
    FIX 2 — Freeze & Hide buttons in Inventory
@@ -13798,6 +13723,24 @@ function v15EnsureInvTools(){
    HIDE: pharmacy_staff, department, warehouse
    The "Add announcement" button: same roles (canAddAnnV15)
 ──────────────────────────────────────────────────────────────── */
+function openAnnouncementsPageV15(){
+  if(!canSeeAnnV15()) return;
+  var page=E('pg-announcements');
+  if(!page && typeof window.renderAnnouncements==='function'){
+    try{ window.renderAnnouncements(); }catch(e){ console.error(e); }
+    page=E('pg-announcements');
+  }
+  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+  document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.remove('on')});
+  if(page){ page.style.display=''; page.classList.add('on'); }
+  var btn=document.querySelector('#mnav [data-pg="pg-announcements"]');
+  if(btn)btn.classList.add('on');
+  if(typeof window.renderAnnouncements==='function'){
+    try{ window.renderAnnouncements(); }catch(e){ console.error('Announcements render failed',e); }
+  }
+}
+window.openAnnouncementsPageV15=openAnnouncementsPageV15;
+
 function v15EnsureAnnouncements(){
   var nav = E('mnav'); if(!nav) return;
   var b = nav.querySelector('[data-pg="pg-announcements"]');
@@ -13807,10 +13750,14 @@ function v15EnsureAnnouncements(){
       b.className = 'nb';
       b.dataset.pg = 'pg-announcements';
       b.innerHTML = '📢 Announcements / الإعلانات';
-      b.onclick = function(){ window.showPg('pg-announcements'); };
+      b.onclick = function(ev){
+        if(ev) ev.preventDefault();
+        openAnnouncementsPageV15();
+      };
       nav.appendChild(b);
     }
     b.style.display = '';
+    b.onclick = function(ev){if(ev)ev.preventDefault();openAnnouncementsPageV15();};
   } else {
     if(b) b.remove();
   }
@@ -13831,11 +13778,19 @@ window.openAnnouncementEditor = function(id){
 /* ────────────────────────────────────────────────────────────────
    WIRE UP — hook into buildNav, startApp, showPg
 ──────────────────────────────────────────────────────────────── */
+var _showPgAnnouncementsBase = window.showPg;
+window.showPg = function(id){
+  if(id==='pg-announcements'){
+    openAnnouncementsPageV15();
+    return;
+  }
+  return _showPgAnnouncementsBase && _showPgAnnouncementsBase.apply(this,arguments);
+};
+
 var _buildNavV15 = window.buildNav;
 window.buildNav = function(){
   var r = _buildNavV15 && _buildNavV15.apply(this, arguments);
   setTimeout(function(){
-    v15EnsureRequestNav();
     v15EnsureAnnouncements();
     v15EnsureInvTools();
   }, 0);
@@ -13846,7 +13801,6 @@ var _startAppV15 = window.startApp;
 window.startApp = function(){
   var r = _startAppV15 && _startAppV15.apply(this, arguments);
   setTimeout(function(){
-    v15EnsureRequestNav();
     v15EnsureAnnouncements();
     v15EnsureInvTools();
   }, 120);
@@ -13862,7 +13816,7 @@ window.renderInv = function(){
 };
 
 /* Version stamp */
-window.FLOORSTOCK_BUILD = 'V15-20260723-RADICAL-FIXES';
+window.FLOORSTOCK_BUILD = 'V15-20260723-NAV-CONSOLIDATED';
 (function(){
   var x = E('v14dp-stamp')||E('v15-stamp');
   if(!x){ x=document.createElement('div'); x.id='v15-stamp';
