@@ -13524,5 +13524,354 @@ window.v14SetPrintFilter=function(f){
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     V15 RADICAL FIXES — 2026-07-23
+     1. New Request page: pharmacy + inpatient_supervisor only
+     2. Freeze & Hide buttons: pharmacy + inpatient_supervisor only
+     3. Controlled Medicines print: same detail as controlled stock print
+     4. Announcements nav button: master + pharmacy + controlled_pharmacy
+        + inpatient_supervisor ONLY (not pharmacy_staff)
+═══════════════════════════════════════════════════════════════════ -->
+<style id="v15-fixes-style">
+/* ── 1. New Request visibility: show ONLY for pharmacy & inpatient_supervisor ── */
+/* Hide by default for all non-department roles */
+body:not(.role-department) #pg-newreq { display: none !important; }
+/* Show when af-request-enabled class is added (privilegedRequestViewer) */
+body.role-pharmacy #pg-newreq.af-request-enabled,
+body.role-inpatient_supervisor #pg-newreq.af-request-enabled { display: block !important; }
+/* Ensure department role always sees it */
+body.role-department #pg-newreq { display: block !important; }
+
+/* ── 4. Announcements: hide for pharmacy_staff ── */
+body.role-pharmacy_staff [data-pg="pg-announcements"] { display: none !important; }
+</style>
+
+<script id="v15-radical-fixes">
+(function(){
+'use strict';
+
+/* ── Helpers ── */
+function E(id){return document.getElementById(id)}
+function role(){
+  try{
+    return String((window.MASTER_EFFECTIVE&&window.MASTER_EFFECTIVE.role)||(window.CU&&window.CU.role)||'');
+  }catch(e){return ''}
+}
+function isMaster(){
+  try{
+    return !!(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)||
+           !!(window.CU&&window.CU.master===true&&!window.MASTER_EFFECTIVE)||
+           (typeof window.isMasterActual==='function'&&window.isMasterActual());
+  }catch(e){return false}
+}
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 1 & 2 — Permission helpers (overwrite ALL variants)
+   canManage / pharmacyManager / canHide / canFreeze
+   → pharmacy + inpatient_supervisor + master
+   pharmacyUser (for announcements visibility)
+   → master + pharmacy + controlled_pharmacy + inpatient_supervisor
+   (NOT pharmacy_staff)
+   canSeeAnnouncements: same as pharmacyUser above
+──────────────────────────────────────────────────────────────── */
+var MANAGE_ROLES   = ['pharmacy','inpatient_supervisor'];
+var ANN_SEE_ROLES  = ['pharmacy','controlled_pharmacy','inpatient_supervisor'];
+var ANN_ADD_ROLES  = ['pharmacy','controlled_pharmacy','inpatient_supervisor'];
+
+function canManageV15()  { return isMaster()||MANAGE_ROLES.indexOf(role())>=0 }
+function canSeeAnnV15()  { return isMaster()||ANN_SEE_ROLES.indexOf(role())>=0 }
+function canAddAnnV15()  { return isMaster()||ANN_ADD_ROLES.indexOf(role())>=0 }
+
+/* Overwrite every copy of these functions */
+window.canManage           = canManageV15;
+window.pharmacyManager     = canManageV15;
+window.canHide             = canManageV15;
+window.canFreeze           = canManageV15;
+window.canFreezeByName     = canManageV15;
+window.canMergeNames       = canManageV15;
+window.canManageW          = canManageV15;
+window.canSeeAnnouncements = canSeeAnnV15;
+/* pharmacyUser was being used to show announcement button to pharmacy_staff —
+   restrict it now */
+window.pharmacyUser = canSeeAnnV15;
+
+/* canManageAnnouncements used by the inline script at line ~10560 */
+window.canManageAnnouncements = canAddAnnV15;
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 1 — New Request page
+   privilegedRequestViewer was: inpatient_supervisor only
+   → keep: pharmacy + inpatient_supervisor
+   (department role goes through normal renderReqForm)
+──────────────────────────────────────────────────────────────── */
+window.v15PrivilegedRequest = function(){
+  return !!(window.CU&&(isMaster()||['pharmacy','inpatient_supervisor'].indexOf(role())>=0));
+};
+
+/* Patch the af-inpatient script's privilegedRequestViewer if accessible */
+/* We re-patch showPg to intercept pg-newreq for both pharmacy & inpatient_supervisor */
+var _showPgV14 = window.showPg;
+window.showPg = function(id){
+  if(id === 'pg-newreq' && window.CU && window.v15PrivilegedRequest()){
+    /* Force page visible */
+    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+    var page = E('pg-newreq');
+    if(page){
+      page.style.display = '';
+      page.classList.add('af-request-enabled','on');
+    }
+    document.querySelectorAll('#mnav .nb').forEach(function(b){
+      b.classList.toggle('on', b.dataset.pg === 'pg-newreq');
+    });
+    /* Ensure department selector */
+    var host = E('af-request-dept-host')||E('v13-admin-request-host');
+    if(!host){
+      host = document.createElement('div');
+      host.id = 'af-request-dept-host';
+      host.className = 'card';
+      host.style.marginBottom = '14px';
+      host.innerHTML = '<div class="ch"><span class="ct">Request department / قسم الطلب</span></div>'
+        + '<div class="cb"><select id="af-request-dept-select" style="margin:0"></select></div>';
+      if(page) page.insertBefore(host, page.firstChild);
+    }
+    var sel = E('af-request-dept-select');
+    if(sel){
+      var ds = typeof gd==='function'?(gd()||[]):[];
+      var cur = sel.value || (ds[0]&&ds[0].id) || '';
+      sel.innerHTML = ds.map(function(d){
+        return '<option value="'+d.id+'" '+(String(d.id)===String(cur)?'selected':'')+'>'+d.name+'</option>';
+      }).join('');
+      if(!sel.onchange){
+        sel.onchange = function(){
+          if(typeof window.renderReqForm==='function') window.renderReqForm();
+          if(typeof window.renderMyReqs==='function') window.renderMyReqs();
+        };
+      }
+    }
+    if(typeof window.renderReqForm==='function') window.renderReqForm();
+    if(typeof window.renderMyReqs==='function') window.renderMyReqs();
+    return;
+  }
+  return _showPgV14 && _showPgV14.apply(this, arguments);
+};
+
+/* Ensure New Request nav button appears for pharmacy & inpatient_supervisor */
+function v15EnsureRequestNav(){
+  if(!window.CU || !window.v15PrivilegedRequest()) return;
+  var nav = E('mnav'); if(!nav) return;
+  var b = nav.querySelector('[data-pg="pg-newreq"]');
+  if(!b){
+    b = document.createElement('button');
+    b.className = 'nb';
+    b.dataset.pg = 'pg-newreq';
+    b.textContent = 'New Request / طلب جديد';
+    b.onclick = function(){ window.showPg('pg-newreq'); };
+    nav.appendChild(b);
+  }
+  b.style.display = '';
+}
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 2 — Freeze & Hide buttons in Inventory
+   ensureInventoryTools: already calls pharmacyManager() → fixed above
+   But also fix canHide guard in opsSaveHide wrapper
+──────────────────────────────────────────────────────────────── */
+/* opsSaveHide already checks canHide() which is now overwritten — no extra patch needed */
+/* Ensure freeze btn visibility is recalculated after role is known */
+function v15EnsureInvTools(){
+  if(!canManageV15()) return;
+  var bar = document.querySelector('#bulk-bar .fl.g8');
+  if(!bar) return;
+  if(!E('ops-hide-selected')){
+    var bh = document.createElement('button');
+    bh.id = 'ops-hide-selected';
+    bh.className = 'btn bg bsm';
+    bh.textContent = '🙈 Hide by department';
+    bh.onclick = function(){ if(typeof window.openHideModal==='function') window.openHideModal(); };
+    bar.appendChild(bh);
+  }
+  if(!E('ops-freeze-selected')){
+    var bf = document.createElement('button');
+    bf.id = 'ops-freeze-selected';
+    bf.className = 'btn bg bsm';
+    bf.textContent = '⏸ Freeze by department';
+    bf.onclick = function(){ if(typeof window.openFreezeModal==='function') window.openFreezeModal(); };
+    bar.appendChild(bf);
+  }
+}
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 3 — Controlled Medicines print: same detail format as
+   controlled stock print (ctlConfirmDepartmentPrint)
+   The existing ctlConfirmDepartmentPrint already matches controlled stock.
+   The issue is that some overrides omit columns. We patch the LAST
+   overwrite of window.ctlConfirmDepartmentPrint to always use
+   the full format (Required Qty, Actual Qty, Expiry batches, signs).
+──────────────────────────────────────────────────────────────── */
+(function(){
+  function escP(s){var d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML}
+  function nP(v){return isNaN(Number(v))?0:Number(v)}
+  function fmtDMY(s){
+    if(!s) return '—';
+    try{
+      var d=new Date(s+'T00:00:00');
+      if(isNaN(d.getTime())) return String(s);
+      return ('0'+d.getDate()).slice(-2)+'/'+('0'+(d.getMonth()+1)).slice(-2)+'/'+d.getFullYear();
+    }catch(e){return String(s)}
+  }
+  function batchLines(batches){
+    if(!batches||!batches.length) return '—';
+    return batches.map(function(b){
+      return (b.qty!=null&&b.qty!==''?escP(b.qty)+' → ':'')+escP(fmtDMY(b.expiry))+(b.lot?' — '+escP(b.lot):'');
+    }).join('<br>');
+  }
+
+  window.ctlConfirmDepartmentPrint = async function(){
+    var dept = typeof ctlCurrentDept==='function' ? ctlCurrentDept() : '';
+    if(!dept) return typeof toast==='function'&&toast('Select a department first','err');
+    var name = ((typeof gd==='function'?gd():[]).find(function(d){return String(d.id)===String(dept)})||{}).name||dept;
+    var s = typeof ctlPrintSettings==='function' ? ctlPrintSettings(dept) : {};
+    var logo = typeof ctlLogo==='function' ? ctlLogo() : '';
+
+    /* Publish for QR */
+    if(typeof ctlPublishDept==='function') await ctlPublishDept(dept);
+    var url = typeof ctlPublicUrl==='function' ? ctlPublicUrl(dept) : '';
+    var qr = url ? 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url) : '';
+
+    /* Detect code mode */
+    var checkedCode = document.querySelector('input[name="ctl-print-code"]:checked');
+    var codeMode = checkedCode ? checkedCode.value : (s.printCodeMode||'both');
+    if(codeMode) { s.printCodeMode = codeMode; await (typeof S!=='undefined'?S.s('controlled_settings_'+dept,s):Promise.resolve()); }
+
+    var codeHeads = codeMode==='moh'?'<th>MOH Code</th>'
+      : codeMode==='nupco'?'<th>NUPCO Code</th>'
+      : codeMode==='both'?'<th>MOH Code</th><th>NUPCO Code</th>':'';
+
+    var rows = (typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x,i){
+      var m = typeof ctlMedicine==='function' ? (ctlMedicine(x.medId)||{}) : {};
+      var codeCells = codeMode==='moh'?'<td>'+escP(m.moh||'—')+'</td>'
+        : codeMode==='nupco'?'<td>'+escP(m.nupco||'—')+'</td>'
+        : codeMode==='both'?'<td>'+escP(m.moh||'—')+'</td><td>'+escP(m.nupco||'—')+'</td>':'';
+      var required = nP(x.requiredQty!=null?x.requiredQty:(m.max||0));
+      var actual   = nP(x.actualQty!=null?x.actualQty:(x.qty||0));
+      return '<tr><td>'+(i+1)+'</td>'+codeCells
+        +'<td class="med">'+escP(m.name||'')+'</td>'
+        +'<td style="text-align:center">'+required+'</td>'
+        +'<td style="text-align:center">'+actual+'</td>'
+        +'<td>'+batchLines(x.batches)+'</td>'
+        +'</tr>';
+    }).join('');
+
+    var custodians = escP(s.controlledCustodian||'').replace(/,\s*/g,'<br>');
+    var body =
+      '<div class="head">'
+        +'<div>'+(logo?'<img class="logo" style="max-width:270px;height:auto" src="'+logo+'">':'')+'</div>'
+        +'<div><h1>قائمة عهدة الأدوية المخدرة والمقيدة</h1>'
+          +'<h2>Custody of Narcotic and Controlled Medication</h2>'
+          +'<h2>'+escP(name)+'</h2></div>'
+        +'<div>'+(qr?'<img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Expiry follow-up<br>متابعة الانتهاء</div>':'')+'</div>'
+      +'</div>'
+      +'<table><thead><tr><th>#</th>'+codeHeads
+        +'<th class="med">Medicine / اسم الدواء</th>'
+        +'<th>Required Qty<br>الكمية المفترض توفرها</th>'
+        +'<th>Actual Qty<br>الكمية الفعلية</th>'
+        +'<th>Expiry batches / تواريخ الانتهاء</th>'
+        +'</tr></thead><tbody>'+rows+'</tbody></table>'
+      +'<div class="signs" style="grid-template-columns:repeat(3,1fr)">'
+        +'<div class="sig">رئيس تمريض القسم<br>Head Nurse<br><b>'+escP(s.nursingHead||'')+'</b></div>'
+        +'<div class="sig">أمين عهدة الأدوية المقيدة<br>Controlled Medicines Custodian<br><b>'+custodians+'</b></div>'
+        +'<div class="sig">مدير الصيدلية<br>Pharmacy Manager<br><b>'+escP(s.pharmacyManager||'')+'</b></div>'
+      +'</div>'
+      +'<div style="text-align:center;font-size:9px;margin-top:10px">'
+        +'Print date: '+new Date().toLocaleDateString('en-GB')+'&nbsp;·&nbsp;By Ali Abudahash'
+      +'</div>';
+
+    if(typeof CM==='function') CM('mctlprintopts');
+    if(typeof ctlPrintHTML==='function') ctlPrintHTML(name, body);
+  };
+})();
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 4 — Announcements button:
+   SHOW: master + pharmacy + controlled_pharmacy + inpatient_supervisor
+   HIDE: pharmacy_staff, department, warehouse
+   The "Add announcement" button: same roles (canAddAnnV15)
+──────────────────────────────────────────────────────────────── */
+function v15EnsureAnnouncements(){
+  var nav = E('mnav'); if(!nav) return;
+  var b = nav.querySelector('[data-pg="pg-announcements"]');
+  if(canSeeAnnV15()){
+    if(!b){
+      b = document.createElement('button');
+      b.className = 'nb';
+      b.dataset.pg = 'pg-announcements';
+      b.innerHTML = '📢 Announcements / الإعلانات';
+      b.onclick = function(){ window.showPg('pg-announcements'); };
+      nav.appendChild(b);
+    }
+    b.style.display = '';
+  } else {
+    if(b) b.remove();
+  }
+  /* Control the "Add" button inside the page */
+  setTimeout(function(){
+    var add = E('ann-add-btn')||document.querySelector('#pg-announcements button[onclick*="openAnnouncementEditor"]');
+    if(add) add.style.display = canAddAnnV15() ? 'inline-flex' : 'none';
+  }, 0);
+}
+
+/* Patch openAnnouncementEditor to respect new permission */
+var _oldOpenAnn = window.openAnnouncementEditor;
+window.openAnnouncementEditor = function(id){
+  if(!canAddAnnV15()) return typeof toast==='function'&&toast('Not authorized.','err');
+  return _oldOpenAnn && _oldOpenAnn.call(this, id);
+};
+
+/* ────────────────────────────────────────────────────────────────
+   WIRE UP — hook into buildNav, startApp, showPg
+──────────────────────────────────────────────────────────────── */
+var _buildNavV15 = window.buildNav;
+window.buildNav = function(){
+  var r = _buildNavV15 && _buildNavV15.apply(this, arguments);
+  setTimeout(function(){
+    v15EnsureRequestNav();
+    v15EnsureAnnouncements();
+    v15EnsureInvTools();
+  }, 0);
+  return r;
+};
+
+var _startAppV15 = window.startApp;
+window.startApp = function(){
+  var r = _startAppV15 && _startAppV15.apply(this, arguments);
+  setTimeout(function(){
+    v15EnsureRequestNav();
+    v15EnsureAnnouncements();
+    v15EnsureInvTools();
+  }, 120);
+  return r;
+};
+
+/* Also hook renderInv to keep hide/freeze buttons visible */
+var _renderInvV15 = window.renderInv;
+window.renderInv = function(){
+  var r = _renderInvV15 && _renderInvV15.apply(this, arguments);
+  setTimeout(v15EnsureInvTools, 0);
+  return r;
+};
+
+/* Version stamp */
+window.FLOORSTOCK_BUILD = 'V15-20260723-RADICAL-FIXES';
+(function(){
+  var x = E('v14dp-stamp')||E('v15-stamp');
+  if(!x){ x=document.createElement('div'); x.id='v15-stamp';
+    x.style.cssText='position:fixed;right:8px;bottom:32px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
+    document.body.appendChild(x); }
+  x.textContent = 'V15-20260723';
+})();
+
+})();
+</script>
 </body>
 </html>
