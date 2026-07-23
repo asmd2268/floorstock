@@ -3398,10 +3398,15 @@ function openAdminRequest(){
 function ensureRequestNav(){
   var nav=E('mnav');if(!nav)return;
   var b=nav.querySelector('[data-pg="pg-newreq"]');
-  if(canManage()){
-    if(!b){b=document.createElement('button');b.className='nb';b.dataset.pg='pg-newreq';b.textContent='New Request / طلب جديد';nav.appendChild(b)}
-    b.style.display='';b.onclick=function(ev){if(ev)ev.preventDefault();openAdminRequest()};
-  }else if(role()!=='department'&&b)b.remove();
+  var isDept = (typeof window.role === 'function' && window.role() === 'department') || (window.CU && window.CU.role === 'department');
+  if(!isDept){
+    if(b) b.remove();
+    var page=E('pg-newreq');
+    if(page){
+      page.classList.remove('on','af-request-enabled','v13-admin-request-enabled');
+      page.style.display='none';
+    }
+  }
 }
 function ensureAnnouncements(){
   var nav=E('mnav');if(!nav)return;
@@ -13590,104 +13595,76 @@ window.pharmacyUser        = canSeeAnnV16;   /* was incorrectly including pharma
 window.canManageAnnouncements = canAddAnnV16;
 
 /* ────────────────────────────────────────────────────────────────
-   FIX 1 — New Request: pharmacy + inpatient_supervisor can view it
+   FIX 1 — New Request: Strictly for inpatient department accounts only
 ──────────────────────────────────────────────────────────────── */
 window.v16PrivilegedRequest = function(){
-  return !!(window.CU&&(isMaster()||['pharmacy','inpatient_supervisor'].indexOf(role())>=0));
+  return false;
 };
 
 /* ────────────────────────────────────────────────────────────────
-   MASTER showPg — ONE definitive replacement that handles every case.
-   All previous showPg wrappers have built up a chain. This sits at
-   the TOP of that chain and intercepts the two problem targets:
-     • pg-newreq    → privileged pharmacy view
-     • pg-announcements → navigate correctly regardless of role filters
-   Everything else falls through to the chain below (_showPgChain).
+   MASTER showPg — Clean navigation and page isolation
 ──────────────────────────────────────────────────────────────── */
 var _showPgChain = window.showPg;
 
 window.showPg = function(id){
 
-  /* ── pg-newreq for privileged pharmacy roles ── */
-  if(id === 'pg-newreq' && window.CU && window.v16PrivilegedRequest()){
-    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
-    var page = E('pg-newreq');
-    if(page){
-      page.style.display = '';
-      page.classList.add('af-request-enabled','on');
-    }
-    document.querySelectorAll('#mnav .nb').forEach(function(b){
-      b.classList.toggle('on', b.dataset.pg === 'pg-newreq');
-    });
-    /* Ensure department selector */
-    var host = E('af-request-dept-host')||E('v13-admin-request-host');
-    if(!host){
-      host = document.createElement('div');
-      host.id = 'af-request-dept-host';
-      host.className = 'card';
-      host.style.marginBottom = '14px';
-      host.innerHTML = '<div class="ch"><span class="ct">Request department / قسم الطلب</span></div>'
-        + '<div class="cb"><select id="af-request-dept-select" style="margin:0"></select></div>';
-      if(page) page.insertBefore(host, page.firstChild);
-    }
-    var sel = E('af-request-dept-select');
-    if(sel){
-      var ds = typeof gd==='function'?(gd()||[]):[];
-      var cur = sel.value || (ds[0]&&ds[0].id) || '';
-      sel.innerHTML = ds.map(function(d){
-        return '<option value="'+d.id+'" '+(String(d.id)===String(cur)?'selected':'')+'>'+d.name+'</option>';
-      }).join('');
-      if(!sel.onchange){
-        sel.onchange = function(){
-          if(typeof window.renderReqForm==='function') window.renderReqForm();
-          if(typeof window.renderMyReqs==='function') window.renderMyReqs();
-        };
-      }
-    }
-    if(typeof window.renderReqForm==='function') window.renderReqForm();
-    if(typeof window.renderMyReqs==='function') window.renderMyReqs();
-    return;
+  /* ── pg-newreq: block for non-department roles ── */
+  if(id === 'pg-newreq' && role() !== 'department'){
+    var fallback = (role()==='controlled_pharmacy'||role()==='warehouse') ? 'pg-controlled' : 'pg-dash';
+    v16EnsureRequestNav();
+    return _showPgChain && _showPgChain.apply(this, [fallback]);
   }
 
-  /* ── pg-announcements: bypass all role-filter layers in the chain ── */
+  /* ── pg-announcements: show clean page without background overlay ── */
   if(id === 'pg-announcements'){
     if(!canSeeAnnV16()){
-      /* Redirect to first valid page */
       id = (role()==='department'||role()==='warehouse'||role()==='controlled_pharmacy')
            ? 'pg-controlled' : 'pg-dash';
       return _showPgChain && _showPgChain.apply(this, [id]);
     }
-    /* Directly show the page without going through role-filter chains */
-    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+    document.querySelectorAll('.pg').forEach(function(p){
+      p.classList.remove('on');
+      p.style.display = 'none';
+    });
     document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.remove('on')});
     var annPage = E('pg-announcements');
-    if(annPage){ annPage.style.display=''; annPage.classList.add('on'); }
+    if(annPage){ annPage.style.display = ''; annPage.classList.add('on'); }
     var annBtn = document.querySelector('#mnav [data-pg="pg-announcements"]');
     if(annBtn) annBtn.classList.add('on');
     if(typeof window.renderAnnouncements==='function') window.renderAnnouncements();
     if(typeof window.renderDepartmentAnnouncements==='function') window.renderDepartmentAnnouncements();
+    v16EnsureRequestNav();
     return;
   }
 
-  return _showPgChain && _showPgChain.apply(this, arguments);
+  /* Hide all non-active page containers */
+  document.querySelectorAll('.pg').forEach(function(p){
+    if(p.id !== id){
+      p.classList.remove('on');
+      p.style.display = 'none';
+    }
+  });
+
+  var res = _showPgChain && _showPgChain.apply(this, arguments);
+  v16EnsureRequestNav();
+  return res;
 };
 
 /* ────────────────────────────────────────────────────────────────
-   FIX 1 — Ensure New Request nav button for pharmacy & inpatient_supervisor
+   FIX 1 — Ensure New Request nav button is ONLY present for department accounts
 ──────────────────────────────────────────────────────────────── */
 function v16EnsureRequestNav(){
-  if(!window.CU || !window.v16PrivilegedRequest()) return;
   var nav = E('mnav'); if(!nav) return;
-  var b = nav.querySelector('[data-pg="pg-newreq"]');
-  if(!b){
-    b = document.createElement('button');
-    b.className = 'nb';
-    b.dataset.pg = 'pg-newreq';
-    b.textContent = 'New Request / طلب جديد';
-    b.onclick = function(){ window.showPg('pg-newreq'); };
-    nav.appendChild(b);
+  var isDept = role() === 'department';
+  if(!isDept){
+    Array.from(nav.querySelectorAll('[data-pg="pg-newreq"], button[onclick*="pg-newreq"]')).forEach(function(b){ b.remove(); });
+    var page = E('pg-newreq');
+    if(page){
+      page.classList.remove('on','af-request-enabled','v13-admin-request-enabled');
+      page.style.display = 'none';
+    }
   }
-  b.style.display = '';
+}
 }
 
 /* ────────────────────────────────────────────────────────────────
@@ -13965,72 +13942,5 @@ window.FLOORSTOCK_BUILD = 'V16-20260723-RADICAL-FIXES';
 
 })();
 </script>
-
-
-<!-- FINAL NEW REQUEST / ANNOUNCEMENTS ISOLATION FIX — 2026-07-23 -->
-<style id="final-new-request-announcements-fix-style">
-body:not(.role-department) #pg-newreq,
-body:not(.role-department) #mnav [data-pg="pg-newreq"]{display:none!important}
-body.role-department #pg-newreq.on{display:block!important}
-</style>
-<script id="final-new-request-announcements-fix">
-(function(){
-'use strict';
-function E(id){return document.getElementById(id)}
-function currentRole(){try{return String((window.CU&&window.CU.role)||(window.MASTER_EFFECTIVE&&window.MASTER_EFFECTIVE.role)||'')}catch(e){return ''}}
-function isDepartment(){return currentRole()==='department'}
-function pageIsOpen(id){var p=E(id);return !!(p&&p.classList.contains('on'))}
-function normalizeRequestNav(){
-  var nav=E('mnav');if(!nav)return;
-  var buttons=[].slice.call(nav.querySelectorAll('[data-pg="pg-newreq"]'));
-  if(!isDepartment()){
-    buttons.forEach(function(b){b.remove()});
-    var p=E('pg-newreq');if(p){p.classList.remove('on','af-request-enabled','v13-admin-request-enabled');p.style.display='none'}
-    return;
-  }
-  var b=buttons.shift();buttons.forEach(function(x){x.remove()});
-  if(!b){b=document.createElement('button');b.type='button';b.className='nb';b.dataset.pg='pg-newreq';b.textContent='New Request / طلب جديد'}
-  b.style.display='';
-  b.onclick=function(ev){if(ev){ev.preventDefault();ev.stopPropagation()}window.showPg('pg-newreq')};
-  var my=nav.querySelector('[data-pg="pg-myreqs"]');
-  if(my){if(b.nextSibling!==my)nav.insertBefore(b,my)}else if(!b.parentNode){nav.insertBefore(b,nav.firstChild)}
-}
-var realRenderReqForm=window.renderReqForm;
-window.renderReqForm=function(){if(!isDepartment()||!pageIsOpen('pg-newreq'))return;return realRenderReqForm&&realRenderReqForm.apply(this,arguments)};
-var previousShowPg=window.showPg;
-window.showPg=function(id){
-  if(id==='pg-newreq'){
-    if(!isDepartment()){
-      normalizeRequestNav();
-      var fallback=E('pg-dash')?'pg-dash':(E('pg-reqs')?'pg-reqs':'');
-      if(fallback&&previousShowPg)return previousShowPg.call(this,fallback);
-      return;
-    }
-    var result=previousShowPg&&previousShowPg.apply(this,arguments);
-    document.querySelectorAll('.pg').forEach(function(p){if(p.id!=='pg-newreq')p.classList.remove('on')});
-    var req=E('pg-newreq');if(req){req.style.display='';req.classList.add('on')}
-    document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.toggle('on',b.dataset.pg==='pg-newreq')});
-    normalizeRequestNav();
-    if(realRenderReqForm)realRenderReqForm.call(this);
-    return result;
-  }
-  if(id==='pg-announcements'){
-    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
-    document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.remove('on')});
-    var ann=E('pg-announcements');if(ann){ann.style.display='';ann.classList.add('on')}
-    var btn=document.querySelector('#mnav [data-pg="pg-announcements"]');if(btn)btn.classList.add('on');
-    if(typeof window.renderAnnouncements==='function')window.renderAnnouncements();
-    return;
-  }
-  var r=previousShowPg&&previousShowPg.apply(this,arguments);normalizeRequestNav();return r;
-};
-['buildNav','startApp'].forEach(function(name){var old=window[name];if(!old)return;window[name]=function(){var r=old.apply(this,arguments);setTimeout(normalizeRequestNav,0);setTimeout(normalizeRequestNav,180);return r}});
-var navObserver=new MutationObserver(function(){normalizeRequestNav()});
-function boot(){var nav=E('mnav');if(nav)navObserver.observe(nav,{childList:true,subtree:true});normalizeRequestNav()}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
-window.FLOORSTOCK_BUILD='V16-20260723-NEW-REQUEST-FIXED';
-})();
-</script>
-
 </body>
 </html>
