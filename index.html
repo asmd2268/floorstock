@@ -12890,5 +12890,639 @@ var oldRender=window.renderInv;if(oldRender)window.renderInv=function(){var r=ol
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){ensureAnnouncementNav();ensureHideUi()},50)});else setTimeout(function(){ensureAnnouncementNav();ensureHideUi()},50);
 })();
 </script>
+
+<!-- ============================================================
+  V14-NR-SCHED-EDIT
+  1. New Request: إخفاء من pharmacy / inpatient_supervisor / pharmacy_staff
+  2. New Request: idle timer 15 دقيقة (بدل المسح عند تحريك الماوس)
+  3. Schedule: نوافذ بتاريخ بداية وانتهاء (يوم/شهر/سنة)
+  4. Schedule: حد أقصى خلال 7 أيام + حد أقصى خلال 15 دقيقة
+  5. تعديل الطلب: إضافة بنود جديدة + تصفير كمية
+  BUILD: V14-NR-SCHED-EDIT-20260722
+  ============================================================ -->
+<style id="v14nrse-style">
+/* حد أقصى 15 دقيقة badge */
+.v14-rate-warn{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;background:#fee2e2;color:#991b1b;border:1px solid #fca5a5;margin:4px 0}
+/* schedule date range card */
+.win-card .win-daterange{font-size:11px;color:var(--tx2);margin-top:2px}
+/* request edit - add item row */
+.v14-add-med-row{background:var(--s2);border-top:1px dashed var(--bd)}
+.v14-add-med-row td{padding:6px 8px}
+</style>
+
+<script id="v14nrse-main">
+(function(){
+'use strict';
+var BUILD='V14-NR-SCHED-EDIT-20260722';
+function E(id){return document.getElementById(id)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function n(v){var x=Number(v);return isFinite(x)?x:0}
+function role(){return window.CU&&String(CU.role||'')||''}
+function isMgr(){return !!(window.CU&&(CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(role())>=0))}
+function nowISO(){return typeof window.nowISO==='function'?window.nowISO():new Date().toISOString()}
+
+/* ══════════════════════════════════════════════════════════════
+   1. New Request: مخفية عن pharmacy / inpatient_supervisor / pharmacy_staff
+   السبب: rolePages تعطيها لـ full وكذلك بعض الـ overrides
+══════════════════════════════════════════════════════════════ */
+var _baseRolePages=window.rolePages;
+window.rolePages=function(r){
+  var rows=typeof _baseRolePages==='function'?_baseRolePages(r):[];
+  /* احذف pg-newreq لكل من ليس قسماً */
+  if(r!=='department'){
+    rows=rows.filter(function(x){return x[0]!=='pg-newreq'});
+  }
+  return rows;
+};
+/* اعترض showPg كذلك */
+var _baseShowPg=window.showPg;
+window.showPg=function(id){
+  if(id==='pg-newreq'&&role()!=='department')id='pg-dash';
+  return _baseShowPg&&_baseShowPg.call(this,id);
+};
+
+/* ══════════════════════════════════════════════════════════════
+   2. New Request: idle timer 15 دقيقة
+   - يبدأ العد عند أول تعامل مع الصفحة
+   - يُعاد العد عند أي إدخال في الصفحة (input / change / click داخل rfbody)
+   - لا يُمسح عند تحريك الماوس فقط
+   - عند انتهاء 15 دقيقة تظهر رسالة تحذير 60 ثانية ثم تُمسح القائمة
+══════════════════════════════════════════════════════════════ */
+var IDLE_MS = 15 * 60 * 1000;   /* 15 دقيقة */
+var WARN_MS = 60 * 1000;        /* 60 ثانية تحذير */
+var _idleTimer=null, _warnTimer=null, _warnEl=null;
+
+function clearIdleTimers(){
+  clearTimeout(_idleTimer);clearTimeout(_warnTimer);
+  if(_warnEl){_warnEl.remove();_warnEl=null;}
+}
+function resetIdleTimer(){
+  if(role()!=='department')return;
+  clearIdleTimers();
+  _idleTimer=setTimeout(function(){showIdleWarning()}, IDLE_MS - WARN_MS);
+}
+function showIdleWarning(){
+  var host=E('rfbody');if(!host)return;
+  if(_warnEl){_warnEl.remove();}
+  _warnEl=document.createElement('div');
+  _warnEl.style.cssText='position:fixed;top:80px;left:50%;transform:translateX(-50%);z-index:20000;background:#dc2626;color:#fff;padding:14px 24px;border-radius:12px;font-weight:700;font-size:14px;box-shadow:0 4px 20px #0006;text-align:center';
+  var secs=60;
+  function tick(){_warnEl.innerHTML='⚠ سيُمسح الطلب خلال <b>'+secs+'</b> ثانية بسبب عدم التفاعل<br><button style="margin-top:8px;padding:5px 18px;border-radius:8px;border:2px solid #fff;background:transparent;color:#fff;font-weight:700;cursor:pointer;font-size:13px" id="v14-idle-keep">إبقاء الطلب</button>';var btn=document.getElementById('v14-idle-keep');if(btn)btn.onclick=function(){resetIdleTimer()}}
+  tick();
+  document.body.appendChild(_warnEl);
+  _warnTimer=setInterval(function(){
+    secs--;
+    if(secs<=0){
+      clearIdleTimers();
+      /* مسح الحقول */
+      document.querySelectorAll('#rfbody .rqi').forEach(function(i){i.value='';});
+      if(typeof cntItems==='function')cntItems();
+      if(typeof toast==='function')toast('تم مسح الطلب بسبب عدم التفاعل لمدة 15 دقيقة','info');
+    } else tick();
+  },1000);
+}
+
+/* ربط الأحداث بصفحة الطلب فقط */
+function attachIdleListeners(){
+  var host=E('rfbody');if(!host||host._v14IdleAttached)return;
+  host._v14IdleAttached=true;
+  ['input','change','click'].forEach(function(ev){
+    host.addEventListener(ev,function(){resetIdleTimer()},{passive:true});
+  });
+  resetIdleTimer();
+}
+var _baseRRF=window.renderReqForm;
+window.renderReqForm=function(){
+  var r=_baseRRF&&_baseRRF.apply(this,arguments);
+  setTimeout(function(){clearIdleTimers();attachIdleListeners();},50);
+  return r;
+};
+/* إيقاف العداد لو غادر الصفحة */
+var _baseShowPg2=window.showPg;
+window.showPg=function(id){
+  if(id!=='pg-newreq')clearIdleTimers();
+  return _baseShowPg2&&_baseShowPg2.call(this,id);
+};
+
+/* ══════════════════════════════════════════════════════════════
+   3. Schedule: نوافذ بنطاق تواريخ (dateFrom → dateTo)
+   يُضاف dateFrom / dateTo للبنية الموجودة دون كسر الـ weekly logic
+══════════════════════════════════════════════════════════════ */
+
+/* patch isRequestAllowed لتحقق من نطاق التاريخ */
+var _baseIsReqAllowed=window.isRequestAllowed;
+window.isRequestAllowed=function(deptId){
+  var today=new Date().toISOString().slice(0,10);
+  var wins=typeof getReqWindows==='function'?getReqWindows():[];
+  /* تصفية النوافذ النشطة في نطاق التاريخ */
+  var active=wins.filter(function(w){
+    if(!w.active)return false;
+    if(w.dateFrom&&today<w.dateFrom)return false;
+    if(w.dateTo&&today>w.dateTo)return false;
+    return true;
+  });
+  if(active.length===wins.length) /* لا تغيير */
+    return _baseIsReqAllowed&&_baseIsReqAllowed(deptId);
+  /* استخدم نسخة مؤقتة */
+  var orig=window.getReqWindows;
+  window.getReqWindows=function(){return active};
+  var res=_baseIsReqAllowed&&_baseIsReqAllowed(deptId);
+  window.getReqWindows=orig;
+  return res;
+};
+
+/* patch renderSchedule لإضافة حقول dateFrom/dateTo في النافذة */
+var _baseRenderSchedule=window.renderSchedule;
+window.renderSchedule=function(){
+  var r=_baseRenderSchedule&&_baseRenderSchedule.apply(this,arguments);
+  setTimeout(function(){
+    /* أضف حقول التاريخ في مودال إضافة/تعديل نافذة الطلب */
+    var modal=E('mreq-window');if(!modal||E('v14-rwin-datefrom'))return;
+    var dayRow=modal.querySelector('#rwin-days');if(!dayRow)return;
+    var parent=dayRow.closest('.fg')||dayRow.parentElement;
+    if(!parent)return;
+    var dateFields=document.createElement('div');
+    dateFields.style.cssText='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px';
+    dateFields.innerHTML=
+      '<div><label>Date from / من تاريخ <span style="font-size:11px;color:var(--tx2)">(optional)</span></label>'
+      +'<input id="v14-rwin-datefrom" type="date"></div>'
+      +'<div><label>Date to / إلى تاريخ <span style="font-size:11px;color:var(--tx2)">(optional)</span></label>'
+      +'<input id="v14-rwin-dateto" type="date"></div>';
+    parent.parentElement.insertBefore(dateFields,parent);
+
+    /* عرض نطاق التاريخ في البطاقات الموجودة */
+    var wins=typeof getReqWindows==='function'?getReqWindows():[];
+    modal.closest('#pg-schedule')&&document.querySelectorAll('#req-windows-list .win-card').forEach(function(card,i){
+      var w=wins[i];if(!w||(!w.dateFrom&&!w.dateTo))return;
+      if(card.querySelector('.win-daterange'))return;
+      var d=document.createElement('div');d.className='win-daterange';
+      d.textContent=(w.dateFrom||'…')+' → '+(w.dateTo||'…');
+      card.querySelector('.win-days').insertAdjacentElement('afterend',d);
+    });
+  },60);
+  return r;
+};
+
+/* patch saveReqWindow لحفظ dateFrom/dateTo */
+var _baseSaveReqWin=window.saveReqWindow;
+window.saveReqWindow=function(){
+  /* قراءة التواريخ قبل الحفظ */
+  var dfEl=E('v14-rwin-datefrom'),dtEl=E('v14-rwin-dateto');
+  if(!dfEl||!dtEl)return _baseSaveReqWin&&_baseSaveReqWin.apply(this,arguments);
+  var df=dfEl.value,dt=dtEl.value;
+  /* patch getReqWindows مؤقتاً لإضافة التواريخ بعد الحفظ */
+  var _orig=window.saveReqWindow;window.saveReqWindow=_baseSaveReqWin;
+  var res=_baseSaveReqWin&&_baseSaveReqWin.apply(this,arguments);
+  window.saveReqWindow=_orig;
+  if(df||dt){
+    var wins=typeof getReqWindows==='function'?getReqWindows():[];
+    var last=wins[wins.length-1];
+    if(last){last.dateFrom=df||null;last.dateTo=dt||null;if(typeof setReqWindows==='function')setReqWindows(wins);}
+  }
+  /* إعادة تعبئة التواريخ عند التعديل */
+  var _base2=window.editReqWindow;
+  window.editReqWindow=function(i){
+    var res2=_base2&&_base2.apply(this,arguments);
+    var w=(typeof getReqWindows==='function'?getReqWindows():[])[i];
+    if(w&&E('v14-rwin-datefrom')){E('v14-rwin-datefrom').value=w.dateFrom||'';E('v14-rwin-dateto').value=w.dateTo||'';}
+    return res2;
+  };
+  return res;
+};
+
+/* ══════════════════════════════════════════════════════════════
+   4. Schedule: حد أقصى خلال 7 أيام + حد أقصى خلال 15 دقيقة
+══════════════════════════════════════════════════════════════ */
+function getWeeklyLimits(){return (window.S&&S.g?S.g('weekly_limits_v2'):null)||{}}
+function setWeeklyLimits(o){return window.S&&S.s?S.s('weekly_limits_v2',o):Promise.resolve()}
+function getRateLimits(){return (window.S&&S.g?S.g('rate_limits_v2'):null)||{}}   /* {deptId: N requests per 15min} */
+function setRateLimits(o){return window.S&&S.s?S.s('rate_limits_v2',o):Promise.resolve()}
+
+function getWeeklyReqCount(deptId){
+  var since=new Date();since.setDate(since.getDate()-7);var sISO=since.toISOString();
+  return (typeof gr==='function'?gr():[]).filter(function(r){return r.deptId===deptId&&r.created>=sISO}).length;
+}
+function get15MinReqCount(deptId){
+  var since=new Date(Date.now()-15*60*1000).toISOString();
+  return (typeof gr==='function'?gr():[]).filter(function(r){return r.deptId===deptId&&r.created>=since}).length;
+}
+
+window.v14CheckLimits=function(deptId){
+  var wl=getWeeklyLimits(),rl=getRateLimits();
+  var wlim=wl[deptId]||null,rlim=rl[deptId]||null;
+  if(wlim){var wc=getWeeklyReqCount(deptId);if(wc>=wlim)return{blocked:true,reason:'تجاوزت الحد الأقصى للطلبات خلال 7 أيام ('+wlim+' طلبات). الحالي: '+wc}}
+  if(rlim){var rc=get15MinReqCount(deptId);if(rc>=rlim)return{blocked:true,reason:'تجاوزت الحد الأقصى للطلبات خلال 15 دقيقة ('+rlim+' طلبات). الحالي: '+rc}}
+  return{blocked:false};
+};
+
+/* اعترض submitReq */
+var _baseSub=window.submitReq;
+window.submitReq=function(){
+  if(window.CU&&role()==='department'){
+    var chk=window.v14CheckLimits(CU.deptId);
+    if(chk.blocked)return typeof toast==='function'?toast(chk.reason,'err'):alert(chk.reason);
+  }
+  return _baseSub&&_baseSub.apply(this,arguments);
+};
+
+/* إضافة أقسام الـ Weekly/Rate limits في صفحة Schedule */
+var _baseRS2=window.renderSchedule;
+window.renderSchedule=function(){
+  var r=_baseRS2&&_baseRS2.apply(this,arguments);
+  setTimeout(function(){
+    var host=E('pg-schedule');if(!host)return;
+    if(E('v14-weekly-limits-section'))return;
+    var wl=getWeeklyLimits(),rl=getRateLimits();
+    var deptOpts=typeof gd==='function'?gd().map(function(d){return '<tr><td style="font-weight:600">'+esc(d.name)+'</td>'
+      +'<td><input type="number" class="v14-wlim" data-dept="'+esc(d.id)+'" value="'+(wl[d.id]||'')+'" min="1" placeholder="∞" style="width:100px;margin:0;padding:5px 7px"></td>'
+      +'<td><span style="font-family:var(--mono)">'+getWeeklyReqCount(d.id)+'</span></td>'
+      +'<td><input type="number" class="v14-rlim" data-dept="'+esc(d.id)+'" value="'+(rl[d.id]||'')+'" min="1" placeholder="∞" style="width:80px;margin:0;padding:5px 7px"></td>'
+      +'<td><span style="font-family:var(--mono)">'+get15MinReqCount(d.id)+'</span></td>'
+      +'</tr>'}):[];
+    var sec=document.createElement('div');sec.id='v14-weekly-limits-section';
+    sec.innerHTML=
+      '<div class="card" style="margin-top:18px">'
+      +'<div class="cb"><b>حد الطلبات / Request Limits</b></div>'
+      +'<div class="tw"><table><thead><tr>'
+      +'<th>Department</th>'
+      +'<th>Max per 7 days</th><th>Used (7d)</th>'
+      +'<th>Max per 15 min</th><th>Used (15m)</th>'
+      +'</tr></thead><tbody>'+deptOpts.join('')+'</tbody></table></div>'
+      +'<div class="fl g8" style="margin-top:10px;justify-content:flex-end">'
+      +'<button class="btn bs bsm" onclick="v14SaveAllLimitsV2()">Save limits / حفظ الحدود</button>'
+      +'</div></div>';
+    host.appendChild(sec);
+  },80);
+  return r;
+};
+window.v14SaveAllLimitsV2=async function(){
+  var wl={},rl={};
+  document.querySelectorAll('.v14-wlim').forEach(function(inp){var v=inp.value.trim();if(v&&+v>0)wl[inp.dataset.dept]=+v;else delete wl[inp.dataset.dept]});
+  document.querySelectorAll('.v14-rlim').forEach(function(inp){var v=inp.value.trim();if(v&&+v>0)rl[inp.dataset.dept]=+v;else delete rl[inp.dataset.dept]});
+  await setWeeklyLimits(wl);await setRateLimits(rl);
+  if(typeof toast==='function')toast('Limits saved ✓','succ');
+  if(typeof renderSchedule==='function')renderSchedule();
+};
+
+/* إظهار تحذير الـ rate limit في صفحة الطلب */
+var _baseRRF2=window.renderReqForm;
+window.renderReqForm=function(){
+  var r=_baseRRF2&&_baseRRF2.apply(this,arguments);
+  setTimeout(function(){
+    if(!window.CU||role()!=='department')return;
+    var old=E('v14-rate-warn-el');if(old)old.remove();
+    var chk=window.v14CheckLimits(CU.deptId);
+    if(chk.blocked){
+      var sub=E('rfbody');if(!sub)return;
+      var warn=document.createElement('div');warn.id='v14-rate-warn-el';warn.className='v14-rate-warn';
+      warn.textContent='⚠ '+chk.reason;
+      sub.insertAdjacentElement('beforebegin',warn);
+    }
+  },100);
+  return r;
+};
+
+/* ══════════════════════════════════════════════════════════════
+   5. تعديل الطلب: إضافة بنود جديدة + تصفير كمية
+   - opsEditRequest يُظهر كل أدوية القسم (موجودة + جديدة)
+   - الأدوية اللي لم تُطلب تظهر بكمية 0 (يمكن إضافتها)
+   - يقدر يضع كمية = 0 لإلغاء بند (يُحذف من الطلب)
+══════════════════════════════════════════════════════════════ */
+window.opsEditRequest=function(id){
+  var reqs=typeof gr==='function'?(gr()||[]):[];
+  var req=reqs.find(function(x){return String(x.id)===String(id)});
+  if(!req)return typeof toast==='function'?toast('Request not found','err'):null;
+  var t=new Date(req.created||req.createdAt||0).getTime();
+  var editable=req.status==='pending'&&isFinite(t)&&(Date.now()-t<=7200000);
+  if(!editable)return typeof toast==='function'?toast('Edit window closed (2 hours) or request already fulfilled.','err'):null;
+
+  var meds=typeof getMeds==='function'?(getMeds(req.deptId)||[]):[];
+  var dispensed=req.items||req.dispensed||[];
+  var dispMap={};dispensed.forEach(function(x){dispMap[x.medId]=n(x.qty)});
+
+  var minsLeft=Math.ceil((7200000-(Date.now()-t))/60000);
+
+  /* جميع أدوية القسم */
+  var rows=meds.map(function(m){
+    var cur=dispMap[m.id]!=null?dispMap[m.id]:0;
+    var max=Math.max(0,n(m.max));
+    var isNew=dispMap[m.id]==null;
+    return '<tr class="'+(isNew?'v14-add-med-row':'')+'">'
+      +'<td><b>'+esc(m.name)+'</b>'+(isNew?' <span style="font-size:10px;background:var(--pri);color:#fff;padding:1px 5px;border-radius:8px">new</span>':'')+'</td>'
+      +'<td style="text-align:center;color:var(--tx2)">'+n(m.min)+' – '+max+'</td>'
+      +'<td><div class="qwrap"><input type="number" class="rqi ops-edit-qty" data-med="'+esc(m.id)+'" data-max="'+max+'" min="0" max="'+max+'" value="'+cur+'" style="margin:0" oninput="this.value=Math.min(Math.max(0,+this.value||0),+this.dataset.max)">'
+      +'<span class="qlim">/'+max+'</span></div></td>'
+      +'</tr>';
+  }).join('');
+
+  var old=E('ops-edit-request');if(old)old.remove();
+  var m=document.createElement('div');m.id='ops-edit-request';m.className='modal-bg on';
+  m.innerHTML='<div class="modal" style="width:min(820px,97vw)">'
+    +'<div class="mh"><span class="mt">Edit Request — '+minsLeft+' min left</span>'
+    +'<button class="xbtn" onclick="E(\'ops-edit-request\').remove()">✕</button></div>'
+    +'<div style="font-size:12px;color:var(--tx2);margin-bottom:8px">كمية = 0 تلغي البند من الطلب. الصفوف الخضراء خفيفة = أدوية جديدة يمكن إضافتها.</div>'
+    +'<div class="tw" style="overflow:auto;max-height:60vh"><table>'
+    +'<thead><tr><th>Medication</th><th>Min – Max</th><th>Qty</th></tr></thead>'
+    +'<tbody>'+rows+'</tbody></table></div>'
+    +'<input type="hidden" id="v14-er2-reqid" value="'+esc(id)+'">'
+    +'<div class="fl g8" style="justify-content:flex-end;margin-top:14px">'
+    +'<button class="btn bg" onclick="E(\'ops-edit-request\').remove()">Cancel</button>'
+    +'<button class="btn bs" onclick="v14SaveEditReq2()">Save changes / حفظ التعديلات</button>'
+    +'</div></div>';
+  document.body.appendChild(m);
+};
+
+window.v14SaveEditReq2=async function(){
+  var reqId=(E('v14-er2-reqid')||{}).value;
+  var all=typeof gr==='function'?(gr()||[]).slice():[];
+  var idx=all.findIndex(function(x){return String(x.id)===String(reqId)});
+  if(idx<0)return typeof toast==='function'?toast('Request not found','err'):null;
+  var req=all[idx];
+  var t=new Date(req.created||req.createdAt||0).getTime();
+  if(req.status!=='pending'||Date.now()-t>7200000)
+    return typeof toast==='function'?toast('Edit window closed.','err'):null;
+
+  var items=Array.from(document.querySelectorAll('.ops-edit-qty')).map(function(inp){
+    return {medId:inp.dataset.med,qty:n(inp.value)};
+  }).filter(function(x){return x.qty>0}); /* 0 يُحذف */
+
+  if(!items.length)return typeof toast==='function'?toast('At least one item with qty > 0 is required.','err'):null;
+  all[idx]=Object.assign({},req,{items:items,dispensed:items,editedAt:nowISO(),editedBy:(window.CU&&CU.username)||''});
+  await (window.S&&S.s?S.s('requests',all):Promise.resolve());
+  if(typeof auditAction==='function')auditAction('request_edited_within_two_hours',{requestId:reqId,itemCount:items.length});
+  E('ops-edit-request').remove();
+  if(typeof toast==='function')toast('Request updated ✓','succ');
+  if(typeof renderMyReqs==='function')renderMyReqs();
+  if(typeof renderReqs==='function')renderReqs();
+};
+
+/* ── Build stamp ── */
+(function(){
+  var x=E('v14nrse-stamp');
+  if(!x){x=document.createElement('div');x.id='v14nrse-stamp';
+    x.style.cssText='position:fixed;right:8px;bottom:30px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
+    document.body.appendChild(x);}
+  x.textContent=BUILD;
+})();
+
+})();
+</script>
+
+<!-- ============================================================
+  V14-DAILY-PRINT
+  1. حد الطلبات: تحديد عدد مسموح خلال 24 ساعة (قابل للزيادة)
+  2. صفحة الطباعة: عزل Fulfilled مع فلتر سريع + تمييز بصري
+  BUILD: V14-DAILY-PRINT-20260722
+  ============================================================ -->
+<style id="v14dp-style">
+/* Fulfilled group header */
+#v14-ptbl-fulfilled-head{background:var(--s2);font-weight:800;font-size:12px;color:var(--tx2)}
+#v14-ptbl-fulfilled-head td{padding:6px 10px;border-bottom:2px solid var(--ac)}
+/* Pending (not fulfilled) in print page - dimmed */
+tr.v14-ptbl-pending{opacity:.5}
+tr.v14-ptbl-pending td{font-style:italic}
+/* fulfilled row highlight */
+tr.v14-ptbl-done{background:color-mix(in srgb,var(--gnl) 8%,transparent)}
+/* filter buttons */
+#v14-print-filter{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+#v14-print-filter button.on{background:var(--pri);color:#fff}
+/* daily limit warning */
+.v14-daily-warn{display:inline-flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin:6px 0}
+.v14-daily-blocked{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+</style>
+
+<script id="v14dp-main">
+(function(){
+'use strict';
+var BUILD='V14-DAILY-PRINT-20260722';
+function E(id){return document.getElementById(id)}
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function n(v){var x=Number(v);return isFinite(x)?x:0}
+function role(){return window.CU&&String(CU.role||'')||''}
+
+/* ══════════════════════════════════════════════════════════════
+   1. حد الطلبات خلال 24 ساعة
+   البنية: daily_limits_v2 = { deptId: N }
+   يدعم الزيادة اليدوية من جدول في Schedule
+══════════════════════════════════════════════════════════════ */
+var DAILY_KEY='daily_limits_v2';
+
+function getDailyLimits(){return (window.S&&S.g?S.g(DAILY_KEY):null)||{}}
+function setDailyLimits(o){return window.S&&S.s?S.s(DAILY_KEY,o):Promise.resolve()}
+
+function get24hReqCount(deptId){
+  var since=new Date(Date.now()-24*60*60*1000).toISOString();
+  return (typeof gr==='function'?gr():[]).filter(function(r){
+    return r.deptId===deptId&&r.created>=since;
+  }).length;
+}
+
+window.v14CheckDailyLimit=function(deptId){
+  var lims=getDailyLimits();
+  var lim=lims[deptId];
+  if(!lim)return{blocked:false};
+  var used=get24hReqCount(deptId);
+  if(used>=lim)return{blocked:true,used:used,limit:lim,reason:'الحد الأقصى للطلبات خلال 24 ساعة هو '+lim+' طلب — الحالي: '+used};
+  return{blocked:false,used:used,limit:lim,remaining:lim-used};
+};
+
+/* اعترض submitReq لفحص الحد اليومي */
+var _baseSub2=window.submitReq;
+window.submitReq=function(){
+  if(window.CU&&role()==='department'){
+    var chk=window.v14CheckDailyLimit(CU.deptId);
+    if(chk.blocked)return typeof toast==='function'?toast(chk.reason,'err'):alert(chk.reason);
+  }
+  return _baseSub2&&_baseSub2.apply(this,arguments);
+};
+
+/* إظهار الحالة في صفحة الطلب */
+var _baseRRF3=window.renderReqForm;
+window.renderReqForm=function(){
+  var r=_baseRRF3&&_baseRRF3.apply(this,arguments);
+  setTimeout(function(){
+    if(!window.CU||role()!=='department')return;
+    var old=E('v14-daily-warn-el');if(old)old.remove();
+    var chk=window.v14CheckDailyLimit(CU.deptId);
+    var host=E('rfbody');if(!host)return;
+    var warn=document.createElement('div');warn.id='v14-daily-warn-el';
+    if(chk.blocked){
+      warn.className='v14-daily-warn v14-daily-blocked';
+      warn.textContent='🚫 '+chk.reason;
+    } else if(chk.limit){
+      warn.className='v14-daily-warn';
+      warn.textContent='📋 الطلبات خلال 24 ساعة: '+chk.used+' / '+chk.limit+' — متبقي: '+chk.remaining;
+    } else return;
+    host.insertAdjacentElement('beforebegin',warn);
+  },110);
+  return r;
+};
+
+/* جدول الحد اليومي في صفحة Schedule */
+var _baseRS3=window.renderSchedule;
+window.renderSchedule=function(){
+  var r=_baseRS3&&_baseRS3.apply(this,arguments);
+  setTimeout(function(){
+    var host=E('pg-schedule');if(!host)return;
+    if(E('v14-daily-limits-section'))return;
+    var lims=getDailyLimits();
+    var rows=(typeof gd==='function'?gd():[]).map(function(d){
+      var lim=lims[d.id]||'';
+      var used=get24hReqCount(d.id);
+      return '<tr>'
+        +'<td style="font-weight:600">'+esc(d.name||d.id)+'</td>'
+        +'<td><div style="display:flex;align-items:center;gap:6px">'
+        +'<input type="number" class="v14-dlim" data-dept="'+esc(d.id)+'" value="'+lim+'" min="1" placeholder="∞ بلا حد" style="width:110px;margin:0;padding:5px 7px">'
+        +'<button class="btn bp bsm" onclick="v14IncDailyLimit(\''+esc(d.id)+'\')">+1</button>'
+        +'</div></td>'
+        +'<td style="font-family:var(--mono)">'+used+'</td>'
+        +'<td style="font-family:var(--mono);color:'+(lim&&used>=lim?'var(--rdl)':used>0?'var(--yll)':'var(--gnl)')+'">'+( lim ? Math.max(0,lim-used) : '∞')+'</td>'
+        +'</tr>';
+    }).join('');
+
+    var sec=document.createElement('div');sec.id='v14-daily-limits-section';
+    sec.innerHTML=
+      '<div class="card" style="margin-top:18px">'
+      +'<div class="cb" style="display:flex;justify-content:space-between;align-items:center">'
+      +'<b>حد الطلبات اليومي (24 ساعة) / Daily Request Limit</b>'
+      +'<button class="btn bs bsm" onclick="v14SaveDailyLimits()">حفظ / Save</button>'
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--tx2);margin-bottom:10px">حدد الحد الأقصى لعدد الطلبات المسموح لكل قسم خلال 24 ساعة. اضغط +1 لزيادة الحد مؤقتاً بمقدار واحد.</div>'
+      +'<div class="tw"><table><thead><tr>'
+      +'<th>Department</th><th>Max per 24h</th><th>Used</th><th>Remaining</th>'
+      +'</tr></thead><tbody>'+rows+'</tbody></table></div>'
+      +'</div>';
+    host.appendChild(sec);
+  },90);
+  return r;
+};
+
+window.v14SaveDailyLimits=async function(){
+  var lims={};
+  document.querySelectorAll('.v14-dlim').forEach(function(inp){
+    var v=inp.value.trim();
+    if(v&&+v>0)lims[inp.dataset.dept]=+v;
+    else delete lims[inp.dataset.dept];
+  });
+  await setDailyLimits(lims);
+  if(typeof toast==='function')toast('Daily limits saved ✓','succ');
+  if(typeof renderSchedule==='function')renderSchedule();
+};
+
+/* +1 مؤقت: يزيد الحد بمقدار واحد دون تغيير الإعداد الدائم */
+window.v14IncDailyLimit=async function(deptId){
+  var lims=Object.assign({},getDailyLimits());
+  lims[deptId]=(lims[deptId]||0)+1;
+  await setDailyLimits(lims);
+  if(typeof toast==='function')toast('Daily limit increased by 1 for this department ✓','succ');
+  if(typeof renderSchedule==='function')renderSchedule();
+  if(typeof window.renderReqForm==='function'&&role()==='department')window.renderReqForm();
+};
+
+/* ══════════════════════════════════════════════════════════════
+   2. صفحة الطباعة: عزل Fulfilled
+   - الطلبات المكتملة (fulfilled) تعلو الجدول بتمييز أخضر
+   - زر فلتر: الكل / Fulfilled فقط / اليوم
+   - نسخ renderPrint
+══════════════════════════════════════════════════════════════ */
+var _v14PrintFilter='fulfilled'; /* الافتراضي: fulfilled فقط */
+
+window.renderPrint=function(){
+  /* أصل renderPrint */
+  var purgeBtn=E('purge-old-orders-btn');
+  if(purgeBtn)purgeBtn.style.display=(window.CU&&CU.master===true)?'inline-flex':'none';
+
+  var allReqs=(typeof gr==='function'?gr():[]).slice().reverse();
+  var fulfilled=allReqs.filter(function(r){return r.status==='fulfilled'||r.status==='partial'});
+  var pending=allReqs.filter(function(r){return r.status==='pending'});
+
+  var today=new Date().toISOString().slice(0,10);
+
+  /* بناء صفوف الجدول */
+  function buildRow(r,cls){
+    var dept=(typeof gd==='function'?gd():[]).find(function(x){return x.id===r.deptId});
+    var nn=(r.dispensed||[]).filter(function(x){return x.qty>0}).length;
+    var date=typeof fmtDateTime==='function'?fmtDateTime(r.created):r.created;
+    var ful=r.fulfilledAt?(typeof fmtDate==='function'?fmtDate(r.fulfilledAt):r.fulfilledAt):'—';
+    return '<tr class="'+cls+'">'
+      +'<td><input type="checkbox" class="pchk" data-id="'+esc(r.id)+'"></td>'
+      +'<td>'+esc((dept&&dept.name)||r.deptId)+'</td>'
+      +'<td>'+esc(date)+'</td>'
+      +'<td>'+esc(ful)+'</td>'
+      +'<td>'+nn+' items</td>'
+      +'<td style="text-align:center;font-family:var(--mono)">'+(r.printCount||0)+'</td>'
+      +'</tr>';
+  }
+
+  var fRows='',pRows='';
+  var todayFulfilled=fulfilled.filter(function(r){return (r.fulfilledAt||r.created||'').slice(0,10)===today});
+
+  if(_v14PrintFilter==='today'){
+    fRows=todayFulfilled.map(function(r){return buildRow(r,'v14-ptbl-done')}).join('');
+  } else if(_v14PrintFilter==='fulfilled'){
+    fRows=fulfilled.map(function(r){return buildRow(r,'v14-ptbl-done')}).join('');
+  } else {
+    /* all: fulfilled أولاً ثم pending */
+    fRows=fulfilled.map(function(r){return buildRow(r,'v14-ptbl-done')}).join('');
+    pRows=pending.map(function(r){return buildRow(r,'v14-ptbl-pending')}).join('');
+  }
+
+  var tbl=E('ptbl');
+  if(!tbl)return;
+
+  /* إضافة شريط الفلتر فوق الجدول */
+  var card=tbl.closest('.card');
+  if(card){
+    var existFilter=E('v14-print-filter');
+    if(!existFilter){
+      var filterBar=document.createElement('div');filterBar.id='v14-print-filter';
+      filterBar.innerHTML=
+        '<span style="font-size:12px;font-weight:700;color:var(--tx2)">Show:</span>'
+        +'<button class="btn bg bsm" id="v14-pf-fulfilled" onclick="v14SetPrintFilter(\'fulfilled\')">✅ Fulfilled</button>'
+        +'<button class="btn bg bsm" id="v14-pf-today" onclick="v14SetPrintFilter(\'today\')">📅 Today\'s fulfilled</button>'
+        +'<button class="btn bg bsm" id="v14-pf-all" onclick="v14SetPrintFilter(\'all\')">All requests</button>'
+        +'<span style="font-size:11px;color:var(--tx2);margin-inline-start:8px">'
+        +'✅ Fulfilled: '+fulfilled.length+' · 📅 Today: '+todayFulfilled.length+' · ⏳ Pending: '+pending.length
+        +'</span>';
+      card.querySelector('.ch').insertAdjacentElement('afterend',filterBar);
+    } else {
+      /* حدّث الأرقام */
+      var stat=existFilter.querySelector('span:last-child');
+      if(stat)stat.textContent='✅ Fulfilled: '+fulfilled.length+' · 📅 Today: '+todayFulfilled.length+' · ⏳ Pending: '+pending.length;
+    }
+    /* أضء الزر النشط */
+    ['fulfilled','today','all'].forEach(function(f){
+      var btn=E('v14-pf-'+f);if(!btn)return;
+      btn.classList.toggle('on',f===_v14PrintFilter);
+    });
+  }
+
+  /* بناء الـ tbody */
+  if(fRows||pRows){
+    tbl.innerHTML=
+      (fRows?'<tr id="v14-ptbl-fulfilled-head"><td colspan="6">✅ Fulfilled Requests</td></tr>'+fRows:'')
+      +(pRows?'<tr id="v14-ptbl-pending-head" style="background:var(--s2)"><td colspan="6" style="padding:6px 10px;font-weight:800;font-size:12px;color:var(--tx2)">⏳ Pending Requests</td></tr>'+pRows:'');
+  } else {
+    tbl.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--tx2);padding:18px">No requests found</td></tr>';
+  }
+};
+
+window.v14SetPrintFilter=function(f){
+  _v14PrintFilter=f;
+  if(typeof window.renderPrint==='function')window.renderPrint();
+};
+
+/* Build stamp */
+(function(){
+  var x=E('v14dp-stamp');
+  if(!x){x=document.createElement('div');x.id='v14dp-stamp';
+    x.style.cssText='position:fixed;right:8px;bottom:44px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
+    document.body.appendChild(x);}
+  x.textContent=BUILD;
+})();
+
+})();
+</script>
+
 </body>
 </html>
