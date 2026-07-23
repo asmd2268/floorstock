@@ -16,6 +16,12 @@ var FB_APP=window.FB_APP||null;
 var FB_AUTH=window.FB_AUTH||null;
 var FB_DB=window.FB_DB||null;
 var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
+
+// Ensure Firebase compat objects are available globally
+window.FB_APP = FB_APP;
+window.FB_AUTH = FB_AUTH;
+window.FB_DB = FB_DB;
+window.FB_FUNCTIONS = FB_FUNCTIONS;
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -2154,7 +2160,12 @@ var renderReqFormDebounced=debounce(function(){renderReqForm()},220);
 var renderControlledDebounced=debounce(function(){renderControlled()},220);
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
-  FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
+  try {
+    FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
+  } catch(e) {
+    // If initialization fails (e.g., already initialized with different config), use existing
+    FB_APP=firebase.app();
+  }
   FB_AUTH=firebase.auth();
   FB_DB=firebase.firestore();
   window.FB_APP=FB_APP;
@@ -2169,6 +2180,26 @@ function initFirebase(){
     }
   });
   FB_FUNCTIONS=null;
+}
+
+
+// Ensure Firebase is loaded before any operations
+window.firebaseReady = false;
+function checkFirebaseReady(){
+  if(window.firebase && firebase.auth && firebase.firestore){
+    window.firebaseReady = true;
+    try{ initFirebase(); }catch(e){ console.error('Firebase init error:', e); }
+    return true;
+  }
+  return false;
+}
+// Check immediately and also after a delay
+if(!checkFirebaseReady()){
+  var fbCheckInterval = setInterval(function(){
+    if(checkFirebaseReady()) clearInterval(fbCheckInterval);
+  }, 500);
+  // Timeout after 10 seconds
+  setTimeout(function(){ clearInterval(fbCheckInterval); }, 10000);
 }
 
 // Firestore is the only operational data store. Memory is a short-lived UI cache, never persistent storage.
@@ -2625,6 +2656,13 @@ function fillDS(){
   sel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
 }
 async function doLogin(){
+  // Ensure Firebase is initialized before attempting login
+  if(!FB_AUTH || !FB_DB){
+    try{ initFirebase(); }catch(e){
+      setLoginError('Firebase not initialized. Please reload the page.');
+      return;
+    }
+  }
   var email=el('lgu').value.trim(),password=el('lgp').value;
   var loginBtn=document.querySelector('#auth button[onclick*=\"doLogin\"]');
   var oldLoginText=loginBtn?loginBtn.innerHTML:'';
