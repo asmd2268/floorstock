@@ -13816,7 +13816,7 @@ window.renderInv = function(){
 };
 
 /* Version stamp */
-window.FLOORSTOCK_BUILD = 'V15-20260723-NAV-CONSOLIDATED';
+window.FLOORSTOCK_BUILD = 'V15-20260723-NAV-AUTHORITY-V2';
 (function(){
   var x = E('v14dp-stamp')||E('v15-stamp');
   if(!x){ x=document.createElement('div'); x.id='v15-stamp';
@@ -13829,3 +13829,124 @@ window.FLOORSTOCK_BUILD = 'V15-20260723-NAV-CONSOLIDATED';
 </script>
 </body>
 </html>
+
+<!-- FINAL NAVIGATION AUTHORITY — 2026-07-23 v2 -->
+<style id="final-nav-authority-v2-style">
+body:not(.role-department) [data-pg="pg-newreq"],
+body:not(.role-department) [onclick*="pg-newreq"],
+body:not(.role-department) #pg-newreq {
+  display:none !important;
+}
+</style>
+<script id="final-nav-authority-v2">
+(function(){
+  'use strict';
+  function E(id){ return document.getElementById(id); }
+  function effectiveRole(){
+    try{
+      return String((window.MASTER_EFFECTIVE && window.MASTER_EFFECTIVE.role) ||
+                    (window.CU && window.CU.role) || '');
+    }catch(e){ return ''; }
+  }
+  function isDepartment(){ return effectiveRole()==='department'; }
+
+  function removeForbiddenNewRequest(){
+    if(isDepartment()) return;
+    document.querySelectorAll('[data-pg="pg-newreq"],button[onclick*="pg-newreq"],a[onclick*="pg-newreq"]').forEach(function(el){
+      el.remove();
+    });
+    var page=E('pg-newreq');
+    if(page){
+      page.classList.remove('on','af-request-enabled','v13-admin-request-enabled');
+      page.hidden=true;
+      page.style.setProperty('display','none','important');
+    }
+  }
+
+  function hideEveryPage(){
+    document.querySelectorAll('.pg').forEach(function(p){
+      p.classList.remove('on');
+      p.style.setProperty('display','none','important');
+    });
+    document.querySelectorAll('#mnav .nb,[data-pg]').forEach(function(b){ b.classList.remove('on'); });
+  }
+
+  function showAnnouncementsOnly(){
+    if(typeof window.canSeeAnnouncements==='function' && !window.canSeeAnnouncements()) return;
+    removeForbiddenNewRequest();
+    hideEveryPage();
+    var page=E('pg-announcements');
+    if(!page && typeof window.renderAnnouncements==='function'){
+      try{ window.renderAnnouncements(); }catch(e){ console.error(e); }
+      page=E('pg-announcements');
+    }
+    if(!page) return;
+    page.hidden=false;
+    page.style.removeProperty('display');
+    page.classList.add('on');
+    var btn=document.querySelector('[data-pg="pg-announcements"]');
+    if(btn) btn.classList.add('on');
+    if(typeof window.renderAnnouncements==='function'){
+      try{ window.renderAnnouncements(); }catch(e){ console.error('Announcements render failed',e); }
+    }
+    /* renderers may touch page classes, so enforce the final state once more */
+    setTimeout(function(){
+      removeForbiddenNewRequest();
+      document.querySelectorAll('.pg').forEach(function(p){
+        if(p!==page){ p.classList.remove('on'); p.style.setProperty('display','none','important'); }
+      });
+      page.hidden=false;
+      page.style.removeProperty('display');
+      page.classList.add('on');
+    },0);
+  }
+
+  /* Disable every legacy runtime injector that can recreate New Request for pharmacy roles. */
+  window.ensureRequestNav=function(){ removeForbiddenNewRequest(); };
+  window.openAdminRequest=function(){ if(isDepartment() && typeof window.showPg==='function') window.showPg('pg-newreq'); };
+  window.openRequestPage=function(){ if(isDepartment() && typeof window.showPg==='function') window.showPg('pg-newreq'); };
+
+  var previousBuild=window.buildNav;
+  window.buildNav=function(){
+    var result=previousBuild && previousBuild.apply(this,arguments);
+    removeForbiddenNewRequest();
+    setTimeout(removeForbiddenNewRequest,0);
+    setTimeout(removeForbiddenNewRequest,180);
+    return result;
+  };
+
+  var previousShow=window.showPg;
+  window.showPg=function(id){
+    if(id==='pg-announcements'){
+      showAnnouncementsOnly();
+      return;
+    }
+    if(id==='pg-newreq' && !isDepartment()){
+      removeForbiddenNewRequest();
+      id='pg-dash';
+    }
+    var result=previousShow && previousShow.call(this,id);
+    setTimeout(removeForbiddenNewRequest,0);
+    return result;
+  };
+
+  window.openAnnouncementsPageV15=showAnnouncementsOnly;
+
+  document.addEventListener('click',function(ev){
+    var ann=ev.target && ev.target.closest && ev.target.closest('[data-pg="pg-announcements"]');
+    if(ann){
+      ev.preventDefault();
+      ev.stopImmediatePropagation();
+      showAnnouncementsOnly();
+    }
+  },true);
+
+  var observer=new MutationObserver(function(){ removeForbiddenNewRequest(); });
+  function boot(){
+    removeForbiddenNewRequest();
+    if(document.body) observer.observe(document.body,{childList:true,subtree:true});
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
+  else boot();
+})();
+</script>
