@@ -14117,7 +14117,7 @@ body:not(.role-department) #pg-newreq {
 <script id="v15-fast-profile-final-authority">
 (function(){
 'use strict';
-window.FLOORSTOCK_BUILD='V15-20260723-FAST-PROFILE-FINAL-V5';
+window.FLOORSTOCK_BUILD='V15-20260723-PROFILE-NORMAL-READ-V6';
 function E(id){return document.getElementById(id)}
 function timeout(ms,msg){return new Promise(function(_,reject){setTimeout(function(){reject(new Error(msg))},ms)})}
 function validProfile(p){return !!(p&&['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'].indexOf(p.role)>=0)}
@@ -14126,18 +14126,28 @@ function savedProfile(uid){
 }
 function storeProfile(uid,p){try{localStorage.setItem('fs_profile_'+uid,JSON.stringify(p))}catch(_){}}
 async function fetchProfile(uid){
-  var ref=FB_DB.collection('users').doc(uid),p=savedProfile(uid);
-  if(p)return p;
+  var ref=FB_DB.collection('users').doc(uid),p=savedProfile(uid),snap=null,last=null;
+  // Prefer Firestore's normal resolution. It may return a persisted document immediately
+  // and then transparently contact the server; forcing source:'server' caused login stalls.
   try{
-    var cached=await Promise.race([ref.get({source:'cache'}),timeout(1200,'cache timeout')]);
-    if(cached&&cached.exists){p=cached.data()||{};if(validProfile(p)){storeProfile(uid,p);return p}}
-  }catch(_){ }
-  var snap=await Promise.race([ref.get({source:'server'}),timeout(10000,'Unable to load your profile. Check Firestore rules or connection.')]);
-  if(!snap||!snap.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
-  p=snap.data()||{};
-  if(!validProfile(p))throw new Error('This account has an invalid role.');
-  storeProfile(uid,p);
-  return p;
+    snap=await Promise.race([ref.get(),timeout(30000,'Profile request timed out.')]);
+    if(snap&&snap.exists){
+      p=snap.data()||{};
+      if(!validProfile(p))throw new Error('This account has an invalid role.');
+      storeProfile(uid,p);return p;
+    }
+    last=new Error('Your Firebase account has no Floor Stock role profile.');
+  }catch(err){last=err;console.warn('Normal profile read failed:',err)}
+  // Explicit cache is only a fallback after the ordinary read fails.
+  try{
+    var cached=await Promise.race([ref.get({source:'cache'}),timeout(2500,'Profile cache request timed out.')]);
+    if(cached&&cached.exists){
+      p=cached.data()||{};
+      if(validProfile(p)){storeProfile(uid,p);return p}
+    }
+  }catch(err){console.warn('Cached profile read failed:',err)}
+  if(p&&validProfile(p))return p;
+  throw last||new Error('Unable to load your profile. Confirm that users/'+uid+' exists in Firestore.');
 }
 async function initDataNonBlocking(){
   try{
