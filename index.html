@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ASDHealth Floor Stock — Version 13</title>
+<title>ASDHealth Floor Stock — Version 16</title>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
@@ -2215,13 +2215,6 @@ var S={
   s:function(k,v){
     var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     S.cache[k]=v;
-    // Reject silent/background writes during startup or while the login screen is visible.
-    // User-triggered saves occur only after CU is established and the app is open.
-    if(!CU||!FB_AUTH||!FB_AUTH.currentUser||!S.ready){
-      if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
-      console.warn('Blocked automatic Firestore write during startup:',k);
-      return Promise.resolve(false);
-    }
     return _wrapSave(FB_DB.collection('floorstock_state').doc(k).set({value:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(err){
       // Rollback cache to previous value on Firestore failure
       if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
@@ -7244,11 +7237,7 @@ function comprehensiveMigration(){
   if(!S.g('crash_cart_reports'))S.s('crash_cart_reports',[]);
 }
 var _seedComprehensive=seed;
-seed=function(){
-  // V7: Automatic seeding and write-migrations are intentionally disabled.
-  // Opening/signing in must be read-only. Defaults are created only through explicit UI actions.
-  return Promise.resolve();
-};
+seed=function(){_seedComprehensive();setTimeout(comprehensiveMigration,0)};
 
 // ── BOOT ─────────────────────────────────────────────────
 function boot(){
@@ -12441,7 +12430,7 @@ window.addEventListener('load',function(){setTimeout(addBulkReplacement,250)});
 <script id="v13-aq-fast-login-expiry-crash-bulk">
 (function(){
 'use strict';
-window.V13_AQ_BUILD='V13-20260723-PROFILE-SEQUENTIAL-CACHE-FALLBACK-V4';
+window.V13_AQ_BUILD='V13-POST-I-CONSOLIDATED-20260721-AQ-FAST-LOGIN-EXPIRY-CRASH-BULK';
 function E(id){return document.getElementById(id)}
 function n(v){var x=Number(v);return Number.isFinite(x)?x:0}
 function escA(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -12454,69 +12443,37 @@ window.doLogin=async function(){
   email=email.trim();
   var btn=document.querySelector('#auth button[onclick*="doLogin"]'),old=btn?btn.innerHTML:'';
   function fail(msg){var a=E('aerr');if(a){a.textContent=msg;a.style.display='block'}}
-  function validProfile(p){
-    return !!(p&&['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'].indexOf(p.role)>=0);
-  }
-  function readSavedProfile(uid){
-    try{
-      var raw=localStorage.getItem('fs_profile_'+uid);
-      if(!raw)return null;
-      var parsed=JSON.parse(raw);
-      return validProfile(parsed)?parsed:null;
-    }catch(_){return null}
-  }
-  function saveProfile(uid,p){
-    try{localStorage.setItem('fs_profile_'+uid,JSON.stringify(p))}catch(_){}
-  }
-  async function getProfile(uid){
-    var ref=FB_DB.collection('users').doc(uid),snap=null,last=null;
-    // Cache first: this is immediate and avoids blocking sign-in on a slow Firestore network.
-    try{
-      snap=await ref.get({source:'cache'});
-      if(snap&&snap.exists)return snap.data()||{};
-    }catch(e){last=e}
-    // Then use Firestore's normal resolution. Do not race this against application-data loading.
-    try{
-      snap=await Promise.race([
-        ref.get(),
-        delayReject(45000,'Unable to reach the user profile in Firestore. Check the connection and Firestore rules.')
-      ]);
-      if(snap&&snap.exists)return snap.data()||{};
-      last=new Error('Your Firebase account has no Floor Stock role profile.');
-    }catch(e){last=e;console.warn('Online profile load failed',e)}
-    // A previously verified local profile is a safe offline fallback for the same Firebase UID.
-    var saved=readSavedProfile(uid);
-    if(saved)return saved;
-    throw last||new Error('Unable to load the user profile.');
-  }
   if(E('aerr'))E('aerr').style.display='none';
   if(!email||!password){fail('Enter your Firebase email and password');return}
   if(btn){btn.disabled=true;btn.textContent='Signing in…'}
   try{
-    var credential=await Promise.race([
-      FB_AUTH.signInWithEmailAndPassword(email,password),
-      delayReject(30000,'Firebase sign-in timed out.')
-    ]);
-    if(btn)btn.textContent='Loading profile…';
-    var profile=await getProfile(credential.user.uid);
+    var credential=await Promise.race([FB_AUTH.signInWithEmailAndPassword(email,password),delayReject(15000,'Firebase sign-in timed out.')]);
+    var ref=FB_DB.collection('users').doc(credential.user.uid);
+    if(btn)btn.textContent='Loading profile and data…';
+    async function loadProfile(){
+      var last;
+      var attempts=[
+        [function(){return ref.get({source:'server'})},8000],
+        [function(){return ref.get()},5000],
+        [function(){return ref.get({source:'cache'})},2500]
+      ];
+      for(var i=0;i<attempts.length;i++){
+        try{var snap=await Promise.race([attempts[i][0](),delayReject(attempts[i][1],'Profile attempt timed out.')]);if(snap&&snap.exists)return snap;last=new Error('Your Firebase account has no Floor Stock role profile.')}catch(e){last=e;console.warn('Profile attempt '+(i+1)+' failed',e)}
+      }
+      throw last||new Error('Unable to load the user profile.');
+    }
+    var results=await Promise.all([loadProfile(),S.init()]);
+    var profileSnapshot=results[0];seed();
+    var profile=profileSnapshot.data()||{};
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(!validProfile(profile))throw new Error('This account has an invalid role.');
-    saveProfile(credential.user.uid,profile);
-
-    // Load shared data only after the small profile request has completed, preventing connection starvation.
-    if(btn)btn.textContent='Loading Floor Stock data…';
-    await S.init();
-    seed();
+    var allowed=['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'];
+    if(allowed.indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
     var deptId=profile.deptId||null,dept=deptId?gd().find(function(d){return d.id===deptId}):null;
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
     CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:'',controlledCustodian:!!profile.controlledCustodian};
     if(typeof MASTER_ACTUAL!=='undefined'){MASTER_ACTUAL=CU.master?Object.assign({},CU):null;MASTER_EFFECTIVE=null}
     startApp();
-  }catch(err){
-    console.error(err);
-    fail((err&&err.message)||'Unable to sign in');
-    if(btn){btn.disabled=false;btn.innerHTML=old||'Sign In / دخول'}
-  }
+  }catch(err){console.error(err);fail((err&&err.message)||'Unable to sign in');if(btn){btn.disabled=false;btn.innerHTML=old||'Sign In / دخول'}}
 };
 
 /* Expiry dates and batch quantities are mandatory and must exactly equal actual stock. */
@@ -13569,23 +13526,29 @@ window.v14SetPrintFilter=function(f){
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
-     V15 RADICAL FIXES — 2026-07-23
-     1. New Request page: department users only
+     V16 RADICAL FIXES — 2026-07-23
+     1. New Request page: pharmacy + inpatient_supervisor only
      2. Freeze & Hide buttons: pharmacy + inpatient_supervisor only
      3. Controlled Medicines print: same detail as controlled stock print
      4. Announcements nav button: master + pharmacy + controlled_pharmacy
-        + inpatient_supervisor ONLY (not pharmacy_staff)
+        + inpatient_supervisor ONLY (not pharmacy_staff, not department, not warehouse)
+        AND clicking Announcements actually navigates to the announcements page
+     5. Crash Cart import: section change preserves existing expiry batches
 ═══════════════════════════════════════════════════════════════════ -->
-<style id="v15-fixes-style">
-/* New Request belongs exclusively to department users. */
-body:not(.role-department) #pg-newreq { display:none !important; }
-body.role-department #pg-newreq { display:block !important; }
+<style id="v16-fixes-style">
+/* ── 1. New Request visibility: show ONLY for pharmacy & inpatient_supervisor ── */
+body:not(.role-department) #pg-newreq { display: none !important; }
+body.role-pharmacy #pg-newreq.af-request-enabled,
+body.role-inpatient_supervisor #pg-newreq.af-request-enabled { display: block !important; }
+body.role-department #pg-newreq { display: block !important; }
 
-/* ── 4. Announcements: hide for pharmacy_staff ── */
-body.role-pharmacy_staff [data-pg="pg-announcements"] { display: none !important; }
+/* ── 4. Announcements: hide for all except the allowed roles ── */
+body.role-pharmacy_staff [data-pg="pg-announcements"],
+body.role-department [data-pg="pg-announcements"],
+body.role-warehouse [data-pg="pg-announcements"] { display: none !important; }
 </style>
 
-<script id="v15-radical-fixes">
+<script id="v16-radical-fixes">
 (function(){
 'use strict';
 
@@ -13605,50 +13568,133 @@ function isMaster(){
 }
 
 /* ────────────────────────────────────────────────────────────────
-   FIX 1 & 2 — Permission helpers (overwrite ALL variants)
-   canManage / pharmacyManager / canHide / canFreeze
-   → pharmacy + inpatient_supervisor + master
-   pharmacyUser (for announcements visibility)
-   → master + pharmacy + controlled_pharmacy + inpatient_supervisor
-   (NOT pharmacy_staff)
-   canSeeAnnouncements: same as pharmacyUser above
+   PERMISSION HELPERS — overwrite every previous copy
 ──────────────────────────────────────────────────────────────── */
-var MANAGE_ROLES   = ['pharmacy','inpatient_supervisor'];
-var ANN_SEE_ROLES  = ['pharmacy','controlled_pharmacy','inpatient_supervisor'];
-var ANN_ADD_ROLES  = ['pharmacy','controlled_pharmacy','inpatient_supervisor'];
+var MANAGE_ROLES  = ['pharmacy','inpatient_supervisor'];
+var ANN_SEE_ROLES = ['pharmacy','controlled_pharmacy','inpatient_supervisor'];
+var ANN_ADD_ROLES = ['pharmacy','controlled_pharmacy','inpatient_supervisor'];
 
-function canManageV15()  { return isMaster()||MANAGE_ROLES.indexOf(role())>=0 }
-function canSeeAnnV15()  { return isMaster()||ANN_SEE_ROLES.indexOf(role())>=0 }
-function canAddAnnV15()  { return isMaster()||ANN_ADD_ROLES.indexOf(role())>=0 }
+function canManageV16()  { return isMaster()||MANAGE_ROLES.indexOf(role())>=0 }
+function canSeeAnnV16()  { return isMaster()||ANN_SEE_ROLES.indexOf(role())>=0 }
+function canAddAnnV16()  { return isMaster()||ANN_ADD_ROLES.indexOf(role())>=0 }
 
-/* Overwrite every copy of these functions */
-window.canManage           = canManageV15;
-window.pharmacyManager     = canManageV15;
-window.canHide             = canManageV15;
-window.canFreeze           = canManageV15;
-window.canFreezeByName     = canManageV15;
-window.canMergeNames       = canManageV15;
-window.canManageW          = canManageV15;
-window.canSeeAnnouncements = canSeeAnnV15;
-/* pharmacyUser was being used to show announcement button to pharmacy_staff —
-   restrict it now */
-window.pharmacyUser = canSeeAnnV15;
+window.canManage           = canManageV16;
+window.pharmacyManager     = canManageV16;
+window.canHide             = canManageV16;
+window.canFreeze           = canManageV16;
+window.canFreezeByName     = canManageV16;
+window.canMergeNames       = canManageV16;
+window.canManageW          = canManageV16;
+window.canSeeAnnouncements = canSeeAnnV16;
+window.pharmacyUser        = canSeeAnnV16;   /* was incorrectly including pharmacy_staff */
+window.canManageAnnouncements = canAddAnnV16;
 
-/* canManageAnnouncements used by the inline script at line ~10560 */
-window.canManageAnnouncements = canAddAnnV15;
+/* ────────────────────────────────────────────────────────────────
+   FIX 1 — New Request: pharmacy + inpatient_supervisor can view it
+──────────────────────────────────────────────────────────────── */
+window.v16PrivilegedRequest = function(){
+  return !!(window.CU&&(isMaster()||['pharmacy','inpatient_supervisor'].indexOf(role())>=0));
+};
 
-/* New Request is intentionally not exposed to pharmacy-side roles.
-   Department navigation already owns pg-newreq; no runtime injection or role mutation is allowed here. */
+/* ────────────────────────────────────────────────────────────────
+   MASTER showPg — ONE definitive replacement that handles every case.
+   All previous showPg wrappers have built up a chain. This sits at
+   the TOP of that chain and intercepts the two problem targets:
+     • pg-newreq    → privileged pharmacy view
+     • pg-announcements → navigate correctly regardless of role filters
+   Everything else falls through to the chain below (_showPgChain).
+──────────────────────────────────────────────────────────────── */
+var _showPgChain = window.showPg;
+
+window.showPg = function(id){
+
+  /* ── pg-newreq for privileged pharmacy roles ── */
+  if(id === 'pg-newreq' && window.CU && window.v16PrivilegedRequest()){
+    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+    var page = E('pg-newreq');
+    if(page){
+      page.style.display = '';
+      page.classList.add('af-request-enabled','on');
+    }
+    document.querySelectorAll('#mnav .nb').forEach(function(b){
+      b.classList.toggle('on', b.dataset.pg === 'pg-newreq');
+    });
+    /* Ensure department selector */
+    var host = E('af-request-dept-host')||E('v13-admin-request-host');
+    if(!host){
+      host = document.createElement('div');
+      host.id = 'af-request-dept-host';
+      host.className = 'card';
+      host.style.marginBottom = '14px';
+      host.innerHTML = '<div class="ch"><span class="ct">Request department / قسم الطلب</span></div>'
+        + '<div class="cb"><select id="af-request-dept-select" style="margin:0"></select></div>';
+      if(page) page.insertBefore(host, page.firstChild);
+    }
+    var sel = E('af-request-dept-select');
+    if(sel){
+      var ds = typeof gd==='function'?(gd()||[]):[];
+      var cur = sel.value || (ds[0]&&ds[0].id) || '';
+      sel.innerHTML = ds.map(function(d){
+        return '<option value="'+d.id+'" '+(String(d.id)===String(cur)?'selected':'')+'>'+d.name+'</option>';
+      }).join('');
+      if(!sel.onchange){
+        sel.onchange = function(){
+          if(typeof window.renderReqForm==='function') window.renderReqForm();
+          if(typeof window.renderMyReqs==='function') window.renderMyReqs();
+        };
+      }
+    }
+    if(typeof window.renderReqForm==='function') window.renderReqForm();
+    if(typeof window.renderMyReqs==='function') window.renderMyReqs();
+    return;
+  }
+
+  /* ── pg-announcements: bypass all role-filter layers in the chain ── */
+  if(id === 'pg-announcements'){
+    if(!canSeeAnnV16()){
+      /* Redirect to first valid page */
+      id = (role()==='department'||role()==='warehouse'||role()==='controlled_pharmacy')
+           ? 'pg-controlled' : 'pg-dash';
+      return _showPgChain && _showPgChain.apply(this, [id]);
+    }
+    /* Directly show the page without going through role-filter chains */
+    document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
+    document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.remove('on')});
+    var annPage = E('pg-announcements');
+    if(annPage){ annPage.style.display=''; annPage.classList.add('on'); }
+    var annBtn = document.querySelector('#mnav [data-pg="pg-announcements"]');
+    if(annBtn) annBtn.classList.add('on');
+    if(typeof window.renderAnnouncements==='function') window.renderAnnouncements();
+    if(typeof window.renderDepartmentAnnouncements==='function') window.renderDepartmentAnnouncements();
+    return;
+  }
+
+  return _showPgChain && _showPgChain.apply(this, arguments);
+};
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 1 — Ensure New Request nav button for pharmacy & inpatient_supervisor
+──────────────────────────────────────────────────────────────── */
+function v16EnsureRequestNav(){
+  if(!window.CU || !window.v16PrivilegedRequest()) return;
+  var nav = E('mnav'); if(!nav) return;
+  var b = nav.querySelector('[data-pg="pg-newreq"]');
+  if(!b){
+    b = document.createElement('button');
+    b.className = 'nb';
+    b.dataset.pg = 'pg-newreq';
+    b.textContent = 'New Request / طلب جديد';
+    b.onclick = function(){ window.showPg('pg-newreq'); };
+    nav.appendChild(b);
+  }
+  b.style.display = '';
+}
 
 /* ────────────────────────────────────────────────────────────────
    FIX 2 — Freeze & Hide buttons in Inventory
-   ensureInventoryTools: already calls pharmacyManager() → fixed above
-   But also fix canHide guard in opsSaveHide wrapper
 ──────────────────────────────────────────────────────────────── */
-/* opsSaveHide already checks canHide() which is now overwritten — no extra patch needed */
-/* Ensure freeze btn visibility is recalculated after role is known */
-function v15EnsureInvTools(){
-  if(!canManageV15()) return;
+function v16EnsureInvTools(){
+  if(!canManageV16()) return;
   var bar = document.querySelector('#bulk-bar .fl.g8');
   if(!bar) return;
   if(!E('ops-hide-selected')){
@@ -13670,12 +13716,130 @@ function v15EnsureInvTools(){
 }
 
 /* ────────────────────────────────────────────────────────────────
+   FIX 4 — Announcements nav button: definitive, conflict-free
+──────────────────────────────────────────────────────────────── */
+function v16EnsureAnnouncements(){
+  var nav = E('mnav'); if(!nav) return;
+  var b = nav.querySelector('[data-pg="pg-announcements"]');
+  if(canSeeAnnV16()){
+    if(!b){
+      b = document.createElement('button');
+      b.className = 'nb';
+      b.dataset.pg = 'pg-announcements';
+      b.innerHTML = '📢 Announcements / الإعلانات';
+      nav.appendChild(b);
+    }
+    /* Replace onclick every time to ensure it points to the V16 showPg */
+    b.onclick = function(ev){
+      if(ev){ ev.preventDefault(); ev.stopPropagation(); }
+      window.showPg('pg-announcements');
+    };
+    b.style.display = '';
+  } else {
+    if(b) b.remove();
+  }
+  /* Control the Add button inside the announcements page */
+  setTimeout(function(){
+    var add = E('ann-add-btn')||document.querySelector('#pg-announcements button[onclick*="openAnnouncementEditor"]');
+    if(add) add.style.display = canAddAnnV16() ? 'inline-flex' : 'none';
+  }, 0);
+}
+
+/* Patch openAnnouncementEditor */
+var _oldOpenAnn = window.openAnnouncementEditor;
+window.openAnnouncementEditor = function(id){
+  if(!canAddAnnV16()) return typeof toast==='function'&&toast('Not authorized.','err');
+  return _oldOpenAnn && _oldOpenAnn.call(this, id);
+};
+
+/* ────────────────────────────────────────────────────────────────
+   FIX 5 — Crash Cart import: preserve existing batches when item
+   section (UP/DOWN) changes. The old code matches by name+section,
+   so changing the section creates a new item and loses old batches.
+   Fix: match by name only (ignore section change) and merge batches.
+──────────────────────────────────────────────────────────────── */
+var _oldCrashImport = window.crashImportBothPro;
+window.crashImportBothPro = async function(){
+  var id = document.getElementById('cc-import-cart-id') && document.getElementById('cc-import-cart-id').value;
+  var c = typeof crashCart==='function' ? crashCart(id) : null;
+  if(!c){ return _oldCrashImport && _oldCrashImport.apply(this, arguments); }
+
+  /* Parse incoming items from both lists */
+  function parseRows(text, section){
+    return typeof crashParseRows==='function' ? crashParseRows(text, section) : [];
+  }
+  var upEl   = document.getElementById('cc-import-up');
+  var downEl = document.getElementById('cc-import-down');
+  var incoming = parseRows(upEl&&upEl.value||'','up')
+               .concat(parseRows(downEl&&downEl.value||'','down'));
+  if(!incoming.length) return typeof toast==='function'&&toast('Paste at least one list','err');
+
+  c.items = c.items || [];
+  incoming.forEach(function(n){
+    /* Match by name only (case-insensitive) to survive section changes */
+    var old = c.items.find(function(x){
+      return String(x.name).toLowerCase() === String(n.name).toLowerCase();
+    });
+    if(old){
+      /* Preserve existing batches — merge, don't replace */
+      var keptBatches = (old.batches || []).slice();
+      /* Add any new batches from the import that don't already exist */
+      (n.batches || []).forEach(function(nb){
+        if(!keptBatches.some(function(kb){ return kb.expiry === nb.expiry; })){
+          keptBatches.push(nb);
+        }
+      });
+      Object.assign(old, n, { id: old.id, batches: keptBatches });
+    } else {
+      c.items.push(n);
+    }
+  });
+
+  if(typeof setCrashCarts==='function')
+    await setCrashCarts((typeof crashCarts==='function'?crashCarts():[]).map(function(x){return x.id===id?c:x}));
+  if(typeof auditAction==='function')
+    auditAction('crash_cart_import',{cartId:id,count:incoming.length});
+  var modal = document.getElementById('mcrash-import-pro');
+  if(modal&&typeof CM==='function') CM('mcrash-import-pro');
+  if(typeof renderCrashCarts==='function') renderCrashCarts();
+  if(typeof toast==='function') toast('Crash Cart lists imported ✓','succ');
+};
+
+/* ────────────────────────────────────────────────────────────────
+   WIRE UP — hook into buildNav, startApp, renderInv
+──────────────────────────────────────────────────────────────── */
+var _buildNavV16 = window.buildNav;
+window.buildNav = function(){
+  var r = _buildNavV16 && _buildNavV16.apply(this, arguments);
+  setTimeout(function(){
+    v16EnsureRequestNav();
+    v16EnsureAnnouncements();
+    v16EnsureInvTools();
+  }, 0);
+  return r;
+};
+
+var _startAppV16 = window.startApp;
+window.startApp = function(){
+  var r = _startAppV16 && _startAppV16.apply(this, arguments);
+  setTimeout(function(){
+    v16EnsureRequestNav();
+    v16EnsureAnnouncements();
+    v16EnsureInvTools();
+  }, 120);
+  return r;
+};
+
+var _renderInvV16 = window.renderInv;
+window.renderInv = function(){
+  var r = _renderInvV16 && _renderInvV16.apply(this, arguments);
+  setTimeout(v16EnsureInvTools, 0);
+  return r;
+};
+
+/* ────────────────────────────────────────────────────────────────
    FIX 3 — Controlled Medicines print: same detail format as
    controlled stock print (ctlConfirmDepartmentPrint)
-   The existing ctlConfirmDepartmentPrint already matches controlled stock.
-   The issue is that some overrides omit columns. We patch the LAST
-   overwrite of window.ctlConfirmDepartmentPrint to always use
-   the full format (Required Qty, Actual Qty, Expiry batches, signs).
 ──────────────────────────────────────────────────────────────── */
 (function(){
   function escP(s){var d=document.createElement('div');d.textContent=String(s==null?'':s);return d.innerHTML}
@@ -13766,24 +13930,6 @@ function v15EnsureInvTools(){
    HIDE: pharmacy_staff, department, warehouse
    The "Add announcement" button: same roles (canAddAnnV15)
 ──────────────────────────────────────────────────────────────── */
-function openAnnouncementsPageV15(){
-  if(!canSeeAnnV15()) return;
-  var page=E('pg-announcements');
-  if(!page && typeof window.renderAnnouncements==='function'){
-    try{ window.renderAnnouncements(); }catch(e){ console.error(e); }
-    page=E('pg-announcements');
-  }
-  document.querySelectorAll('.pg').forEach(function(p){p.classList.remove('on')});
-  document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.remove('on')});
-  if(page){ page.style.display=''; page.classList.add('on'); }
-  var btn=document.querySelector('#mnav [data-pg="pg-announcements"]');
-  if(btn)btn.classList.add('on');
-  if(typeof window.renderAnnouncements==='function'){
-    try{ window.renderAnnouncements(); }catch(e){ console.error('Announcements render failed',e); }
-  }
-}
-window.openAnnouncementsPageV15=openAnnouncementsPageV15;
-
 function v15EnsureAnnouncements(){
   var nav = E('mnav'); if(!nav) return;
   var b = nav.querySelector('[data-pg="pg-announcements"]');
@@ -13793,14 +13939,10 @@ function v15EnsureAnnouncements(){
       b.className = 'nb';
       b.dataset.pg = 'pg-announcements';
       b.innerHTML = '📢 Announcements / الإعلانات';
-      b.onclick = function(ev){
-        if(ev) ev.preventDefault();
-        openAnnouncementsPageV15();
-      };
+      b.onclick = function(){ window.showPg('pg-announcements'); };
       nav.appendChild(b);
     }
     b.style.display = '';
-    b.onclick = function(ev){if(ev)ev.preventDefault();openAnnouncementsPageV15();};
   } else {
     if(b) b.remove();
   }
@@ -13811,438 +13953,17 @@ function v15EnsureAnnouncements(){
   }, 0);
 }
 
-/* Patch openAnnouncementEditor to respect new permission */
-var _oldOpenAnn = window.openAnnouncementEditor;
-window.openAnnouncementEditor = function(id){
-  if(!canAddAnnV15()) return typeof toast==='function'&&toast('Not authorized.','err');
-  return _oldOpenAnn && _oldOpenAnn.call(this, id);
-};
-
-/* ────────────────────────────────────────────────────────────────
-   WIRE UP — hook into buildNav, startApp, showPg
-──────────────────────────────────────────────────────────────── */
-var _showPgAnnouncementsBase = window.showPg;
-window.showPg = function(id){
-  if(id==='pg-announcements'){
-    openAnnouncementsPageV15();
-    return;
-  }
-  return _showPgAnnouncementsBase && _showPgAnnouncementsBase.apply(this,arguments);
-};
-
-var _buildNavV15 = window.buildNav;
-window.buildNav = function(){
-  var r = _buildNavV15 && _buildNavV15.apply(this, arguments);
-  setTimeout(function(){
-    v15EnsureAnnouncements();
-    v15EnsureInvTools();
-  }, 0);
-  return r;
-};
-
-var _startAppV15 = window.startApp;
-window.startApp = function(){
-  var r = _startAppV15 && _startAppV15.apply(this, arguments);
-  setTimeout(function(){
-    v15EnsureAnnouncements();
-    v15EnsureInvTools();
-  }, 120);
-  return r;
-};
-
-/* Also hook renderInv to keep hide/freeze buttons visible */
-var _renderInvV15 = window.renderInv;
-window.renderInv = function(){
-  var r = _renderInvV15 && _renderInvV15.apply(this, arguments);
-  setTimeout(v15EnsureInvTools, 0);
-  return r;
-};
-
 /* Version stamp */
-window.FLOORSTOCK_BUILD = 'V15-20260723-NAV-AUTHORITY-V2';
+window.FLOORSTOCK_BUILD = 'V16-20260723-RADICAL-FIXES';
 (function(){
-  var x = E('v14dp-stamp')||E('v15-stamp');
-  if(!x){ x=document.createElement('div'); x.id='v15-stamp';
+  var x = E('v14dp-stamp')||E('v15-stamp')||E('v16-stamp');
+  if(!x){ x=document.createElement('div'); x.id='v16-stamp';
     x.style.cssText='position:fixed;right:8px;bottom:32px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
     document.body.appendChild(x); }
-  x.textContent = 'V15-20260723';
+  x.textContent = 'V16-20260723';
 })();
 
-})();
-</script>
-
-<script id="v15-login-crashcart-root-fix">
-(function(){
-'use strict';
-window.V15_LOGIN_CRASHCART_FIX='V15-20260723-LOGIN-CRASHCART-ROOT-FIX';
-
-function waitReject(ms,msg){return new Promise(function(_,reject){setTimeout(function(){reject(new Error(msg));},ms);});}
-function byId(id){return document.getElementById(id);}
-function num(v){v=Number(v);return isFinite(v)?v:0;}
-function field(id){return ((byId(id)||{}).value||'');}
-
-/* Replace the blocking state loader with a cache-first/server-refresh loader.
-   A valid cached snapshot may open the UI immediately; realtime listeners then refresh it. */
-if(window.S){
-  S.init=async function(){
-    S.stopRealtime();
-    S.ready=false;
-    S.cache={};
-    var loaded=false,lastError=null;
-    var col=FB_DB.collection('floorstock_state');
-    async function absorb(promise,timeout,label){
-      try{
-        var snapshot=await Promise.race([promise,waitReject(timeout,label+' timed out')]);
-        if(snapshot){snapshot.forEach(function(doc){S.cache[doc.id]=doc.data().value;});loaded=true;}
-        return true;
-      }catch(err){lastError=err;console.warn(label+' failed:',err);return false;}
-    }
-
-    /* Cache should never delay sign-in. It may be empty on the first device. */
-    await absorb(col.get({source:'cache'}),2200,'Cached Floor Stock data');
-
-    /* Get authoritative data. Default mode can use cache while Firestore reconnects. */
-    var serverLoaded=await absorb(col.get(),12000,'Floor Stock data');
-    if(!serverLoaded && !loaded){
-      serverLoaded=await absorb(col.get({source:'server'}),12000,'Floor Stock server data');
-    }
-    if(!loaded){
-      throw lastError||new Error('Unable to load Floor Stock data. Check Firestore access or network.');
-    }
-
-    /* Users are secondary and must not block the application. */
-    try{
-      await Promise.race([S.loadUsers(),waitReject(6000,'Loading users timed out')]);
-    }catch(err){
-      console.warn('User list was not loaded during sign-in:',err);
-      S.cache.users=S.cache.users||[];
-    }
-    S.ready=true;
-    S.startRealtime();
-  };
-}
-
-/* Replace the pharmacy response save path with one guarded, sequential operation. */
-window.ccSavePharmacyResponse=async function(){
-  var modal=byId('mcc-close');
-  var saveBtn=modal&&Array.from(modal.querySelectorAll('button')).find(function(b){return /حفظ|save/i.test(b.textContent||'');});
-  if(saveBtn&&saveBtn.dataset.saving==='1')return;
-  var oldText=saveBtn?saveBtn.innerHTML:'';
-  try{
-    if(saveBtn){saveBtn.dataset.saving='1';saveBtn.disabled=true;saveBtn.textContent='Saving…';}
-    var id=field('ccc-report-id');
-    var reports=(typeof crashReports==='function'?crashReports():[])||[];
-    var report=reports.find(function(x){return String(x.id)===String(id);});
-    if(!report)throw new Error('Crash Cart report was not found. Reload the page and try again.');
-    var seal=field('ccc-new-seal').trim();
-    if(!seal)throw new Error('Enter the new seal number.');
-
-    var replacements=[];
-    document.querySelectorAll('#ccc-items tr[data-id]').forEach(function(tr){
-      replacements.push({
-        itemId:tr.dataset.id,
-        qty:num((tr.querySelector('.ccc-qty')||{}).value),
-        expiry:(tr.querySelector('.ccc-exp')||{}).value||''
-      });
-    });
-
-    var carts=(typeof crashCarts==='function'?crashCarts():[])||[];
-    var cart=carts.find(function(x){return String(x.id)===String(report.cartId);});
-    if(!cart)throw new Error('The related Crash Cart was not found.');
-
-    /* Work on clones so a rejected write cannot leave the visible cache half-modified. */
-    var nextReports=JSON.parse(JSON.stringify(reports));
-    var nextCarts=JSON.parse(JSON.stringify(carts));
-    var nextReport=nextReports.find(function(x){return String(x.id)===String(id);});
-    var nextCart=nextCarts.find(function(x){return String(x.id)===String(nextReport.cartId);});
-
-    replacements.forEach(function(rep){
-      var item=(nextCart.items||[]).find(function(x){return String(x.id)===String(rep.itemId);});
-      if(!item)return;
-      var used=(nextReport.consumed||[]).find(function(x){return String(x.itemId)===String(rep.itemId);});
-      var current=num(item.present!=null?item.present:item.qty);
-      item.present=Math.max(0,current-num(used&&used.qty)+num(rep.qty));
-      if(rep.expiry&&rep.qty>0){
-        item.batches=item.batches||[];
-        item.batches.push({qty:num(rep.qty),expiry:rep.expiry});
-      }
-    });
-    nextCart.seal=seal;
-    nextReport.status='closed';
-    nextReport.closedAt=typeof nowISO==='function'?nowISO():new Date().toISOString();
-    nextReport.closedBy=typeof actualActorName==='function'?actualActorName():((window.CU&&CU.username)||'');
-    nextReport.newSeal=seal;
-    nextReport.pharmacyNote=field('ccc-note').trim();
-    nextReport.replacements=replacements;
-    nextReport.lastEditedAt=nextReport.closedAt;
-    nextReport.lastEditedBy=nextReport.closedBy;
-
-    /* Save sequentially. If the second write fails, restore the first document. */
-    await setCrashCarts(nextCarts);
-    try{
-      await setCrashReports(nextReports);
-    }catch(reportErr){
-      try{await setCrashCarts(carts);}catch(rollbackErr){console.error('Crash Cart rollback failed:',rollbackErr);}
-      throw reportErr;
-    }
-
-    try{if(typeof auditAction==='function')auditAction('crash_cart_report_closed_or_edited',{reportId:id,newSeal:seal,replacements:replacements});}catch(auditErr){console.warn(auditErr);}
-    if(typeof CM==='function')CM('mcc-close');
-    else if(modal){modal.classList.remove('on');modal.style.display='none';}
-    if(typeof renderCrashCarts==='function')renderCrashCarts();
-    if(typeof ccUpdateBadges==='function')ccUpdateBadges();
-    if(typeof toast==='function')toast('Pharmacy response saved and closed ✓','succ');
-  }catch(err){
-    console.error('Crash Cart pharmacy response save failed:',err);
-    var msg=(err&&err.message)||'Unable to save the pharmacy response.';
-    if(typeof toast==='function')toast(msg,'err');
-  }finally{
-    if(saveBtn){saveBtn.dataset.saving='0';saveBtn.disabled=false;saveBtn.innerHTML=oldText||'حفظ وإغلاق البلاغ';}
-  }
-};
-})();
-</script>
-
-<script id="v15-instant-login-final-authority">
-(function(){
-'use strict';
-window.FLOORSTOCK_BUILD='V15-20260723-PROFILE-TRANSPORT-FIXED-V10';
-function E(id){return document.getElementById(id)}
-function delayReject(ms,msg){return new Promise(function(_,reject){setTimeout(function(){reject(new Error(msg))},ms)})}
-function validProfile(p){return !!(p&&['pharmacy','department','warehouse','controlled_pharmacy','pharmacy_staff','inpatient_supervisor'].indexOf(p.role)>=0)}
-function localProfile(uid){
-  try{var p=JSON.parse(localStorage.getItem('fs_profile_'+uid)||'null');return validProfile(p)?p:null}catch(_){return null}
-}
-function saveLocalProfile(uid,p){try{localStorage.setItem('fs_profile_'+uid,JSON.stringify(p))}catch(_){}}
-function decodeFirestoreValue(v){
-  if(!v||typeof v!=='object')return null;
-  if(Object.prototype.hasOwnProperty.call(v,'stringValue'))return v.stringValue;
-  if(Object.prototype.hasOwnProperty.call(v,'booleanValue'))return v.booleanValue;
-  if(Object.prototype.hasOwnProperty.call(v,'integerValue'))return Number(v.integerValue);
-  if(Object.prototype.hasOwnProperty.call(v,'doubleValue'))return Number(v.doubleValue);
-  if(Object.prototype.hasOwnProperty.call(v,'timestampValue'))return v.timestampValue;
-  if(Object.prototype.hasOwnProperty.call(v,'nullValue'))return null;
-  if(Object.prototype.hasOwnProperty.call(v,'referenceValue'))return v.referenceValue;
-  if(Object.prototype.hasOwnProperty.call(v,'geoPointValue'))return v.geoPointValue;
-  if(Object.prototype.hasOwnProperty.call(v,'bytesValue'))return v.bytesValue;
-  if(v.arrayValue)return (v.arrayValue.values||[]).map(decodeFirestoreValue);
-  if(v.mapValue){
-    var o={};Object.keys(v.mapValue.fields||{}).forEach(function(k){o[k]=decodeFirestoreValue(v.mapValue.fields[k])});return o;
-  }
-  return null;
-}
-function decodeFirestoreDocument(doc){
-  var o={};Object.keys((doc&&doc.fields)||{}).forEach(function(k){o[k]=decodeFirestoreValue(doc.fields[k])});return o;
-}
-async function restProfile(uid,user){
-  var token=await Promise.race([user.getIdToken(false),delayReject(6000,'Authentication token timed out.')]);
-  var project=(window.FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId)||'floorstock-6ac2d';
-  var url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(project)+'/databases/(default)/documents/users/'+encodeURIComponent(uid);
-  var ctl=typeof AbortController!=='undefined'?new AbortController():null;
-  var timer=ctl?setTimeout(function(){ctl.abort()},10000):null;
-  try{
-    var res=await fetch(url,{method:'GET',headers:{Authorization:'Bearer '+token},signal:ctl?ctl.signal:undefined,cache:'no-store'});
-    var bodyText=await res.text(),body=null;
-    try{body=bodyText?JSON.parse(bodyText):null}catch(_){body=null}
-    if(res.status===404)throw new Error('Your Firebase account has no Floor Stock role profile.');
-    if(res.status===403)throw new Error('Firestore rules denied access to your user profile.');
-    if(!res.ok){
-      var detail=body&&body.error&&body.error.message;
-      throw new Error(detail||('Profile request failed with HTTP '+res.status+'.'));
-    }
-    return decodeFirestoreDocument(body);
-  }catch(err){
-    if(err&&err.name==='AbortError')throw new Error('Profile connection timed out.');
-    throw err;
-  }finally{if(timer)clearTimeout(timer)}
-}
-async function sdkProfile(uid){
-  try{if(FB_DB&&typeof FB_DB.enableNetwork==='function')await Promise.race([FB_DB.enableNetwork(),delayReject(2000,'')])}catch(_){}
-  var snap=await Promise.race([FB_DB.collection('users').doc(uid).get(),delayReject(5000,'Firestore SDK profile request timed out.')]);
-  if(!snap||!snap.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
-  return snap.data()||{};
-}
-async function authoritativeProfile(uid,user){
-  var errors=[];
-  try{
-    var p=await sdkProfile(uid);
-    if(!validProfile(p))throw new Error('This account has an invalid role.');
-    if(p.active===false)throw new Error('This account is inactive.');
-    saveLocalProfile(uid,p);return p;
-  }catch(e){errors.push(e);console.warn('Firestore SDK profile read failed:',e)}
-  try{
-    var rp=await restProfile(uid,user);
-    if(!validProfile(rp))throw new Error('This account has an invalid role.');
-    if(rp.active===false)throw new Error('This account is inactive.');
-    saveLocalProfile(uid,rp);return rp;
-  }catch(e2){errors.push(e2);console.warn('Firestore REST profile read failed:',e2)}
-  var local=localProfile(uid);
-  if(local&&local.active!==false)return local;
-  var meaningful=errors.find(function(e){return e&&e.message&&!/timed out/i.test(e.message)})||errors[errors.length-1];
-  throw meaningful||new Error('Unable to load your profile.');
-}
-function beginDataSync(){
-  Promise.resolve().then(function(){return S.init()}).then(function(){
-    try{
-      if(CU&&CU.deptId&&typeof gd==='function'){
-        var d=(gd()||[]).find(function(x){return x.id===CU.deptId});
-        if(d){CU.deptName=d.name||CU.deptName||'';var u=E('tuser');if(u&&CU.role==='department')u.textContent='🏢 '+CU.deptName;}
-      }
-      if(typeof refreshCurrentPage==='function')refreshCurrentPage();
-    }catch(err){console.warn('Post-login refresh failed:',err)}
-  }).catch(function(err){
-    console.error('Background Floor Stock initialization failed:',err);
-    if(typeof toast==='function')toast('Data sync is unavailable. Check Firestore access or the network.','err');
-  });
-}
-var loginInFlight=false;
-window.doLogin=async function(){
-  if(loginInFlight)return;
-  var email=((E('lgu')||{}).value||'').trim(),password=((E('lgp')||{}).value||'');
-  var btn=document.querySelector('#auth button[onclick*="doLogin"]'),old=btn?btn.innerHTML:'Sign In / دخول';
-  var signedIn=false;
-  function error(msg){var a=E('aerr');if(a){a.textContent=msg;a.style.display='block'}}
-  function reset(){loginInFlight=false;if(btn){btn.disabled=false;btn.innerHTML=old}}
-  if(E('aerr'))E('aerr').style.display='none';
-  if(!email||!password){error('Enter your Firebase email and password');reset();return}
-  loginInFlight=true;if(btn){btn.disabled=true;btn.textContent='Signing in…'}
-  try{
-    if(!window.FB_AUTH||!window.FB_DB)initFirebase();
-    var credential=await Promise.race([FB_AUTH.signInWithEmailAndPassword(email,password),delayReject(15000,'Firebase sign-in timed out.')]);
-    signedIn=true;if(btn)btn.textContent='Opening account…';
-    var profile=await authoritativeProfile(credential.user.uid,credential.user);
-    var deptId=profile.deptId||null;
-    CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:profile.deptName||profile.departmentName||'',controlledCustodian:!!profile.controlledCustodian};
-    if(typeof MASTER_ACTUAL!=='undefined'){MASTER_ACTUAL=CU.master?Object.assign({},CU):null;MASTER_EFFECTIVE=null}
-    startApp();loginInFlight=false;beginDataSync();
-  }catch(err){
-    console.error('Login failed:',err);
-    if(signedIn){try{await FB_AUTH.signOut()}catch(_){}}
-    CU=null;error((err&&err.message)||'Unable to sign in');reset();
-  }
-};
 })();
 </script>
 </body>
 </html>
-
-<!-- FINAL NAVIGATION AUTHORITY — 2026-07-23 v2 -->
-<style id="final-nav-authority-v2-style">
-body:not(.role-department) [data-pg="pg-newreq"],
-body:not(.role-department) [onclick*="pg-newreq"],
-body:not(.role-department) #pg-newreq {
-  display:none !important;
-}
-</style>
-<script id="final-nav-authority-v2">
-(function(){
-  'use strict';
-  function E(id){ return document.getElementById(id); }
-  function effectiveRole(){
-    try{
-      return String((window.MASTER_EFFECTIVE && window.MASTER_EFFECTIVE.role) ||
-                    (window.CU && window.CU.role) || '');
-    }catch(e){ return ''; }
-  }
-  function isDepartment(){ return effectiveRole()==='department'; }
-
-  function removeForbiddenNewRequest(){
-    if(isDepartment()) return;
-    document.querySelectorAll('[data-pg="pg-newreq"],button[onclick*="pg-newreq"],a[onclick*="pg-newreq"]').forEach(function(el){
-      el.remove();
-    });
-    var page=E('pg-newreq');
-    if(page){
-      page.classList.remove('on','af-request-enabled','v13-admin-request-enabled');
-      page.hidden=true;
-      page.style.setProperty('display','none','important');
-    }
-  }
-
-  function hideEveryPage(){
-    document.querySelectorAll('.pg').forEach(function(p){
-      p.classList.remove('on');
-      p.style.setProperty('display','none','important');
-    });
-    document.querySelectorAll('#mnav .nb,[data-pg]').forEach(function(b){ b.classList.remove('on'); });
-  }
-
-  function showAnnouncementsOnly(){
-    if(typeof window.canSeeAnnouncements==='function' && !window.canSeeAnnouncements()) return;
-    removeForbiddenNewRequest();
-    hideEveryPage();
-    var page=E('pg-announcements');
-    if(!page && typeof window.renderAnnouncements==='function'){
-      try{ window.renderAnnouncements(); }catch(e){ console.error(e); }
-      page=E('pg-announcements');
-    }
-    if(!page) return;
-    page.hidden=false;
-    page.style.removeProperty('display');
-    page.classList.add('on');
-    var btn=document.querySelector('[data-pg="pg-announcements"]');
-    if(btn) btn.classList.add('on');
-    if(typeof window.renderAnnouncements==='function'){
-      try{ window.renderAnnouncements(); }catch(e){ console.error('Announcements render failed',e); }
-    }
-    /* renderers may touch page classes, so enforce the final state once more */
-    setTimeout(function(){
-      removeForbiddenNewRequest();
-      document.querySelectorAll('.pg').forEach(function(p){
-        if(p!==page){ p.classList.remove('on'); p.style.setProperty('display','none','important'); }
-      });
-      page.hidden=false;
-      page.style.removeProperty('display');
-      page.classList.add('on');
-    },0);
-  }
-
-  /* Disable every legacy runtime injector that can recreate New Request for pharmacy roles. */
-  window.ensureRequestNav=function(){ removeForbiddenNewRequest(); };
-  window.openAdminRequest=function(){ if(isDepartment() && typeof window.showPg==='function') window.showPg('pg-newreq'); };
-  window.openRequestPage=function(){ if(isDepartment() && typeof window.showPg==='function') window.showPg('pg-newreq'); };
-
-  var previousBuild=window.buildNav;
-  window.buildNav=function(){
-    var result=previousBuild && previousBuild.apply(this,arguments);
-    removeForbiddenNewRequest();
-    setTimeout(removeForbiddenNewRequest,0);
-    setTimeout(removeForbiddenNewRequest,180);
-    return result;
-  };
-
-  var previousShow=window.showPg;
-  window.showPg=function(id){
-    if(id==='pg-announcements'){
-      showAnnouncementsOnly();
-      return;
-    }
-    if(id==='pg-newreq' && !isDepartment()){
-      removeForbiddenNewRequest();
-      id='pg-dash';
-    }
-    var result=previousShow && previousShow.call(this,id);
-    setTimeout(removeForbiddenNewRequest,0);
-    return result;
-  };
-
-  window.openAnnouncementsPageV15=showAnnouncementsOnly;
-
-  document.addEventListener('click',function(ev){
-    var ann=ev.target && ev.target.closest && ev.target.closest('[data-pg="pg-announcements"]');
-    if(ann){
-      ev.preventDefault();
-      ev.stopImmediatePropagation();
-      showAnnouncementsOnly();
-    }
-  },true);
-
-  var observer=new MutationObserver(function(){ removeForbiddenNewRequest(); });
-  function boot(){
-    removeForbiddenNewRequest();
-    if(document.body) observer.observe(document.body,{childList:true,subtree:true});
-  }
-  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot,{once:true});
-  else boot();
-})();
-</script>
