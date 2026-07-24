@@ -3098,7 +3098,6 @@ function ctlMoves(){return S.g('controlled_moves')||[]}
 function ctlMove(v){v.id='ctl_'+Date.now()+'_'+Math.random().toString(36).slice(2,6);v.at=nowISO();v.by=CU.username;return S.push('controlled_moves',v)}
 function ctlIsOfficer(){return CU&&CU.role==='controlled_pharmacy'}
 function ctlIsWarehouse(){return CU&&CU.role==='warehouse'}
-function ctlCanEditCatalog(){return ctlIsOfficer()||ctlIsWarehouse()}
 function ctlCanEditDept(){return ctlIsOfficer()}
 function ctlDate(v){
   if(!v)return '';
@@ -3214,9 +3213,6 @@ function printControlledCurrent(){
 </script>
 <style id="v13-final-ui-repair-style">
 /* Final repair: allow privileged pharmacy roles to open New Request and keep modal controls interactive. */
-body.role-pharmacy #pg-newreq.v13-admin-request-enabled,
-body.role-pharmacy_director #pg-newreq.v13-admin-request-enabled,
-body.role-inpatient_supervisor #pg-newreq.v13-admin-request-enabled{display:block!important}
 #ann-editor button,#ann-editor input,#ann-editor select,#ann-editor textarea,
 #ops-hide-modal button,#ops-hide-modal input,#ops-hide-modal select,#ops-hide-modal textarea{
   pointer-events:auto!important;opacity:1!important
@@ -3258,7 +3254,7 @@ function expiryHTML(b){var d=b.expiry||b.date||'',days=daysTo(d),cls=days<0?'v13
 window.ctlConfirmDepartmentPrint=async function(){var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,s=ctlPrintSettings(dept),logo=(typeof ctlLogo==='function'?ctlLogo():''),rows=ctlDeptList(dept).map(function(x,i){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+(i+1)+'</td><td class="med">'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td class="expiry">'+((x.batches||[]).map(expiryHTML).join('<br>')||'—')+'</td></tr>'}).join('');var body='<div class="head"><div>'+(logo?'<img class="logo v13-logo-print" src="'+logo+'">':'')+'</div><div><h1>عهدة الأدوية المخدرة والمقيدة</h1><h2>Custody of Narcotic and Controlled Medications</h2><h2>'+esc(name)+'</h2></div><div></div></div><table class="v13-print-compact"><thead><tr><th>#</th><th class="med">اسم الدواء / Medicine</th><th>الكمية / Qty</th><th>تاريخ الانتهاء ← الكمية / Expiry date ← Qty</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs" style="grid-template-columns:repeat(2,1fr)"><div class="sig">أمين عهدة الأدوية المخدرة والمقيدة<br>Controlled Medicines Custodian<br><b>'+esc(s.controlledCustodian||s.custodyOfficer||'')+'</b></div><div class="sig">مدير الصيدلية<br>Pharmacy Manager<br><b>'+esc(s.pharmacyManager||'')+'</b></div></div><div class="v13-official-footer">هذه الأدوية مصدقة إلكترونيًا ولا تحتاج إلى الختم<br>These medicines are electronically approved and do not require an official stamp.</div>';if(typeof ctlPrintHTML==='function')ctlPrintHTML(name,body)};
 window.v13OpenBulkExpiry=function(){var ids=typeof ctlSelectedDeptIds==='function'?ctlSelectedDeptIds():[];if(!ids.length)return toast('Select one or more medicines first','err');var dept=ctlCurrentDept(),list=ctlDeptList(dept),html='<table><thead><tr><th>✓</th><th>Medicine</th><th>Current Qty</th><th>Current expiry batches</th></tr></thead><tbody>'+ids.map(function(id){var x=list.find(function(z){return z.medId===id})||{},m=ctlMedicine(id)||{};return '<tr data-med="'+id+'"><td><input type="checkbox" class="v13-bulk-exp-use" checked></td><td><b>'+esc(m.name||id)+'</b></td><td>'+ctlNum(x.qty)+'</td><td>'+((x.batches||[]).map(expiryHTML).join('<br>')||'—')+'</td></tr>'}).join('')+'</tbody></table>';E('v13-bulk-exp-list').innerHTML=html;E('v13-bulk-exp-date').value='';E('v13-bulk-exp-lot').value='';E('v13-bulk-exp-qty').value='';OM('v13-bulk-expiry-modal')};
 window.v13ApplyBulkExpiry=async function(){var date=E('v13-bulk-exp-date').value,mode=E('v13-bulk-exp-mode').value,lot=E('v13-bulk-exp-lot').value.trim(),q=E('v13-bulk-exp-qty').value;if(!date)return toast('Choose the new expiry date','err');var dept=ctlCurrentDept(),list=ctlDeptList(dept),count=0;document.querySelectorAll('#v13-bulk-exp-list tr[data-med]').forEach(function(tr){if(!tr.querySelector('.v13-bulk-exp-use').checked)return;var x=list.find(function(z){return z.medId===tr.dataset.med});if(!x)return;if(mode==='replace')x.batches=[];x.batches=x.batches||[];x.batches.push({expiry:date,lot:lot,qty:q===''?x.qty:Number(q)});count++});if(!count)return toast('Select at least one medicine','err');await S.s('controlled_department_'+dept,list);CM('v13-bulk-expiry-modal');toast(count+' medicine(s) updated ✓','succ');renderControlled()};
-var rc0=window.renderControlled;window.renderControlled=function(){var r=rc0&&rc0.apply(this,arguments);setTimeout(function(){var head=E('ctl-dept-table')&&E('ctl-dept-table').closest('.card');if(head&&!E('v13-bulk-expiry-btn')){var bar=document.createElement('div');bar.className='v13-bulk-expiry-bar';bar.innerHTML='<button id="v13-bulk-expiry-btn" class="btn bp bsm" onclick="v13OpenBulkExpiry()">Bulk add/replace expiry</button><span class="fhint">Select medicines first, then add or replace expiry dates in one action.</span>';head.appendChild(bar)}},0);return r};
+var rc0=window.renderControlled;
 
 var oph0=window.officialPrintHeaderHTML;window.officialPrintHeaderHTML=function(){var h=typeof oph0==='function'?oph0.apply(this,arguments):'';return String(h).replace(/class="logo"/g,'class="logo v13-logo-print"').replace(/max-width:\s*\d+px/g,'max-width:180px').replace(/max-height:\s*\d+px/g,'max-height:100px')};
 var cp0=window.ctlPrintHTML;window.ctlPrintHTML=function(title,body){if(String(body).indexOf('electronically approved')<0)body+='<div class="v13-official-footer">هذه الأدوية مصدقة إلكترونيًا ولا تحتاج إلى الختم<br>These medicines are electronically approved and do not require an official stamp.</div>';return cp0(title,body)};
@@ -3919,26 +3915,6 @@ function handleXlsxDrop(e){
   e.preventDefault();
   var f=e.dataTransfer.files[0];
   if(f)handleXlsxFile(f);
-}
-async function handleXlsxFile(file){
-  if(!file)return;
-  try{await ensureXLSX()}catch(e){toast('تعذر تحميل قارئ Excel. تأكد من الاتصال بالإنترنت أو استخدم Paste mode.','err');return;}
-  var dz=el('xlsx-drop-zone');
-  if(dz){dz.querySelector('div:nth-child(2)').textContent='Reading: '+file.name;}
-  var reader=new FileReader();
-  reader.onload=function(e){
-    try{
-      if(String(file.name).toLowerCase().endsWith('.csv')){
-        parseCsvData(e.target.result);
-      } else {
-        parseXlsxData(e.target.result);
-      }
-    }catch(err){
-      toast('Error reading file: '+err.message,'err');
-    }
-  };
-  if(String(file.name).toLowerCase().endsWith('.csv')) reader.readAsText(file);
-  else reader.readAsArrayBuffer(e.target.result||file);
 }
 async function handleXlsxFile(file){
   if(!file)return;
@@ -5734,43 +5710,6 @@ function ctlTabs(){
   if(!tabs.some(function(x){return x[0]===CTL_VIEW}))CTL_VIEW=tabs[0][0];
   el('ctl-tabs').innerHTML=tabs.map(function(x){return '<button class="tbtn '+(CTL_VIEW===x[0]?'on':'')+'" onclick="ctlSetView(\''+x[0]+'\')">'+x[1]+'</button>'}).join('');
 }
-function renderControlled(){
-  if(!CU)return;
-  ctlEnsureDepartmentSeed();
-  ctlTabs();
-  ['overview','catalog','departments'].forEach(function(v){var node=el('ctl-'+v+'-view');if(node)node.style.display=CTL_VIEW===v?'block':'none'});
-  var canCatalog=ctlCanEditCatalog(),canAdd=ctlCanAddCatalog();
-  if(el('ctl-import-card'))el('ctl-import-card').style.display=canCatalog?'block':'none';
-  if(el('ctl-add-med-btn'))el('ctl-add-med-btn').style.display=canAdd?'inline-flex':'none';
-  if(el('ctl-add-overview-btn'))el('ctl-add-overview-btn').style.display=canAdd?'inline-flex':'none';
-  if(el('ctl-alert-days'))el('ctl-alert-days').value=ctlAlertDays();
-  var note=el('ctl-permission-note');
-  if(CU.role==='department'){
-    note.style.display='block';
-    note.innerHTML='Read-only access: Master or the controlled-medicines pharmacy officer manages your department list, quantities and expiry dates.';
-  }else note.style.display='none';
-  renderCtlOverview();renderCtlCatalog();renderCtlDepartments();renderCtlPending();renderCtlLog();renderCtlPdfReceiptPanel();
-}
-function renderCtlOverview(){
-  var body=el('ctl-overview-table');if(!body)return;
-  var wh=ctlWarehouse(),ph=ctlPharmacy(),q=(el('ctl-overview-search')?el('ctl-overview-search').value:'').toLowerCase(),filter=(el('ctl-status-filter')?el('ctl-status-filter').value:'all');
-  var alerts=[],rows=ctlCatalog().filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)}).map(function(m){
-    var w=wh[m.id]||{},p=ph[m.id]||{},st=ctlStatus(m,w,p);
-    if(st.key!=='ok')alerts.push({m:m,status:st});
-    return {m:m,w:w,p:p,status:st};
-  }).filter(function(x){return filter==='all'||x.status.key===filter});
-  el('ctl-global-alerts').innerHTML=alerts.length
-    ?'<div class="alert-banner-y"><b>Attention:</b> '+alerts.length+' medicine(s) need review. '+alerts.slice(0,8).map(function(x){return esc(x.m.name)+' — '+x.status.html}).join(' &nbsp; ')+'</div>'
-    :'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ No stock or expiry alerts within '+ctlAlertDays()+' days.</div>';
-  body.innerHTML=rows.length?rows.map(function(x,i){
-    var m=x.m,w=x.w,p=x.p,actions=[];
-    if(ctlCanEditWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Warehouse</button>');
-    if(ctlCanEditPharmacy())actions.push('<button class="btn bp bxs" data-id="'+m.id+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Pharmacy</button>');
-    if(ctlIsWarehouse())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send</button>');
-    if(ctlCanEditCatalog())actions.push('<button class="btn bg bxs" data-id="'+m.id+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit</button><button class="btn bd2c bxs" data-id="'+m.id+'" onclick="ctlDeleteCatalogMedicine(this.dataset.id)">Delete</button>');
-    return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b><div class="fhint">'+esc(m.moh||'')+' · '+esc(m.nupco||'')+'</div></td><td>'+ctlClassLabel(m.classification)+'</td><td>'+ctlFlags(m)+'</td><td>'+ctlNum(m.min)+' / '+ctlNum(m.max)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.system)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlNum(w.outside)+'</td><td class="'+ctlWarehouseCellClass(w)+'">'+ctlBatchText(w.batches)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlNum(p.qty)+'</td><td class="'+ctlPharmacyCellClass(p)+'">'+ctlBatchText(p.batches)+'</td><td>'+x.status.html+'</td><td style="white-space:nowrap">'+(actions.join(' ')||'<span class="chip">Read only</span>')+'</td></tr>';
-  }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No medicines match the selected filter.</td></tr>';
-}
 function renderCtlCatalog(){
   var q=(el('ctl-search')?el('ctl-search').value:'').toLowerCase(),rows=ctlCatalog().filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)});
   el('ctl-catalog-table').innerHTML=rows.length?rows.map(function(m,i){
@@ -6028,15 +5967,7 @@ function renderCtlOverview(){
 
 // Run the exact stock restore once after the app state is ready.
 var _originalControlledRender=renderControlled;
-renderControlled=function(){
-  if(!S.g('controlled_master_stock_seed_v4')){
-    ctlRestoreMasterStockOnce().then(function(){_originalControlledRender()}).catch(function(err){
-      console.error(err);toast('Could not restore stock quantities: '+(err.message||err),'err');_originalControlledRender();
-    });
-    return;
-  }
-  _originalControlledRender();
-};
+
 
 
 // ── CONTROLLED MODULE V6: batch editor, dispensing, analytics and print suite ──
@@ -6077,7 +6008,7 @@ function printCtlAnalytics(){var html=el('ctl-an-table').closest('table').outerH
 async function processPublicControlledExpiry(){var p=new URLSearchParams(location.search);if(p.get('view')!=='controlled-expiry')return false;await waitForFirebase();document.body.innerHTML='<div id="pub-ctl" style="max-width:1000px;margin:20px auto;padding:15px;font-family:Arial"></div>';var root=el('pub-ctl'),dept=p.get('dept')||'';try{var snap=await FB_DB.collection('public_controlled_expiry').doc(dept).get();if(!snap.exists)throw new Error('List not found');var d=snap.data(),rows=(d.items||[]).map(function(x,i){var bs=(x.batches||[]).map(function(b){var days=daysUntil(b.expiry),cls=days<=0?'exp-red':days<=ctlAlertDays()?'exp-yellow':'exp-ok';return '<div class="'+cls+'">'+(b.qty?esc(b.qty)+' — ':'')+ctlFmtDMY(b.expiry)+' ('+days+' days)</div>'}).join('')||'—';return '<tr><td>'+(i+1)+'</td><td style="font-weight:bold">'+esc(x.name)+'</td><td>'+esc(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');root.innerHTML='<h1 style="text-align:center">متابعة انتهاء الأدوية المخدرة والمقيدة</h1><h2 style="text-align:center">Controlled Medicines Expiry Follow-up</h2><h2 style="text-align:center">'+esc(d.departmentName||dept)+'</h2><div class="tw"><table><thead><tr><th>#</th><th>Medicine / الدواء</th><th>Qty / الكمية</th><th>Expiry / الانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table></div><div style="text-align:center;margin-top:18px;font-size:11px">By Ali Abudahash</div>'}catch(e){root.innerHTML='<div class="alert-banner">'+esc(e.message||'Could not load list')+'</div>'}return true}
 // Add buttons and improved batch controls after each controlled render.
 var _ctlRenderV6=renderControlled;
-renderControlled=function(){ctlEnsureV6UI();_ctlRenderV6();if(CTL_VIEW==='overview'){Array.from(document.querySelectorAll('#ctl-overview-table tr,#ctl-out-table tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild,m=ctlMedicine(id);if(td&&m&&!td.querySelector('.v6disp'))td.insertAdjacentHTML('afterbegin','<span class="v6disp">'+ctlDispenseButton(m)+'</span>')})}if(CTL_VIEW==='departments'&&ctlCanEditDept()){var h=el('ctl-departments-view').querySelector('.ch .fl');if(h&&!h.querySelector('.v6print'))h.insertAdjacentHTML('beforeend','<button class="btn bg bsm v6print" onclick="ctlChooseLogo()">Logo</button><button class="btn bg bsm v6print" onclick="printCtlHandover()">Temporary custody handover / محضر تسليم عهدة مؤقت</button>')}if(el('ctl-overview-table'))Array.from(el('ctl-overview-table').querySelectorAll('tr')).forEach(function(tr){var b=tr.querySelector('button[data-id]');if(!b)return;var id=b.dataset.id,td=tr.lastElementChild;if(ctlCanEditWarehouse()&&!td.querySelector('.wh-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs wh-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'warehouse\',this.dataset.id)">WH expiries</button> ');if(ctlCanEditPharmacy()&&!td.querySelector('.ph-batch'))td.insertAdjacentHTML('afterbegin','<button class="btn bg bxs ph-batch" data-id="'+id+'" onclick="ctlOpenBatchEditor(\'pharmacy\',this.dataset.id)">PH expiries</button> ')})}
+
 
 
 async function ctlPrintTemporaryHandover(){
@@ -6938,18 +6869,7 @@ ctlPromptMed=async function(existing){
   return d;
 };
 var _renderControlledComprehensive=renderControlled;
-renderControlled=function(){
-  _renderControlledComprehensive();
-  var root=el('pg-controlled');if(!root)return;
-  var top=root.querySelector('.fl.ic.jb.mb14')||root.querySelector('.stitle')&&root.querySelector('.stitle').parentElement;
-  if(top&&!el('ctl-global-tools')){
-    var box=document.createElement('div');box.id='ctl-global-tools';box.className='card';box.innerHTML='<div class="cb fl g8 ic" style="flex-wrap:wrap"><button class="btn bg bsm" onclick="ctlEditGlobalSettings()">Hospital & approval settings</button><button class="btn bg bsm" onclick="ctlPrintCurrentGroup(\'narcotic\')">Print current narcotic list</button><button class="btn bg bsm" onclick="ctlPrintCurrentGroup(\'psychotropic\')">Print current psychotropic list</button><button class="btn bg bsm" onclick="ctlPrintNearExpiryGroup(\'narcotic\')">Near-expiry narcotic</button><button class="btn bg bsm" onclick="ctlPrintNearExpiryGroup(\'psychotropic\')">Near-expiry psychotropic</button><button class="btn bg bsm" onclick="ctlPrintTemporaryHandover()">Narcotic handover</button><button class="btn bg bsm" onclick="ctlPrintPsychHandover()">Psychotropic handover</button></div>';root.insertBefore(box,root.children[2]||null);
-  }
-  // Min/max editable only by warehouse: hide visually for non-warehouse.
-  if(CU.role!=='warehouse'){
-    root.querySelectorAll('th,td').forEach(function(cell){if(/^\s*(Min|Max|Min \/ Max)\s*$/i.test(cell.textContent||''))cell.style.display='none'});
-  }
-};
+
 function ctlPrintPsychHandover(){
   var original=ctlCatalog,filtered=ctlCatalog().filter(function(m){return ctlGroup(m)==='psychotropic'});
   var backup=window.ctlCatalog;window.ctlCatalog=function(){return filtered};
@@ -7157,7 +7077,7 @@ renderCtlOverview=function(){
     card.insertAdjacentHTML('afterbegin','<div class="card dept-print-settings" id="ctl-dept-print-settings" style="margin:12px"><div class="ch"><div><span class="ct">Department print details / بيانات طباعة القسم</span><div class="fhint">These details are saved separately for '+esc(name)+' and appear automatically on printed documents.</div></div><button class="btn bp bsm" onclick="ctlSaveDepartmentPrintSettings()">Save details</button></div><div class="cb"><div><label>Department manager / مدير القسم</label><input id="ctl-set-dept-manager" value="'+esc(s.departmentManager||'')+'" placeholder="Full name"></div><div><label>Head nurse / رئيس التمريض</label><input id="ctl-set-nursing-head" value="'+esc(s.nursingHead||'')+'" placeholder="Full name"></div><div><label>Controlled medicines custodian / أمين العهدة</label><input id="ctl-set-controlled-custodian" value="'+esc(s.controlledCustodian||'')+'" placeholder="Full name"></div><div><label>Pharmacy manager / مدير الصيدلية</label><input id="ctl-set-pharmacy-manager" value="'+esc(s.pharmacyManager||'')+'" placeholder="Full name"></div></div></div>');
   }
   var prevRender=renderControlled;
-  renderControlled=function(){var r=prevRender.apply(this,arguments);setTimeout(injectDepartmentPrintSettings,0);return r};
+  
   window.ctlEditSignatures=function(){injectDepartmentPrintSettings();var x=el('ctl-set-dept-manager');if(x)x.focus()};
   window.printControlledCurrent=function(){ctlOpenDepartmentPrintOptions()};
   window.ctlConfirmDepartmentPrint=async function(){
@@ -7220,10 +7140,7 @@ function ctlInjectResponsibleNamesCard(){
   }else pg.insertBefore(card,pg.firstChild);
 }
 var __renderControlledResponsible=renderControlled;
-renderControlled=function(){
-  __renderControlledResponsible.apply(this,arguments);
-  setTimeout(ctlInjectResponsibleNamesCard,0);
-};
+
 
 crashPrint=function(id){
   var c=crashCart(id),open=crashReports().some(function(r){return r.cartId===id&&r.status==='open'});if(!c)return;
@@ -7338,10 +7255,7 @@ crashPrint=function(id){
     }
   }
   var previousRender=renderControlled;
-  renderControlled=function(){var r=previousRender.apply(this,arguments);setTimeout(function(){
-    var legacy=document.getElementById('ctl-responsible-names-card');if(legacy)legacy.remove();
-    if(ctlDirectoryCanEdit())buildAdminCard();else enforceDepartmentReadOnly();
-  },0);return r;};
+  
 })();
 </script>
 <style>
@@ -7395,7 +7309,7 @@ crashPrint=function(id){
 (function(){
   function removeDirectory(){['ctl-admin-directory-card','ctl-responsible-names-card','ctl-dept-print-settings'].forEach(function(id){var x=document.getElementById(id);if(x)x.remove();});}
   var oldRenderControlled=renderControlled;
-  renderControlled=function(){var r=oldRenderControlled.apply(this,arguments);setTimeout(removeDirectory,0);return r;};
+  
   document.addEventListener('DOMContentLoaded',removeDirectory);
 
   window.whAddBatchRow=function(b){
@@ -7528,7 +7442,7 @@ crashPrint=function(id){
     if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(card,anchor.nextSibling);else pg.insertBefore(card,pg.firstChild);
   }
   var oldRender=window.renderControlled;
-  if(typeof oldRender==='function')window.renderControlled=function(){var r=oldRender.apply(this,arguments);setTimeout(applyWarehouseUI,0);return r};
+  if(typeof oldRender==='function')
   document.addEventListener('DOMContentLoaded',function(){setTimeout(applyWarehouseUI,400)});
   
 
@@ -7552,8 +7466,8 @@ crashPrint=function(id){
   var BACKUP_COLLECTIONS=['floorstock_state','users','public_expiry','public_controlled_expiry'];
   var pendingBackup=null;
 
-  function isMaster(){return !!(window.CU&&CU.master===true)}
-  function requireMaster(){if(!isMaster()){toast('Master permission required','err');return false}return true}
+  function isMasterBackupLocal(){return typeof window.isMaster==='function'?window.isMaster():!!(window.CU&&CU.master===true)}
+  function requireMaster(){if(!isMasterBackupLocal()){toast('Master permission required','err');return false}return true}
 
   /* Warehouse must never see or open inpatient department lists. */
   window.ctlTabs=function(){
@@ -7567,27 +7481,14 @@ crashPrint=function(id){
     document.getElementById('ctl-tabs').innerHTML=tabs.map(function(x){return '<button class="tbtn '+(window.CTL_VIEW===x[0]?'on':'')+'" data-view="'+x[0]+'" onclick="ctlSetView(this.dataset.view)">'+x[1]+'</button>'}).join('');
   };
   var originalCtlSetView=window.ctlSetView;
-  window.ctlSetView=function(v){
-    if(window.CU&&CU.role==='warehouse'&&v==='departments'){toast('Inpatient departments are not available to the warehouse role.','info');v='warehouse'}
-    window.CTL_VIEW=v;
-    if(typeof window.renderControlled==='function')window.renderControlled();
-  };
-  var originalRenderControlled=window.renderControlled;
-  if(typeof originalRenderControlled==='function')window.renderControlled=function(){
-    if(window.CU&&CU.role==='warehouse'&&(window.CTL_VIEW==='departments'||window.CTL_VIEW==='overview'))window.CTL_VIEW='warehouse';
-    var r=originalRenderControlled.apply(this,arguments);
-    if(window.CU&&CU.role==='warehouse'){
-      var dept=document.getElementById('ctl-departments-view');if(dept)dept.style.display='none';
-      document.querySelectorAll('#ctl-tabs button').forEach(function(b){if(/inpatient|departments/i.test(b.textContent||''))b.remove()});
-    }
-    return r;
-  };
+    var originalRenderControlled=window.renderControlled;
+  if(typeof originalRenderControlled==='function')
 
   /* Add the backup page to Master navigation only. */
   var originalBuildNav=window.buildNav;
   if(typeof originalBuildNav==='function')window.buildNav=function(){
     var r=originalBuildNav.apply(this,arguments),nav=document.getElementById('mnav');
-    if(isMaster()&&nav&&!nav.querySelector('[data-pg="pg-backup-restore"]')){
+    if(isMasterBackupLocal()&&nav&&!nav.querySelector('[data-pg="pg-backup-restore"]')){
       var b=document.createElement('button');b.className='nb';b.setAttribute('data-pg','pg-backup-restore');b.textContent='💾 Backup & Restore';b.onclick=function(){showPg('pg-backup-restore')};nav.appendChild(b);
     }
     return r;
@@ -7775,17 +7676,7 @@ crashPrint=function(id){
     var a=byId('ctl-global-alerts');if(a)a.innerHTML=count?'<div class="alert-banner-y"><b>'+count+'</b> medicine(s) require stock or expiry review.</div>':'<div class="alert-banner" style="border-color:var(--gn);background:rgba(46,160,67,.08)">✓ No current stock or expiry alerts.</div>';
   };
   var priorRenderControlled=window.renderControlled;
-  if(typeof priorRenderControlled==='function')window.renderControlled=function(){
-    if(window.CU&&CU.role!=='department'&&(window.CTL_VIEW==='overview'||window.CTL_VIEW==='warehouse'||window.CTL_VIEW==='pharmacy'))window.CTL_VIEW='overview';
-    var r=priorRenderControlled.apply(this,arguments);
-    if(window.CU&&CU.role!=='department'){
-      ensureSplitControlledUI();
-      ['overview','catalog','departments'].forEach(function(v){var n=byId('ctl-'+v+'-view');if(n)n.style.display=(v==='overview'&&CTL_VIEW==='overview')||(v===CTL_VIEW)?'block':'none'});
-      window.renderCtlOverview();
-      if(typeof renderCtlPending==='function')renderCtlPending();
-    }
-    return r;
-  };
+  if(typeof priorRenderControlled==='function')
   var priorCtlTabs=window.ctlTabs;
   window.ctlTabs=function(){
     if(!window.CU||!byId('ctl-tabs'))return;
@@ -8161,8 +8052,6 @@ crashPrint=function(id){
 })();
 </script>
 <style>
-body.role-pharmacy_staff #pg-newreq,
-body.role-inpatient_supervisor #pg-newreq{display:none!important}
 .final-print-choice{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0}
 .final-print-choice label{border:1px solid var(--bd);border-radius:9px;padding:12px;cursor:pointer;background:var(--s2);color:var(--tx)}
 .final-print-choice label:has(input:checked){border-color:var(--ac);box-shadow:inset 0 0 0 1px var(--ac)}
@@ -8373,7 +8262,7 @@ body.role-department #ctl-log{pointer-events:none}
     var fb=E('ctl-dept-filter-btn');if(fb)fb.textContent=window.CTL_DEPT_SOON_ONLY?'Show all medicines':'Show expiring soon only';
   }
   var oldRender=window.renderControlled;
-  window.renderControlled=function(){if(isDept())window.CTL_VIEW='departments';var r=oldRender&&oldRender.apply(this,arguments);setTimeout(applyDeptReadOnlyView,0);return r};
+  
   var oldShow=window.showPg;
   window.showPg=function(id){var r=oldShow&&oldShow.apply(this,arguments);if(id==='pg-controlled'&&isDept())setTimeout(function(){window.CTL_VIEW='departments';renderControlled()},0);return r};
   document.addEventListener('DOMContentLoaded',function(){setTimeout(applyDeptReadOnlyView,300)});
@@ -8425,7 +8314,7 @@ body.role-department #ctl-log{pointer-events:none}
   window.ctlDeptFinalPrint=function(){if(!isDept())return;return typeof window.ctlConfirmDepartmentPrint==='function'?window.ctlConfirmDepartmentPrint():toast('Custody print service unavailable.','err')};
 
   var prevRender=window.renderControlled;
-  window.renderControlled=function(){if(isDept())return buildDeptPanel();return prevRender&&prevRender.apply(this,arguments)};
+  
   var prevShow=window.showPg;
   window.showPg=function(id){var r=prevShow&&prevShow.call(this,id);if(id==='pg-controlled'&&isDept())setTimeout(buildDeptPanel,0);return r};
 
@@ -8451,8 +8340,8 @@ body.role-department #ctl-log{pointer-events:none}
   }
 
   /* Controlled print pages: full-width A4 landscape, left-to-right, Gregorian dates. */
-  window.ctlPrintHTML=function(title,body){
-    var w=window.open('','_blank');
+  window.ctlPrintHTML=function(title,body,preparedWindow){
+    var w=preparedWindow||window.open('','_blank');
     if(!w){toast('Allow pop-ups to print.','err');return;}
     w.document.write('<!doctype html><html dir="ltr"><head><meta charset="utf-8"><title>'+esc(title)+'</title><style>'+ 
       '@page{size:A4 landscape;margin:5mm}'+
@@ -8774,10 +8663,10 @@ body.role-department #ctl-log{pointer-events:none}
 <script id="system-health-script">
 (function(){
 'use strict';
-function isMaster(){try{return !!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE)}catch(e){return false}}
+function isMasterHealthLocal(){return typeof window.isMaster==='function'?window.isMaster():!!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE)}
 function setStatus(id,text,cls){var el=document.getElementById(id);if(!el)return;el.textContent=text;el.className='health-value '+(cls||'')}
 window.runSystemHealthDiagnostics=async function(){
-  if(!isMaster()){if(window.toast)toast('Master access only','err');return}
+  if(!isMasterHealthLocal()){if(window.toast)toast('Master access only','err');return}
   var lines=[],start=performance.now(),online=navigator.onLine;
   setStatus('health-network',online?'Online':'Offline',online?'health-ok':'health-bad');lines.push((online?'✓':'✗')+' Network: '+(online?'online':'offline'));
   var hasFirebase=!!window.firebase;setStatus('health-firebase',hasFirebase?'Loaded':'Unavailable',hasFirebase?'health-ok':'health-bad');lines.push((hasFirebase?'✓':'✗')+' Firebase SDK: '+(hasFirebase?'loaded':'not loaded'));
@@ -9264,7 +9153,7 @@ window.doPrint=function(){
   var card=document.getElementById('wh-receive-card');if(!card)return;var head=card.querySelector('.ch');if(!head||head.querySelector('.wh-bulk-buttons'))return;
   var wrap=document.createElement('div');wrap.className='fl g8 wh-bulk-buttons';wrap.innerHTML='<button class="btn bs" onclick="whBulkReceiveOpen()">+ Bulk receive / استلام متعدد</button><button class="btn bp" onclick="whBulkDispenseOpen()">⇢ Bulk dispense / صرف متعدد</button>';var old=head.querySelector('button[onclick="whReceiveOpen()"]');if(old)old.replaceWith(wrap);else head.appendChild(wrap);
  }
- var oldRender=window.renderControlled;if(typeof oldRender==='function')window.renderControlled=function(){var r=oldRender.apply(this,arguments);setTimeout(addButtons,30);return r};
+ var oldRender=window.renderControlled;if(typeof oldRender==='function')
  document.addEventListener('DOMContentLoaded',function(){setTimeout(addButtons,700)});
 })();
 </script>
@@ -9416,9 +9305,6 @@ window.doPrint=function(){
   }
 
   // Both custody roles may edit the shared catalogue.
-  window.ctlCanEditCatalog=function(){
-    return !!(window.CU&&(CU.master===true||CU.role==='controlled_pharmacy'||CU.role==='warehouse'));
-  };
   window.ctlCanAddCatalog=window.ctlCanEditCatalog;
   window.ctlCanEditWarehouse=function(){
     return !!(window.CU&&(CU.master===true||CU.role==='warehouse'));
@@ -9990,7 +9876,7 @@ window.doPrint=function(){
  var html='<!doctype html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body><section class="page"><div class="top">Floor Stock Dispensing Orders · '+escH(typeof fmtDate==='function'?fmtDate(typeof nowISO==='function'?nowISO():new Date()):new Date().toLocaleDateString())+'<span class="legend">High Alert: inverse name · LASA: circled quantity · Refrigerated: snowflake quantity · Hazard: diagonal line</span></div><div class="flow">';orders.forEach(function(o){var groups={};o.items.forEach(function(x){var c=String(x.m.category||'Uncategorized').trim()||'Uncategorized';(groups[c]||(groups[c]=[])).push(x)});html+='<div class="order"><div class="dept">'+escH(o.dept&&o.dept.name||o.r.deptId)+'</div>';var ix=0;Object.keys(groups).sort().forEach(function(cat){html+='<div class="cat">'+escH(cat)+'</div>';groups[cat].forEach(function(x){ix++;var f=medFlags(x.m),cl=(f.ha?' ha':'')+(f.hz?' hazard':'')+(f.lasa?' lasa':'')+(f.cold?' cold':'');html+='<div class="item'+cl+'"><span class="num">'+ix+'</span><span class="name">'+escH(x.m.name)+'</span><span class="qty">'+x.qty+'</span></div>'})});html+='</div>'});html+='</div><div class="foot">By Ali Abudahash</div></section><script>window.onload=function(){setTimeout(function(){window.print()},250)}<\\/script></body></html>';
  ids.forEach(function(id){var r=(gr()||[]).find(function(x){return String(x.id)===String(id)});if(r&&window.S&&S.upd)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:typeof nowISO==='function'?nowISO():new Date().toISOString()})});var w=window.open('','_blank');if(!w)return toast2('Allow pop-ups to print.','err');w.document.open();w.document.write(html);w.document.close();if(typeof renderPrint==='function')renderPrint()
 };
-var baseRender=window.renderControlled;window.renderControlled=function(){var r=baseRender&&baseRender.apply(this,arguments);setTimeout(function(){addBulkButton();var btn=E('ctl-sign-btn');if(btn){btn.onclick=function(e){e.preventDefault();window.ctlEditSignatures()}}},30);return r};
+
 function stamp(){var x=E('v13-build-stamp');if(!x){x=document.createElement('div');x.id='v13-build-stamp';x.style.cssText='position:fixed;left:8px;bottom:6px;z-index:9999;font:9px monospace;color:#6e7781;opacity:.75;pointer-events:none';document.body.appendChild(x)}x.textContent=BUILD}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){createModals();stamp()});else{createModals();stamp()}
 })();
@@ -10125,7 +10011,6 @@ function E(id){return document.getElementById(id)}
 function escV(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function normExact(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
 function variantKey(v){return normExact(v).replace(/\b(tablet|tablets|tab|tabs|capsule|capsules|cap|caps|injection|injections|inj|ampoule|ampoules|amp|vial|vials)\b/g,'').replace(/\s+/g,' ').trim()}
-function flags(m){return {high_alert:!!(m.high_alert||m.highAlert),lasa:!!(m.lasa||m.LASA),refrigerated:!!(m.refrigerated||m.fridge||m.cold_chain),hazard:!!(m.hazard||m.hazardous)}}
 function flagSig(m){var f=flags(m);return ['high_alert','lasa','refrigerated','hazard'].filter(function(k){return f[k]}).join('|')||'none'}
 function canManage(){return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
 var selectedRows=new Map();
@@ -10158,12 +10043,12 @@ var oldOpenBR=window.openBulkReplacement;window.openBulkReplacement=function(){v
 
 /* Reliable Pharmacy Custody view using the existing stock editor. */
 function renderPharmacyCustodyFallback(){if(!window.CU||CU.role!=='controlled_pharmacy'||String(window.CTL_VIEW)!=='pharmacy')return;var host=E('ctl-pharmacy-view');if(!host)return;var cat=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[],stock=typeof ctlPharmacy==='function'?(ctlPharmacy()||{}):{},wh=typeof ctlWarehouse==='function'?(ctlWarehouse()||{}):{};var filter=(E('v13q-ph-class')||{}).value||'all',q=normExact((E('v13q-ph-search')||{}).value||'');var list=cat.filter(function(m){return (filter==='all'||String(m.classification||'narcotic')===filter)&&(!q||normExact(m.name).indexOf(q)>-1)});host.style.display='block';host.innerHTML='<div class="card"><div class="ch"><div><span class="ct">Pharmacy Custody / عهدة الصيدلية</span><div class="fhint">Narcotic and psychotropic medicines are separated by filter.</div></div><div class="fl g8"><select id="v13q-ph-class" class="psel" onchange="renderControlled()"><option value="all" '+(filter==='all'?'selected':'')+'>All</option><option value="narcotic" '+(filter==='narcotic'?'selected':'')+'>Narcotic</option><option value="psychotropic" '+(filter==='psychotropic'?'selected':'')+'>Psychotropic</option></select><input id="v13q-ph-search" value="'+escV((E('v13q-ph-search')||{}).value||'')+'" placeholder="Search..." oninput="renderControlled()" style="margin:0;width:220px"></div></div><div class="tw"><table><thead><tr><th>#</th><th>Medicine</th><th>Type</th><th>Min / Max</th><th>Pharmacy Qty</th><th>Expiry batches</th><th>Warehouse reference</th><th></th></tr></thead><tbody>'+list.map(function(m,i){var p=stock[m.id]||{},w=wh[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+escV(m.name)+'</b><div class="fhint">'+escV(m.moh||'')+' · '+escV(m.nupco||'')+'</div></td><td>'+escV(m.classification||'narcotic')+'</td><td>'+Number(m.min||0)+' / '+Number(m.max||0)+'</td><td>'+Number(p.qty||0)+'</td><td>'+((p.batches||[]).map(function(b){return escV(b.qty||0)+' — '+escV(b.expiry||'—')+(b.lot?' · '+escV(b.lot):'')}).join('<br>')||'—')+'</td><td>'+Number(w.system||0)+' / '+Number(w.outside||0)+'</td><td><button class="btn bp bxs" data-id="'+escV(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit custody</button></td></tr>'}).join('')+'</tbody></table></div>'+(list.length?'':'<div class="v13q-custody-empty">No medicines match the selected filter.</div>')+'</div>'}
-var baseControlled=window.renderControlled;window.renderControlled=function(){var r=baseControlled&&baseControlled.apply(this,arguments);setTimeout(renderPharmacyCustodyFallback,20);return r};
+var baseControlled=window.renderControlled;
 
 /* Extend controlled bulk edit with classification-only action. */
 function extendControlledBulk(){var modal=E('v13-final-bulk-modal');if(!modal||E('v13q-ctl-class-op'))return;var scope=E('v13-final-bulk-scope');if(!scope)return;var box=document.createElement('div');box.className='card';box.style.marginTop='10px';box.innerHTML='<div class="cb" style="padding:12px"><label>Classification operation</label><select id="v13q-ctl-class-op"><option value="keep">Keep classification</option><option value="replace">Replace classification</option></select><select id="v13q-ctl-class-value"><option value="narcotic">Narcotic</option><option value="psychotropic">Psychotropic</option></select><button type="button" class="btn bg bsm" onclick="v13ApplyControlledClassification()">Apply classification to selected medication</button></div>';scope.parentNode.insertBefore(box,scope)}
 window.v13ApplyControlledClassification=async function(){var med=(E('v13-final-bulk-med')||{}).value,op=(E('v13q-ctl-class-op')||{}).value,val=(E('v13q-ctl-class-value')||{}).value;if(!med)return toast('Select a medication.','err');if(op==='keep')return toast('Choose Replace classification first.','info');var cat=(ctlCatalog()||[]).map(function(m){return String(m.id)===String(med)?Object.assign({},m,{classification:val}):m});await ctlSetCatalog(cat);toast('Controlled medication classification updated.','succ');if(typeof renderControlled==='function')renderControlled()};
-var oldControlledRender=window.renderControlled;window.renderControlled=function(){var r=oldControlledRender&&oldControlledRender.apply(this,arguments);setTimeout(extendControlledBulk,30);return r};
+var oldControlledRender=window.renderControlled;
 
 /* New Request safety: never leave the page blank for a department user. */
 var reqBase=window.renderReqForm;window.renderReqForm=function(){var root=E('rfbody');try{var r=reqBase&&reqBase.apply(this,arguments);setTimeout(function(){if(!root)return;var empty=!String(root.innerHTML||'').trim();if(empty){var dept=window.CU&&CU.deptId,meds=dept&&typeof getMeds==='function'?(getMeds(dept)||[]):[];root.innerHTML=meds.length?'<div class="alert-banner-y">The request list could not render. Reload once; '+meds.length+' medications are assigned to this department.</div>':'<div class="v13q-custody-empty">No medication list is assigned to this department.</div>'}},0);return r}catch(e){console.error(e);if(root)root.innerHTML='<div class="alert-banner">'+escV(e.message||'Could not load New Request')+'</div>'}};
@@ -10330,14 +10215,13 @@ window.v13XSaveCatalogMed=async function(){var id=E('v13x-med-id').value,a=catal
 function openStockX(id,scope){ensureModalsX();var m=medX(id)||{},data={},title='';if(scope==='pharmacy'){data=phX()[id]||{};title='Pharmacy custody — '+(m.name||'');E('v13x-required-wrap').style.display='none'}else{var dept=deptX(),x=listX(dept).find(function(y){return String(y.medId)===String(id)})||{};data=x;title='Department controlled list — '+(m.name||'');E('v13x-required-wrap').style.display='block'}E('v13x-stock-id').value=id;E('v13x-stock-scope').value=scope;E('v13x-stock-title').textContent=title;E('v13x-stock-qty').value=numX(data.actualQty!=null?data.actualQty:data.qty);E('v13x-stock-required').value=numX(data.requiredQty!=null?data.requiredQty:(data.max!=null?data.max:m.max));var h=E('v13x-stock-batches');h.innerHTML='';(data.batches||[]).forEach(function(b){addBatchRowX(h,b)});if(!h.children.length)addBatchRowX(h,{});openX('v13x-stock-modal')}
 window.ctlEditPharmacyStock=function(id){if(!officerX())return toastX('No permission','err');openStockX(id,'pharmacy')};
 window.ctlEditDeptMedicine=function(id){openStockX(id,'department')};
-window.v13XSaveStock=async function(){var id=E('v13x-stock-id').value,scope=E('v13x-stock-scope').value,qty=numX(E('v13x-stock-qty').value),required=numX(E('v13x-stock-required').value),batches=readBatchesX(E('v13x-stock-batches')),sum=batches.reduce(function(a,b){return a+numX(b.qty)},0);if(batches.length&&sum!==qty)return toastX('Expiry quantities must equal the actual quantity. Total: '+sum+' / Actual: '+qty,'err');if(scope==='pharmacy'){var all=Object.assign({},phX());all[id]=Object.assign({},all[id]||{},{qty:qty,actualQty:qty,batches:batches});if(typeof window.ctlSetPharmacy==='function')await ctlSetPharmacy(all)}else{var d=deptX(),list=listX(d).slice(),i=list.findIndex(function(x){return String(x.medId)===String(id)});if(i<0)return;list[i]=Object.assign({},list[i],{qty:qty,actualQty:qty,requiredQty:required,batches:batches});if(typeof window.ctlSetDeptList==='function')await ctlSetDeptList(d,list)}closeX('v13x-stock-modal');toastX('Custody saved ✓','succ');if(typeof window.renderControlled==='function')renderControlled()};
 function renderPharmacyX(){var host=E('ctl-pharmacy-view');if(!host||window.CTL_VIEW!=='pharmacy')return;var separate=localStorage.getItem('v13x_ctl_separate')!=='0',q=((E('v13x-ph-search')||{}).value||'').toLowerCase(),cat=catalogX().filter(function(m){return !q||String(m.name||'').toLowerCase().indexOf(q)>=0}),ph=phX(),wh=whX();function table(type){var list=cat.filter(function(m){return !separate||String(m.classification||'narcotic')===type});return '<div class="v13x-section"><div class="v13x-section-title">'+(separate?(type==='narcotic'?'Narcotic medicines custody / عهدة الأدوية المخدرة':'Psychotropic medicines / الأدوية النفسية'):'All controlled medicines / جميع الأدوية المقيدة')+'</div><div class="tw"><table><thead><tr><th>#</th><th>Medicine</th><th>Type</th><th>Min/Max</th><th>Actual qty</th><th>Expiry date → qty</th><th>Warehouse ref.</th><th></th></tr></thead><tbody>'+list.map(function(m,i){var p=ph[m.id]||{},w=wh[m.id]||{};return '<tr><td>'+(i+1)+'</td><td><b>'+escX(m.name||'')+'</b><div class="fhint">'+escX(m.moh||'')+' · '+escX(m.nupco||'')+'</div></td><td>'+escX(m.classification||'narcotic')+'</td><td>'+numX(m.min)+' / '+numX(m.max)+'</td><td>'+numX(p.actualQty!=null?p.actualQty:p.qty)+'</td><td>'+fmtBatchesX(p.batches)+'</td><td>'+numX(w.system)+' / '+numX(w.outside)+'</td><td><button class="btn bp bxs" data-id="'+escX(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit custody</button></td></tr>'}).join('')+'</tbody></table></div></div>'}host.innerHTML='<div class="card"><div class="ch"><div><span class="ct">Pharmacy Custody / عهدة الصيدلية</span><div class="fhint">Edit actual quantity and multiple expiry dates.</div></div><div class="v13x-toolbar"><label style="margin:0"><input type="checkbox" id="v13x-separate" style="width:auto;margin:0" '+(separate?'checked':'')+'> Separate narcotic and psychotropic lists</label><input id="v13x-ph-search" value="'+escX((E('v13x-ph-search')||{}).value||'')+'" placeholder="Search..." style="margin:0;width:220px"></div></div><div class="cb">'+(separate?table('narcotic')+table('psychotropic'):table('all'))+'</div></div>';E('v13x-separate').onchange=function(){localStorage.setItem('v13x_ctl_separate',this.checked?'1':'0');renderPharmacyX()};E('v13x-ph-search').oninput=renderPharmacyX}
 function enhanceDepartmentsX(){var body=E('ctl-dept-table');if(!body||window.CTL_VIEW!=='departments')return;var d=deptX(),list=listX(d);body.innerHTML=list.map(function(x,i){var m=medX(x.medId)||{},actual=numX(x.actualQty!=null?x.actualQty:x.qty),required=numX(x.requiredQty!=null?x.requiredQty:(x.max!=null?x.max:m.max));return '<tr><td>'+(i+1)+'</td><td>'+escX(m.moh||'—')+'</td><td>'+escX(m.nupco||'—')+'</td><td><b>'+escX(m.name||'')+'</b></td><td>'+escX(m.classification||'')+'</td><td>'+numX(x.min!=null?x.min:m.min)+'</td><td>'+required+'</td><td>'+actual+'</td><td>'+fmtBatchesX(x.batches)+'</td><td><button class="btn bg bxs" data-id="'+escX(x.medId)+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button></td></tr>'}).join('')||'<tr><td colspan="10" class="v13x-empty">No medicines assigned to this department.</td></tr>';var th=body.closest('table').querySelector('thead tr');if(th)th.innerHTML='<th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine</th><th>Type</th><th>Min</th><th>Required qty</th><th>Actual qty</th><th>Expiry date → qty</th><th></th>';var card=E('ctl-dept-print-settings');if(card){var dm=card.querySelector('input[id="ctl-set-dept-manager"]');if(dm&&dm.parentElement)dm.parentElement.style.display='none';var label=card.querySelector('label[for="ctl-set-nursing-head"]');}var nh=E('ctl-set-nursing-head');if(nh){var l=nh.previousElementSibling;if(l)l.textContent='Head nurse / رئيس تمريض القسم'}var cc=E('ctl-set-controlled-custodian');if(cc){var l2=cc.previousElementSibling;if(l2)l2.textContent='Controlled medicines officer / مسؤول الأدوية المخدرة والمقيدة'}}
 function opsX(kind){ensureModalsX();var title=kind.replace(/_/g,' '),body='',run=function(){};if(kind==='settings'){title='Hospital & approval settings';var s=typeof window.ctlSettingsGlobal==='function'?ctlSettingsGlobal():{};body='<div class="v13x-grid"><div><label>Hospital name</label><input id="v13x-hospital" value="'+escX(s.hospitalName||'')+'"></div><div><label>Approval authority</label><input id="v13x-approval" value="'+escX(s.approvalAuthority||'')+'"></div></div>';run=async function(){var x=typeof window.ctlSettingsGlobal==='function'?ctlSettingsGlobal():{};x.hospitalName=E('v13x-hospital').value.trim();x.approvalAuthority=E('v13x-approval').value.trim();if(window.S&&S.s)await S.s('controlled_global_settings',x);closeX('v13x-ops-modal');toastX('Settings saved ✓','succ')}}else{body='<div class="alert-banner-y">This operation opens in a modern confirmation window. All medicine quantities remain linked to their expiry-date batches.</div><p>'+escX(title)+'</p>';run=function(){closeX('v13x-ops-modal');var map={print_narcotic:'ctlPrintCurrentGroup',print_psychotropic:'ctlPrintCurrentGroup',near_narcotic:'ctlPrintNearExpiryGroup',near_psychotropic:'ctlPrintNearExpiryGroup',handover_narcotic:'ctlPrintTemporaryHandover',handover_psychotropic:'ctlPrintPsychHandover'},fn=map[kind];if(fn&&typeof window[fn]==='function'){if(kind.indexOf('narcotic')>-1&&kind.indexOf('psychotropic')<0)window[fn]('narcotic');else if(kind.indexOf('psychotropic')>-1)window[fn]('psychotropic');else window[fn]()}}}E('v13x-ops-title').textContent=title;E('v13x-ops-body').innerHTML=body;E('v13x-ops-run').onclick=run;openX('v13x-ops-modal')}
 window.v13XOpenOps=opsX;
 function replaceToolsX(){var box=E('ctl-global-tools');if(!box)return;box.innerHTML='<div class="cb v13x-toolbar"><button class="btn bg bsm" onclick="v13XOpenOps(\'settings\')">Hospital & approval settings</button><button class="btn bg bsm" onclick="v13XOpenOps(\'print_narcotic\')">Print current narcotic list</button><button class="btn bg bsm" onclick="v13XOpenOps(\'print_psychotropic\')">Print current psychotropic list</button><button class="btn bg bsm" onclick="v13XOpenOps(\'near_narcotic\')">Near-expiry narcotic</button><button class="btn bg bsm" onclick="v13XOpenOps(\'near_psychotropic\')">Near-expiry psychotropic</button><button class="btn bg bsm" onclick="v13XOpenOps(\'handover_narcotic\')">Narcotic handover</button><button class="btn bg bsm" onclick="v13XOpenOps(\'handover_psychotropic\')">Psychotropic handover</button></div>'}
 function ensurePrintOptionsX(){var modal=E('mfinal-ctl-print')||E('mctlprintopts');if(!modal)return;var grid=modal.querySelector('#final-ctl-code, #ctl-print-code-grid');if(E('final-ctl-code')){var sel=E('final-ctl-code');if(!Array.from(sel.options).some(function(o){return o.value==='both'})){var op=document.createElement('option');op.value='both';op.textContent='MOH + NUPCO codes';sel.appendChild(op)}}else if(grid&&!grid.querySelector('input[value="both"]')){grid.insertAdjacentHTML('beforeend','<label class="print-option-card"><input type="radio" name="ctl-print-code" value="both"> <b>MOH + NUPCO</b><small>Print both codes</small></label>')}}
-var baseRender=window.renderControlled;window.renderControlled=function(){var r=baseRender&&baseRender.apply(this,arguments);setTimeout(function(){ensureModalsX();replaceToolsX();ensurePrintOptionsX();if(window.CTL_VIEW==='pharmacy')renderPharmacyX();if(window.CTL_VIEW==='departments')enhanceDepartmentsX()},20);return r};
+
 function resolveDeptX(){var id=(window.CU&&CU.deptId)||(window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.deptId)||'';var ds=typeof window.gd==='function'?(gd()||[]):[];return ds.find(function(d){return String(d.id)===String(id)})||null}
 window.renderReqForm=function(){var root=E('rfbody'),sub=E('dnsub');if(!root)return;var d=resolveDeptX();if(!d){root.innerHTML='<div class="alert-banner">No department is linked to this account. Assign a department in User Management.</div>';return}if(window.CU){CU.deptId=d.id;CU.deptName=d.name||''}if(sub)sub.textContent=(d.name||'Department')+' — Enter quantities needed';var meds=typeof window.getMeds==='function'?(getMeds(d.id)||[]):[];var q=((E('rsrch')||{}).value||'').toLowerCase().trim();meds=meds.filter(function(m){return m&&m.id&&m.name&&(!q||String(m.name).toLowerCase().indexOf(q)>=0)});if(!meds.length){root.innerHTML='<div class="v13x-empty">No medicines are assigned to this department.</div>';if(E('rcnt'))E('rcnt').textContent='0';return}var groups={};meds.forEach(function(m){var c=m.category||'Uncategorized';(groups[c]||(groups[c]=[])).push(m)});var cats=Object.keys(groups);var cfg=typeof getPharmacyCategoryConfig==='function'?getPharmacyCategoryConfig(d.id):{order:[]};var order=cfg.order||[];cats.sort(function(a,b){var ai=order.indexOf(a),bi=order.indexOf(b);if(ai<0)ai=999;if(bi<0)bi=999;return ai-bi||String(a).localeCompare(String(b))});root.innerHTML=cats.map(function(c){var items=groups[c]||[];items.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base',numeric:true})});return '<div class="cath">'+escX(c)+'</div><div class="tw"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th></tr></thead><tbody>'+items.map(function(m,i){var max=Math.max(0,numX(m.max));return '<tr class="'+(typeof window.rowCls==='function'?rowCls(m):'')+'"><td>'+(i+1)+'</td><td><b>'+escX(m.name)+'</b></td><td>'+(typeof window.bdg==='function'?bdg(m):'')+'</td><td>'+numX(m.min)+'</td><td>'+max+'</td><td><div class="qwrap"><input type="number" class="rqi" data-mid="'+escX(m.id)+'" data-max="'+max+'" min="0" max="'+max+'" placeholder="0" oninput="valQ(this)"><span class="qlim">/'+max+'</span></div></td></tr>'}).join('')+'</tbody></table></div>'}).join('');if(typeof window.cntItems==='function')cntItems()};
 function stamp(){var n=E('v13-build-stamp');if(n)n.textContent=BUILD}
@@ -10396,7 +10280,7 @@ function renderUnified(){
 function ensureBothOption(){var s=E('final-ctl-code');if(s&&!Array.from(s.options).some(function(o){return o.value==='both'})){var o=document.createElement('option');o.value='both';o.textContent='MOH + NUPCO codes';s.appendChild(o)}}
 var oldFinal=window.finalControlledPrintRun;window.finalControlledPrintRun=async function(){var s=E('final-ctl-code');ensureBothOption();if(!s||s.value!=='both')return oldFinal?oldFinal.apply(this,arguments):undefined;var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';if(!dept)return toastY('Select a department first.','err');var expiryMode=(E('final-ctl-expiry')||{}).value;if(!expiryMode)return toastY('Select expiry option.','err');var name=typeof ctlDeptName==='function'?ctlDeptName(dept):dept,ps=typeof ctlPrintSettings==='function'?ctlPrintSettings(dept):{},logo=typeof ctlLogo==='function'?ctlLogo():'';if(typeof ctlPublishDept==='function')await ctlPublishDept(dept);var showExpiry=expiryMode==='show',rows=(ctlDeptList(dept)||[]).map(function(x,i){var m=ctlMedicine(x.medId)||{},required=nY(x.requiredQty!=null?x.requiredQty:(m.max||0)),actual=nY(x.actualQty!=null?x.actualQty:(x.qty||0));return '<tr><td>'+(i+1)+'</td><td>'+escY(m.moh||'—')+'</td><td>'+escY(m.nupco||'—')+'</td><td>'+escY(m.name||'')+'</td><td>'+actual+'</td><td>'+required+'</td>'+(showExpiry?'<td>'+batchesY(x.batches)+'</td>':'')+'</tr>'}).join('');var body='<div class="head"><div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div><div><h1>قائمة الأدوية المخدرة والمقيدة</h1><h2>Controlled Medicines List</h2><h2>'+escY(name)+'</h2></div></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th><th>Actual Qty</th><th>Required Qty</th>'+(showExpiry?'<th>Expiry date → Qty</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">Head Nurse / رئيس تمريض القسم<br><b>'+escY(ps.nursingHead||'')+'</b></div><div class="sig">Controlled Medicines Officer / مسؤول الأدوية المخدرة والمقيدة<br><b>'+escY(ps.controlledCustodian||ps.pharmacyControlledOfficer||'')+'</b></div><div class="sig">Pharmacy Manager / مدير الصيدلية<br><b>'+escY(ps.pharmacyManager||'')+'</b></div></div>';if(typeof CM==='function')CM('mfinal-ctl-print');if(typeof ctlPrintHTML==='function')ctlPrintHTML(name,body)};
 window.delDept=async function(id){if(!window.CU||!(CU.master===true||CU.role==='pharmacy'))return toastY('Only Pharmacy Manager or Master can delete departments.','err');var depts=(typeof gd==='function'?gd():[])||[],dept=depts.find(function(d){return String(d.id)===String(id)});if(!dept)return toastY('Department already deleted.','info');if(!await uiConfirm('Permanently delete department "'+dept.name+'"? This cannot be undone.'))return;try{var remaining=depts.filter(function(d){return String(d.id)!==String(id)});await S.s('departments',remaining);await Promise.all(['meds_'+id,'expiry_'+id,'shelves_'+id,'alerts_'+id,'controlled_dept_list_'+id,'controlled_settings_'+id].map(function(k){return S.rm(k)}));if(window.FB_DB){await Promise.all([FB_DB.collection('public_expiry').doc(id).delete().catch(function(){}),FB_DB.collection('public_controlled_expiry').doc(id).delete().catch(function(){})])}var snap=await FB_DB.collection('floorstock_state').doc('departments').get({source:'server'}),saved=snap.exists?snap.data().value:[];if((saved||[]).some(function(d){return String(d.id)===String(id)}))throw new Error('Firebase verification failed: department still exists.');S.cache.departments=remaining;if(typeof renderUsers==='function')renderUsers();if(typeof fillDS==='function')fillDS();if(typeof populateInvDeptSel==='function')populateInvDeptSel();toastY('Department permanently deleted ✓','succ')}catch(e){console.error(e);toastY(e.message||'Department deletion failed.','err')}};
-var baseRender=window.renderControlled;window.renderControlled=function(){var r=baseRender&&baseRender.apply(this,arguments);setTimeout(function(){replaceTools();ensureBothOption();renderUnified()},80);return r};
+
 function init(){createModal();ensureBothOption();var b=E('v13-build-stamp');if(b)b.textContent=BUILD;else{b=document.createElement('div');b.id='v13-build-stamp';b.style.cssText='position:fixed;left:8px;bottom:6px;z-index:9999;font:9px monospace;color:#6e7781;opacity:.75;pointer-events:none';b.textContent=BUILD;document.body.appendChild(b)}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
@@ -10463,7 +10347,7 @@ function ctlUpgradeCustodianFieldAA(){
  input.placeholder='Enter one or more names, separated by commas / أدخل اسمًا أو أكثر';
 }
 var __aaRenderControlled=renderControlled;
-renderControlled=function(){var r=__aaRenderControlled.apply(this,arguments);setTimeout(function(){ctlInjectRulesButtonAA();ctlUpgradeCustodianFieldAA()},0);return r};
+
 // Replace department print with MOH/NUPCO-aware, colored expiry output and no department-manager name.
 window.ctlConfirmDepartmentPrint=async function(){
  var dept=ctlCurrentDept(),name=(gd().find(function(d){return d.id===dept})||{}).name||dept,codeMode=(document.querySelector('input[name="ctl-print-code"]:checked')||{}).value||'nupco';
@@ -10579,17 +10463,11 @@ setTimeout(AC_repairDeletedDepartments,2500);
 })();
 </script>
 <style id="af-inpatient-request-visibility-fix">
-body.role-inpatient_supervisor #pg-newreq,
-body.role-pharmacy #pg-newreq{display:none}
-body.role-inpatient_supervisor #pg-newreq.af-request-enabled,
-body.role-pharmacy #pg-newreq.af-request-enabled{display:block!important}
 </style>
 <style id="ag-role-request-print-fix-style">
 /* New Request is exclusively for department users. */
-body:not(.role-department) #pg-newreq{display:none!important}
 </style>
 <style id="al-clean-authoritative-style">
-body:not(.role-department) #pg-newreq{display:none!important}
 body.role-inpatient_supervisor #pg-controlled,
 body.role-pharmacy_staff #pg-controlled,
 body.role-pharmacy #pg-controlled{display:none!important}
@@ -10637,18 +10515,10 @@ function addBulkReplacement(){
     header.appendChild(old);
   }
 }
-var baseRender=window.renderControlled;
-window.renderControlled=function(){
-  var result=baseRender&&baseRender.apply(this,arguments);
-  setTimeout(addBulkReplacement,0);
-  return result;
-};
+window.__ASDH_CTL_POST_RENDER_HOOKS=window.__ASDH_CTL_POST_RENDER_HOOKS||[];
+window.__ASDH_CTL_POST_RENDER_HOOKS.push(addBulkReplacement);
+window.__asdhAddBulkReplacement=addBulkReplacement;
 var baseSetView=window.ctlSetView;
-window.ctlSetView=function(view){
-  var result=baseSetView&&baseSetView.apply(this,arguments);
-  setTimeout(addBulkReplacement,0);
-  return result;
-};
 window.addEventListener('load',function(){setTimeout(addBulkReplacement,250)});
 })();
 </script>
@@ -11394,12 +11264,6 @@ window.v14SetPrintFilter=function(f){
 })();
 </script>
 <style id="v16-fixes-style">
-/* ── 1. New Request visibility: show ONLY for pharmacy & inpatient_supervisor ── */
-body:not(.role-department) #pg-newreq { display: none !important; }
-body.role-pharmacy #pg-newreq.af-request-enabled,
-body.role-inpatient_supervisor #pg-newreq.af-request-enabled { display: block !important; }
-body.role-department #pg-newreq:not(.on) { display: none !important; }
-
 /* ── 4. Announcements: hide for all except the allowed roles ── */
 body.role-pharmacy_staff [data-pg="pg-announcements"],
 body.role-department [data-pg="pg-announcements"],
@@ -11416,13 +11280,14 @@ function role(){
     return String((window.MASTER_EFFECTIVE&&window.MASTER_EFFECTIVE.role)||(window.CU&&window.CU.role)||'');
   }catch(e){return ''}
 }
-function isMaster(){
+window.isMaster=function(){
   try{
     return !!(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)||
            !!(window.CU&&window.CU.master===true&&!window.MASTER_EFFECTIVE)||
            (typeof window.isMasterActual==='function'&&window.isMasterActual());
   }catch(e){return false}
-}
+};
+function isMaster(){return window.isMaster()}
 
 /* ────────────────────────────────────────────────────────────────
    PERMISSION HELPERS — overwrite every previous copy
@@ -11964,14 +11829,14 @@ function escC(v){return typeof window.esc==='function'?esc(v==null?'':String(v))
 function numC(v){v=Number(v);return isFinite(v)?v:0}
 function roleC(){return String((window.CU&&CU.role)||'')}
 function masterC(){try{return !!(window.CU&&CU.master===true&&!(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true&&roleC()!=='pharmacy'))}catch(e){return false}}
-function canCatalogC(){return masterC()||['pharmacy','controlled_pharmacy','warehouse'].indexOf(roleC())>=0}
+function canCatalogC(){return masterC()||roleC()==='controlled_pharmacy'}
 function canWarehouseC(){return masterC()||roleC()==='warehouse'}
 function canPharmacyC(){return masterC()||roleC()==='pharmacy'||roleC()==='controlled_pharmacy'}
 function canDispenseC(){return masterC()||roleC()==='pharmacy'||roleC()==='controlled_pharmacy'}
 function fmtBatchC(list){return (list||[]).length?(list||[]).map(function(b){return '<div><span class="chip">'+numC(b.qty)+'</span> '+escC(typeof ctlFmtDMY==='function'?ctlFmtDMY(b.expiry):(b.expiry||'—'))+(b.lot?' · '+escC(b.lot):'')+'</div>'}).join(''):'—'}
 function classC(m){return String((m&&m.classification)||'narcotic')==='psychotropic'?'<span class="badge bpu">Psychotropic / نفسي</span>':'<span class="badge brd">Narcotic / مخدر</span>'}
 function statusC(m,w,p){try{return typeof ctlStatus==='function'?ctlStatus(m,w,p):{key:'ok',html:'<span class="badge bgn">OK</span>'}}catch(e){return {key:'ok',html:'<span class="badge bgn">OK</span>'}}}
-function normalizeViewC(v){return v==='departments'?'departments':'overview'}
+function normalizeViewC(v){var valid=['overview','departments','pharmacy','warehouse','catalog'];return valid.indexOf(String(v||''))>=0?String(v):'overview'}
 
 /* ── Inventory Hide / Freeze: one modal, reliable close, no orphan overlay. ── */
 function invNorm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').trim()}
@@ -11999,8 +11864,8 @@ document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(E('v16
 window.renderCtlCatalog=function(){};
 window.ctlCanDispense=canDispenseC;
 window.ctlOwnerSource=function(){return canDispenseC()?'pharmacy':''};
-window.ctlTabs=function(){var root=E('ctl-tabs');if(!root||!window.CU)return;var tabs=roleC()==='department'?[['departments','My controlled list / عهدتي']]:roleC()==='warehouse'?[['overview','Controlled stock / المخزون المقيد']]:[['overview','Controlled stock / المخزون المقيد'],['departments','Inpatient departments / أقسام التنويم']];window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);if(!tabs.some(function(x){return x[0]===window.CTL_VIEW}))window.CTL_VIEW=tabs[0][0];root.innerHTML=tabs.map(function(x){return '<button type="button" class="tbtn '+(window.CTL_VIEW===x[0]?'on':'')+'" data-view="'+x[0]+'">'+x[1]+'</button>'}).join('');root.querySelectorAll('button').forEach(function(b){b.onclick=function(){window.ctlSetView(b.dataset.view)}})};
-window.ctlSetView=function(v){window.CTL_VIEW=normalizeViewC(v);window.renderControlled()};
+window.ctlTabs=function(){var root=E('ctl-tabs');if(!root||!window.CU)return;var tabs=roleC()==='department'?[['departments','My controlled list / عهدتي']]:roleC()==='warehouse'?[['overview','Controlled stock / المخزون المقيد']]:[['overview','Controlled stock / المخزون المقيد'],['departments','Inpatient departments / أقسام التنويم']];window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);var active=window.CTL_VIEW==='departments'?'departments':'overview';root.innerHTML=tabs.map(function(x){return '<button type="button" class="tbtn '+(active===x[0]?'on':'')+'" data-view="'+x[0]+'">'+x[1]+'</button>'}).join('');root.querySelectorAll('button').forEach(function(b){b.onclick=function(){window.ctlSetView(b.dataset.view)}})};
+window.ctlSetView=function(v){window.CTL_VIEW=normalizeViewC(v);return window.renderControlled()};
 function cleanImportCardC(){if(!canCatalogC())return '';return '<details class="card ctl-clean-import"><summary>Import or paste shared catalogue / استيراد القائمة المشتركة</summary><div class="cb"><div class="g2"><div><label>Excel file (.xlsx, .xls, .csv)</label><input type="file" id="ctl-import-file" accept=".xlsx,.xls,.csv" onchange="ctlImportMasterFile(this.files[0])"><div class="fhint">Imports medicine codes, balances and expiry dates.</div></div><div><label>Paste tab-separated text</label><textarea id="ctl-import-text" rows="4" placeholder="MOH Code    NUPCO Code    Medication ..."></textarea><button type="button" class="btn bp bsm" onclick="ctlImportMasterText()">Import text</button></div></div></div></details>'}
 function overviewActionsC(m){var a=[];if(canWarehouseC()){a.push('<button type="button" class="btn bg bxs" data-id="'+escC(m.id)+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');if(roleC()==='warehouse')a.push('<button type="button" class="btn bs bxs" data-id="'+escC(m.id)+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send to pharmacy</button>')}if(canPharmacyC())a.push('<button type="button" class="btn bp bxs" data-id="'+escC(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>');if(canDispenseC())a.push('<button type="button" class="btn bs bxs" data-id="'+escC(m.id)+'" onclick="ctlOpenDispense(this.dataset.id)">Dispense / صرف</button>');if(canCatalogC())a.push('<button type="button" class="btn bg bxs" data-id="'+escC(m.id)+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit medicine</button>');return a.join(' ')||'<span class="chip">Read only</span>'}
 window.renderCtlOverview=function(){
@@ -12032,7 +11897,7 @@ window.renderCtlOverview=function(){
  if(typeof renderCtlPending==='function')renderCtlPending();
 };
 function ensureDeptToolsC(){if(window.CTL_VIEW!=='departments'||!E('ctl-departments-view'))return;var allowed=masterC()||roleC()==='pharmacy'||roleC()==='controlled_pharmacy'||roleC()==='inpatient_supervisor';if(!allowed)return;var bar=E('ctl-departments-view').querySelector('.ch .fl')||E('ctl-departments-view').querySelector('.ch');if(!bar)return;if(!E('aa-final-print-details-btn')&&typeof window.aaFinalOpenPrintSettings==='function'){var b=document.createElement('button');b.id='aa-final-print-details-btn';b.type='button';b.className='btn bg bsm';b.textContent='✎ Print custody names / أسماء العهدة';b.onclick=window.aaFinalOpenPrintSettings;bar.appendChild(b)}if(!E('aa-final-rules-btn-dept')&&typeof window.aaFinalOpenExpiryRules==='function'){var c=document.createElement('button');c.id='aa-final-rules-btn-dept';c.type='button';c.className='btn bg bsm';c.textContent='⚙ Expiry rules';c.onclick=window.aaFinalOpenExpiryRules;bar.appendChild(c)}}
-window.renderControlled=function(){if(!window.CU)return;try{if(typeof ctlEnsureDepartmentSeed==='function')ctlEnsureDepartmentSeed()}catch(e){}window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);window.ctlTabs();var ov=E('ctl-overview-view'),dp=E('ctl-departments-view');if(ov)ov.style.display=window.CTL_VIEW==='overview'?'block':'none';if(dp)dp.style.display=window.CTL_VIEW==='departments'?'block':'none';var pdf=E('ctl-pdf-receipt-card');if(pdf)pdf.style.display=roleC()==='warehouse'&&window.CTL_VIEW==='overview'?'block':'none';var note=E('ctl-permission-note');if(note){note.style.display=roleC()==='department'||roleC()==='warehouse'||roleC()==='controlled_pharmacy'?'block':'none';note.textContent=roleC()==='department'?'Read-only department custody / عهدة القسم للعرض':roleC()==='warehouse'?'Warehouse permission: warehouse quantities and deliveries only / صلاحية المستودع للكميات والتوريد فقط':'Controlled pharmacy permission: pharmacy custody, inpatient dispensing and department lists / صلاحية مسؤول المخدرات للعهدة والصرف للأقسام'}if(window.CTL_VIEW==='overview')window.renderCtlOverview();else if(typeof renderCtlDepartments==='function'){renderCtlDepartments();ensureDeptToolsC()}if(typeof renderCtlLog==='function'&&window.CTL_VIEW==='departments')renderCtlLog();if(typeof renderCtlPdfReceiptPanel==='function')try{renderCtlPdfReceiptPanel()}catch(e){}};
+window.renderControlled=function(){if(!window.CU)return;try{if(typeof ctlEnsureDepartmentSeed==='function')ctlEnsureDepartmentSeed()}catch(e){}window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);var displayView=window.CTL_VIEW==='departments'?'departments':'overview';window.ctlTabs();var ov=E('ctl-overview-view'),dp=E('ctl-departments-view');if(ov)ov.style.display=displayView==='overview'?'block':'none';if(dp)dp.style.display=displayView==='departments'?'block':'none';var pdf=E('ctl-pdf-receipt-card');if(pdf)pdf.style.display=roleC()==='warehouse'&&displayView==='overview'?'block':'none';var note=E('ctl-permission-note');if(note){note.style.display=roleC()==='department'||roleC()==='warehouse'||roleC()==='controlled_pharmacy'?'block':'none';note.textContent=roleC()==='department'?'Read-only department custody / عهدة القسم للعرض':roleC()==='warehouse'?'Warehouse permission: warehouse quantities and deliveries only / صلاحية المستودع للكميات والتوريد فقط':'Controlled pharmacy permission: pharmacy custody, inpatient dispensing and department lists / صلاحية مسؤول المخدرات للعهدة والصرف للأقسام'}if(displayView==='overview')window.renderCtlOverview();else if(typeof renderCtlDepartments==='function'){renderCtlDepartments();ensureDeptToolsC()}if(typeof renderCtlLog==='function'&&displayView==='departments')renderCtlLog();if(typeof renderCtlPdfReceiptPanel==='function')try{renderCtlPdfReceiptPanel()}catch(e){}};
 
 /* ── Department controlled custody: batch/lot optional; zero quantity needs no expiry. ── */
 function readBatchesC(host){return Array.from((host||document).querySelectorAll('.v13x-batch-row,.batch-editor-row')).map(function(r){var qi=r.querySelector('.v13x-bq,.be-qty,input[type="number"]'),ei=r.querySelector('.v13x-be,.be-exp,input[type="date"]'),li=r.querySelector('.v13x-bl,.be-lot,input[placeholder*="lot" i]');return {qty:numC(qi&&qi.value),expiry:(ei&&ei.value)||'',lot:((li&&li.value)||'').trim()}}).filter(function(b){return b.qty||b.expiry||b.lot})}
@@ -12040,7 +11905,6 @@ function validateBatchesC(actual,batches){if(actual<0)return {error:'Actual quan
 function markOptionalC(){var modal=E('v13x-stock-modal');if(!modal)return;modal.querySelectorAll('.v13x-batch-row input,.batch-editor-row input').forEach(function(x){x.required=false});var note=E('v13aq-expiry-summary');if(!note){var host=E('v13x-stock-batches');if(host){note=document.createElement('div');note.id='v13aq-expiry-summary';note.className='alert-banner-y';host.parentNode.insertBefore(note,host)}}if(note)note.innerHTML='<b>Lot/Batch is optional.</b> Expiry rows are required only when actual quantity is greater than zero. When actual quantity is 0, expiry rows are cleared automatically.'}
 var editDeptBase=window.ctlEditDeptMedicine;window.ctlEditDeptMedicine=function(){var r=editDeptBase&&editDeptBase.apply(this,arguments);setTimeout(markOptionalC,0);return r};
 var editPhBase=window.ctlEditPharmacyStock;window.ctlEditPharmacyStock=function(){var r=editPhBase&&editPhBase.apply(this,arguments);setTimeout(markOptionalC,0);return r};
-window.v13XSaveStock=async function(){var id=(E('v13x-stock-id')||{}).value||'',scope=(E('v13x-stock-scope')||{}).value||'',qty=numC((E('v13x-stock-qty')||{}).value),required=numC((E('v13x-stock-required')||{}).value),check=validateBatchesC(qty,readBatchesC(E('v13x-stock-batches')));if(check.error)return toast(check.error,'err');var batches=check.batches||[];if(scope==='pharmacy'){var all=Object.assign({},ctlPharmacy());all[id]=Object.assign({},all[id]||{},{qty:qty,actualQty:qty,batches:batches});await ctlSetPharmacy(all)}else{var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';if(!dept)return toast('Select a department first.','err');var list=(ctlDeptList(dept)||[]).slice(),i=list.findIndex(function(x){return String(x.medId)===String(id)});if(i<0)return toast('Medicine was not found in the department list.','err');list[i]=Object.assign({},list[i],{qty:qty,actualQty:qty,requiredQty:required,batches:batches});await ctlSetDeptList(dept,list);if(typeof ctlSyncPublicDept==='function')await ctlSyncPublicDept(dept)}if(typeof v13XClose==='function')v13XClose('v13x-stock-modal');else if(typeof CM==='function')CM('v13x-stock-modal');toast('Custody saved ✓','succ');window.renderControlled()};
 var batchSaveBase=window.ctlSaveBatchEditor;window.ctlSaveBatchEditor=async function(){if(!window.CTL_BATCH_CTX)return;var src=CTL_BATCH_CTX.source,id=CTL_BATCH_CTX.id,actual=0;if(src==='pharmacy'){var p=ctlPharmacy()[id]||{};actual=numC(p.actualQty!=null?p.actualQty:p.qty)}else if(src==='warehouse'){var w=ctlWarehouse()[id]||{};actual=numC(w.system)+numC(w.outside)}var check=validateBatchesC(actual,readBatchesC(E('mctlb-list')));if(check.error)return toast(check.error,'err');if(actual===0){if(src==='warehouse'){var wa=Object.assign({},ctlWarehouse()),wx=Object.assign({},wa[id]||{});wx.batches=[];wa[id]=wx;await ctlSetWarehouse(wa)}else{var pa=Object.assign({},ctlPharmacy()),px=Object.assign({},pa[id]||{});px.batches=[];pa[id]=px;await ctlSetPharmacy(pa)}CM('mctlbatches');window.renderControlled();return toast('Expiry batches cleared ✓','succ')}return batchSaveBase&&batchSaveBase.apply(this,arguments)};
 
 /* ── Controlled pharmacy dispensing updates the inpatient department custody. ── */
@@ -12898,7 +12762,7 @@ window.printDepartmentCustodyExact=async function(dept,opts){
   var rows=(typeof ctlDeptList==='function'?(ctlDeptList(dept)||[]):[]).map(function(x,i){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{},codes='';if(mode==='moh')codes='<td>'+escF(m.moh||x.moh||'—')+'</td>';else if(mode==='nupco')codes='<td>'+escF(m.nupco||x.nupco||'—')+'</td>';else if(mode==='both')codes='<td>'+escF(m.moh||x.moh||'—')+'</td><td>'+escF(m.nupco||x.nupco||'—')+'</td>';var req=x.requiredQty!=null?nF(x.requiredQty):(x.max!=null?nF(x.max):nF(m.max)),act=x.actualQty!=null?nF(x.actualQty):nF(x.qty);return '<tr><td>'+(i+1)+'</td>'+codes+'<td class="med">'+escF(m.name||x.name||'')+'</td><td>'+req+'</td><td>'+act+'</td><td class="expiry">'+batchLinesF(x.batches)+'</td></tr>'}).join('');
   var custodians=escF(settings.controlledCustodian||settings.custodyOfficer||settings.pharmacyControlledOfficer||'').replace(/,\s*/g,'<br>');
   var body='<div class="head"><div>'+(logo?'<img class="logo" style="max-width:270px!important;max-height:160px!important;width:270px!important;height:auto!important" src="'+logo+'">':'')+'</div><div><h1>قائمة عهدة الأدوية المخدرة والمقيدة</h1><h2>Custody of Narcotic and Controlled Medication</h2><h2>'+escF(deptNameF(dept))+'</h2></div><div>'+(qr?'<img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Expiry follow-up<br>متابعة الانتهاء</div>':'')+'</div></div><table><thead><tr><th>#</th>'+heads+'<th class="med">Medicine / اسم الدواء</th><th>Required Qty<br>الكمية المفترض توفرها</th><th>Actual Qty<br>الكمية الفعلية</th><th>Expiry batches / تواريخ الانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs" style="grid-template-columns:repeat(3,1fr)"><div class="sig">رئيس تمريض القسم<br>Head Nurse<br><b>'+escF(settings.nursingHead||settings.departmentHead||'')+'</b></div><div class="sig">أمين عهدة الأدوية المقيدة<br>Controlled Medicines Custodian<br><b>'+custodians+'</b></div><div class="sig">مدير الصيدلية<br>Pharmacy Manager<br><b>'+escF(settings.pharmacyManager||'')+'</b></div></div>';
-  if(typeof ctlPrintHTML!=='function'){if(window.toast)toast('Print service unavailable','err');return false}ctlPrintHTML(deptNameF(dept),body);return true
+  if(typeof ctlPrintHTML!=='function'){if(window.toast)toast('Print service unavailable','err');if(opts.printWindow&&!opts.printWindow.closed)opts.printWindow.close();return false}ctlPrintHTML(deptNameF(dept),body,opts.printWindow||null);return true
 };
 window.ctlConfirmDepartmentPrint=async function(){var dept=currentDeptF();var checked=document.querySelector('input[name="ctl-print-code"]:checked'),mode=checked?checked.value:codeModeF(dept,'');if(typeof CM==='function')CM('mctlprintopts');return printDepartmentCustodyExact(dept,{codeMode:mode,persist:true})};
 function departmentPrintF(){return printDepartmentCustodyExact((window.CU&&CU.deptId)||'',{persist:false})}
@@ -12926,7 +12790,7 @@ if(typeof window.startApp==='function'){
 window.masterApplyRole=function(){var sel=E('master-role-select');if(!sel)return;var role=String(sel.value||'pharmacy'),master=window.MASTER_ACTUAL||(window.CU&&CU.master===true?Object.assign({},CU):null);if(!master)return;var deptId=role==='department'?String((E('master-dept-select')||{}).value||''):'',dept=deptId?(gd()||[]).find(function(d){return String(d.id)===deptId}):null;if(role==='department'&&!dept){if(window.toast)toast('Choose a department first.','err');return}window.MASTER_ACTUAL=Object.assign({},master);window.MASTER_EFFECTIVE={userId:'master-preview-'+role,email:master.email||master.username||'Master',role:role,deptId:deptId||null,deptName:dept?dept.name:''};window.CU={id:master.id,username:master.username||master.email||'Master',email:master.email||'',role:role,master:false,deptId:deptId||null,deptName:dept?dept.name:'',controlledCustodian:role==='department'?true:!!master.controlledCustodian};if(typeof CM==='function')CM('mmaster-role');clearRoleUiF();startApp();if(window.toast)toast('Switched to: '+role,'info')};
 window.masterResetRole=function(){if(!window.MASTER_ACTUAL)return;window.CU=Object.assign({},window.MASTER_ACTUAL);window.MASTER_EFFECTIVE=null;if(typeof CM==='function')CM('mmaster-role');clearRoleUiF();startApp();if(window.toast)toast('Master permissions restored ✓','succ')};
 
-var renderControlledBaseF=window.renderControlled;window.renderControlled=function(){var r=renderControlledBaseF&&renderControlledBaseF.apply(this,arguments);setTimeout(cleanupDepartmentPrintUiF,0);return r};
+window.__ASDH_CTL_POST_RENDER_HOOKS=window.__ASDH_CTL_POST_RENDER_HOOKS||[];window.__ASDH_CTL_POST_RENDER_HOOKS.push(cleanupDepartmentPrintUiF);window.__asdhCleanupDepartmentPrintUi=cleanupDepartmentPrintUiF;
 
 /* Clear stale department filters after the repaired list is loaded. */
 function resetInvalidDeptSelectorsF(){var ids=(gd()||[]).map(function(d){return String(d.id)});['inv-dept-sel','ccx-dept','ctl-dept'].forEach(function(id){var s=E(id);if(s&&s.value&&ids.indexOf(String(s.value))<0)s.value=''})}
@@ -13359,7 +13223,7 @@ var renderBase=window.renderCrashCarts;if(typeof renderBase==='function')window.
 
 /* One exact department custody print button across every possible controlled-custody layout. */
 function cleanDepartmentPrint(){if(role()!=='department')return;var pg=E('pg-controlled');if(!pg)return;var keep=E('ctl-dept-authoritative-print-btn');pg.querySelectorAll('button').forEach(function(b){if(b===keep)return;var t=String(b.textContent||'').toLowerCase(),oc=String(b.getAttribute('onclick')||'');if(t.indexOf('print')>=0||t.indexOf('طباعة')>=0||t.indexOf('open qr')>=0||/PrintNames|OpenPublic|printCtlHandover|ctlChooseLogo|ctlDeptFinalPrint/.test(oc))b.remove()});var host=pg.querySelector('#ctl-departments-view .ch .fl')||pg.querySelector('#ctl-dept-public-panel .ctl-rulebar')||pg.querySelector('.ch .fl')||pg.querySelector('.ch');if(!host)return;var btn=E('ctl-dept-authoritative-print-btn');if(!btn){btn=document.createElement('button');btn.id='ctl-dept-authoritative-print-btn';btn.type='button';btn.className='btn bp bsm';btn.textContent='🖨 Print department custody / طباعة عهدة القسم';btn.onclick=function(){if(typeof window.ctlConfirmDepartmentPrint==='function')return window.ctlConfirmDepartmentPrint()};host.appendChild(btn)}}
-var ctlBase=window.renderControlled;if(typeof ctlBase==='function')window.renderControlled=function(){var r=ctlBase.apply(this,arguments);setTimeout(cleanDepartmentPrint,0);return r};
+window.__ASDH_CTL_POST_RENDER_HOOKS=window.__ASDH_CTL_POST_RENDER_HOOKS||[];window.__ASDH_CTL_POST_RENDER_HOOKS.push(cleanDepartmentPrint);window.__asdhCleanDepartmentPrint=cleanDepartmentPrint;
 
 /* Keep the public no-login snapshot aligned with printing, including Expiry Track rules. */
 async function publishPublic(carts){if(!window.FB_DB||!Array.isArray(carts))return;var r=rules(),depts=typeof gd==='function'?(gd()||[]):[];await Promise.all(carts.map(function(c){var d=depts.find(function(x){return String(x.id)===String(c.deptId)})||{},items=(c.items||[]).map(function(it){var med=normalizedMedication(it.name,it.concentration||it.strength),required=num(it.qty),available=num(it.present==null?it.qty:it.present);return {name:med.name,concentration:med.concentration,strength:med.concentration,required:required,available:available,status:available<=0?'Out of stock':(available<required?'Less than required':'Available'),batches:(it.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':num(b.qty),lot:b.lot||''}})}});return FB_DB.collection('public_controlled_expiry').doc('crash_'+String(c.id)).set({cartId:c.id,name:c.name||'',department:d.name||c.deptId||'',seal:c.seal||'',lastClosedAt:c.lastClosedAt||null,lastClosedByName:c.lastClosedByName||'',lastClosedByUser:c.lastClosedByUser||'',expiryRules:r,expiryTrackRules:{urgent:'0–'+r.urgentDays+' days',near:(r.urgentDays+1)+'–'+r.nearDays+' days',expired:'Before today'},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),items:items},{merge:true})}))}
@@ -13382,7 +13246,20 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 'use strict';
 function E(id){return document.getElementById(id)}
 function isDepartment(){return !!(window.CU&&String(CU.role)==='department')}
-function sharedPrint(){return typeof window.ctlConfirmDepartmentPrint==='function'?window.ctlConfirmDepartmentPrint():(typeof window.printDepartmentCustodyExact==='function'?window.printDepartmentCustodyExact((window.CU&&CU.deptId)||'',{persist:false}):undefined)}
+function sharedPrint(ev){
+  if(ev){ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation()}
+  var dept=String((window.CU&&CU.deptId)||'');
+  if(!dept){if(typeof window.toast==='function')toast('Department is not assigned to this account / لا يوجد قسم مرتبط بالحساب','err');return false}
+  var popup=window.open('','_blank');
+  if(!popup){if(typeof window.toast==='function')toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');return false}
+  try{popup.document.open();popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Preparing custody print</title><style>body{font-family:Arial,Tahoma,sans-serif;padding:30px;text-align:center}</style></head><body><h2>Preparing department custody print…</h2><p>جاري تجهيز طباعة عهدة القسم…</p></body></html>');popup.document.close()}catch(e){}
+  if(typeof window.printDepartmentCustodyExact==='function'){
+    return Promise.resolve(window.printDepartmentCustodyExact(dept,{persist:false,printWindow:popup})).catch(function(err){try{if(!popup.closed)popup.close()}catch(e){};console.error(err);if(typeof window.toast==='function')toast(String(err&&err.message||err),'err');return false})
+  }
+  try{popup.close()}catch(e){}
+  if(typeof window.toast==='function')toast('Custody print service unavailable / خدمة الطباعة غير متاحة','err');
+  return false
+}
 function isLegacyPrintButton(b){
   if(!b||b.id==='ctl-dept-authoritative-print-btn')return false;
   var t=String(b.textContent||'').replace(/\s+/g,' ').trim().toLowerCase();
@@ -13399,19 +13276,52 @@ function enforce(){
   var buttons=Array.from(pg.querySelectorAll('#ctl-dept-authoritative-print-btn'));
   var btn=buttons.shift();buttons.forEach(function(x){x.remove()});
   if(!btn){btn=document.createElement('button');btn.id='ctl-dept-authoritative-print-btn';btn.type='button';btn.className='btn bp bsm'}
-  btn.textContent='🖨 Print department custody / طباعة عهدة القسم';btn.onclick=sharedPrint;
+  btn.textContent='🖨 Print department custody / طباعة عهدة القسم';btn.disabled=false;btn.style.pointerEvents='auto';btn.style.position='relative';btn.style.zIndex='2';btn.onclick=null;btn.setAttribute('onclick','return window.__asdhDepartmentCustodyPrintClick(event)');
   if(btn.parentNode!==host)host.appendChild(btn);
 }
+window.__asdhDepartmentCustodyPrintClick=sharedPrint;
+var pgCaptureBound=false;
+function bindCapture(){var pg=E('pg-controlled');if(!pg||pgCaptureBound)return;pgCaptureBound=true;pg.addEventListener('click',function(ev){var b=ev.target&&ev.target.closest?ev.target.closest('#ctl-dept-authoritative-print-btn'):null;if(b&&isDepartment())sharedPrint(ev)},true)}
 var queued=false;
-function queue(){if(queued)return;queued=true;requestAnimationFrame(function(){queued=false;enforce()})}
+function queue(){if(queued)return;queued=true;requestAnimationFrame(function(){queued=false;enforce();bindCapture()})}
 var obs=new MutationObserver(queue);
-function boot(){var pg=E('pg-controlled');if(pg)obs.observe(pg,{subtree:true,childList:true});enforce()}
+function boot(){var pg=E('pg-controlled');if(pg)obs.observe(pg,{subtree:true,childList:true});enforce();bindCapture()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-var baseRender=window.renderControlled;if(typeof baseRender==='function')window.renderControlled=function(){var r=baseRender.apply(this,arguments);queue();return r};
+window.__ASDH_CTL_POST_RENDER_HOOKS=window.__ASDH_CTL_POST_RENDER_HOOKS||[];window.__ASDH_CTL_POST_RENDER_HOOKS.push(enforce);
 var baseShow=window.showPg;if(typeof baseShow==='function')window.showPg=function(id){var r=baseShow.apply(this,arguments);if(id==='pg-controlled')queue();return r};
 window.__enforceDepartmentCustodySinglePrint=enforce;
 })();
 </script>
 
+
+<style id="asdh-audit-authoritative-new-request-style">
+/* One authoritative New Request visibility policy. */
+#pg-newreq{display:none!important}
+body.role-department #pg-newreq.on{display:block!important}
+body.role-pharmacy #pg-newreq.af-request-enabled,
+body.role-inpatient_supervisor #pg-newreq.af-request-enabled{display:block!important}
+body.role-pharmacy_staff #pg-newreq,
+body.role-controlled_pharmacy #pg-newreq,
+body.role-warehouse #pg-newreq{display:none!important}
+</style>
+<script id="asdh-controlled-render-coordinator">
+(function(){
+'use strict';
+if(window.__ASDH_CTL_RENDER_COORDINATOR__)return;
+window.__ASDH_CTL_RENDER_COORDINATOR__=true;
+var core=window.renderControlled;
+var scheduled=false;
+window.onControlledRender=function(){
+  var hooks=(window.__ASDH_CTL_POST_RENDER_HOOKS||[]).slice(),seen=[];
+  hooks.forEach(function(fn){if(typeof fn!=='function'||seen.indexOf(fn)>=0)return;seen.push(fn);try{fn()}catch(err){console.error('Controlled post-render hook failed',err)}})
+};
+function schedule(){if(scheduled)return;scheduled=true;requestAnimationFrame(function(){scheduled=false;window.onControlledRender()})}
+if(typeof core==='function')window.renderControlled=function(){var out=core.apply(this,arguments);schedule();return out};
+var showBase=window.showPg;
+if(typeof showBase==='function')window.showPg=function(id){var out=showBase.apply(this,arguments);if(id==='pg-controlled')schedule();return out};
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
+window.__ASDH_AUDIT_FIXES__='20260725-print-render-permissions-clean';
+})();
+</script>
 </body>
 </html>
