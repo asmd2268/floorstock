@@ -10573,7 +10573,7 @@ window.delDept=async function(id){
     if(typeof renderUsers==='function')renderUsers();if(typeof fillDS==='function')fillDS();if(typeof populateInvDeptSel==='function')populateInvDeptSel();
   }catch(e){console.error('Department deletion',e);toast('Department deletion failed: '+(e.message||e),'err')}
 };
-async function AC_repairDeletedDepartments(){if(!window.FB_DB||!window.S||!S.ready)return;var tombs=AC_deletedIds();if(!tombs.length)return;var raw=(S.g('departments')||[]);if(!raw.length)return;/* Never filter if list is empty — could be a load failure */var filtered=raw.filter(function(d){return tombs.indexOf(AC_str(d&&d.id))<0});if(filtered.length!==raw.length){try{await S.s('departments',filtered)}catch(e){console.warn('Deleted department repair failed',e)}}}
+async function AC_repairDeletedDepartments(){if(!window.FB_DB||!window.S)return;var tombs=AC_deletedIds();if(!tombs.length)return;var raw=(S.g('departments')||[]),filtered=raw.filter(function(d){return tombs.indexOf(AC_str(d&&d.id))<0});if(filtered.length!==raw.length){try{await S.s('departments',filtered)}catch(e){console.warn('Deleted department repair failed',e)}}}
 setTimeout(AC_repairDeletedDepartments,2500);
 })();
 </script>
@@ -12886,16 +12886,10 @@ function roleF(){return String((window.CU&&CU.role)||'')}
 function deptNameF(id){var d=(typeof window.gd==='function'?(gd()||[]):[]).find(function(x){return String(x.id)===String(id)});return d&&d.name?d.name:String(id||'')}
 function currentDeptF(){return roleF()==='department'?String((CU&&CU.deptId)||''):(typeof window.ctlCurrentDept==='function'?String(ctlCurrentDept()||''):'')}
 
-/* seed() is now defined above with a full S.ready guard.
-   This override is kept only to ensure the controlled_settings init
-   still runs, but will never write default departments. */
+/* Stop the old workbook seed from creating duplicate departments such as MMW. */
 window.seed=function(){
-  if(!window.S||!S.ready){
-    console.warn('seed() skipped — Firestore not ready yet.');
-    return;
-  }
-  if(S.g('departments')===null){
-    S.s('departments',[]);
+  if(typeof window.gd==='function'&&!gd().length){
+    S.s('departments',[{id:'icu',name:'ICU',created:typeof nowISO==='function'?nowISO():new Date().toISOString()},{id:'ed',name:'Emergency Dept',created:typeof nowISO==='function'?nowISO():new Date().toISOString()}]);
   }
   (typeof window.gd==='function'?(gd()||[]):[]).forEach(function(d){
     var key='controlled_settings_'+d.id;
@@ -13055,5 +13049,37 @@ window.__ASD_FINAL_DEPARTMENT_CONTROLLED_FIX__='20260724';
 })();
 </script>
 
+<script id="master-backup-nav-final-fix">
+(function(){
+  function E(id){return document.getElementById(id)}
+  function realMaster(){
+    try{
+      if(window.MASTER_EFFECTIVE)return false;
+      return !!((window.CU&&window.CU.master===true)||(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true));
+    }catch(e){return false}
+  }
+  function ensureBackupNav(){
+    var nav=E('mnav'),page=E('pg-backup-restore');
+    if(!nav||!page)return;
+    var existing=nav.querySelector('[data-pg="pg-backup-restore"],#master-backup-nav-final');
+    if(!realMaster()){if(existing)existing.remove();return}
+    if(!existing){
+      var b=document.createElement('button');
+      b.type='button';b.className='nb';b.id='master-backup-nav-final';
+      b.setAttribute('data-pg','pg-backup-restore');
+      b.textContent='💾 Backup & Restore';
+      b.onclick=function(){if(typeof window.showPg==='function')window.showPg('pg-backup-restore')};
+      nav.appendChild(b);
+    }
+  }
+  var oldBuild=window.buildNav;
+  window.buildNav=function(){var r=oldBuild&&oldBuild.apply(this,arguments);setTimeout(ensureBackupNav,0);setTimeout(ensureBackupNav,100);return r};
+  var oldStart=window.startApp;
+  if(typeof oldStart==='function')window.startApp=function(){var r=oldStart.apply(this,arguments);setTimeout(ensureBackupNav,0);setTimeout(ensureBackupNav,150);return r};
+  function boot(){ensureBackupNav();var nav=E('mnav');if(nav&&window.MutationObserver){var busy=false;new MutationObserver(function(){if(busy)return;busy=true;setTimeout(function(){ensureBackupNav();busy=false},0)}).observe(nav,{childList:true})}}
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+  window.__ensureMasterBackupNav=ensureBackupNav;
+})();
+</script>
 </body>
 </html>
