@@ -5656,6 +5656,9 @@ function ctlClassLabel(v){
     ?'<span class="badge byl">Psychotropic / نفسي</span>'
     :'<span class="badge brd">Narcotic / مخدر</span>';
 }
+function ctlClassText(v){
+  return v==='psychotropic'?'Psychotropic / نفسي':'Narcotic / مخدر';
+}
 function ctlEarliestDays(batches){
   var arr=(batches||[]).map(function(b){return daysUntil(b.expiry)}).filter(function(d){return d!==null});
   return arr.length?Math.min.apply(null,arr):null;
@@ -6739,6 +6742,10 @@ function deptInvExpiryText(m){
 }
 function renderDeptInventory(){
   if(!CU||CU.role!=='department')return;
+  if(!el('deptinv-sub')||!el('deptinv-shelf')||!el('deptinv-table')||!el('deptinv-bulk')||!el('deptinv-count')){
+    if(typeof window.renderShelves==='function'&&el('shelf-list'))window.renderShelves();
+    return;
+  }
   el('deptinv-sub').textContent=CU.deptName+' — select medicines once for shelf or expiry actions';
   var q=(el('deptinv-search')?el('deptinv-search').value:'').toLowerCase(),meds=getMeds(CU.deptId).filter(function(m){return !q||m.name.toLowerCase().includes(q)});
   el('deptinv-shelf').innerHTML='<option value="">Choose shelf...</option>'+getShelves(CU.deptId).map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
@@ -8085,7 +8092,7 @@ crashPrint=function(id){
   var oldRenderInv=window.renderInv;window.renderInv=function(){if(oldRenderInv)oldRenderInv();renderPhExpiryIntegrated()};
   /* Modernize simple alert messages globally without breaking synchronous confirm/prompt logic. */
   window.alert=function(msg){try{toast(String(msg||''),'info')}catch(e){console.log(msg)}};
-  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){ccUpdateBadges();if(q('pg-inv')&&q('pg-inv').classList.contains('on'))renderPhExpiryOverview()},700)});
+  document.addEventListener('DOMContentLoaded',function(){setTimeout(function(){ccUpdateBadges();if(q('pg-inv')&&q('pg-inv').classList.contains('on')&&typeof window.renderPhExpiryOverview==='function')window.renderPhExpiryOverview()},700)});
 })();
 </script>
 <!-- v1.2 in-place maintenance patch: modern dialogs, role access, timestamps, transient print layout -->
@@ -8616,7 +8623,7 @@ body.role-department #ctl-log{pointer-events:none}
     if(!id)return toast('Select a department first.','err');
     try{await publishDept(id)}catch(e){return toast('Could not publish the public QR list: '+(e.message||e),'err')}
     var url=publicUrl(id),qr=typeof makeReadableQR==='function'?makeReadableQR(url):('https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url));
-    var rows=(typeof ctlDeptList==='function'?ctlDeptList(id):[]).map(function(x,i){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return '<tr><td>'+(i+1)+'</td><td><b>'+escx(m.name||'')+'</b></td><td>'+escx(typeof ctlClassLabel==='function'?ctlClassLabel(m.classification):m.classification||'—')+'</td><td>'+numx(x.qty)+'</td><td>'+expiryText(x.batches)+'</td></tr>'}).join('')||'<tr><td colspan="5" style="text-align:center">No medicines</td></tr>';
+    var rows=(typeof ctlDeptList==='function'?ctlDeptList(id):[]).map(function(x,i){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return '<tr><td>'+(i+1)+'</td><td><b>'+escx(m.name||'')+'</b></td><td>'+escx(typeof ctlClassText==='function'?ctlClassText(m.classification):(m.classification||'—'))+'</td><td>'+numx(x.qty)+'</td><td>'+expiryText(x.batches)+'</td></tr>'}).join('')||'<tr><td colspan="5" style="text-align:center">No medicines</td></tr>';
     var w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print.','err');
     w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+escx(deptName(id))+' - Controlled Custody</title><style>@page{size:A4 landscape;margin:8mm}html,body{direction:ltr}body{font-family:Arial,Tahoma,sans-serif;color:#111}h1,h2{text-align:center;margin:4px}.head{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;gap:12px}.qrbox{text-align:center}.qrbox img{width:170px;height:170px;background:#fff;border:3px solid #000;padding:8px;image-rendering:pixelated}.note{border:1px solid #333;padding:8px;margin:8px 0;text-align:center}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid}th,td{border:1px solid #222;padding:6px;text-align:left;vertical-align:top;font-size:11px}th{background:#eee}th:nth-child(1){width:4%}th:nth-child(2){width:34%}th:nth-child(3){width:16%}th:nth-child(4){width:10%}th:nth-child(5){width:36%}</style></head><body>'+(typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'')+'<div class="head"><div></div><div><h1>Controlled Custody</h1><h2>'+escx(deptName(id))+'</h2></div><div class="qrbox"><img src="'+qr+'"><div><b>Names & expiry dates</b><br>Public — no login required</div></div></div><div class="note">Scan the QR code to view the latest medicine names, quantities and expiry batches directly from the database.</div><table><thead><tr><th>#</th><th>Medicine name</th><th>Class</th><th>Qty</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.onload=function(){setTimeout(function(){window.print()},900)}<\/script></body></html>');w.document.close();
     if(typeof auditAction==='function')auditAction('controlled_names_expiry_qr_print',{deptId:id,publicUrl:url});
@@ -8758,7 +8765,7 @@ body.role-department #ctl-log{pointer-events:none}
     var id=deptId();if(!id)return toast('Select a department first.','err');
     try{await syncDept(id)}catch(e){return toast('Could not update the public QR list: '+(e.message||e),'err')}
     var u=urlFor(id),qr=typeof makeReadableQR==='function'?makeReadableQR(u):('https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(u));
-    var rows=(typeof ctlDeptList==='function'?ctlDeptList(id):[]).map(function(x,i){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return '<tr><td>'+(i+1)+'</td><td><b>'+ex(m.name||'')+'</b></td><td>'+ex(typeof ctlClassLabel==='function'?ctlClassLabel(m.classification):m.classification||'—')+'</td><td>'+nx(x.qty)+'</td></tr>'}).join('')||'<tr><td colspan="4" style="text-align:center">No medicines</td></tr>';
+    var rows=(typeof ctlDeptList==='function'?ctlDeptList(id):[]).map(function(x,i){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return '<tr><td>'+(i+1)+'</td><td><b>'+ex(m.name||'')+'</b></td><td>'+ex(typeof ctlClassText==='function'?ctlClassText(m.classification):(m.classification||'—'))+'</td><td>'+nx(x.qty)+'</td></tr>'}).join('')||'<tr><td colspan="4" style="text-align:center">No medicines</td></tr>';
     var w=window.open('','_blank');if(!w)return toast('Allow pop-ups to print.','err');
     w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+ex(deptLabel(id))+' - Controlled Custody</title><style>@page{size:A4 landscape;margin:8mm}html,body{direction:ltr}body{font-family:Arial,Tahoma,sans-serif;color:#111}h1,h2{text-align:center;margin:4px}.head{display:grid;grid-template-columns:1fr 2fr 1fr;align-items:center;gap:12px}.qr{text-align:center}.qr img{width:180px;height:180px;background:#fff;border:3px solid #000;padding:9px;image-rendering:pixelated}.note{border:1px solid #333;padding:9px;margin:8px 0;text-align:center;font-weight:700}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid}th,td{border:1px solid #222;padding:7px;text-align:left;font-size:12px}th{background:#eee}th:nth-child(1){width:6%}th:nth-child(2){width:56%}th:nth-child(3){width:22%}th:nth-child(4){width:16%}</style></head><body>'+(typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'')+'<div class="head"><div></div><div><h1>Controlled Custody</h1><h2>'+ex(deptLabel(id))+'</h2></div><div class="qr"><img src="'+qr+'"><div><b>Latest expiry information</b><br>Public — no login required</div></div></div><div class="note">Expiry dates are intentionally not printed. Scan the QR code to view the latest expiry batches and near-expiry status directly from the database.</div><table><thead><tr><th>#</th><th>Medicine name</th><th>Class</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.onload=function(){setTimeout(function(){window.print()},900)}<\/script></body></html>');w.document.close();
     if(typeof auditAction==='function')auditAction('controlled_names_only_qr_print',{deptId:id,publicUrl:u});
@@ -10310,12 +10317,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     }
   };
 
-  document.addEventListener('DOMContentLoaded',function(){
-    var badge=document.createElement('div');
-    badge.textContent='V13-DELETE-LOGIN-SAFE-20260720-I';
-    badge.style.cssText='position:fixed;left:8px;bottom:5px;z-index:9999;font:9px monospace;color:#777;pointer-events:none';
-    document.body.appendChild(badge);
-  });
+  /* Development build badge removed from production UI. */
 })();
 </script>
 <style id="v13-post-i-consolidated-style">
@@ -10597,7 +10599,7 @@ window.v13YOpenOperation=function(kind){
 };
 function replaceTools(){var box=E('ctl-global-tools');if(!box)return;box.innerHTML='<div class="cb v13y-toolbar"><button class="btn bg bsm" onclick="v13YOpenOperation(\'settings\')">Hospital & approval settings</button><button class="btn bg bsm" onclick="v13YOpenOperation(\'print_narcotic\')">Print current narcotic list</button><button class="btn bg bsm" onclick="v13YOpenOperation(\'print_psychotropic\')">Print current psychotropic list</button><button class="btn bg bsm" onclick="v13YOpenOperation(\'near_narcotic\')">Near-expiry narcotic</button><button class="btn bg bsm" onclick="v13YOpenOperation(\'near_psychotropic\')">Near-expiry psychotropic</button><button class="btn bg bsm" onclick="v13YOpenOperation(\'handover_narcotic\')">Narcotic handover</button><button class="btn bg bsm" onclick="v13YOpenOperation(\'handover_psychotropic\')">Psychotropic handover</button></div>'}
 function renderUnified(){
- if(!window.CU||['controlled_pharmacy','warehouse','pharmacy'].indexOf(roleY())<0)return;var view=String(window.CTL_VIEW||'');if(['catalog','pharmacy','warehouse'].indexOf(view)<0)return;var host=E('ctl-'+view+'-view');if(!host)return;
+ if(!window.CU||roleY()!=='pharmacy')return;var view=String(window.CTL_VIEW||'');if(['catalog','pharmacy','warehouse'].indexOf(view)<0)return;var host=E('ctl-'+view+'-view');if(!host)return;
  var q=(E('v13y-q')||{}).value||'',cmp=(E('v13y-cmp')||{}).value||'all',type=(E('v13y-type')||{}).value||'all',ph=phY(),wh=whY();var rows=catY().filter(function(m){var p=ph[m.id]||{},w=wh[m.id]||{},wq=nY(w.system)+nY(w.outside),pq=nY(p.qty),ok=!q||String(m.name+' '+(m.moh||'')+' '+(m.nupco||'')).toLowerCase().indexOf(q.toLowerCase())>=0;if(type!=='all'&&String(m.classification||'narcotic')!==type)ok=false;if(cmp==='warehouse_gt_pharmacy'&&!(wq>pq))ok=false;if(cmp==='pharmacy_gt_warehouse'&&!(pq>wq))ok=false;if(cmp==='warehouse_zero'&&wq!==0)ok=false;if(cmp==='pharmacy_zero'&&pq!==0)ok=false;if(cmp==='difference'&&wq===pq)ok=false;return ok});
  host.style.display='block';host.innerHTML='<div class="card"><div class="ch"><div><span class="ct">Shared Catalogue + Pharmacy Custody + Warehouse Stock</span><div class="fhint">Unified controlled medicines view with comparison filters.</div></div><div class="v13y-toolbar"><input id="v13y-q" placeholder="Search medicine or code" value="'+escY(q)+'" style="width:220px;margin:0"><select id="v13y-type" class="psel"><option value="all">All types</option><option value="narcotic" '+(type==='narcotic'?'selected':'')+'>Narcotic</option><option value="psychotropic" '+(type==='psychotropic'?'selected':'')+'>Psychotropic</option></select><select id="v13y-cmp" class="psel"><option value="all">All comparisons</option><option value="difference" '+(cmp==='difference'?'selected':'')+'>Different warehouse/pharmacy qty</option><option value="warehouse_gt_pharmacy" '+(cmp==='warehouse_gt_pharmacy'?'selected':'')+'>Warehouse greater</option><option value="pharmacy_gt_warehouse" '+(cmp==='pharmacy_gt_warehouse'?'selected':'')+'>Pharmacy greater</option><option value="warehouse_zero" '+(cmp==='warehouse_zero'?'selected':'')+'>Warehouse zero</option><option value="pharmacy_zero" '+(cmp==='pharmacy_zero'?'selected':'')+'>Pharmacy zero</option></select></div></div><div class="v13y-table-wrap"><table class="v13y-table"><thead><tr><th>#</th><th>Medicine</th><th>Type</th><th>MOH</th><th>NUPCO</th><th>Warehouse Qty</th><th>Warehouse Expiry</th><th>Pharmacy Qty</th><th>Pharmacy Expiry</th><th>Actions</th></tr></thead><tbody>'+rows.map(function(m,i){var p=ph[m.id]||{},w=wh[m.id]||{},actions=[];if(canWh())actions.push('<button class="btn bg bxs" data-id="'+escY(m.id)+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');if(canPh())actions.push('<button class="btn bp bxs" data-id="'+escY(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>');if(typeof ctlEditCatalogMedicine==='function'&&canPh())actions.push('<button class="btn bg bxs" data-id="'+escY(m.id)+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit catalogue</button>');return '<tr><td>'+(i+1)+'</td><td><b>'+escY(m.name)+'</b></td><td>'+escY(m.classification||'narcotic')+'</td><td>'+escY(m.moh||'—')+'</td><td>'+escY(m.nupco||'—')+'</td><td>'+nY(w.system)+nY(w.outside)+'</td><td>'+batchesY(w.batches)+'</td><td>'+nY(p.qty)+'</td><td>'+batchesY(p.batches)+'</td><td>'+actions.join(' ')+'</td></tr>'}).join('')+'</tbody></table></div></div>';
  E('v13y-q').oninput=renderUnified;E('v13y-type').onchange=renderUnified;E('v13y-cmp').onchange=renderUnified
@@ -10636,6 +10638,7 @@ function zBatches(list){return (list||[]).length?(list||[]).map(function(b){retu
 function zCanWarehouse(){try{return typeof ctlCanEditWarehouse==='function'&&ctlCanEditWarehouse()}catch(e){return false}}
 function zCanPharmacy(){try{return typeof ctlCanEditPharmacy==='function'&&ctlCanEditPharmacy()}catch(e){return false}}
 function zCanCatalog(){try{return typeof ctlCanEditCatalog==='function'&&ctlCanEditCatalog()}catch(e){return false}}
+function zSpecialControlledRole(){var r=window.CU&&String(CU.role||'');return r==='controlled_pharmacy'||r==='warehouse'}
 
 window.zChooseControlledCodeMode=function(){
  return new Promise(function(resolve){
@@ -10672,6 +10675,7 @@ window.printControlledCurrent=async function(){
 };
 
 window.zRenderUnifiedControlled=function(){
+ if(zSpecialControlledRole()){var stale=zE('ctl-unified-card');if(stale)stale.remove();return;}
  var view=zE('ctl-catalog-view');if(!view)return;
  var card=zE('ctl-unified-card');
  if(!card){
@@ -10691,10 +10695,11 @@ window.zFillUnifiedControlled=function(){
   if(q&&![m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q))return false;if(group&&g!==group)return false;
   if(cmp==='different'&&wq===pq)return false;if(cmp==='warehouse_more'&&!(wq>pq))return false;if(cmp==='pharmacy_more'&&!(pq>wq))return false;if(cmp==='warehouse_zero'&&wq!==0)return false;if(cmp==='pharmacy_zero'&&pq!==0)return false;return true;
  });
- body.innerHTML=rows.length?rows.map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{},wq=zNum(w.system)+zNum(w.outside),actions=[];if(zCanCatalog())actions.push('<button class="btn bg bxs" onclick="ctlEditCatalogMedicine(\''+zEsc(m.id)+'\')">Edit catalogue</button>');if(zCanWarehouse())actions.push('<button class="btn bg bxs" onclick="ctlEditWarehouseStock(\''+zEsc(m.id)+'\')">Edit warehouse</button>');if(zCanPharmacy())actions.push('<button class="btn bg bxs" onclick="ctlEditPharmacyStock(\''+zEsc(m.id)+'\')">Edit pharmacy</button>');return '<tr><td>'+(i+1)+'</td><td class="med-cell"><b>'+zEsc(m.name||'')+'</b></td><td>'+zEsc(typeof ctlClassLabel==='function'?ctlClassLabel(m.classification):m.classification||'')+'</td><td>'+zEsc(m.moh||'—')+'</td><td>'+zEsc(m.nupco||'—')+'</td><td>'+zNum(m.min)+' / '+zNum(m.max)+'</td><td class="ctl-wh-cell stock-cell"><b>'+wq+'</b><div class="fhint">System '+zNum(w.system)+' · Outside '+zNum(w.outside)+'</div></td><td class="ctl-wh-cell stock-cell">'+zBatches(w.batches)+'</td><td class="ctl-ph-cell stock-cell"><b>'+zNum(p.qty)+'</b></td><td class="ctl-ph-cell stock-cell">'+zBatches(p.batches)+'</td><td>'+actions.join(' ')+'</td></tr>'}).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px">No matching medicines</td></tr>';
+ body.innerHTML=rows.length?rows.map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{},wq=zNum(w.system)+zNum(w.outside),actions=[];if(zCanCatalog())actions.push('<button class="btn bg bxs" onclick="ctlEditCatalogMedicine(\''+zEsc(m.id)+'\')">Edit catalogue</button>');if(zCanWarehouse())actions.push('<button class="btn bg bxs" onclick="ctlEditWarehouseStock(\''+zEsc(m.id)+'\')">Edit warehouse</button>');if(zCanPharmacy())actions.push('<button class="btn bg bxs" onclick="ctlEditPharmacyStock(\''+zEsc(m.id)+'\')">Edit pharmacy</button>');return '<tr><td>'+(i+1)+'</td><td class="med-cell"><b>'+zEsc(m.name||'')+'</b></td><td>'+(typeof ctlClassLabel==='function'?ctlClassLabel(m.classification):zEsc(m.classification||''))+'</td><td>'+zEsc(m.moh||'—')+'</td><td>'+zEsc(m.nupco||'—')+'</td><td>'+zNum(m.min)+' / '+zNum(m.max)+'</td><td class="ctl-wh-cell stock-cell"><b>'+wq+'</b><div class="fhint">System '+zNum(w.system)+' · Outside '+zNum(w.outside)+'</div></td><td class="ctl-wh-cell stock-cell">'+zBatches(w.batches)+'</td><td class="ctl-ph-cell stock-cell"><b>'+zNum(p.qty)+'</b></td><td class="ctl-ph-cell stock-cell">'+zBatches(p.batches)+'</td><td>'+actions.join(' ')+'</td></tr>'}).join(''):'<tr><td colspan="11" style="text-align:center;padding:24px">No matching medicines</td></tr>';
 };
 
 function zMergeControlledTabs(){
+ if(zSpecialControlledRole()){var stale=zE('ctl-unified-card');if(stale)stale.remove();return;}
  var tabs=zE('ctl-tabs');if(!tabs)return;
  Array.from(tabs.querySelectorAll('button')).forEach(function(b){
   var txt=(b.textContent||'').toLowerCase();
@@ -10872,8 +10877,8 @@ window.aaFinalOpenPrintSettings=function(){if(!canManageA())return toast('No per
 window.aaFinalSavePrintSettings=async function(){var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';if(!dept)return;var s=Object.assign({},typeof ctlPrintSettings==='function'?ctlPrintSettings(dept):{});s.nursingHead=E('aa-final-head-nurse').value.trim();s.controlledCustodian=E('aa-final-custodians').value.trim();s.pharmacyManager=E('aa-final-pharmacy-manager').value.trim();s.printCodeMode=E('aa-final-code-mode').value;await S.s('controlled_settings_'+dept,s);CM('aa-final-print-settings-modal');toast('Print details saved ✓','succ');if(typeof renderControlled==='function')renderControlled()};
 window.aaFinalOpenExpiryRules=function(){if(!canManageA())return toast('No permission / لا توجد صلاحية','err');ensureModalA();var r=rulesA();E('aa-final-rule-soon').value=r.soon;E('aa-final-rule-near').value=r.near;E('aa-final-rule-critical').value=r.critical;OM('aa-final-expiry-rules-modal')};
 window.aaFinalSaveExpiryRules=async function(){if(!canManageA())return;var soon=Math.max(1,numA(E('aa-final-rule-soon').value)),near=Math.max(0,numA(E('aa-final-rule-near').value)),critical=Math.max(0,numA(E('aa-final-rule-critical').value));if(!(critical<=near&&near<=soon))return toast('Critical ≤ Near expiry ≤ Early warning','err');var s=(typeof ctlSettingsGlobal==='function'?ctlSettingsGlobal():{})||{};s.expirySoonDays=soon;s.expiryUrgentDays=near;s.expiryCriticalDays=critical;s.expiryAlertDays=soon;await S.s('controlled_global_settings',s);await S.s('controlled_alert_days',soon);CM('aa-final-expiry-rules-modal');toast('Expiry tracking rules saved ✓','succ');if(typeof renderControlled==='function')renderControlled()};
-function renderUnifiedA(){var host=E('ctl-overview-view');if(!host||!window.CU||roleA()==='department')return;var q=(E('aa-final-search')||{}).value||'',type=(E('aa-final-type')||{}).value||'',cmp=(E('aa-final-compare')||{}).value||'',cat=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[],wh=typeof ctlWarehouse==='function'?(ctlWarehouse()||{}):{},ph=typeof ctlPharmacy==='function'?(ctlPharmacy()||{}):{};var rows=cat.filter(function(m){var p=ph[m.id]||{},w=wh[m.id]||{},wq=warehouseQtyA(w),pq=pharmacyQtyA(p),ok=!q||String((m.name||'')+' '+(m.moh||'')+' '+(m.nupco||'')).toLowerCase().indexOf(q.toLowerCase())>=0;if(type&&String(m.classification||'narcotic')!==type)ok=false;if(cmp==='different'&&wq===pq)ok=false;if(cmp==='warehouse_more'&&!(wq>pq))ok=false;if(cmp==='pharmacy_more'&&!(pq>wq))ok=false;if(cmp==='warehouse_zero'&&wq!==0)ok=false;if(cmp==='pharmacy_zero'&&pq!==0)ok=false;return ok});host.style.display=String(window.CTL_VIEW)==='overview'?'block':'none';host.innerHTML='<div class="stitle">عهدة الأدوية المخدرة والخاضعة للرقابة</div><div class="ssub">Custody of Narcotic and Controlled Medication</div><div class="card" id="ctl-global-tools"><div class="cb fl g8 ic" style="flex-wrap:wrap"><button class="btn bg bsm" onclick="ctlEditGlobalSettings()">Hospital & approval settings</button><button class="btn bg bsm" onclick="ctlPrintCurrentGroup(\'narcotic\')">Print current narcotic custody list</button><button class="btn bg bsm" onclick="ctlPrintCurrentGroup(\'psychotropic\')">Print current psychotropic list</button><button class="btn bg bsm" onclick="ctlPrintNearExpiryGroup(\'narcotic\')">Near-expiry narcotic</button><button class="btn bg bsm" onclick="ctlPrintNearExpiryGroup(\'psychotropic\')">Near-expiry psychotropic</button><button class="btn bg bsm" onclick="ctlPrintTemporaryHandover()">Narcotic custody handover</button><button class="btn bg bsm" onclick="ctlPrintPsychHandover()">Psychotropic handover</button><button class="btn bg bsm" onclick="aaFinalOpenExpiryRules()">⚙ Expiry tracking rules</button></div></div><div class="card" id="aa-final-unified-card"><div class="ch"><div><span class="ct">Catalogue + Custody / القائمة المشتركة + العهدة</span><div class="fhint">Shared catalogue, pharmacy custody and warehouse stock in one page.</div></div><div id="aa-final-unified-filters"><input id="aa-final-search" placeholder="Search medicine or code" value="'+escA(q)+'"><select id="aa-final-type"><option value="">All types</option><option value="narcotic" '+(type==='narcotic'?'selected':'')+'>Narcotic custody</option><option value="psychotropic" '+(type==='psychotropic'?'selected':'')+'>Psychotropic</option></select><select id="aa-final-compare"><option value="">All comparisons</option><option value="different" '+(cmp==='different'?'selected':'')+'>Warehouse ≠ Pharmacy</option><option value="warehouse_more" '+(cmp==='warehouse_more'?'selected':'')+'>Warehouse &gt; Pharmacy</option><option value="pharmacy_more" '+(cmp==='pharmacy_more'?'selected':'')+'>Pharmacy &gt; Warehouse</option><option value="warehouse_zero" '+(cmp==='warehouse_zero'?'selected':'')+'>Warehouse zero</option><option value="pharmacy_zero" '+(cmp==='pharmacy_zero'?'selected':'')+'>Pharmacy zero</option></select></div></div><div class="tw"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>MOH</th><th>NUPCO</th><th>Min/Max</th><th>Warehouse Qty</th><th>Warehouse Expiry</th><th>Pharmacy Custody Qty</th><th>Pharmacy Expiry</th><th>Actions</th></tr></thead><tbody>'+rows.map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{},actions=[];if(canWarehouseA())actions.push('<button class="btn bg bxs" data-id="'+escA(m.id)+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');if(canPharmacyA())actions.push('<button class="btn bp bxs" data-id="'+escA(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit custody</button>');if(canCatalogA())actions.push('<button class="btn bg bxs" data-id="'+escA(m.id)+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit catalogue</button>');return '<tr><td>'+(i+1)+'</td><td><b>'+escA(m.name||'')+'</b></td><td>'+escA(m.classification||'narcotic')+'</td><td>'+escA(m.moh||'—')+'</td><td>'+escA(m.nupco||'—')+'</td><td>'+numA(m.min)+' / '+numA(m.max)+'</td><td>'+warehouseQtyA(w)+'</td><td>'+batchesA(w.batches)+'</td><td>'+pharmacyQtyA(p)+'</td><td>'+batchesA(p.batches)+'</td><td>'+actions.join(' ')+'</td></tr>'}).join('')+'</tbody></table></div></div>';E('aa-final-search').oninput=renderUnifiedA;E('aa-final-type').onchange=renderUnifiedA;E('aa-final-compare').onchange=renderUnifiedA}
-function tabsA(){var tabs=roleA()==='department'?[['departments','My controlled custody list']]:[['overview','Catalogue + Custody / القائمة + العهدة'],['departments','Inpatient Departments / الأقسام']];if(!tabs.some(function(x){return x[0]===window.CTL_VIEW}))window.CTL_VIEW=tabs[0][0];var root=E('ctl-tabs');if(root)root.innerHTML=tabs.map(function(x){return '<button class="tbtn '+(window.CTL_VIEW===x[0]?'on':'')+'" onclick="ctlSetView(\''+x[0]+'\')">'+x[1]+'</button>'}).join('')}
+function renderUnifiedA(){var host=E('ctl-overview-view');if(!host||!window.CU||roleA()==='department')return;var q=(E('aa-final-search')||{}).value||'',type=(E('aa-final-type')||{}).value||'',cmp=(E('aa-final-compare')||{}).value||'',cat=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[],wh=typeof ctlWarehouse==='function'?(ctlWarehouse()||{}):{},ph=typeof ctlPharmacy==='function'?(ctlPharmacy()||{}):{};var rows=cat.filter(function(m){var p=ph[m.id]||{},w=wh[m.id]||{},wq=warehouseQtyA(w),pq=pharmacyQtyA(p),ok=!q||String((m.name||'')+' '+(m.moh||'')+' '+(m.nupco||'')).toLowerCase().indexOf(q.toLowerCase())>=0;if(type&&String(m.classification||'narcotic')!==type)ok=false;if(cmp==='different'&&wq===pq)ok=false;if(cmp==='warehouse_more'&&!(wq>pq))ok=false;if(cmp==='pharmacy_more'&&!(pq>wq))ok=false;if(cmp==='warehouse_zero'&&wq!==0)ok=false;if(cmp==='pharmacy_zero'&&pq!==0)ok=false;return ok});host.style.display=String(window.CTL_VIEW)==='overview'?'block':'none';host.innerHTML='<div class="stitle">عهدة الأدوية المخدرة والخاضعة للرقابة</div><div class="ssub">Custody of Narcotic and Controlled Medication</div><div class="card" id="ctl-global-tools"><div class="cb fl g8 ic" style="flex-wrap:wrap"><button class="btn bg bsm" onclick="ctlEditGlobalSettings()">Hospital & approval settings</button><button class="btn bg bsm" onclick="ctlPrintCurrentGroup(\'narcotic\')">Print current narcotic custody list</button><button class="btn bg bsm" onclick="ctlPrintCurrentGroup(\'psychotropic\')">Print current psychotropic list</button><button class="btn bg bsm" onclick="ctlPrintNearExpiryGroup(\'narcotic\')">Near-expiry narcotic</button><button class="btn bg bsm" onclick="ctlPrintNearExpiryGroup(\'psychotropic\')">Near-expiry psychotropic</button><button class="btn bg bsm" onclick="ctlPrintTemporaryHandover()">Narcotic custody handover</button><button class="btn bg bsm" onclick="ctlPrintPsychHandover()">Psychotropic handover</button><button class="btn bg bsm" onclick="aaFinalOpenExpiryRules()">⚙ Expiry tracking rules</button></div></div><div class="card" id="aa-final-unified-card"><div class="ch"><div><span class="ct">Catalogue + Custody / القائمة المشتركة + العهدة</span><div class="fhint">Shared catalogue, pharmacy custody and warehouse stock in one page.</div></div><div id="aa-final-unified-filters"><input id="aa-final-search" placeholder="Search medicine or code" value="'+escA(q)+'"><select id="aa-final-type"><option value="">All types</option><option value="narcotic" '+(type==='narcotic'?'selected':'')+'>Narcotic custody</option><option value="psychotropic" '+(type==='psychotropic'?'selected':'')+'>Psychotropic</option></select><select id="aa-final-compare"><option value="">All comparisons</option><option value="different" '+(cmp==='different'?'selected':'')+'>Warehouse ≠ Pharmacy</option><option value="warehouse_more" '+(cmp==='warehouse_more'?'selected':'')+'>Warehouse &gt; Pharmacy</option><option value="pharmacy_more" '+(cmp==='pharmacy_more'?'selected':'')+'>Pharmacy &gt; Warehouse</option><option value="warehouse_zero" '+(cmp==='warehouse_zero'?'selected':'')+'>Warehouse zero</option><option value="pharmacy_zero" '+(cmp==='pharmacy_zero'?'selected':'')+'>Pharmacy zero</option></select></div></div><div class="tw"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>MOH</th><th>NUPCO</th><th>Min/Max</th><th>Warehouse Qty</th><th>Warehouse Expiry</th><th>Pharmacy Custody Qty</th><th>Pharmacy Expiry</th><th>Actions</th></tr></thead><tbody>'+rows.map(function(m,i){var w=wh[m.id]||{},p=ph[m.id]||{},actions=[];if(canWarehouseA())actions.push('<button class="btn bg bxs" data-id="'+escA(m.id)+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');if(canPharmacyA())actions.push('<button class="btn bp bxs" data-id="'+escA(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit custody</button>');if(canCatalogA())actions.push('<button class="btn bg bxs" data-id="'+escA(m.id)+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit catalogue</button>');return '<tr><td>'+(i+1)+'</td><td><b>'+escA(m.name||'')+'</b></td><td>'+(typeof ctlClassLabel==='function'?ctlClassLabel(m.classification):escA(m.classification||'narcotic'))+'</td><td>'+escA(m.moh||'—')+'</td><td>'+escA(m.nupco||'—')+'</td><td>'+numA(m.min)+' / '+numA(m.max)+'</td><td>'+warehouseQtyA(w)+'</td><td>'+batchesA(w.batches)+'</td><td>'+pharmacyQtyA(p)+'</td><td>'+batchesA(p.batches)+'</td><td>'+actions.join(' ')+'</td></tr>'}).join('')+'</tbody></table></div></div>';E('aa-final-search').oninput=renderUnifiedA;E('aa-final-type').onchange=renderUnifiedA;E('aa-final-compare').onchange=renderUnifiedA}
+function tabsA(){if(['controlled_pharmacy','warehouse'].indexOf(roleA())>=0){if(typeof window.ctlTabs==='function')window.ctlTabs();return}var tabs=roleA()==='department'?[['departments','My controlled custody list']]:[['overview','Catalogue + Custody / القائمة + العهدة'],['departments','Inpatient Departments / الأقسام']];if(!tabs.some(function(x){return x[0]===window.CTL_VIEW}))window.CTL_VIEW=tabs[0][0];var root=E('ctl-tabs');if(root)root.innerHTML=tabs.map(function(x){return '<button class="tbtn '+(window.CTL_VIEW===x[0]?'on':'')+'" onclick="ctlSetView(\''+x[0]+'\')">'+x[1]+'</button>'}).join('')}
 var baseRender=window.renderControlled;window.renderControlled=function(){var r=baseRender&&baseRender.apply(this,arguments);setTimeout(function(){try{tabsA();renderUnifiedA();ensureDeptButtonsA()}catch(e){console.error('AA final controlled render',e)}},0);return r};
 function ensureDeptButtonsA(){if(String(window.CTL_VIEW)!=='departments'||!canManageA())return;var host=E('ctl-departments-view');if(!host)return;var bar=host.querySelector('.ch .fl')||host.querySelector('.ch');if(!bar)return;if(!E('aa-final-print-details-btn')){var b=document.createElement('button');b.id='aa-final-print-details-btn';b.className='btn bg bsm';b.textContent='✎ Print custody names / أسماء العهدة';b.onclick=window.aaFinalOpenPrintSettings;bar.appendChild(b)}if(!E('aa-final-rules-btn-dept')){var c=document.createElement('button');c.id='aa-final-rules-btn-dept';c.className='btn bg bsm';c.textContent='⚙ Expiry rules';c.onclick=window.aaFinalOpenExpiryRules;bar.appendChild(c)}}
 function inlineExpiryA(batch){var d=daysA(batch&&batch.expiry),r=rulesA(),style='display:inline-block;padding:2px 5px;border-radius:3px;margin:1px 0;';if(d!==null&&d<0)style+='background:#fee2e2;color:#991b1b;font-weight:800;';else if(d!==null&&d<=r.critical)style+='background:#ffedd5;color:#9a3412;font-weight:800;';else if(d!==null&&d<=r.near)style+='background:#fef3c7;color:#854d0e;font-weight:700;';var txt=(batch&&batch.qty!=null?escA(batch.qty)+' — ':'')+escA(fmtDateA(batch&&batch.expiry))+(batch&&batch.lot?' · '+escA(batch.lot):'')+(d===null?'':' ('+d+' days)');return '<span style="'+style+'">'+txt+'</span>'}
@@ -11785,14 +11790,7 @@ window.v14SaveEditReq2=async function(){
   if(typeof renderReqs==='function')renderReqs();
 };
 
-/* ── Build stamp ── */
-(function(){
-  var x=E('v14nrse-stamp');
-  if(!x){x=document.createElement('div');x.id='v14nrse-stamp';
-    x.style.cssText='position:fixed;right:8px;bottom:30px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
-    document.body.appendChild(x);}
-  x.textContent=BUILD;
-})();
+/* Development build stamp removed from production UI. */
 
 })();
 </script>
@@ -12039,14 +12037,7 @@ window.v14SetPrintFilter=function(f){
   if(typeof window.renderPrint==='function')window.renderPrint();
 };
 
-/* Build stamp */
-(function(){
-  var x=E('v14dp-stamp');
-  if(!x){x=document.createElement('div');x.id='v14dp-stamp';
-    x.style.cssText='position:fixed;right:8px;bottom:44px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
-    document.body.appendChild(x);}
-  x.textContent=BUILD;
-})();
+/* Development build stamp removed from production UI. */
 
 })();
 </script>
@@ -12400,15 +12391,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 /* Announcements duplicate removed: v16EnsureAnnouncements is authoritative. */
 
-/* Version stamp */
+/* Build identifier retained internally without a visible badge. */
 window.FLOORSTOCK_BUILD = 'V16-CLEAN-CONSOLIDATED-20260724';
-(function(){
-  var x = E('v14dp-stamp')||E('v15-stamp')||E('v16-stamp');
-  if(!x){ x=document.createElement('div'); x.id='v16-stamp';
-    x.style.cssText='position:fixed;right:8px;bottom:32px;z-index:14000;font:9px monospace;color:#888;pointer-events:none';
-    document.body.appendChild(x); }
-  x.textContent = 'V16-20260723';
-})();
 
 })();
 </script>
@@ -12598,15 +12582,13 @@ body:not(.real-master-ui) #pg-backup-restore{display:none!important}
   };
   var CONTROLLED_TABS={
     controlled_pharmacy:[
-      ['catalog','Shared catalogue / القائمة المشتركة'],
-      ['warehouse','Warehouse (read only) / المستودع (قراءة فقط)'],
-      ['pharmacy','Pharmacy custody / عهدة الصيدلية'],
-      ['departments','Inpatient departments / أقسام التنويم']
+      ['overview','📊 Stock overview / نظرة عامة للمخزون'],
+      ['catalog','📚 Shared catalogue / القائمة المشتركة'],
+      ['departments','🏥 Inpatient departments / أقسام التنويم']
     ],
     warehouse:[
-      ['warehouse','My warehouse custody / عهدة المستودع'],
-      ['catalog','Shared medicines list / قائمة الأدوية المشتركة'],
-      ['pharmacy','Pharmacy custody (read only) / عهدة الصيدلية (قراءة فقط)']
+      ['overview','📦 Warehouse stock / مخزون المستودع'],
+      ['catalog','📚 Shared medicines / قائمة الأدوية المشتركة']
     ]
   };
   var RENDERERS={'pg-controlled':'renderControlled','pg-ctl-analytics':'renderCtlAnalytics','pg-announcements':'renderAnnouncements'};
@@ -12666,6 +12648,52 @@ body:not(.real-master-ui) #pg-backup-restore{display:none!important}
   ['online','offline'].forEach(function(ev){window.addEventListener(ev,function(){setTimeout(enforce,0)})});
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){enforce();setTimeout(enforce,0)},{once:true});else enforce();
   window.__FINAL_ROLE_ROUTING_FIX__='20260724-final';
+})();
+</script>
+<style id="controlled-specialist-clean-ui-style">
+body.role-controlled_pharmacy #ctl-pdf-receipt-card{display:none!important}
+body.role-controlled_pharmacy #ctl-import-card{display:none!important}
+body.role-warehouse #ctl-departments-view{display:none!important}
+#ctl-tabs .tbtn{display:inline-flex;align-items:center;gap:5px}
+#v13-build-stamp,#z-build-label,#v14nrse-stamp,#v14dp-stamp,#v15-stamp,#v16-stamp{display:none!important}
+#ctl-overview-table .badge,#ctl-catalog-table .badge,#ctl-dept-table .badge{unicode-bidi:plaintext}
+</style>
+<script id="controlled-specialist-clean-ui-fix">
+(function(){
+  'use strict';
+  function role(){return String((window.CU&&CU.role)||'')}
+  function specialist(){var r=role();return r==='controlled_pharmacy'||r==='warehouse'}
+  function clean(){
+    var tools=Array.from(document.querySelectorAll('#pg-controlled #ctl-global-tools'));
+    if(tools.length>1){tools.forEach(function(n){if(!n.closest('#ctl-overview-view'))n.remove()})}
+    ['v13-build-stamp','z-build-label','v14nrse-stamp','v14dp-stamp','v15-stamp','v16-stamp'].forEach(function(id){var n=document.getElementById(id);if(n)n.remove()});
+    if(!specialist())return;
+    var stale=document.getElementById('ctl-unified-card');if(stale)stale.remove();
+    if(typeof window.ctlTabs==='function')window.ctlTabs();
+    document.querySelectorAll('#ctl-tabs button').forEach(function(b){b.type='button'});
+    var note=document.getElementById('ctl-permission-note');
+    if(note&&role()==='controlled_pharmacy'){
+      note.style.display='block';
+      note.textContent='Pharmacy controlled-medicines access / صلاحية مسؤول الأدوية المخدرة بالصيدلية: إدارة عهدة الصيدلية وقوائم أقسام التنويم، مع عرض مخزون المستودع للمقارنة.';
+    }
+    if(note&&role()==='warehouse'){
+      note.style.display='block';
+      note.textContent='Warehouse access / صلاحية مسؤول المستودع: إدارة كميات وتواريخ المستودع فقط، مع عرض عهدة الصيدلية للمقارنة دون تعديل.';
+    }
+    var mainPrint=document.getElementById('ctl-main-print-btn');
+    if(mainPrint)mainPrint.style.display=(role()==='controlled_pharmacy'&&String(window.CTL_VIEW)==='departments')?'inline-flex':'none';
+    if(role()==='warehouse'){
+      var tool=document.querySelector('#ctl-overview-view #ctl-global-tools');if(tool)tool.style.display='none';
+      ['ctl-import-card','ctl-pdf-receipt-card'].forEach(function(id){var n=document.getElementById(id);if(n)n.style.display='none'});
+      document.querySelectorAll('#pg-controlled button').forEach(function(b){
+        var t=String(b.textContent||'').toLowerCase();
+        if(/hospital|approval settings|expiry tracking rules|handover|edit catalogue|add medicine|import|print current|near-expiry/.test(t))b.style.display='none';
+      });
+    }
+  }
+  var base=window.renderControlled;
+  window.renderControlled=function(){var out=base&&base.apply(this,arguments);clean();requestAnimationFrame(clean);setTimeout(clean,100);return out};
+  window.__cleanControlledSpecialistUI=clean;
 })();
 </script>
 
