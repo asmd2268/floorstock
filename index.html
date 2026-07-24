@@ -11865,9 +11865,7 @@ window.v16ManageHiddenCategories=function(){var map=get('hidden_request_categori
 window.v16SaveHiddenCats=async function(){var map={};document.querySelectorAll('.v16-cat-check:checked').forEach(function(x){map[norm(x.value)]={name:x.value,updatedAt:now(),updatedBy:CU.username||''}});await set('hidden_request_categories_v1',map);E('v16-cat-hide').remove();toast('Category visibility saved ✓','succ');if(typeof renderReqForm==='function')renderReqForm()};
 
 /* Multi-department medicine maintenance */
-function openMulti(){if(!mgr())return;var source=selectedMeds()[0]||{};var cats=typeof getCategories==='function'?getCategories():[];document.body.insertAdjacentHTML('beforeend','<div class="modal-bg on" id="v16-multi-modal"><div class="modal" style="width:min(900px,97vw)"><div class="mh"><span class="mt">Multi-department medicine / دواء لعدة أقسام</span><button class="xbtn" onclick="document.getElementById(\'v16-multi-modal\').remove()">×</button></div><div class="frow"><div><label>Action</label><select id="v16-multi-action"><option value="upsert">Add or update</option><option value="delete">Delete</option></select></div><div><label>Medication name</label><input id="v16-multi-name" value="'+esc(source.name||'')+'"></div><div><label>Category</label><select id="v16-multi-cat">'+cats.map(function(c){return '<option '+(c===source.category?'selected':'')+'>'+esc(c)+'</option>'}).join('')+'</select></div><div><label>Min</label><input id="v16-multi-min" type="number" min="0" value="'+esc(source.min||0)+'"></div><div><label>Max</label><input id="v16-multi-max" type="number" min="0" value="'+esc(source.max||0)+'"></div><div><label>Monthly</label><input id="v16-multi-monthly" type="number" min="0" value="'+esc(source.monthly||source.monthlyQty||0)+'"></div></div><div class="ops-check-grid">'+deptChecks('v16-multi')+'</div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="document.getElementById(\'v16-multi-modal\').remove()">Cancel</button><button class="btn bs" onclick="v16ApplyMulti()">Apply</button></div></div></div>')}
-window.v16ApplyMulti=async function(){var sc=selectedScope('v16-multi'),name=(E('v16-multi-name').value||'').trim(),action=E('v16-multi-action').value;if(!name)return toast('Medication name is required.','err');var ids=sc.all?(gd()||[]).map(function(d){return d.id}):sc.ids;if(!ids.length)return toast('Choose departments.','err');for(var i=0;i<ids.length;i++){var ms=(getMeds(ids[i])||[]).slice(),idx=ms.findIndex(function(m){return medFamily(m.name)===medFamily(name)||sameMedicationIdentity(m.name,name)});if(action==='delete'){if(idx>=0)ms.splice(idx,1)}else{var obj=idx>=0?Object.assign({},ms[idx]):{id:'med_'+Date.now().toString(36)+'_'+i,name:name};obj.name=name;obj.category=E('v16-multi-cat').value;obj.min=Number(E('v16-multi-min').value)||0;obj.max=Number(E('v16-multi-max').value)||0;obj.monthly=Number(E('v16-multi-monthly').value)||0;if(idx>=0)ms[idx]=obj;else ms.push(obj)}await setMeds(ids[i],ms)}E('v16-multi-modal').remove();renderInv();toast('Updated '+ids.length+' department(s) ✓','succ')};
-
+function openMulti(){if(typeof window.v16OpenMultiDepartments==='function')return window.v16OpenMultiDepartments()}
 /* Request form: hide medicine/category only here; freeze; global order */
 function cleanRequestForm(){if(!deptUser())return;var dept=CU.deptId,hm=hideMap(),fm=freezeMap(),hc=get('hidden_request_categories_v1',{})||{},meds=getMeds(dept)||[],by={};meds.forEach(function(m){by[String(m.id)]=m});document.querySelectorAll('#rfbody .rqi').forEach(function(inp){var m=by[String(inp.dataset.mid)],tr=inp.closest('tr');if(!m||!tr)return;if(hc[norm(m.category)]||findRule(hm,m,dept)){tr.remove();return}var fr=findRule(fm,m,dept);if(fr){inp.disabled=true;inp.value='';var c=tr.cells&&tr.cells[1];if(c&&!c.querySelector('.v16-freeze-badge'))c.insertAdjacentHTML('beforeend',' <span class="badge brd v16-freeze-badge">⏸ '+esc(fr.reason||'Frozen')+'</span>')}});document.querySelectorAll('#rfbody .cath').forEach(function(h){var n=h.nextElementSibling,hasMedication=!!(n&&n.querySelector('tbody tr .rqi'));if(!hasMedication){if(n)n.remove();h.remove()}});if(typeof cntItems==='function')cntItems()}
 var rr=window.renderReqForm;window.renderReqForm=function(){var r=rr&&rr.apply(this,arguments);setTimeout(cleanRequestForm,20);return r};
@@ -12123,5 +12121,119 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 window.__ctlCleanFilterRole='';
 window.__V16_CLEAN_OPTIMIZED__='20260724';
 })();
-</script></body>
+</script>
+<style id="v16-inventory-status-merge-clean-style">
+/* Inventory status: Frozen rows are visibly crossed; hidden rows remain readable. */
+#pg-inv tr.v16-inv-frozen td:nth-child(n+2):nth-child(-n+8){
+  text-decoration-line:line-through;
+  text-decoration-thickness:1.5px;
+  text-decoration-color:var(--rdl);
+  opacity:.74;
+}
+#pg-inv tr.v16-inv-hidden td:nth-child(n+2):nth-child(-n+8){opacity:.70}
+#pg-inv tr.v16-inv-frozen td:nth-child(3),#pg-inv tr.v16-inv-hidden td:nth-child(3){opacity:1}
+.v16-inv-state-badges{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.v16-status-filter{min-width:210px!important}
+.v16-multi-dept-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;max-height:330px;overflow:auto;padding:9px;border:1px solid var(--bd);border-radius:9px;margin:10px 0}
+.v16-multi-dept-row{display:flex!important;align-items:center;justify-content:space-between;gap:8px;margin:0!important;padding:8px!important;background:var(--s2);border:1px solid var(--bd);border-radius:8px}
+.v16-multi-dept-row>span:first-of-type{flex:1}
+.v16-multi-fields.is-delete{display:none}
+body.role-pharmacy_staff #pg-inv #inv-dept-sel,
+body.role-pharmacy_staff #pg-inv #isrch,
+body.role-pharmacy_staff #pg-inv #icatf,
+body.role-pharmacy_staff #pg-inv #iclsf,
+body.role-pharmacy_staff #pg-inv #v16-inv-status-filter{
+  pointer-events:auto!important;opacity:1!important
+}
+body.role-pharmacy_staff #pg-inv #bulk-bar,
+body.role-pharmacy_staff #pg-inv #inv-all-chk,
+body.role-pharmacy_staff #pg-inv .inv-chk,
+body.role-pharmacy_staff #pg-inv button:not(.nb),
+body.role-pharmacy_staff #pg-inv th:first-child,
+body.role-pharmacy_staff #pg-inv td:first-child{display:none!important}
+body.role-pharmacy_staff #pg-inv .ch button{display:none!important}
+@media(max-width:760px){.v16-multi-dept-list{grid-template-columns:1fr}}
+</style>
+<script id="v16-inventory-status-merge-clean-script">
+(function(){
+'use strict';
+function E(id){return document.getElementById(id)}
+function R(){return String((window.CU&&CU.role)||'')}
+function escV(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function normV(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
+function familyV(v){return normV(v).replace(/(\d)(mg|mcg|gm|g|ml|iu|mmol|meq)\b/gi,'$1 $2').replace(/\b(?:tab(?:let)?s?|caps?(?:ule)?s?|amp(?:oule)?s?|vials?|bottles?|bags?|syrups?|solutions?|soln|susp(?:ension)?|inj(?:ection)?s?|cream|ointment|drops?|inhalers?|suppositor(?:y|ies))\b/gi,' ').replace(/\s+/g,' ').trim()}
+function identityV(v){
+ var stop={tab:1,tabs:1,tablet:1,tablets:1,cap:1,caps:1,capsule:1,capsules:1,amp:1,amps:1,ampoule:1,ampoules:1,vial:1,vials:1,bottle:1,bottles:1,bag:1,bags:1,syrup:1,solution:1,solutions:1,soln:1,susp:1,suspension:1,inj:1,injection:1,injections:1,cream:1,ointment:1,drop:1,drops:1,inhaler:1,inhalers:1,suppository:1,suppositories:1,oral:1,iv:1,im:1,sc:1,intravenous:1,intramuscular:1,subcutaneous:1,infusion:1,premix:1,pack:1,packs:1,for:1,of:1,محلول:1,محاليل:1,حقن:1,حقنة:1,امبول:1,امبولات:1,فيال:1,فيالات:1,قرص:1,اقراص:1,كبسول:1,كبسولات:1};
+ return normV(v).replace(/(\d)(mg|mcg|gm|g|ml|iu|mmol|meq)\b/gi,'$1 $2').split(/\s+/).filter(function(t){return t&&!stop[t]}).join(' ')
+}
+function sameV(a,b){a=identityV(a);b=identityV(b);if(!a||!b)return false;if(a===b)return true;var aa=a.split(' '),bb=b.split(' '),common=aa.filter(function(t){return bb.indexOf(t)>-1});return common.length>=2&&common.length/Math.max(aa.length,bb.length)>=.78}
+function store(key,def){try{var x=window.S&&S.g?S.g(key):null;return x==null?def:x}catch(e){return def}}
+function appliesV(rule,dept){return !!(rule&&(rule.allDepartments===true||rule.deptIds==='all'||(Array.isArray(rule.departmentIds)&&rule.departmentIds.indexOf(dept)>-1)||(Array.isArray(rule.deptIds)&&rule.deptIds.indexOf(dept)>-1)))}
+function ruleFor(map,med,dept){
+ var keys=[normV(med.name),'family:'+familyV(med.name),'identity:'+identityV(med.name)],r=null;
+ for(var i=0;i<keys.length&&!r;i++)r=map[keys[i]];
+ if(r&&appliesV(r,dept))return r;
+ var ks=Object.keys(map||{});for(var j=0;j<ks.length;j++){var c=map[ks[j]];if(c&&c.name&&appliesV(c,dept)&&sameV(c.name,med.name))return c}return null
+}
+function statusAllowed(){return !!(window.CU&&(CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(R())>-1))}
+function manageAllowed(){return !!(window.CU&&(CU.master===true||['pharmacy','inpatient_supervisor'].indexOf(R())>-1))}
+function currentDept(){return String((E('inv-dept-sel')||{}).value||'')}
+function currentMeds(){var d=currentDept();return d&&typeof getMeds==='function'?(getMeds(d)||[]):[]}
+function ensureStatusFilter(){
+ if(!statusAllowed()||!E('pg-inv'))return;
+ var host=E('pg-inv').querySelector('.card .ch .fl.g8.ic')||E('pg-inv').querySelector('.card .ch');if(!host)return;
+ var f=E('v16-inv-status-filter');if(!f){f=document.createElement('select');f.id='v16-inv-status-filter';f.className='psel v16-status-filter';f.innerHTML='<option value="all">All medicines / كل الأدوية</option><option value="active">Active only / النشطة فقط</option><option value="hidden">Hidden from requests / المخفية من الطلب</option><option value="frozen">Frozen / المجمدة</option><option value="restricted">Hidden or frozen / المخفية أو المجمدة</option>';f.onchange=applyInventoryStatus;host.appendChild(f)}
+}
+function ensureInventoryHeaderTools(){
+ if(!E('pg-inv'))return;var head=E('pg-inv').querySelector('.fl.ic.jb .fl.g8.ic');if(!head)return;
+ if(manageAllowed()&&!E('v16-similar-head')){var s=document.createElement('button');s.id='v16-similar-head';s.type='button';s.className='btn bg bsm';s.textContent='≋ Similar medicines / الأدوية المتشابهة';s.onclick=window.openSimilarMedicinesAllDepartments;head.appendChild(s)}
+ ['v16-multi-head','v16-multi-btn'].forEach(function(id){var b=E(id);if(b){b.type='button';b.onclick=window.v16OpenMultiDepartments}})
+}
+function applyInventoryStatus(){
+ if(!statusAllowed())return;var dept=currentDept(),meds=currentMeds(),hm=store('medication_visibility_rules_v3',{})||{},fm=store('medication_freeze_rules_v3',{})||{},old=store('global_request_freeze_v2',{})||{};Object.keys(old).forEach(function(k){if(!fm[k])fm[k]=old[k]});var mode=(E('v16-inv-status-filter')||{}).value||'all';
+ meds.forEach(function(m){var row=E('inv-row-'+m.id);if(!row)return;var h=!!ruleFor(hm,m,dept),f=!!ruleFor(fm,m,dept);row.classList.toggle('v16-inv-hidden',h);row.classList.toggle('v16-inv-frozen',f);row.dataset.v16Hidden=h?'1':'0';row.dataset.v16Frozen=f?'1':'0';var nameCell=row.cells&&row.cells[2];if(nameCell){var oldBadges=nameCell.querySelector('.v16-inv-state-badges');if(oldBadges)oldBadges.remove();if(h||f){var badges=document.createElement('div');badges.className='v16-inv-state-badges';if(h)badges.innerHTML+='<span class="badge byl">🙈 Hidden</span>';if(f)badges.innerHTML+='<span class="badge brd">⏸ Frozen</span>';nameCell.appendChild(badges)}}var show=mode==='all'||(mode==='active'&&!h&&!f)||(mode==='hidden'&&h)||(mode==='frozen'&&f)||(mode==='restricted'&&(h||f));row.style.display=show?'':'none'});
+ document.querySelectorAll('#itbl .cath').forEach(function(c){var tr=c.closest('tr'),n=tr&&tr.nextElementSibling,visible=false;while(n&&!n.querySelector('.cath')){if(n.style.display!=='none'){visible=true;break}n=n.nextElementSibling}if(tr)tr.style.display=visible?'':'none'});
+}
+window.openSimilarMedicinesAllDepartments=function(){
+ if(!manageAllowed())return typeof toast==='function'?toast('Not authorized.','err'):null;
+ if(typeof window.openAllDepartmentsInventory!=='function')return typeof toast==='function'?toast('The similar medicines list is unavailable.','err'):null;
+ window.openAllDepartmentsInventory();setTimeout(function(){var modal=E('all-inv-modal');if(!modal)return;var title=modal.querySelector('.mt'),hint=modal.querySelector('.fhint');if(title)title.textContent='Similar medicines across all departments / الأدوية المتشابهة في جميع الأقسام';if(hint)hint.textContent='Select different spellings of the same medicine, then choose Merge selected names to use one name in every department.';var v=E('all-inv-variants'),h=E('all-inv-hide-identical');if(v){v.checked=true;v.dispatchEvent(new Event('change',{bubbles:true}))}if(h&&!h.checked){h.checked=true;h.dispatchEvent(new Event('change',{bubbles:true}))}var steps=0;function all(){var b=E('v13w-load-more');if(b&&b.offsetParent!==null&&steps++<80){b.click();requestAnimationFrame(all)}}requestAnimationFrame(all)},30)
+};
+function selectedSource(){var d=currentDept(),ids=Array.from(document.querySelectorAll('.inv-chk:checked')).map(function(x){return String(x.dataset.id)});return (typeof getMeds==='function'?(getMeds(d)||[]):[]).find(function(m){return ids.indexOf(String(m.id))>-1})||{}}
+function matchInDept(dept,name){return (typeof getMeds==='function'?(getMeds(dept)||[]):[]).find(function(m){return familyV(m.name)===familyV(name)||sameV(m.name,name)})||null}
+function refreshMultiDepartments(){
+ var host=E('v16-multi-departments'),action=(E('v16-multi-action')||{}).value||'add',name=((E('v16-multi-name')||{}).value||'').trim(),depts=typeof gd==='function'?(gd()||[]):[];if(!host)return;
+ var fields=E('v16-multi-fields');if(fields)fields.classList.toggle('is-delete',action==='delete');
+ host.innerHTML=depts.map(function(d){var found=name?matchInDept(d.id,name):null,applicable=action==='add'?!found:!!found,checked=(action!=='add'&&found)?' checked':'',disabled=applicable?'':' disabled';return '<label class="v16-multi-dept-row"><input class="v16-multi-dept" type="checkbox" value="'+escV(d.id)+'"'+checked+disabled+' style="width:auto;margin:0"><span><b>'+escV(d.name||d.id)+'</b><div class="fhint">'+(found?escV(found.name):'Not found / غير موجود')+'</div></span><span class="badge '+(found?'bgn':'bgr')+'">'+(found?'Existing / موجود':'Missing / غير موجود')+'</span></label>'}).join('')||'<div class="fhint">No departments.</div>';
+ var all=E('v16-multi-all');if(all)all.checked=false
+}
+window.v16ToggleMultiApplicable=function(on){document.querySelectorAll('.v16-multi-dept:not(:disabled)').forEach(function(x){x.checked=!!on})};
+window.v16OpenMultiDepartments=function(){
+ if(!manageAllowed())return;var old=E('v16-multi-modal');if(old)old.remove();var source=selectedSource(),cats=typeof getCategories==='function'?(getCategories()||[]):[],names={};(typeof gd==='function'?(gd()||[]):[]).forEach(function(d){(getMeds(d.id)||[]).forEach(function(m){if(m.name)names[m.name]=1})});
+ var html='<div class="modal-bg on" id="v16-multi-modal"><div class="modal" style="width:min(940px,97vw)"><div class="mh"><div><div class="mt">Multi-department medicine / دواء لعدة أقسام</div><div class="fhint">Add to missing departments, edit where it exists, or delete from selected departments.</div></div><button type="button" class="xbtn" data-close>×</button></div><div class="frow"><div><label>Action / العملية</label><select id="v16-multi-action"><option value="add">Add / إضافة</option><option value="edit">Edit / تعديل</option><option value="delete">Delete / حذف</option></select></div><div><label>Medication name / اسم العلاج</label><input id="v16-multi-name" list="v16-multi-names" value="'+escV(source.name||'')+'"><datalist id="v16-multi-names">'+Object.keys(names).sort().map(function(n){return '<option value="'+escV(n)+'">'}).join('')+'</datalist></div></div><div id="v16-multi-fields" class="v16-multi-fields frow"><div><label>Category</label><select id="v16-multi-cat">'+cats.map(function(c){return '<option '+(c===source.category?'selected':'')+'>'+escV(c)+'</option>'}).join('')+'</select></div><div><label>Min</label><input id="v16-multi-min" type="number" min="0" value="'+escV(source.min||0)+'"></div><div><label>Max</label><input id="v16-multi-max" type="number" min="0" value="'+escV(source.max||0)+'"></div></div><label class="ops-scope-all"><input id="v16-multi-all" type="checkbox" onchange="v16ToggleMultiApplicable(this.checked)" style="width:auto;margin:0"> Select all applicable departments / تحديد كل الأقسام المتاحة</label><div id="v16-multi-departments" class="v16-multi-dept-list"></div><div class="fl g8" style="justify-content:flex-end"><button type="button" class="btn bg" data-close>Cancel</button><button type="button" class="btn bs" onclick="v16ApplyMultiClean()">Apply</button></div></div></div>';
+ document.body.insertAdjacentHTML('beforeend',html);var modal=E('v16-multi-modal');modal.addEventListener('click',function(ev){if(ev.target===modal||ev.target.closest('[data-close]'))modal.remove()});E('v16-multi-action').onchange=refreshMultiDepartments;var timer;E('v16-multi-name').oninput=function(){clearTimeout(timer);timer=setTimeout(refreshMultiDepartments,120)};refreshMultiDepartments()
+};
+window.v16ApplyMultiClean=async function(){
+ var modal=E('v16-multi-modal'),action=(E('v16-multi-action')||{}).value||'add',name=((E('v16-multi-name')||{}).value||'').trim(),ids=Array.from(document.querySelectorAll('.v16-multi-dept:checked:not(:disabled)')).map(function(x){return x.value});if(!name)return toast('Medication name is required.','err');if(!ids.length)return toast('Choose one or more departments.','err');var changed=0;
+ for(var i=0;i<ids.length;i++){var dept=ids[i],meds=(getMeds(dept)||[]).slice(),idx=meds.findIndex(function(m){return familyV(m.name)===familyV(name)||sameV(m.name,name)});if(action==='add'){if(idx>=0)continue;meds.push({id:'med_'+Date.now().toString(36)+'_'+i,name:name,category:(E('v16-multi-cat')||{}).value||'',min:Number((E('v16-multi-min')||{}).value)||0,max:Number((E('v16-multi-max')||{}).value)||0,created:typeof nowISO==='function'?nowISO():new Date().toISOString()});changed++}else if(action==='edit'){if(idx<0)continue;var obj=Object.assign({},meds[idx]);obj.name=name;obj.category=(E('v16-multi-cat')||{}).value||obj.category;obj.min=Number((E('v16-multi-min')||{}).value)||0;obj.max=Number((E('v16-multi-max')||{}).value)||0;meds[idx]=obj;changed++}else{if(idx<0)continue;var removed=meds[idx];meds.splice(idx,1);if(typeof getExpiry==='function'&&typeof setExpiry==='function'){var exp=(getExpiry(dept)||[]).filter(function(x){return String(x.medId)!==String(removed.id)});await setExpiry(dept,exp)}changed++}await setMeds(dept,meds)}
+ if(modal)modal.remove();if(typeof renderInv==='function')renderInv();toast((action==='add'?'Added to ':action==='edit'?'Edited in ':'Deleted from ')+changed+' department(s) ✓','succ')
+};
+
+function mergeRuleScopes(rules,canonical){var all=rules.some(function(r){return r&&r.allDepartments===true}),ids=[];rules.forEach(function(r){(r&&r.departmentIds||[]).forEach(function(id){if(ids.indexOf(id)<0)ids.push(id)})});return {name:canonical,allDepartments:all,departmentIds:all?[]:ids,reason:(rules.find(function(r){return r&&r.reason})||{}).reason||'',updatedAt:new Date().toISOString(),updatedBy:(window.CU&&(CU.username||CU.email))||''}}
+async function reconcileMergedRules(names,canonical){for(var ki=0;ki<2;ki++){var key=ki===0?'medication_visibility_rules_v3':'medication_freeze_rules_v3',map=Object.assign({},store(key,{})||{}),rules=[];Object.keys(map).forEach(function(k){var r=map[k];if(r&&r.name&&names.some(function(n){return sameV(r.name,n)})){rules.push(r);delete map[k]}});if(rules.length){var merged=mergeRuleScopes(rules,canonical);[normV(canonical),'family:'+familyV(canonical),'identity:'+identityV(canonical)].forEach(function(k){if(k&&!/:$/.test(k))map[k]=merged});await S.s(key,map)}}}
+function selectedSimilarNames(){var names=[];document.querySelectorAll('#all-inv-body .all-inv-name-check:checked').forEach(function(c){var n=c.dataset.name||'';if(n&&!names.some(function(x){return normV(x)===normV(n)}))names.push(n)});return names}
+window.openMergeInventoryNames=function(){var names=selectedSimilarNames();if(names.length<2)return toast('Select at least two different medication names.','err');var old=E('merge-names-modal');if(old)old.remove();document.body.insertAdjacentHTML('beforeend','<div class="modal-bg on" id="merge-names-modal"><div class="modal" style="width:650px"><div class="mh"><div><div class="mt">Merge medication names / دمج مسميات الأدوية</div><div class="fhint">Choose the single standard name that will be used in every department.</div></div><button type="button" class="xbtn" data-close>×</button></div><div class="merge-canonical-list">'+names.map(function(n,i){return '<label class="merge-canonical-option"><input type="radio" name="canonical-med-name" value="'+escV(n)+'" '+(i===0?'checked':'')+' style="width:auto;margin:0"><b>'+escV(n)+'</b></label>'}).join('')+'</div><div class="alert-banner-y" style="margin-top:12px">All matching records in every department will use one name. Duplicate records inside the same department will be combined while retaining the highest Min/Max and current classifications.</div><div class="fl g8" style="justify-content:flex-end"><button type="button" class="btn bg" data-close>Cancel</button><button type="button" class="btn bp" onclick="confirmMergeInventoryNames()">Merge names</button></div></div></div>');var m=E('merge-names-modal');m.addEventListener('click',function(ev){if(ev.target===m||ev.target.closest('[data-close]'))m.remove()})};
+window.confirmMergeInventoryNames=async function(){var names=selectedSimilarNames(),radio=document.querySelector('input[name="canonical-med-name"]:checked'),canonical=radio&&radio.value;if(names.length<2||!canonical)return toast('Choose at least two names and a standard name.','err');if(!(await uiConfirm('Merge '+names.length+' names into “'+canonical+'” across all departments?')))return;var snapshot={id:'merge_'+Date.now(),at:typeof nowISO==='function'?nowISO():new Date().toISOString(),by:(window.CU&&CU.username)||'',canonical:canonical,names:names,departments:{},expiry:{}},changed=0,removed=0,depts=typeof gd==='function'?(gd()||[]):[];for(var di=0;di<depts.length;di++){var dept=depts[di],meds=(getMeds(dept.id)||[]).slice(),matches=meds.filter(function(m){return names.some(function(n){return sameV(m.name,n)})});if(!matches.length)continue;snapshot.departments[dept.id]=meds;snapshot.expiry[dept.id]=typeof getExpiry==='function'?(getExpiry(dept.id)||[]).slice():[];var survivor=matches.find(function(m){return normV(m.name)===normV(canonical)})||matches[0],merged=Object.assign({},survivor),matchIds={};matches.forEach(function(m){matchIds[String(m.id)]=1});merged.id=survivor.id;merged.name=canonical;merged.min=Math.max.apply(null,matches.map(function(m){return Number(m.min)||0}));merged.max=Math.max.apply(null,matches.map(function(m){return Number(m.max)||0}));if(matches.some(function(m){return m.monthly!=null}))merged.monthly=Math.max.apply(null,matches.map(function(m){return Number(m.monthly)||0}));['high_alert','hazard','lasa','refrigerated'].forEach(function(k){merged[k]=matches.some(function(m){return !!m[k]})});if(matches.some(function(m){return m.currentQty!=null}))merged.currentQty=matches.reduce(function(sum,m){return sum+(Number(m.currentQty)||0)},0);var next=[],inserted=false;meds.forEach(function(m){if(!matchIds[String(m.id)]){next.push(m);return}if(!inserted){next.push(merged);inserted=true}else removed++});await setMeds(dept.id,next);if(typeof getExpiry==='function'&&typeof setExpiry==='function'){var exp=(getExpiry(dept.id)||[]).map(function(e){return matchIds[String(e.medId)]?Object.assign({},e,{medId:survivor.id}):e});await setExpiry(dept.id,exp)}changed++}var history=(store('inventory_name_merge_history',[])||[]).slice();history.unshift(snapshot);if(history.length>20)history.length=20;await S.s('inventory_name_merge_history',history);await reconcileMergedRules(names,canonical);if(typeof auditAction==='function')auditAction('inventory_names_merged',{canonical:canonical,names:names,departments:changed,removedRecords:removed});var mm=E('merge-names-modal');if(mm)mm.remove();var am=E('all-inv-modal');if(am)am.remove();document.body.style.overflow='';toast('Names merged across '+changed+' department(s) ✓','succ');if(typeof renderInv==='function')renderInv();window.openSimilarMedicinesAllDepartments()};
+
+function bindTools(){ensureStatusFilter();ensureInventoryHeaderTools();if(R()==='pharmacy_staff'){['inv-dept-sel','isrch','icatf','iclsf','v16-inv-status-filter'].forEach(function(id){var n=E(id);if(n){n.style.setProperty('pointer-events','auto','important');n.style.setProperty('opacity','1','important')}})}applyInventoryStatus()}
+var renderBase=window.renderInv;window.renderInv=function(){var r=renderBase&&renderBase.apply(this,arguments);requestAnimationFrame(bindTools);return r};
+var buildBase=window.buildNav;window.buildNav=function(){var r=buildBase&&buildBase.apply(this,arguments);setTimeout(function(){if(R()==='pharmacy_staff'){var nav=E('mnav');if(nav&&!nav.querySelector('[data-pg="pg-inv"]')){var b=document.createElement('button');b.type='button';b.className='nb';b.dataset.pg='pg-inv';b.textContent='Inventory status / حالة الأدوية';b.onclick=function(){window.showPg('pg-inv')};var req=nav.querySelector('[data-pg="pg-reqs"]');nav.insertBefore(b,req||nav.children[1]||null)}}bindTools()},0);return r};
+var showBase=window.showPg;window.showPg=function(id){var r=showBase&&showBase.apply(this,arguments);if(id==='pg-inv')setTimeout(bindTools,0);return r};
+function boot(){bindTools();if(R()==='pharmacy_staff'&&typeof window.buildNav==='function')window.buildNav()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+window.__V16_INVENTORY_STATUS_MERGE_CLEAN__='20260724';
+})();
+</script>
+
+</body>
 </html>
