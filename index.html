@@ -1819,98 +1819,334 @@ window.asdhWaitForAllSaves=async function(timeoutMs){
   return true;
 };
 function stateValueEqual(a,b){if(a===b)return true;try{return JSON.stringify(a)===JSON.stringify(b)}catch(e){return false}}
+function fsStateRestEncode(value){
+  if(value===null||value===undefined)return {nullValue:null};
+  if(value instanceof Date)return {timestampValue:value.toISOString()};
+  var type=typeof value;
+  if(type==='string')return {stringValue:value};
+  if(type==='boolean')return {booleanValue:value};
+  if(type==='number'){
+    if(!isFinite(value))return {nullValue:null};
+    return Number.isInteger(value)?{integerValue:String(value)}:{doubleValue:value};
+  }
+  if(Array.isArray(value))return {arrayValue:{values:value.map(fsStateRestEncode)}};
+  if(type==='object'){
+    var fields={};
+    Object.keys(value).forEach(function(key){
+      if(value[key]!==undefined)fields[key]=fsStateRestEncode(value[key]);
+    });
+    return {mapValue:{fields:fields}};
+  }
+  return {stringValue:String(value)};
+}
+async function fsStateToken(forceRefresh){
+  if(!FB_AUTH||!FB_AUTH.currentUser)throw new Error('The authenticated Firebase session is unavailable.');
+  return fsLoginTimeout(
+    FB_AUTH.currentUser.getIdToken(!!forceRefresh),
+    10000,
+    'Firebase data-access token timed out.'
+  );
+}
+function fsStateRestBase(){
+  return 'https://firestore.googleapis.com/v1/projects/'+
+    encodeURIComponent(FIREBASE_CONFIG.projectId)+
+    '/databases/(default)/documents';
+}
+async function fsStateRestRequest(url,options,timeoutMs){
+  var token=await fsStateToken(false);
+  options=options||{};
+  options.headers=Object.assign({},options.headers||{},{
+    'Authorization':'Bearer '+token,
+    'Content-Type':'application/json'
+  });
+  return fsLoginFetchJson(url,options,timeoutMs||12000);
+}
+async function fsStateRestListCollection(collectionId){
+  var documents=[],pageToken='',guard=0;
+  do{
+    var url=fsStateRestBase()+'/'+encodeURIComponent(collectionId)+'?pageSize=300&key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+    if(pageToken)url+='&pageToken='+encodeURIComponent(pageToken);
+    var response=await fsStateRestRequest(url,{method:'GET'},12000);
+    var payload=response.payload||{};
+    if(Array.isArray(payload.documents))documents=documents.concat(payload.documents);
+    pageToken=payload.nextPageToken||'';
+    guard++;
+    if(guard>20)throw new Error('Firestore REST pagination exceeded the safety limit.');
+  }while(pageToken);
+  return documents;
+}
+async function fsStateLoadFloorstockViaRest(){
+  var documents=await fsStateRestListCollection('floorstock_state'),cache={};
+  documents.forEach(function(documentValue){
+    var data=fsLoginDecodeRestDocument(documentValue)||{};
+    var id=String(documentValue.name||'').split('/').pop();
+    if(id&&id!=='users')cache[id]=data.value;
+  });
+  return {cache:cache,source:'rest'};
+}
+async function fsStateLoadUsersViaRest(){
+  var documents=await fsStateRestListCollection('users');
+  return documents.map(function(documentValue){
+    var data=fsLoginDecodeRestDocument(documentValue)||{};
+    var id=String(documentValue.name||'').split('/').pop();
+    return Object.assign({id:id},data);
+  });
+}
+async function fsStateLoadFloorstockViaSdk(){
+  var snapshot=await fsLoginTimeout(
+    FB_DB.collection('floorstock_state').get(),
+    7000,
+    'Firestore SDK state request timed out.'
+  );
+  var cache={};
+  snapshot.forEach(function(doc){if(doc.id!=='users')cache[doc.id]=doc.data().value;});
+  return {cache:cache,source:'sdk'};
+}
+async function fsStateLoadUsersViaSdk(){
+  var snapshot=await fsLoginTimeout(
+    FB_DB.collection('users').get(),
+    7000,
+    'Firestore SDK users request timed out.'
+  );
+  return snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
+}
+function fsStateFirstSuccess(tasks,label){
+  return new Promise(function(resolve,reject){
+    var settled=false,remaining=tasks.length,errors=[];
+    tasks.forEach(function(task){
+      Promise.resolve(task).then(function(value){
+        if(settled)return;
+        settled=true;resolve(value);
+      },function(error){
+        if(settled)return;
+        errors.push(error);remaining--;
+        if(remaining===0){
+          var messages=errors.map(function(item){return item&&item.message||String(item);}).filter(Boolean);
+          reject(new Error((label||'Firestore request')+' failed. '+messages.join(' | ')));
+        }
+      });
+    });
+  });
+}
+async function fsStateRestSetDocument(key,value){
+  var url=fsStateRestBase()+'/floorstock_state/'+encodeURIComponent(key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  var body={fields:{
+    value:fsStateRestEncode(value),
+    updatedAt:{timestampValue:new Date().toISOString()}
+  }};
+  await fsStateRestRequest(url,{method:'PATCH',body:JSON.stringify(body)},12000);
+  return true;
+}
+async function fsStateRestDeleteDocument(key){
+  var url=fsStateRestBase()+'/floorstock_state/'+encodeURIComponent(key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  await fsStateRestRequest(url,{method:'DELETE'},12000);
+  return true;
+}
+async function fsStateSdkSetDocument(key,value){
+  return fsLoginTimeout(
+    FB_DB.collection('floorstock_state').doc(key).set({
+      value:value,
+      updatedAt:firebase.firestore.FieldValue.serverTimestamp()
+    }),
+    8000,
+    'Firestore SDK save timed out.'
+  );
+}
+async function fsStateSdkDeleteDocument(key){
+  return fsLoginTimeout(
+    FB_DB.collection('floorstock_state').doc(key).delete(),
+    8000,
+    'Firestore SDK delete timed out.'
+  );
+}
+async function fsStateSetSmart(key,value){
+  if(S.transport==='rest')return fsStateRestSetDocument(key,value);
+  try{
+    return await fsStateSdkSetDocument(key,value);
+  }catch(error){
+    console.warn('Firestore SDK save failed; switching the Floor Stock state layer to REST.',error);
+    S.transport='rest';S.startRealtime();
+    return fsStateRestSetDocument(key,value);
+  }
+}
+async function fsStateDeleteSmart(key){
+  if(S.transport==='rest')return fsStateRestDeleteDocument(key);
+  try{
+    return await fsStateSdkDeleteDocument(key);
+  }catch(error){
+    console.warn('Firestore SDK delete failed; switching the Floor Stock state layer to REST.',error);
+    S.transport='rest';S.startRealtime();
+    return fsStateRestDeleteDocument(key);
+  }
+}
+function fsStateApplyCache(nextCache){
+  var changed=false,current=S.cache||{};
+  Object.keys(current).forEach(function(key){
+    if(key==='users')return;
+    if(!Object.prototype.hasOwnProperty.call(nextCache,key)){delete current[key];changed=true;}
+  });
+  Object.keys(nextCache).forEach(function(key){
+    if(!stateValueEqual(current[key],nextCache[key]))changed=true;
+    current[key]=nextCache[key];
+  });
+  return changed;
+}
+
 var S={
-  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,
-  init:async function(){
+  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',
+  init:async function(statusCallback){
     S.stopRealtime();
-    function withTimeout(promise,ms,label){
-      return Promise.race([
-        promise,
-        new Promise(function(_,reject){setTimeout(function(){reject(new Error(label+' timed out. Check Firestore access or network.'));},ms);})
-      ]);
+    if(statusCallback)statusCallback('Loading Floor Stock data…');
+    var result=await fsStateFirstSuccess([
+      fsStateLoadFloorstockViaRest(),
+      fsStateLoadFloorstockViaSdk()
+    ],'Loading Floor Stock data');
+    S.cache=result.cache||{};
+    S.transport=result.source||'rest';
+
+    if(statusCallback)statusCallback('Loading access lists…');
+    try{
+      var users=await fsStateFirstSuccess([
+        fsStateLoadUsersViaRest(),
+        fsStateLoadUsersViaSdk()
+      ],'Loading users');
+      S.cache.users=users||[];
+    }catch(error){
+      console.warn('User list was not loaded during sign-in:',error);
+      S.cache.users=S.cache.users||[];
     }
-    var snapshot=await withTimeout(FB_DB.collection('floorstock_state').get(),15000,'Loading Floor Stock data');
-    S.cache={};snapshot.forEach(function(doc){if(doc.id!=='users')S.cache[doc.id]=doc.data().value;});
-    // User-list loading must never block opening the application after authentication.
-    try{await withTimeout(S.loadUsers(),8000,'Loading users')}catch(err){console.warn('User list was not loaded during sign-in:',err);S.cache.users=S.cache.users||[];}
+
     S.ready=true;
     S.startRealtime();
+    if(statusCallback)statusCallback('Preparing Floor Stock…');
+    return true;
   },
   loadUsers:async function(){
-    var snapshot=await FB_DB.collection('users').get();
-    S.cache.users=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
+    var users=await fsStateFirstSuccess([
+      fsStateLoadUsersViaRest(),
+      fsStateLoadUsersViaSdk()
+    ],'Loading users');
+    S.cache.users=users||[];
+    return S.cache.users;
   },
   startRealtime:function(){
-    // Repeated/manual starts can never stack listeners; stopRealtime is the single cleanup path.
     S.stopRealtime();
-    S.stateUnsub=FB_DB.collection('floorstock_state').onSnapshot(function(snapshot){
-      var changed=false;
-      snapshot.docChanges().forEach(function(change){
-        // `users` belongs exclusively to the dedicated users collection; ignore any legacy state document with that id.
-        if(change.doc.id==='users')return;
-        var key=change.doc.id;
-        if(change.type==='removed'){if(Object.prototype.hasOwnProperty.call(S.cache,key)){delete S.cache[key];changed=true}return}
-        var next=change.doc.data().value,prev=Object.prototype.hasOwnProperty.call(S.cache,key)?S.cache[key]:undefined;
-        if(!stateValueEqual(prev,next))changed=true;
-        S.cache[key]=next;
-      });
+    if(!S.ready)return;
+
+    if(S.transport==='sdk'){
+      try{
+        S.stateUnsub=FB_DB.collection('floorstock_state').onSnapshot(function(snapshot){
+          var changed=false;
+          snapshot.docChanges().forEach(function(change){
+            if(change.doc.id==='users')return;
+            var key=change.doc.id;
+            if(change.type==='removed'){
+              if(Object.prototype.hasOwnProperty.call(S.cache,key)){delete S.cache[key];changed=true;}
+              return;
+            }
+            var next=change.doc.data().value;
+            if(!stateValueEqual(S.cache[key],next))changed=true;
+            S.cache[key]=next;
+          });
+          if(changed)S.scheduleRefresh();
+        },function(error){
+          console.error('floorstock_state realtime error; switching to REST polling.',error);
+          S.transport='rest';S.startRealtime();
+        });
+        S.usersUnsub=FB_DB.collection('users').onSnapshot(function(snapshot){
+          var nextUsers=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
+          var changed=!stateValueEqual(S.cache.users||[],nextUsers);
+          S.cache.users=nextUsers;
+          var active=document.querySelector('.pg.on');
+          if(changed&&active&&active.id==='pg-users')S.scheduleRefresh();
+        },function(error){
+          console.warn('users realtime error; the state listener remains active.',error);
+        });
+        return;
+      }catch(error){
+        console.error('Firestore realtime setup failed; switching to REST polling.',error);
+        S.transport='rest';
+      }
+    }
+
+    S.pollTimer=setInterval(function(){S.pollRest();},30000);
+  },
+  pollRest:async function(){
+    if(S.pollBusy||!S.ready||document.visibilityState==='hidden')return;
+    S.pollBusy=true;
+    try{
+      var state=await fsStateLoadFloorstockViaRest();
+      var changed=fsStateApplyCache(state.cache||{});
       if(changed)S.scheduleRefresh();
-    },function(err){console.error('floorstock_state realtime error',err);toast('Live sync disconnected — reload the page.','err');});
-    S.usersUnsub=FB_DB.collection('users').onSnapshot(function(snapshot){
-      var nextUsers=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());}),changed=!stateValueEqual(S.cache.users||[],nextUsers);
-      S.cache.users=nextUsers;
-      var active=document.querySelector('.pg.on');
-      if(changed&&active&&active.id==='pg-users')S.scheduleRefresh();
-    },function(err){console.error('users realtime error',err);toast('User sync disconnected — reload the page.','err');});
+      if(CU&&(CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>=0)){
+        try{
+          var users=await fsStateLoadUsersViaRest();
+          var usersChanged=!stateValueEqual(S.cache.users||[],users);
+          S.cache.users=users;
+          var active=document.querySelector('.pg.on');
+          if(usersChanged&&active&&active.id==='pg-users')S.scheduleRefresh();
+        }catch(usersError){
+          console.warn('REST user polling was unavailable.',usersError);
+        }
+      }
+    }catch(error){
+      console.warn('REST Floor Stock polling failed.',error);
+    }finally{
+      S.pollBusy=false;
+    }
   },
   stopRealtime:function(){
     if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
     if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
     if(S.refreshTimer){clearTimeout(S.refreshTimer);S.refreshTimer=null;}
+    if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}
+    S.pollBusy=false;
   },
   scheduleRefresh:function(){
     if(!S.ready||!CU)return;
     if(S.refreshTimer)clearTimeout(S.refreshTimer);
-    S.refreshTimer=setTimeout(function(){S.refreshTimer=null;if(document.visibilityState==='visible')refreshCurrentPage();},450);
+    S.refreshTimer=setTimeout(function(){
+      S.refreshTimer=null;
+      if(document.visibilityState==='visible')refreshCurrentPage();
+    },450);
   },
   g:function(k){return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null},
   s:function(k,v){
     var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     S.cache[k]=v;
-    var write=FB_DB.collection('floorstock_state').doc(k).set({value:v,updatedAt:firebase.firestore.FieldValue.serverTimestamp()}).catch(function(err){
-      // Rollback cache to previous value on Firestore failure
+    var write=fsStateSetSmart(k,v).catch(function(error){
       if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
-      console.error('Firestore save failed for key:',k,err);
+      console.error('Persistent save failed for key:',k,error);
       toast('Save failed — Firebase rejected the update.','err');
-      throw err;
+      throw error;
     });
     return _trackSave(write,'floorstock_state/'+k);
   },
   rm:function(k){
     var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     delete S.cache[k];
-    var write=FB_DB.collection('floorstock_state').doc(k).delete().catch(function(err){
+    var write=fsStateDeleteSmart(k).catch(function(error){
       if(prev!==undefined)S.cache[k]=prev;
-      console.error('Firestore delete failed for key:',k,err);
+      console.error('Persistent delete failed for key:',k,error);
       toast('Delete failed — Firebase rejected the update.','err');
-      throw err;
+      throw error;
     });
     return _trackSave(write,'delete floorstock_state/'+k);
   },
   push:function(k,v){
     v=Object.assign({},v||{});v.id=v.id||'id_'+Date.now()+'_'+Math.random().toString(36).slice(2,7);
     var a=(S.g(k)||[]).slice();a.push(v);
-    return S.s(k,a).then(function(){return v});
+    return S.s(k,a).then(function(){return v;});
   },
   upd:function(k,id,d){
-    var a=(S.g(k)||[]).slice(),i=a.findIndex(function(x){return String(x.id)===String(id)});
+    var a=(S.g(k)||[]).slice(),i=a.findIndex(function(x){return String(x.id)===String(id);});
     if(i<0)return Promise.resolve(false);
     a[i]=Object.assign({},a[i],d||{});
-    return S.s(k,a).then(function(){return true});
+    return S.s(k,a).then(function(){return true;});
   },
   del:function(k,id){
-    var a=(S.g(k)||[]).filter(function(x){return String(x.id)!==String(id)});
-    return S.s(k,a).then(function(){return true});
+    var a=(S.g(k)||[]).filter(function(x){return String(x.id)!==String(id);});
+    return S.s(k,a).then(function(){return true;});
   }
 };
 var _publicSyncWarningAt=0;
@@ -2439,7 +2675,7 @@ async function doLogin(){
     if(profile.active===false)throw new Error('This account is inactive.');
     if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
     setLoginStage('Loading Floor Stock data…');
-    await S.init();
+    await S.init(setLoginStage);
     if(typeof window.repairImportedDepartmentAliases==='function')await window.repairImportedDepartmentAliases();
     await seed();
     var deptId=profile.deptId||null;
@@ -9308,7 +9544,7 @@ window.delDept=async function(id){var dept=(gd()||[]).find(function(d){return St
 })();
 </script>
 
-<script id="asdhealth-canonical-r6-5-20260726">
+<script id="asdhealth-canonical-r6-6-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
