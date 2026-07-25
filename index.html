@@ -1753,6 +1753,16 @@ function initFirebase(){
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
   FB_AUTH=firebase.auth();
   FB_DB=firebase.firestore();
+  try{
+    if(FB_DB&&typeof FB_DB.settings==='function'){
+      FB_DB.settings({
+        experimentalForceLongPolling:true,
+        ignoreUndefinedProperties:true
+      });
+    }
+  }catch(settingsError){
+    console.warn('Firestore transport settings could not be applied.',settingsError);
+  }
   window.FB_APP=FB_APP;
   window.FB_AUTH=FB_AUTH;
   window.FB_DB=FB_DB;
@@ -2279,46 +2289,156 @@ function fillDS(){
   var sel=el('dsel');if(!sel)return;
   sel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
 }
+function fsLoginTimeout(promise,ms,message){
+  var timer=null;
+  return new Promise(function(resolve,reject){
+    timer=setTimeout(function(){reject(new Error(message));},ms);
+    Promise.resolve(promise).then(function(value){
+      clearTimeout(timer);resolve(value);
+    },function(error){
+      clearTimeout(timer);reject(error);
+    });
+  });
+}
+function fsLoginRestValue(value){
+  if(!value||typeof value!=='object')return null;
+  if(Object.prototype.hasOwnProperty.call(value,'nullValue'))return null;
+  if(Object.prototype.hasOwnProperty.call(value,'stringValue'))return value.stringValue;
+  if(Object.prototype.hasOwnProperty.call(value,'booleanValue'))return !!value.booleanValue;
+  if(Object.prototype.hasOwnProperty.call(value,'integerValue'))return Number(value.integerValue);
+  if(Object.prototype.hasOwnProperty.call(value,'doubleValue'))return Number(value.doubleValue);
+  if(Object.prototype.hasOwnProperty.call(value,'timestampValue'))return value.timestampValue;
+  if(Object.prototype.hasOwnProperty.call(value,'referenceValue'))return value.referenceValue;
+  if(Object.prototype.hasOwnProperty.call(value,'bytesValue'))return value.bytesValue;
+  if(value.geoPointValue)return {latitude:Number(value.geoPointValue.latitude),longitude:Number(value.geoPointValue.longitude)};
+  if(value.arrayValue)return (value.arrayValue.values||[]).map(fsLoginRestValue);
+  if(value.mapValue){
+    var mapped={};
+    Object.keys(value.mapValue.fields||{}).forEach(function(key){mapped[key]=fsLoginRestValue(value.mapValue.fields[key]);});
+    return mapped;
+  }
+  return null;
+}
+function fsLoginDecodeRestDocument(documentValue){
+  if(!documentValue||!documentValue.fields)return null;
+  var data={};
+  Object.keys(documentValue.fields).forEach(function(key){data[key]=fsLoginRestValue(documentValue.fields[key]);});
+  return data;
+}
+function fsLoginSnapshot(data,id,source){
+  return {exists:!!data,id:id||'',source:source||'unknown',data:function(){return data||{}}};
+}
+async function fsLoginFetchJson(url,options,timeoutMs){
+  options=options||{};
+  var controller=typeof AbortController!=='undefined'?new AbortController():null;
+  var timer=setTimeout(function(){if(controller)controller.abort();},timeoutMs);
+  if(controller)options.signal=controller.signal;
+  try{
+    var response=await fetch(url,options);
+    var text=await response.text(),payload=null;
+    try{payload=text?JSON.parse(text):null}catch(parseError){payload=null}
+    if(response.status===404)return {status:404,payload:null};
+    if(!response.ok){
+      var detail=payload&&payload.error&&(payload.error.message||payload.error.status);
+      var err=new Error(detail||('Firestore REST request failed with HTTP '+response.status));
+      err.httpStatus=response.status;err.restPayload=payload;throw err;
+    }
+    return {status:response.status,payload:payload};
+  }catch(error){
+    if(error&&error.name==='AbortError')throw new Error('Secure profile fallback timed out.');
+    throw error;
+  }finally{clearTimeout(timer);}
+}
+async function fsLoadProfileViaRest(user,statusCallback){
+  if(typeof fetch!=='function')throw new Error('Secure profile fallback is unavailable in this browser.');
+  if(statusCallback)statusCallback('Checking profile through secure fallback…');
+  var token=await fsLoginTimeout(user.getIdToken(true),10000,'Firebase ID token refresh timed out.');
+  var projectId=FIREBASE_CONFIG.projectId;
+  var base='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(projectId)+'/databases/(default)/documents';
+  var headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
+  var directUrl=base+'/users/'+encodeURIComponent(user.uid)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  var direct=await fsLoginFetchJson(directUrl,{method:'GET',headers:headers},10000);
+  if(direct.status===200&&direct.payload){
+    var directData=fsLoginDecodeRestDocument(direct.payload);
+    if(directData)return fsLoginSnapshot(directData,user.uid,'rest-document');
+  }
+  if(!user.email)return fsLoginSnapshot(null,user.uid,'rest-not-found');
+  var queryUrl=base+':runQuery?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  var queryBody={structuredQuery:{from:[{collectionId:'users'}],where:{fieldFilter:{field:{fieldPath:'email'},op:'EQUAL',value:{stringValue:user.email}}},limit:1}};
+  var query=await fsLoginFetchJson(queryUrl,{method:'POST',headers:headers,body:JSON.stringify(queryBody)},8000);
+  var rows=Array.isArray(query.payload)?query.payload:[];
+  var found=rows.find(function(row){return row&&row.document&&row.document.fields;});
+  if(!found)return fsLoginSnapshot(null,user.uid,'rest-not-found');
+  var data=fsLoginDecodeRestDocument(found.document);
+  var id=String(found.document.name||'').split('/').pop()||user.uid;
+  return fsLoginSnapshot(data,id,'rest-email-query');
+}
+async function fsLoadProfileViaSdk(user,statusCallback){
+  if(statusCallback)statusCallback('Loading profile from Firestore…');
+  try{
+    if(FB_DB&&typeof FB_DB.enableNetwork==='function'){
+      fsLoginTimeout(FB_DB.enableNetwork(),4000,'Firestore network recovery timed out.').catch(function(error){
+        console.warn('Firestore network recovery did not complete.',error);
+      });
+    }
+  }catch(networkError){console.warn('Firestore network recovery was unavailable.',networkError);}
+  var ref=FB_DB.collection('users').doc(user.uid),lastError=null;
+  try{
+    var server=await fsLoginTimeout(ref.get({source:'server'}),10000,'Firestore profile server request timed out.');
+    if(server&&server.exists)return server;
+    if(server&&!server.exists)return fsLoginSnapshot(null,user.uid,'sdk-server-not-found');
+  }catch(error){lastError=error;console.warn('Firestore server profile request failed.',error);}
+  try{
+    var cached=await fsLoginTimeout(ref.get({source:'cache'}),2500,'Cached profile request timed out.');
+    if(cached&&cached.exists)return cached;
+  }catch(cacheError){console.warn('Cached profile request was unavailable.',cacheError);}
+  throw lastError||new Error('Firestore profile was not available through the SDK.');
+}
+async function fsLoadAuthenticatedProfile(user,statusCallback){
+  var errors=[],remaining=2,completed=false;
+  return new Promise(function(resolve,reject){
+    function settle(snapshot){
+      if(completed)return;
+      if(snapshot&&snapshot.exists){completed=true;resolve(snapshot);return;}
+      remaining--;
+      if(remaining===0){completed=true;resolve(fsLoginSnapshot(null,user.uid,'not-found'));}
+    }
+    function fail(error){
+      if(completed)return;
+      errors.push(error);remaining--;
+      if(remaining===0){
+        completed=true;
+        var messages=errors.map(function(item){return item&&item.message||String(item);}).filter(Boolean);
+        reject(new Error('Authentication succeeded, but the user profile could not be reached. '+messages.join(' | ')));
+      }
+    }
+    fsLoadProfileViaSdk(user,statusCallback).then(settle,fail);
+    fsLoadProfileViaRest(user,statusCallback).then(settle,fail);
+  });
+}
 async function doLogin(){
   var email=el('lgu').value.trim(),password=el('lgp').value;
-  var loginBtn=document.querySelector('#auth button[onclick*=\"doLogin\"]');
-  var oldLoginText=loginBtn?loginBtn.innerHTML:'';
-  function setLoginError(message){
-    var box=el('aerr');
-    if(box){box.textContent=message;box.style.display='block';}
-  }
-  function timeoutAfter(ms,message){
-    return new Promise(function(_,reject){setTimeout(function(){reject(new Error(message));},ms);});
-  }
-  async function loadProfile(uid){
-    var ref=FB_DB.collection('users').doc(uid),lastError=null;
-    var attempts=[
-      function(){return ref.get({source:'server'});},
-      function(){return ref.get();},
-      function(){return ref.get({source:'cache'});}
-    ];
-    for(var i=0;i<attempts.length;i++){
-      try{
-        if(loginBtn)loginBtn.textContent=i===0?'Loading profile…':('Retrying profile '+(i+1)+'/3…');
-        var snap=await Promise.race([attempts[i](),timeoutAfter(i===0?30000:15000,'User profile request timed out.')]);
-        if(snap&&snap.exists)return snap;
-        if(snap&&!snap.exists&&i<2)continue;
-        return snap;
-      }catch(e){lastError=e;console.warn('Profile load attempt '+(i+1)+' failed:',e);}
-    }
-    throw lastError||new Error('Unable to load the user profile.');
-  }
-  if(loginBtn){loginBtn.disabled=true;loginBtn.textContent='Signing in…';}
+  var loginBtn=document.querySelector('#auth button[onclick*="doLogin"]');
+  var oldLoginText=loginBtn?loginBtn.innerHTML:'',credential=null;
+  function setLoginError(message){var box=el('aerr');if(box){box.textContent=message;box.style.display='block';}}
+  function setLoginStage(message){if(loginBtn)loginBtn.textContent=message;}
+  if(loginBtn){loginBtn.disabled=true;setLoginStage('Signing in…');}
   if(el('aerr'))el('aerr').style.display='none';
-  if(!email||!password){setLoginError('Enter your Firebase email and password');if(loginBtn){loginBtn.disabled=false;loginBtn.innerHTML=oldLoginText||'Sign In / دخول';}return;}
+  if(!email||!password){
+    setLoginError('Enter your Firebase email and password');
+    if(loginBtn){loginBtn.disabled=false;loginBtn.innerHTML=oldLoginText||'Sign In / دخول';}
+    return;
+  }
   try{
-    var credential=await Promise.race([FB_AUTH.signInWithEmailAndPassword(email,password),timeoutAfter(30000,'Firebase sign-in timed out.')]);
-    var profileSnapshot=await loadProfile(credential.user.uid);
+    await waitForFirebase(15000);
+    credential=await fsLoginTimeout(FB_AUTH.signInWithEmailAndPassword(email,password),30000,'Firebase sign-in timed out.');
+    setLoginStage('Verifying profile…');
+    var profileSnapshot=await fsLoadAuthenticatedProfile(credential.user,setLoginStage);
     if(!profileSnapshot||!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
     var profile=profileSnapshot.data()||{};
     if(profile.active===false)throw new Error('This account is inactive.');
     if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
-    if(loginBtn)loginBtn.textContent='Loading data…';
+    setLoginStage('Loading Floor Stock data…');
     await S.init();
     if(typeof window.repairImportedDepartmentAliases==='function')await window.repairImportedDepartmentAliases();
     await seed();
@@ -2329,7 +2449,12 @@ async function doLogin(){
     startApp();
   }catch(err){
     console.error(err);
-    setLoginError((err&&err.message)||'Unable to sign in');
+    var message=(err&&err.message)||'Unable to sign in';
+    if(/profile could not be reached|profile.*timed out|Firestore profile/i.test(message)){
+      message+=' Open the file in Chrome or Safari with internet access, and verify that firestore.googleapis.com is not blocked by a firewall or content filter.';
+    }
+    setLoginError(message);
+    try{if(credential&&FB_AUTH&&FB_AUTH.currentUser)await FB_AUTH.signOut();}catch(signOutError){console.warn('Could not clear the partial authentication session.',signOutError);}
     if(loginBtn){loginBtn.disabled=false;loginBtn.innerHTML=oldLoginText||'Sign In / دخول';}
   }
 }
@@ -9183,7 +9308,7 @@ window.delDept=async function(id){var dept=(gd()||[]).find(function(d){return St
 })();
 </script>
 
-<script id="asdhealth-canonical-r6-4-20260726">
+<script id="asdhealth-canonical-r6-5-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
