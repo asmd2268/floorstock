@@ -9699,833 +9699,332 @@ window.delDept=async function(id){var dept=(gd()||[]).find(function(d){return St
 })();
 </script>
 
-<script id="asdhealth-fixpack-20260726-r3">
+<script id="asdhealth-clean-r4-20260726">
 (function(){
 'use strict';
+if(window.__ASDHEALTH_CLEAN_R4_20260726__)return;
+window.__ASDHEALTH_CLEAN_R4_20260726__='20260726-r4';
 
-var FIX_ID='asdhealth-fixpack-20260726-r3';
-if(window.__ASDHEALTH_FIXPACK_20260726_R3__)return;
-window.__ASDHEALTH_FIXPACK_20260726_R3__=true;
-
-function E(id){return document.getElementById(id)}
-function escF(v){
-  if(typeof window.esc==='function'){
-    try{return window.esc(v==null?'':String(v))}catch(_e){}
-  }
+function R4E(id){return document.getElementById(id)}
+function R4S(v,fallback){var s=String(v==null?'':v).trim();return s||fallback||''}
+function R4N(v){v=Number(v);return isFinite(v)?v:0}
+function R4Esc(v){
+  if(typeof window.esc==='function'){try{return window.esc(String(v==null?'':v))}catch(_e){}}
   return String(v==null?'':v).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
   });
 }
-function nF(v){v=Number(v);return isFinite(v)?v:0}
-function sF(v,fallback){var s=String(v==null?'':v).trim();return s||fallback||''}
-function toastF(message,type){
+function R4Toast(message,type){
   if(typeof window.toast2==='function')return window.toast2(message,type||'info');
   if(typeof window.toast==='function')return window.toast(message,type||'info');
   console[type==='err'?'error':'log'](message);
 }
-function auditF(action,meta){
-  if(typeof window.auditAction==='function'){
-    try{return Promise.resolve(window.auditAction(action,meta||{})).catch(function(e){console.error('Audit failed',e)})}
-    catch(e){console.error('Audit failed',e)}
-  }
-  return Promise.resolve();
-}
-function closeModalF(id){
-  if(typeof window.CM==='function'){try{window.CM(id);return}catch(_e){}}
-  var m=E(id);if(m)m.classList.remove('on');
-}
-function normalizeF(v){
+function R4Norm(v){
   return String(v==null?'':v).trim().toLowerCase()
+    .normalize('NFKD').replace(/[\u0300-\u036f]/g,'')
     .replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي')
     .replace(/[^a-z0-9\u0600-\u06ff]+/g,'');
 }
-
-/* =========================================================
-   1) Shared department identity and name resolution
-   ========================================================= */
-function rawDepartmentsF(){
-  var pools=[];
-  try{if(typeof window.gd==='function')pools.push(window.gd()||[])}catch(_e){}
-  try{
-    if(window.S&&typeof window.S.g==='function'){
-      ['departments','department_list','departments_list','depts'].forEach(function(k){
-        var v=window.S.g(k);if(Array.isArray(v))pools.push(v);
-      });
-    }
-  }catch(_e){}
-  try{
-    var users=typeof window.gu==='function'?(window.gu()||[]):[];
-    pools.push(users.filter(function(u){return u&&(u.deptId||u.departmentId)}).map(function(u){
-      return {id:u.deptId||u.departmentId,name:u.deptName||u.departmentName||u.deptId||u.departmentId};
-    }));
-  }catch(_e){}
-  if(window.CU&&(CU.deptId||CU.departmentId)){
-    pools.push([{id:CU.deptId||CU.departmentId,name:CU.deptName||CU.departmentName||CU.deptId||CU.departmentId}]);
-  }
-  var seen={},out=[];
-  pools.forEach(function(pool){
-    (pool||[]).forEach(function(d){
-      if(!d)return;
-      var id=sF(d.id||d.deptId||d.departmentId||d.code,'');
-      var name=sF(d.name||d.deptName||d.departmentName||d.label,id);
-      if(!id)return;
-      if(!seen[id]){seen[id]={id:id,name:name};out.push(seen[id])}
-      else if((!seen[id].name||seen[id].name===id)&&name)seen[id].name=name;
-    });
-  });
-  return out;
-}
-function departmentIdFromRefF(ref){
-  if(ref&&typeof ref==='object')ref=ref.id||ref.dept||ref.deptId||ref.departmentId||ref.name;
-  var value=sF(ref,'');
-  if(!value)return '';
-  if(value==='all'||normalizeF(value)==='alldepartments')return 'all';
-  var ds=rawDepartmentsF(),norm=normalizeF(value);
-  var d=ds.find(function(x){
-    return String(x.id)===value||normalizeF(x.name)===norm||normalizeF(x.id)===norm;
-  });
-  return d?String(d.id):value;
-}
-function departmentNameF(ref,record){
-  var value=departmentIdFromRefF(ref);
-  if(value==='all')return 'All Departments / جميع الأقسام';
-  var ds=rawDepartmentsF();
-  var d=ds.find(function(x){return String(x.id)===String(value)});
-  if(d&&d.name)return d.name;
-  var stored=record&&sF(record.deptName||record.departmentName||record.departmentLabel,'');
-  if(stored)return stored;
-  if(window.CU&&String(CU.deptId||CU.departmentId||'')===String(value)&&CU.deptName)return CU.deptName;
-  return value?('Unknown department / قسم غير معروف: '+value):'Department not selected / لم يحدد القسم';
-}
-function departmentOptionsF(selected,records){
-  var ds=rawDepartmentsF().slice();
-  (records||[]).forEach(function(r){
-    var ref=r&&(r.dept!=null?r.dept:(r.deptId!=null?r.deptId:r.departmentId));
-    var id=departmentIdFromRefF(ref);
-    if(!id||id==='all'||ds.some(function(d){return String(d.id)===String(id)}))return;
-    ds.push({id:id,name:departmentNameF(id,r)});
-  });
-  var html='<option value="all">All Departments / جميع الأقسام</option>';
-  html+=ds.map(function(d){return '<option value="'+escF(d.id)+'">'+escF(d.name||d.id)+'</option>'}).join('');
-  return {html:html,selected:departmentIdFromRefF(selected)||'all'};
-}
-
-/* =========================================================
-   2) Schedule & Limits: restore department names
-   ========================================================= */
-function daysF(days){
-  if(typeof window.dayBits==='function'){
-    try{return window.dayBits(days||[])}catch(_e){}
-  }
-  var names=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-  return (days||[]).map(function(i){return names[Number(i)]||String(i)}).join(', ');
-}
-function timeF(v){
-  if(typeof window.fmt12==='function'){
-    try{return window.fmt12(v)}catch(_e){}
-  }
-  return sF(v,'—');
-}
-function patchScheduleDepartmentSelectorsF(){
-  var wins=typeof window.getReqWindows==='function'?(window.getReqWindows()||[]):[];
-  var slots=typeof window.getDispSlots==='function'?(window.getDispSlots()||[]):[];
-  [['rwin-dept',wins],['dslot-dept',slots]].forEach(function(pair){
-    var sel=E(pair[0]);if(!sel)return;
-    var current=sel.value;
-    var opt=departmentOptionsF(current,pair[1]);
-    sel.innerHTML=opt.html;
-    var wanted=departmentIdFromRefF(current)||opt.selected;
-    if(Array.from(sel.options).some(function(o){return String(o.value)===String(wanted)}))sel.value=wanted;
-    else sel.value='all';
-  });
-}
-function patchRequestWindowsListF(){
-  var box=E('req-windows-list');if(!box||typeof window.getReqWindows!=='function')return;
-  var wins=window.getReqWindows()||[];
-  box.innerHTML=wins.length?wins.map(function(w,i){
-    var ref=w.dept!=null?w.dept:(w.deptId!=null?w.deptId:w.departmentId);
-    return '<div class="win-card'+(w.active===false?' inactive':'')+'">'+
-      '<div><div style="font-weight:600">'+escF(w.label||'Request window')+'</div>'+
-      '<div class="win-days">'+escF(departmentNameF(ref,w))+' &nbsp;|&nbsp; '+daysF(w.days||[])+'</div></div>'+
-      '<div class="win-time">'+escF(timeF(w.from))+' &ndash; '+escF(timeF(w.to))+'</div>'+
-      '<div class="fl g8 ic">'+
-        '<button class="btn bg bxs" data-i="'+i+'" onclick="editReqWindow(+this.dataset.i)">✏</button>'+
-        '<button class="btn '+(w.active===false?'bp':'bg')+' bxs" data-i="'+i+'" onclick="toggleWindow(+this.dataset.i)">'+(w.active===false?'Enable':'Pause')+'</button>'+
-        '<button class="btn bd2c bxs" data-i="'+i+'" onclick="delWindow(+this.dataset.i)">✕</button>'+
-      '</div></div>';
-  }).join(''):'<div style="color:var(--tx2);font-size:13px;padding:12px 0">No windows set — requests allowed anytime</div>';
-}
-function patchDispenseSlotsListF(){
-  var box=E('disp-slots-list');if(!box||typeof window.getDispSlots!=='function')return;
-  var slots=window.getDispSlots()||[];
-  box.innerHTML=slots.length?slots.map(function(s,i){
-    var ref=s.dept!=null?s.dept:(s.deptId!=null?s.deptId:s.departmentId);
-    return '<div class="win-card"><div><div style="font-weight:600">'+escF(s.label||'Dispense slot')+'</div>'+
-      '<div class="win-days">'+escF(departmentNameF(ref,s))+' &nbsp;|&nbsp; '+daysF(s.days||[])+(s.notes?' &nbsp;|&nbsp; <i>'+escF(s.notes)+'</i>':'')+'</div></div>'+
-      '<span class="slot-badge">⏰ '+escF(timeF(s.time))+'</span>'+
-      '<div class="fl g8 ic"><button class="btn bg bxs" data-i="'+i+'" onclick="editDispSlot(+this.dataset.i)">✏</button>'+
-      '<button class="btn bd2c bxs" data-i="'+i+'" onclick="delSlot(+this.dataset.i)">✕</button></div></div>';
-  }).join(''):'<div style="color:var(--tx2);font-size:13px;padding:12px 0">No dispense slots defined</div>';
-}
-function repairScheduleF(){
-  patchScheduleDepartmentSelectorsF();
-  patchRequestWindowsListF();
-  patchDispenseSlotsListF();
-}
-var baseRenderScheduleF=window.renderSchedule;
-window.renderSchedule=function(){
-  var r;
-  if(typeof baseRenderScheduleF==='function')r=baseRenderScheduleF.apply(this,arguments);
-  setTimeout(repairScheduleF,0);
-  setTimeout(repairScheduleF,250);
-  return r;
+var R4_FALLBACK_DEPT_NAMES={
+  icu:'INTENSIVE CARE UNIT',
+  emergency:'EMERGENCY DEPARTMENT',
+  er:'EMERGENCY DEPARTMENT',
+  endoscopy_unit:'ENDOSCOPY UNIT',
+  endoscopy:'ENDOSCOPY UNIT',
+  ccu:'CORONARY CARE UNIT',
+  obw:'OBSTETRICS AND GYNAECOLOGY',
+  pedia:'PEDIATRIC',
+  nursery:'NURSERY',
+  fmw:'FEMALE MEDICAL WARD',
+  mmw:'MALE MEDICAL WARD',
+  msw:'MALE SURGICAL WARD',
+  anesthesia:'ANESTHESIA',
+  aku:'ARTIFICIAL KIDNEY UNIT',
+  opd:'OUTPATIENT DEPARTMENT'
 };
-['addReqWindow','editReqWindow','addDispSlot','editDispSlot'].forEach(function(name){
-  var base=window[name];
-  if(typeof base!=='function')return;
-  window[name]=function(){
-    var r=base.apply(this,arguments);
-    var args=arguments;
-    setTimeout(function(){
-      patchScheduleDepartmentSelectorsF();
-      if(name==='editReqWindow'&&typeof window.getReqWindows==='function'){
-        var w=(window.getReqWindows()||[])[Number(args[0])];
-        var sel=E('rwin-dept');
-        if(w&&sel){
-          var ref=w.dept!=null?w.dept:(w.deptId!=null?w.deptId:w.departmentId);
-          var id=departmentIdFromRefF(ref);
-          if(Array.from(sel.options).some(function(o){return String(o.value)===String(id)}))sel.value=id;
-        }
-      }
-      if(name==='editDispSlot'&&typeof window.getDispSlots==='function'){
-        var s=(window.getDispSlots()||[])[Number(args[0])];
-        var dsel=E('dslot-dept');
-        if(s&&dsel){
-          var dref=s.dept!=null?s.dept:(s.deptId!=null?s.deptId:s.departmentId);
-          var did=departmentIdFromRefF(dref);
-          if(Array.from(dsel.options).some(function(o){return String(o.value)===String(did)}))dsel.value=did;
-        }
-      }
-    },0);
-    return r;
-  };
-});
-
-/* =========================================================
-   3) Master test mode: switch real users without logout
-   ========================================================= */
-function masterActualF(){
-  if(window.MASTER_ACTUAL)return window.MASTER_ACTUAL;
-  if(window.CU&&CU.master===true)return CU;
-  return null;
-}
-function isMasterActualF(){return !!masterActualF()}
-function usersF(){
-  var out=[];
-  try{if(typeof window.gu==='function')out=window.gu()||[]}catch(_e){}
-  if(!out.length&&window.S&&typeof window.S.g==='function'){
-    try{var v=window.S.g('users');if(Array.isArray(v))out=v}catch(_e){}
-  }
-  return out.filter(Boolean);
-}
-function roleLabelF(role){
-  if(typeof window.masterRoleLabel==='function'){
-    try{return window.masterRoleLabel(role)}catch(_e){}
-  }
-  var labels={
-    pharmacy:'Pharmacy Director / مدير الصيدلية',
-    inpatient_supervisor:'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم',
-    pharmacy_staff:'Pharmacy Employee / موظف صيدلية',
-    controlled_pharmacy:'Controlled Medicines Officer / مسؤول الأدوية المخدرة',
-    warehouse:'Warehouse Custody Officer / مسؤول عهدة المستودع',
-    department:'Department Employee / موظف قسم'
-  };
-  return labels[role]||role||'Unknown role';
-}
-function removeMasterModalF(){
-  var old=E('mmaster-role');
-  if(old)old.remove();
-}
-function ensureMasterUserModalF(){
-  var modal=E('mmaster-role');
-  if(modal&&E('master-user-select'))return modal;
-  removeMasterModalF();
-  document.body.insertAdjacentHTML('beforeend',
-    '<div class="modal-bg" id="mmaster-role"><div class="modal" style="width:620px;max-width:94vw">'+
-    '<div class="mh"><span class="mt">Test User Permissions / اختبار صلاحيات مستخدم</span><button class="xbtn" type="button" onclick="CM(\'mmaster-role\')">✕</button></div>'+
-    '<div style="font-size:12px;color:var(--tx2);margin-bottom:12px">يتم تبديل الصلاحيات داخل جلسة الماستر الحالية فقط، بدون تسجيل خروج أو تغيير مستخدم Firebase.</div>'+
-    '<div class="fg"><label>User to test / المستخدم المراد اختبار صلاحياته</label><select id="master-user-select" onchange="masterPreviewUser()"></select></div>'+
-    '<div id="master-user-preview" class="master-test-detail"></div>'+
-    '<div class="fl g8" style="justify-content:flex-end;margin-top:18px">'+
-    '<button class="btn bg" type="button" onclick="CM(\'mmaster-role\')">Cancel</button>'+
-    '<button class="btn bd2c" type="button" id="master-reset-modal-btn" onclick="masterResetRole()">Exit Test Mode</button>'+
-    '<button class="btn bp" type="button" onclick="masterApplyRole()">Start / Change Test</button>'+
-    '</div></div></div>');
-  return E('mmaster-role');
-}
-window.masterPreviewUser=function(){
-  var select=E('master-user-select'),preview=E('master-user-preview');
-  if(!preview)return;
-  var id=select?select.value:'';
-  var target=usersF().find(function(u){return String(u.id)===String(id)});
-  if(!target){
-    preview.innerHTML='<span style="color:var(--tx2)">No active managed user selected / لم يتم اختيار مستخدم نشط</span>';
-    return;
-  }
-  var dept=target.deptId||target.departmentId;
-  preview.innerHTML='<strong>Effective permissions:</strong> '+escF(roleLabelF(target.role))+
-    '<br><strong>Tested user:</strong> '+escF(target.email||target.username||target.displayName||target.id)+
-    (dept?'<br><strong>Department:</strong> '+escF(departmentNameF(dept,target)):'')+
-    '<br><strong>Actual Firebase session:</strong> '+escF((masterActualF()||{}).email||(masterActualF()||{}).username||'Master')+' (Master)';
-};
-window.openMasterRoleSwitch=function(){
-  if(!isMasterActualF())return toastF('Only the signed-in master can use test mode.','err');
-  ensureMasterUserModalF();
-  var actual=masterActualF()||{};
-  var list=usersF().filter(function(u){
-    return u.active!==false&&u.master!==true&&String(u.id)!==String(actual.id);
-  });
-  var select=E('master-user-select');
-  select.innerHTML=list.length?list.map(function(u){
-    var dep=u.deptId||u.departmentId;
-    var label=(u.email||u.username||u.displayName||u.id)+' — '+roleLabelF(u.role)+(dep?' — '+departmentNameF(dep,u):'');
-    return '<option value="'+escF(u.id)+'">'+escF(label)+'</option>';
-  }).join(''):'<option value="">No active managed users available</option>';
-  select.disabled=!list.length;
-  if(window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.userId&&list.some(function(u){return String(u.id)===String(MASTER_EFFECTIVE.userId)})){
-    select.value=MASTER_EFFECTIVE.userId;
-  }
-  var reset=E('master-reset-modal-btn');
-  if(reset)reset.style.display=window.MASTER_EFFECTIVE?'inline-flex':'none';
-  window.masterPreviewUser();
-  if(typeof window.OM==='function')window.OM('mmaster-role');
-  else E('mmaster-role').classList.add('on');
-};
-window.masterApplyRole=function(){
-  if(!isMasterActualF())return toastF('Master session is unavailable.','err');
-  ensureMasterUserModalF();
-  var select=E('master-user-select'),target=usersF().find(function(u){return select&&String(u.id)===String(select.value)});
-  if(!target)return toastF('Choose an active user to test.','err');
-
-  if(!window.MASTER_ACTUAL)window.MASTER_ACTUAL=Object.assign({},window.CU);
-  var actual=window.MASTER_ACTUAL;
-  var deptId=sF(target.deptId||target.departmentId,'');
-  if(target.role==='department'&&!deptId)return toastF('The selected user has no department assignment.','err');
-
-  window.MASTER_EFFECTIVE={
-    userId:target.id,
-    email:target.email||target.username||target.displayName||'',
-    role:target.role,
-    deptId:deptId||null,
-    deptName:deptId?departmentNameF(deptId,target):''
-  };
-
-  /* Keep Firebase/auth identity equal to the real master. Only effective UI permissions change. */
-  window.CU=Object.assign({},target,{
-    id:actual.id,
-    authUid:actual.id,
-    actualUserId:actual.id,
-    testedUserId:target.id,
-    username:target.username||target.displayName||target.email||'Test user',
-    email:target.email||'',
-    role:target.role,
-    master:false,
-    deptId:deptId||null,
-    deptName:deptId?departmentNameF(deptId,target):'',
-    controlledCustodian:!!target.controlledCustodian
-  });
-
-  closeModalF('mmaster-role');
-  auditF('master_user_permission_test',{
-    testedUserId:target.id,
-    testedUser:target.email||target.username||'',
-    role:target.role,
-    deptId:deptId||null,
-    actualMasterId:actual.id
-  });
-  try{
-    if(typeof window.clearRoleUiF==='function')window.clearRoleUiF();
-    if(typeof window.startApp==='function')window.startApp();
-    toastF('Test mode changed to: '+(target.email||target.username||target.id),'info');
-  }catch(e){
-    console.error('Master test switch failed',e);
-    window.CU=Object.assign({},actual);
-    window.MASTER_EFFECTIVE=null;
-    if(typeof window.startApp==='function')window.startApp();
-    toastF('Could not change test user: '+(e&&e.message||e),'err');
-  }
-};
-window.masterResetRole=function(){
-  var actual=window.MASTER_ACTUAL;
-  if(!actual){
-    if(window.CU&&CU.master===true){
-      window.MASTER_EFFECTIVE=null;
-      closeModalF('mmaster-role');
-      if(typeof window.startApp==='function')window.startApp();
-      return true;
-    }
-    return toastF('Master profile is unavailable. Refresh the page once.','err');
-  }
-  var previous=window.MASTER_EFFECTIVE;
-  closeModalF('mmaster-role');
-  window.CU=Object.assign({},actual);
-  window.MASTER_EFFECTIVE=null;
-  try{
-    if(typeof window.clearRoleUiF==='function')window.clearRoleUiF();
-    if(typeof window.startApp==='function')window.startApp();
-    auditF('master_role_reset',{previousTest:previous||null});
-    toastF('Exited test mode — Master permissions restored.','succ');
-    return true;
-  }catch(e){
-    console.error('Exit test mode failed',e);
-    toastF('Could not restore Master mode: '+(e&&e.message||e),'err');
-    return false;
-  }
-};
-window.addMasterSwitchButton=function(){
-  var top=E('tuser')&&E('tuser').parentElement;
-  if(!top||!isMasterActualF())return;
-  ['master-switch-btn','master-test-status','master-test-exit'].forEach(function(id){var x=E(id);if(x)x.remove()});
-  var anchor=E('themeBtn')||top.lastElementChild;
-  var button=document.createElement('button');
-  button.id='master-switch-btn';button.type='button';button.className='btn bg bsm';
-  button.textContent=window.MASTER_EFFECTIVE?'Change Test User':'Test User Permissions';
-  button.onclick=window.openMasterRoleSwitch;
-  top.insertBefore(button,anchor||null);
-  if(window.MASTER_EFFECTIVE){
-    var status=document.createElement('span');
-    status.id='master-test-status';status.className='master-test-banner';
-    status.innerHTML='<strong>TEST MODE</strong>'+escF(roleLabelF(MASTER_EFFECTIVE.role))+'<br>'+escF(MASTER_EFFECTIVE.email||'')+
-      (MASTER_EFFECTIVE.deptName?'<br>Department: '+escF(MASTER_EFFECTIVE.deptName):'');
-    top.insertBefore(status,button);
-    var exit=document.createElement('button');
-    exit.id='master-test-exit';exit.type='button';exit.className='btn bg bsm master-test-exit';
-    exit.textContent='Exit Test Mode';exit.onclick=window.masterResetRole;
-    top.insertBefore(exit,button);
-  }
-};
-/* Capture phase guarantees the repaired exit action wins over stale inline/wrapper handlers. */
-document.addEventListener('click',function(ev){
-  var target=ev.target&&ev.target.closest?ev.target.closest('#master-test-exit,#master-reset-modal-btn'):null;
-  if(!target)return;
-  ev.preventDefault();ev.stopImmediatePropagation();
-  window.masterResetRole();
-},true);
-
-/* =========================================================
-   4) Controlled & Restricted Medicines for departments
-   ========================================================= */
-var DEPT_ALIASES_F={
+var R4_NAME_ALIASES={
   intensivecareunit:'icu',intensivecare:'icu',icu:'icu',
   emergencydepartment:'emergency',emergency:'emergency',er:'emergency',
   endoscopyunit:'endoscopy_unit',endoscopy:'endoscopy_unit',
-  delivery:'ccu',deliveryroom:'ccu',coronarycareunit:'ccu',ccu:'ccu',
+  coronarycareunit:'ccu',ccu:'ccu',deliveryroom:'ccu',delivery:'ccu',
   obstetricsandgynaecology:'obw',obstetricsgynecology:'obw',obgyn:'obw',obw:'obw',
   pediatric:'pedia',pediatrics:'pedia',paediatric:'pedia',pedia:'pedia',
-  femaleward:'fmw',femalemedicalward:'fmw',fmw:'fmw',
-  nursery:'nursery',
-  malemedical:'mmw',malemedicalward:'mmw',mmw:'mmw',
-  malesurgical:'msw',malesurgicalward:'msw',msw:'msw',
+  nursery:'nursery',femalemedicalward:'fmw',femaleward:'fmw',fmw:'fmw',
+  malemedicalward:'mmw',malemedical:'mmw',mmw:'mmw',
+  malesurgicalward:'msw',malesurgical:'msw',msw:'msw',
   anesthesia:'anesthesia',anaesthesia:'anesthesia',
   artificialkidneyunit:'aku',dialysis:'aku',aku:'aku',
   outpatientdepartment:'opd',outpatient:'opd',opd:'opd'
 };
-function departmentRecordsF(){
-  var ds=[];
-  try{if(typeof window.gd==='function')ds=window.gd()||[]}catch(_e){}
-  if(!ds.length&&window.S&&typeof window.S.g==='function'){
-    try{var stored=window.S.g('departments');if(Array.isArray(stored))ds=stored}catch(_e){}
-  }
-  return Array.isArray(ds)?ds.filter(Boolean):[];
-}
-function deptTokensF(d){
-  return [d&&d.id,d&&d.name,d&&d.departmentName,d&&d.code,d&&d.shortName]
-    .map(normalizeF).filter(Boolean);
-}
-function resolveDepartmentIdF(ref,name){
-  var raw=sF(ref,''),rawName=sF(name,''),ds=departmentRecordsF();
-  var tokens=[normalizeF(raw),normalizeF(rawName)].filter(Boolean);
-  var exact=ds.find(function(d){return String(d.id)===raw});
-  if(exact)return String(exact.id);
-  var match=ds.find(function(d){
-    var dt=deptTokensF(d);
-    return tokens.some(function(t){return dt.indexOf(t)>=0});
-  });
-  if(match)return String(match.id);
-  for(var i=0;i<tokens.length;i++){
-    var alias=DEPT_ALIASES_F[tokens[i]];
-    if(alias){
-      var aliasMatch=ds.find(function(d){return String(d.id)===alias||deptTokensF(d).indexOf(normalizeF(alias))>=0});
-      return aliasMatch?String(aliasMatch.id):alias;
-    }
-  }
-  return raw;
-}
-function repairDepartmentIdentityF(){
-  var u=window.CU;
-  if(!u||u.role!=='department')return '';
-  var raw=sF(u.deptId||u.departmentId||u.department,'');
-  var resolved=resolveDepartmentIdF(raw,u.deptName||u.departmentName);
-  if(resolved&&resolved!==raw){
-    if(!u.originalDeptId)u.originalDeptId=raw;
-    u.deptId=resolved;
-    u.departmentId=resolved;
-  }
-  var d=departmentRecordsF().find(function(x){return String(x.id)===String(resolved)});
-  if(d&&d.name)u.deptName=d.name;
-  return resolved||raw;
-}
-function controlledCandidateIdsF(ref){
-  var u=window.CU||{},raw=sF(ref||u.deptId||u.departmentId||u.department,'');
-  var resolved=resolveDepartmentIdF(raw,u.deptName||u.departmentName);
-  var ids=[];
-  [resolved,raw,u.originalDeptId].forEach(function(x){
-    x=sF(x,'');if(x&&ids.indexOf(x)<0)ids.push(x);
-  });
-  departmentRecordsF().forEach(function(d){
-    var userTokens=[normalizeF(raw),normalizeF(u.deptName||u.departmentName)].filter(Boolean);
-    if(userTokens.some(function(t){return deptTokensF(d).indexOf(t)>=0})&&ids.indexOf(String(d.id))<0)ids.push(String(d.id));
-  });
-  return ids;
-}
-function currentControlledDeptF(){
-  var u=window.CU||{};
-  if(u.role==='department')return repairDepartmentIdentityF();
-  var sel=E('ctl-dept');
-  return resolveDepartmentIdF((sel&&sel.value)||(u.deptId||u.departmentId||u.department),u.deptName||u.departmentName);
-}
-window.ctlCurrentDept=currentControlledDeptF;
 
-function controlledPrivateRowsWithDeptF(dept){
-  var ids=controlledCandidateIdsF(dept);
-  for(var i=0;i<ids.length;i++){
-    try{
-      var rows=typeof window.ctlDeptList==='function'?(window.ctlDeptList(ids[i])||[]):[];
-      if(Array.isArray(rows)&&rows.length)return {dept:ids[i],rows:rows};
-    }catch(e){console.error('Controlled department list read failed for '+ids[i],e)}
-  }
-  return {dept:ids[0]||dept,rows:[]};
-}
-function medicineF(id){
-  try{return typeof window.ctlMedicine==='function'?(window.ctlMedicine(id)||{}):{}}
-  catch(_e){return {}}
-}
-function normalizeControlledRowsF(rows,source){
-  return (rows||[]).map(function(x,i){
-    var m=medicineF(x.medId||x.id);
-    return {
-      key:sF(x.medId||x.id,'row_'+i),
-      medId:sF(x.medId||x.id,''),
-      name:sF(m.name||x.name||x.medication||x.medicineName,'Unknown medicine / دواء غير معروف'),
-      moh:sF(m.moh||x.moh||x.mohCode,''),
-      nupco:sF(m.nupco||x.nupco||x.nupcoCode,''),
-      classification:sF(m.classification||x.classification,'narcotic'),
-      min:x.min!=null?nF(x.min):(m.min!=null?nF(m.min):null),
-      max:x.max!=null?nF(x.max):(m.max!=null?nF(m.max):null),
-      requiredQty:x.requiredQty!=null?nF(x.requiredQty):(x.required!=null?nF(x.required):(x.max!=null?nF(x.max):(m.max!=null?nF(m.max):null))),
-      qty:x.actualQty!=null?nF(x.actualQty):(x.available!=null?nF(x.available):nF(x.qty)),
-      shelfId:sF(x.shelfId,''),
-      batches:Array.isArray(x.batches)?x.batches:[],
-      source:source
-    };
-  });
-}
-var publicControlledCacheF={};
-async function readPublicControlledDocF(id){
-  if(!window.FB_DB||!id)return [];
-  var ref=window.FB_DB.collection('public_controlled_expiry').doc(String(id));
-  var attempts=[
-    function(){return ref.get({source:'server'})},
-    function(){return ref.get()},
-    function(){return ref.get({source:'cache'})}
-  ];
-  for(var i=0;i<attempts.length;i++){
-    try{
-      var snap=await attempts[i]();
-      if(snap&&snap.exists){
-        var data=snap.data()||{};
-        var rows=normalizeControlledRowsF(data.items||data.medicines||[],'public');
-        if(rows.length)return rows;
-      }
-    }catch(e){console.warn('Controlled public fallback '+id+' attempt '+(i+1)+' failed',e)}
-  }
-  return [];
-}
-async function controlledRowsWithDeptF(dept){
-  var privateResult=controlledPrivateRowsWithDeptF(dept);
-  var privateRows=normalizeControlledRowsF(privateResult.rows,'private');
-  if(privateRows.length)return {dept:privateResult.dept,rows:privateRows};
-  var ids=controlledCandidateIdsF(dept);
-  for(var i=0;i<ids.length;i++){
-    var cacheKey=String(ids[i]);
-    var rows=publicControlledCacheF[cacheKey]||await readPublicControlledDocF(ids[i]);
-    if(rows.length){
-      publicControlledCacheF[cacheKey]=rows.slice();
-      return {dept:ids[i],rows:rows};
-    }
-  }
-  return {dept:privateResult.dept||ids[0]||dept,rows:[]};
-}
-async function controlledRowsF(dept){
-  return (await controlledRowsWithDeptF(dept)).rows;
-}
-function dateDMYF(v){
-  if(!v)return '—';
-  if(typeof window.ctlFmtDMY==='function'){
-    try{return window.ctlFmtDMY(v)}catch(_e){}
-  }
-  var d=new Date(v);if(isNaN(d))return escF(v);
-  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-}
-function batchHtmlF(batches){
-  return Array.isArray(batches)&&batches.length?batches.map(function(b){
-    return '<div>'+((b.qty===0||b.qty!=null)?escF(b.qty)+' × ':'')+dateDMYF(b.expiry||b.date)+(b.lot?' · Lot: '+escF(b.lot):'')+'</div>';
-  }).join(''):'—';
-}
-function classLabelF(v){
-  if(typeof window.ctlClassLabel==='function'){
-    try{return window.ctlClassLabel(v)}catch(_e){}
-  }
-  return String(v).toLowerCase()==='psychotropic'?'Psychotropic / نفسي':'Narcotic / مخدر';
-}
-function renderControlledDepartmentFallbackF(rows,dept){
-  var table=E('ctl-dept-table');if(!table)return;
-  table.innerHTML=rows.length?rows.map(function(r,i){
-    var shelf='—';
-    if(r.shelfId&&typeof window.ctlDeptShelfName==='function'){
-      try{shelf=window.ctlDeptShelfName(dept,r.shelfId)||'—'}catch(_e){}
-    }
-    return '<tr>'+
-      '<td><input type="checkbox" disabled></td><td>'+(i+1)+'</td>'+
-      '<td>'+escF(r.moh||'—')+'</td><td>'+escF(r.nupco||'—')+'</td>'+
-      '<td><b>'+escF(r.name)+'</b></td><td>'+classLabelF(r.classification)+'</td><td>—</td>'+
-      '<td>'+(r.min==null?'—':r.min)+'</td><td>'+(r.max==null?'—':r.max)+'</td><td>'+r.qty+'</td>'+
-      '<td><span class="shelf-badge">'+escF(shelf)+'</span></td><td>'+batchHtmlF(r.batches)+'</td>'+
-      '<td><span class="chip">Read only</span></td></tr>';
-  }).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--tx2)">No controlled or restricted medicines were found for this department.<br>لم يتم العثور على قائمة الأدوية المخدرة والمقيدة لهذا القسم.</td></tr>';
-}
-var controlledRepairSeqF=0;
-async function repairControlledDepartmentF(){
-  if(!window.CU||CU.role!=='department')return;
-  repairDepartmentIdentityF();
-  var seq=++controlledRepairSeqF,requestedDept=currentControlledDeptF();
-  window.CTL_VIEW='departments';
-  ['ctl-catalog-view','ctl-warehouse-view','ctl-pharmacy-view','ctl-overview-view'].forEach(function(id){var n=E(id);if(n)n.style.display='none'});
-  var view=E('ctl-departments-view');if(view)view.style.display='block';
-  ['ctl-assign-btn','ctl-sign-btn','ctl-bulk-shelf-btn'].forEach(function(id){var n=E(id);if(n)n.style.display='none'});
-  var table=E('ctl-dept-table');
-  if(!requestedDept){
-    if(table)table.innerHTML='<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--rdl)">Department assignment is missing / تعيين القسم غير موجود</td></tr>';
-    return;
-  }
-  if(table)table.innerHTML='<tr><td colspan="13" style="text-align:center;padding:24px">Loading controlled medicines… / جاري تحميل قائمة الأدوية المخدرة والمقيدة…</td></tr>';
-  var result=await controlledRowsWithDeptF(requestedDept);
-  if(seq!==controlledRepairSeqF)return;
-  if(result.dept&&window.CU&&CU.role==='department'){
-    CU.deptId=result.dept;CU.departmentId=result.dept;
-    var d=departmentRecordsF().find(function(x){return String(x.id)===String(result.dept)});
-    if(d&&d.name)CU.deptName=d.name;
-  }
-  var sel=E('ctl-dept');
-  if(sel&&result.dept){
-    sel.innerHTML='<option value="'+escF(result.dept)+'">'+escF(departmentNameF(result.dept))+'</option>';
-    sel.value=result.dept;
-  }
-  renderControlledDepartmentFallbackF(result.rows,result.dept||requestedDept);
-}
-var baseRenderControlledF=window.renderControlled;
-window.renderControlled=function(){
-  repairDepartmentIdentityF();
-  var r;
-  try{if(typeof baseRenderControlledF==='function')r=baseRenderControlledF.apply(this,arguments)}
-  catch(e){if(!window.CU||CU.role!=='department')throw e;console.error('Base controlled renderer failed',e)}
-  setTimeout(repairControlledDepartmentF,0);
-  setTimeout(repairControlledDepartmentF,350);
-  return r;
-};
-var baseRenderCtlDepartmentsF=window.renderCtlDepartments;
-window.renderCtlDepartments=function(){
-  repairDepartmentIdentityF();
-  var r;
-  try{if(typeof baseRenderCtlDepartmentsF==='function')r=baseRenderCtlDepartmentsF.apply(this,arguments)}
-  catch(e){if(!window.CU||CU.role!=='department')throw e;console.error('Base controlled department renderer failed',e)}
-  setTimeout(repairControlledDepartmentF,0);
-  return r;
-};
-
-/* Department controlled print always uses the same resolved source as the screen. */
-function controlledPrintHeaderF(mode,expiry){
-  var h='<th>#</th>';
-  if(mode==='moh')h+='<th>MOH Code</th>';
-  else if(mode==='nupco')h+='<th>NUPCO Code</th>';
-  else if(mode==='both')h+='<th>MOH Code</th><th>NUPCO Code</th>';
-  h+='<th>Medicine / اسم الدواء</th><th>Required / المطلوب</th><th>Available / المتوفر</th>';
-  if(expiry)h+='<th>Expiry / الانتهاء</th>';
-  return h;
-}
-function controlledPrintRowF(r,i,mode,expiry){
-  var h='<td>'+(i+1)+'</td>';
-  if(mode==='moh')h+='<td>'+escF(r.moh||'—')+'</td>';
-  else if(mode==='nupco')h+='<td>'+escF(r.nupco||'—')+'</td>';
-  else if(mode==='both')h+='<td>'+escF(r.moh||'—')+'</td><td>'+escF(r.nupco||'—')+'</td>';
-  h+='<td class="med">'+escF(r.name)+'</td><td>'+(r.requiredQty==null?'—':r.requiredQty)+'</td><td>'+r.qty+'</td>';
-  if(expiry)h+='<td class="expiry">'+batchHtmlF(r.batches)+'</td>';
-  return '<tr class="medicine-row">'+h+'</tr>';
-}
-window.finalControlledPrintRun=async function(){
-  repairDepartmentIdentityF();
-  var requestedDept=currentControlledDeptF();
-  if(!requestedDept)return toastF('Select a department first / اختر القسم أولاً','err');
-  var mode=sF((E('final-ctl-code')||{}).value,'nupco');
-  if(['none','moh','nupco','both'].indexOf(mode)<0)mode='nupco';
-  var exp=sF((E('final-ctl-expiry')||{}).value,'show');
-  var showExpiry=!['hide','none','no'].includes(exp);
-  var w=window.open('about:blank','_blank');
-  if(!w)return toastF('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Preparing…</title></head><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">Loading department custody… / جاري تحميل عهدة القسم…</body></html>');
-  w.document.close();
+function R4DepartmentSources(){
+  var pools=[];
+  function addPool(v){if(Array.isArray(v))pools.push(v)}
+  try{if(typeof window.gd==='function')addPool(window.gd()||[])}catch(_e){}
+  try{if(typeof window.getDepts==='function')addPool(window.getDepts()||[])}catch(_e){}
+  try{addPool(window.departments)}catch(_e){}
   try{
-    var result=await controlledRowsWithDeptF(requestedDept),dept=result.dept||requestedDept,rows=result.rows;
-    if(!rows.length){
-      w.document.body.innerHTML='<h2 style="font-family:Arial,Tahoma,sans-serif">No controlled or restricted medicines were found for this department.<br>لم يتم العثور على قائمة الأدوية المخدرة والمقيدة لهذا القسم.</h2>';
-      return;
+    if(window.S&&typeof window.S.g==='function'){
+      ['departments','department_list','departments_list','depts'].forEach(function(k){addPool(window.S.g(k))});
     }
-    var settings=typeof window.ctlPrintSettings==='function'?(window.ctlPrintSettings(dept)||{}):{};
-    var signs=[
-      ['Department Manager / مدير القسم',settings.departmentManager||''],
-      ['Head Nurse / رئيس التمريض',settings.nursingHead||''],
-      ['Controlled Custodian / أمين العهدة',settings.controlledCustodian||settings.custodyOfficer||''],
-      ['Pharmacy Manager / مدير الصيدلية',settings.pharmacyManager||'']
-    ].map(function(x){return '<div class="sig"><b>'+escF(x[0])+'</b><br>'+escF(x[1])+'</div>'}).join('');
-    var html='<!doctype html><html><head><meta charset="utf-8"><title>'+escF(departmentNameF(dept))+' - Controlled Medicines</title><style>'+
-      '@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}html,body{margin:0;color:#111;background:#fff;font-family:Arial,Tahoma,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}h1,h2,h3{text-align:center;margin:2mm 0}h1{font-size:16pt}h2{font-size:12pt}h3{font-size:10pt}table{width:100%;border-collapse:collapse;table-layout:fixed;margin-top:5mm}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #222;padding:2.4mm 2mm;font-size:9pt;text-align:center;vertical-align:top;overflow-wrap:anywhere}th{background:#e9eef5}.med,.expiry{text-align:left}.med{font-weight:700;width:30%}.signs{display:grid;grid-template-columns:repeat(4,1fr);gap:7mm;margin-top:13mm;break-inside:avoid}.sig{text-align:center;border-top:1px solid #222;padding-top:2mm;min-height:15mm;font-size:9pt}.cert{margin-top:6mm;text-align:center;border:1px solid #333;padding:2mm;font-size:8pt;break-inside:avoid}.footer{text-align:center;font-size:7pt;margin-top:3mm}</style></head><body>'+
-      '<h1>قائمة الأدوية المخدرة والمقيدة</h1><h2>Controlled and Restricted Medicines List</h2><h3>'+escF(departmentNameF(dept))+'</h3>'+
-      '<table data-expected="'+rows.length+'"><thead><tr>'+controlledPrintHeaderF(mode,showExpiry)+'</tr></thead><tbody>'+
-      rows.map(function(r,i){return controlledPrintRowF(r,i,mode,showExpiry)}).join('')+
-      '</tbody></table><div class="signs">'+signs+'</div><div class="cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><div class="footer">By Ali Abudahash</div>'+
-      '<script>(function(){function run(){var t=document.querySelector("table"),e=Number(t.dataset.expected||0),a=document.querySelectorAll(".medicine-row").length;if(a!==e){document.body.innerHTML="<h2>Print integrity check failed: expected "+e+" rows, rendered "+a+".</h2>";return}requestAnimationFrame(function(){requestAnimationFrame(function(){window.print()})})}window.addEventListener("load",run,{once:true})})();<\/script></body></html>';
-    w.document.open();w.document.write(html);w.document.close();
-    closeModalF('mfinal-ctl-print');
-  }catch(e){
-    console.error('Controlled print failed',e);
-    w.document.body.innerHTML='<h2 style="font-family:Arial,Tahoma,sans-serif">Unable to prepare controlled medicines print / تعذر تجهيز الطباعة</h2><pre>'+escF(e&&e.message||e)+'</pre>';
+  }catch(_e){}
+  try{
+    var users=typeof window.gu==='function'?(window.gu()||[]):[];
+    addPool(users.map(function(u){
+      return {
+        id:u&&R4S(u.deptId||u.departmentId||u.department,''),
+        name:u&&R4S(u.deptName||u.departmentName||u.departmentLabel,'')
+      };
+    }));
+  }catch(_e){}
+  try{
+    var reqs=typeof window.gr==='function'?(window.gr()||[]):[];
+    addPool(reqs.map(function(r){
+      return {
+        id:r&&R4S(r.deptId||r.departmentId||r.department,''),
+        name:r&&R4S(r.deptName||r.departmentName||r.departmentLabel,'')
+      };
+    }));
+  }catch(_e){}
+  if(window.CU){
+    addPool([{
+      id:R4S(CU.deptId||CU.departmentId||CU.department,''),
+      name:R4S(CU.deptName||CU.departmentName||CU.departmentLabel,'')
+    }]);
   }
+  return pools;
+}
+function R4Departments(){
+  var map={},order=[];
+  function add(d){
+    if(!d)return;
+    var id=R4S(d.id||d.deptId||d.departmentId||d.department||d.code,'');
+    if(!id)return;
+    var name=R4S(d.name||d.deptName||d.departmentName||d.departmentLabel||d.label,'');
+    if(!name)name=R4_FALLBACK_DEPT_NAMES[id]||R4_FALLBACK_DEPT_NAMES[R4_NAME_ALIASES[R4Norm(id)]]||'';
+    if(!map[id]){map[id]={id:id,name:name};order.push(id)}
+    else if(name&&(!map[id].name||map[id].name===id))map[id].name=name;
+  }
+  R4DepartmentSources().forEach(function(pool){pool.forEach(add)});
+  return order.map(function(id){
+    var d=map[id];
+    if(!d.name)d.name=R4_FALLBACK_DEPT_NAMES[id]||id;
+    return d;
+  }).sort(function(a,b){return String(a.name).localeCompare(String(b.name),'en')});
+}
+function R4DeptName(ref,record){
+  var id=R4S(ref&&typeof ref==='object'?(ref.id||ref.deptId||ref.departmentId||ref.name):ref,'');
+  var stored=record&&R4S(record.deptName||record.departmentName||record.departmentLabel,'');
+  if(stored)return stored;
+  var d=R4Departments().find(function(x){return String(x.id)===String(id)});
+  if(d&&d.name)return d.name;
+  return R4_FALLBACK_DEPT_NAMES[id]||id||'Department / القسم';
+}
+function R4DeptCandidates(ref,name){
+  var raw=R4S(ref,'');
+  var nm=R4S(name,'');
+  var out=[];
+  function add(x){x=R4S(x,'');if(x&&out.indexOf(x)<0)out.push(x)}
+  add(raw);
+  var normName=R4Norm(nm),normRaw=R4Norm(raw);
+  var alias=R4_NAME_ALIASES[normName]||R4_NAME_ALIASES[normRaw];
+  add(alias);
+  R4Departments().forEach(function(d){
+    if(String(d.id)===raw||R4Norm(d.name)===normName||R4Norm(d.name)===normRaw||
+       (alias&&String(d.id)===String(alias)))add(d.id);
+  });
+  if(window.CU){
+    add(CU.deptId);add(CU.departmentId);add(CU.originalDeptId);
+    var cuNorm=R4Norm(CU.deptName||CU.departmentName);
+    var cuAlias=R4_NAME_ALIASES[cuNorm];add(cuAlias);
+    R4Departments().forEach(function(d){if(R4Norm(d.name)===cuNorm)add(d.id)});
+  }
+  return out;
+}
+
+/* =========================================================
+   A) Weekly Request Windows: authoritative department names
+   ========================================================= */
+function R4RenderGridTargets(depts,selected){
+  var host=R4E('request-grid-targets');if(!host)return;
+  var hadSelection=selected&&selected.size>0;
+  var source=(R4E('request-grid-source')||{}).value||'';
+  host.innerHTML=depts.map(function(d){
+    var checked=hadSelection?selected.has(String(d.id)):String(d.id)===String(source);
+    return '<label class="request-grid-target">'+
+      '<input class="request-grid-target-check" type="checkbox" value="'+R4Esc(d.id)+'"'+(checked?' checked':'')+'>'+
+      '<span>'+R4Esc(d.name||d.id)+'</span></label>';
+  }).join('');
+}
+function R4RepairRequestGrid(preferred){
+  var source=R4E('request-grid-source'),host=R4E('request-grid-targets');
+  if(!source||!host)return '';
+  var depts=R4Departments();
+  if(!depts.length)return '';
+  var selected=new Set(Array.from(host.querySelectorAll('.request-grid-target-check:checked')).map(function(x){return String(x.value)}));
+  var keep=R4S(preferred||source.value,'');
+  source.innerHTML=depts.map(function(d){
+    return '<option value="'+R4Esc(d.id)+'">'+R4Esc(d.name||d.id)+'</option>';
+  }).join('');
+  if(!depts.some(function(d){return String(d.id)===String(keep)}))keep=depts[0].id;
+  source.value=keep;
+  R4RenderGridTargets(depts,selected);
+  return keep;
+}
+var R4BaseLoadGrid=window.loadRequestHourGrid;
+window.loadRequestHourGrid=function(dept){
+  var chosen=R4S(dept,'');
+  var source=R4E('request-grid-source');
+  if(source&&chosen)source.dataset.r4Loaded=chosen;
+  var r;
+  if(typeof R4BaseLoadGrid==='function')r=R4BaseLoadGrid.apply(this,arguments);
+  setTimeout(function(){R4RepairRequestGrid(chosen)},0);
+  setTimeout(function(){R4RepairRequestGrid(chosen)},250);
+  return r;
+};
+function R4InitRequestGrid(){
+  var chosen=R4RepairRequestGrid(),source=R4E('request-grid-source');
+  if(chosen&&typeof window.loadRequestHourGrid==='function'&&(!source||source.dataset.r4Loaded!==String(chosen))){
+    if(source)source.dataset.r4Loaded=String(chosen);
+    try{window.loadRequestHourGrid(chosen)}catch(e){console.error('Request grid load repair failed',e)}
+  }
+}
+var R4BaseRenderSchedule=window.renderSchedule;
+window.renderSchedule=function(){
+  var r;
+  if(typeof R4BaseRenderSchedule==='function')r=R4BaseRenderSchedule.apply(this,arguments);
+  [0,250,900,2200].forEach(function(ms){setTimeout(R4InitRequestGrid,ms)});
+  return r;
+};
+var R4BaseSaveGrid=window.saveRequestHourGrid;
+window.saveRequestHourGrid=function(){
+  var r=typeof R4BaseSaveGrid==='function'?R4BaseSaveGrid.apply(this,arguments):undefined;
+  Promise.resolve(r).then(function(){setTimeout(R4InitRequestGrid,0)},function(){setTimeout(R4InitRequestGrid,0)});
+  return r;
 };
 
 /* =========================================================
-   5) Print Orders: complete A4 flow with visible High Alert rows
+   B) Print Orders: single full-width B&W flow, no columns
    ========================================================= */
-function requestByIdF(id){
-  var all=typeof window.gr==='function'?(window.gr()||[]):[];
-  return all.find(function(r){return String(r.id)===String(id)})||null;
+function R4RequestById(id){
+  var reqs=typeof window.gr==='function'?(window.gr()||[]):[];
+  return reqs.find(function(r){return String(r.id)===String(id)})||null;
 }
-function requestItemKeyF(x,i){
-  return sF(x&&x.medId||x&&x.id||x&&x.medicationId||x&&x.name||x&&x.medName,'row_'+i);
+function R4ItemKey(x,index){
+  return R4S(x&&(x.medId||x.medicationId||x.id||x.name||x.medName),'row_'+index);
 }
-function requestQtyF(x){
+function R4Qty(x){
   if(!x)return 0;
-  var candidates=[x.dispensedQty,x.approvedQty,x.actualQty,x.qty,x.quantity,x.requestedQty,x.requestQty];
-  for(var i=0;i<candidates.length;i++){
-    if(candidates[i]!==undefined&&candidates[i]!==null&&candidates[i]!=='')return nF(candidates[i]);
+  var values=[x.dispensedQty,x.approvedQty,x.actualQty,x.qty,x.quantity,x.requestedQty,x.requestQty];
+  for(var i=0;i<values.length;i++){
+    if(values[i]!==undefined&&values[i]!==null&&values[i]!=='')return R4N(values[i]);
   }
   return 0;
 }
-function requestItemsF(r){
-  var requested=Array.isArray(r.items)?r.items:[];
-  var dispensed=Array.isArray(r.dispensed)?r.dispensed:[];
-  var merged=[],byKey={};
-  requested.forEach(function(x,i){
-    var key=requestItemKeyF(x,i);
-    var row=Object.assign({},x,{__key:key,__requestedQty:requestQtyF(x)});
-    byKey[key]=row;merged.push(row);
-  });
-  dispensed.forEach(function(x,i){
-    var key=requestItemKeyF(x,i),existing=byKey[key];
-    if(existing){
-      Object.keys(x||{}).forEach(function(k){existing[k]=x[k]});
-      existing.__dispensedQty=requestQtyF(x);
-    }else{
-      var row=Object.assign({},x,{__key:key,__dispensedQty:requestQtyF(x)});
-      byKey[key]=row;merged.push(row);
-    }
-  });
-  if(!merged.length)merged=(dispensed.length?dispensed:requested).map(function(x,i){return Object.assign({},x,{__key:requestItemKeyF(x,i)})});
-  var meds=typeof window.getMeds==='function'?(window.getMeds(r.deptId||'')||[]):[];
-  return merged.map(function(x,i){
-    var id=x.medId||x.id||x.medicationId||'';
-    var m=meds.find(function(v){return String(v.id)===String(id)})||{};
-    var qty=x.__dispensedQty!=null?x.__dispensedQty:(x.__requestedQty!=null?x.__requestedQty:requestQtyF(x));
-    var high=!!(m.high_alert||m.highAlert||x.high_alert||x.highAlert);
+function R4OrderItems(req){
+  var requested=Array.isArray(req.items)?req.items:[];
+  var dispensed=Array.isArray(req.dispensed)?req.dispensed:[];
+  var map={},order=[];
+  function merge(x,index,isDispensed){
+    var key=R4ItemKey(x,index),row=map[key];
+    if(!row){row={key:key,raw:{}};map[key]=row;order.push(key)}
+    Object.keys(x||{}).forEach(function(k){row.raw[k]=x[k]});
+    if(isDispensed)row.dispensedQty=R4Qty(x);else row.requestedQty=R4Qty(x);
+  }
+  requested.forEach(function(x,i){merge(x,i,false)});
+  dispensed.forEach(function(x,i){merge(x,i,true)});
+  var meds=[];
+  try{if(typeof window.getMeds==='function')meds=window.getMeds(req.deptId||req.departmentId||'')||[]}catch(_e){}
+  return order.map(function(key){
+    var row=map[key],x=row.raw||{};
+    var id=x.medId||x.medicationId||x.id||'';
+    var med=meds.find(function(m){return String(m.id)===String(id)})||{};
+    var high=!!(med.high_alert||med.highAlert||x.high_alert||x.highAlert);
+    var qty=row.dispensedQty!==undefined?row.dispensedQty:(row.requestedQty!==undefined?row.requestedQty:R4Qty(x));
+    var flags=[];
+    if(high)flags.push('HIGH ALERT / عالي الخطورة');
+    if(med.hazard||med.hazardous||x.hazard||x.hazardous)flags.push('HAZARD / خطِر');
+    if(med.lasa||med.LASA||x.lasa||x.LASA)flags.push('LASA');
+    if(med.refrigerated||med.fridge||x.refrigerated||x.fridge)flags.push('REFRIGERATED / ثلاجة');
     return {
-      key:x.__key||requestItemKeyF(x,i),
-      name:sF(m.name||x.name||x.medName||x.medication||id,'Unknown medicine / دواء غير معروف'),
-      category:sF(m.category||x.category,'Uncategorized / غير مصنف'),
+      key:key,
+      name:R4S(med.name||x.name||x.medName||x.medication||id,'Unknown medicine / دواء غير معروف'),
+      category:R4S(med.category||x.category,'Uncategorized / غير مصنف'),
       qty:qty,
       highAlert:high,
-      flags:[
-        high?'High Alert / عالي الخطورة':'',
-        (m.hazard||x.hazard)?'Hazard / خطِر':'',
-        (m.lasa||x.lasa)?'LASA':'',
-        (m.refrigerated||x.refrigerated)?'Refrigerated / ثلاجة':''
-      ].filter(Boolean)
+      flags:flags
     };
   });
 }
-function requestOrderF(id){
-  var r=requestByIdF(id);if(!r)return null;
-  var deptName=departmentNameF(r.deptId,r);
-  if(!deptName||deptName.indexOf('Unknown department')===0)deptName=sF(r.deptName||r.departmentName||r.deptId,'Department');
-  return {
-    key:String(r.id||id),department:deptName,
-    created:typeof window.fmtDateTime==='function'?window.fmtDateTime(r.created||r.createdAt||''):sF(r.created||r.createdAt,''),
-    fulfilled:typeof window.fmtDateTime==='function'?window.fmtDateTime(r.fulfilledAt||''):sF(r.fulfilledAt,''),
-    items:requestItemsF(r)
-  };
+function R4FormatDate(v){
+  if(typeof window.fmtDateTime==='function'){try{return window.fmtDateTime(v||'')}catch(_e){}}
+  if(!v)return '—';
+  var d=new Date(v);return isNaN(d)?String(v):d.toLocaleString();
 }
-function orderHtmlF(order){
-  var cats=[],map={};
-  order.items.forEach(function(x){if(!map[x.category]){map[x.category]=[];cats.push(x.category)}map[x.category].push(x)});
-  var idx=0,rows='';
-  cats.forEach(function(cat){
-    rows+='<tr class="category-row"><td colspan="4">'+escF(cat)+'</td></tr>';
-    map[cat].forEach(function(x){
-      idx++;
-      rows+='<tr class="item-row'+(x.highAlert?' high-alert':'')+'" data-order-key="'+escF(order.key)+'">'+
-        '<td class="num">'+idx+'</td>'+
-        '<td class="name">'+escF(x.name)+(x.flags.length?'<div class="flags">'+escF(x.flags.join(' · '))+'</div>':'')+'</td>'+
-        '<td class="qty">'+escF(x.qty)+'</td><td class="check"></td></tr>';
+function R4OrderMarkup(req){
+  var items=R4OrderItems(req),groups={},categories=[];
+  items.forEach(function(item){
+    if(!groups[item.category]){groups[item.category]=[];categories.push(item.category)}
+    groups[item.category].push(item);
+  });
+  var index=0,rows='';
+  categories.forEach(function(cat){
+    rows+='<tr class="category-row"><td colspan="4">'+R4Esc(cat)+'</td></tr>';
+    groups[cat].forEach(function(item){
+      index++;
+      rows+='<tr class="medicine-row'+(item.highAlert?' high-alert':'')+'">'+
+        '<td class="number">'+index+'</td>'+
+        '<td class="medicine"><strong>'+R4Esc(item.name)+'</strong>'+
+          (item.flags.length?'<div class="flags">'+R4Esc(item.flags.join(' · '))+'</div>':'')+
+        '</td><td class="quantity">'+R4Esc(item.qty)+'</td><td class="check"></td></tr>';
     });
   });
-  if(!rows)rows='<tr><td colspan="4" class="empty">No items in this order / لا توجد أصناف في هذا الطلب</td></tr>';
-  return '<article class="order" data-order-key="'+escF(order.key)+'" data-expected="'+order.items.length+'">'+
-    '<div class="order-head"><div><b>'+escF(order.department)+'</b></div><div>Created: '+escF(order.created||'—')+' · Fulfilled: '+escF(order.fulfilled||'—')+'</div></div>'+
-    '<table><colgroup><col class="c-num"><col class="c-name"><col class="c-qty"><col class="c-check"></colgroup>'+
-    '<thead><tr><th>#</th><th>Medicine / الدواء</th><th>Qty / الكمية</th><th>Check / تحقق</th></tr></thead><tbody>'+rows+'</tbody></table></article>';
+  if(!items.length)rows='<tr><td colspan="4" class="empty">No items / لا توجد أصناف</td></tr>';
+  var dept=R4DeptName(req.deptId||req.departmentId,req);
+  return {
+    count:items.length,
+    html:'<section class="order" data-order="'+R4Esc(req.id||'')+'" data-expected="'+items.length+'">'+
+      '<header class="order-header"><h1>'+R4Esc(dept)+'</h1>'+
+      '<div>Request: '+R4Esc(req.id||'—')+' &nbsp; | &nbsp; Created: '+R4Esc(R4FormatDate(req.created||req.createdAt))+
+      ' &nbsp; | &nbsp; Fulfilled: '+R4Esc(R4FormatDate(req.fulfilledAt))+'</div></header>'+
+      '<table><colgroup><col class="c1"><col class="c2"><col class="c3"><col class="c4"></colgroup>'+
+      '<thead><tr><th>#</th><th>Medicine / الدواء</th><th>Qty / الكمية</th><th>Check / تحقق</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody></table></section>'
+  };
+}
+function R4BuildOrdersDocument(reqs){
+  var built=reqs.map(R4OrderMarkup);
+  var expected=built.reduce(function(s,x){return s+x.count},0);
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>Floor Stock Print Orders</title><style>'+
+    '@page{size:A4 portrait;margin:8mm}'+
+    '*{box-sizing:border-box}html,body{margin:0;padding:0;background:#fff!important;color:#000!important;font-family:Arial,Tahoma,sans-serif;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'+
+    '.order{width:100%;margin:0;padding:0;overflow:visible!important;columns:auto!important;column-count:auto!important;height:auto!important;max-height:none!important}'+
+    '.order+.order{break-before:page;page-break-before:always}'+
+    '.order-header{border:2px solid #000;border-bottom:0;padding:3mm;text-align:center;break-after:avoid;page-break-after:avoid;background:#fff!important;color:#000!important}'+
+    '.order-header h1{margin:0 0 1mm;font-size:14pt}.order-header div{font-size:8pt}'+
+    'table{width:100%;border-collapse:collapse;table-layout:fixed;margin:0;overflow:visible!important}thead{display:table-header-group}'+
+    'tr{break-inside:avoid!important;page-break-inside:avoid!important}th,td{border:1px solid #000;padding:2.2mm 2mm;font-size:9pt;line-height:1.28;vertical-align:top;background:#fff;color:#000;white-space:normal;overflow:visible;overflow-wrap:anywhere}'+
+    'th{font-weight:800;border-top-width:2px}.c1{width:8%}.c2{width:65%}.c3{width:12%}.c4{width:15%}'+
+    '.number,.quantity{text-align:center}.quantity{font-weight:800}.category-row td{font-weight:900;border-top:2px solid #000;border-bottom:2px solid #000;text-transform:uppercase}'+
+    '.flags{font-size:7pt;margin-top:1mm;font-weight:700}.high-alert td{background:#000!important;color:#fff!important;border-color:#000!important}.high-alert *{color:#fff!important}'+
+    '.empty{text-align:center;padding:8mm}.footer{font-size:7pt;text-align:center;margin-top:2mm}'+
+    '@media screen{body{padding:8mm;max-width:210mm;margin:auto}.order{margin-bottom:12mm}}'+
+    '</style></head><body data-expected="'+expected+'">'+built.map(function(x){return x.html}).join('')+
+    '<div class="footer">ASDHealth Floor Stock</div>'+
+    '<script>(function(){function go(){var expected=Number(document.body.dataset.expected||0),actual=document.querySelectorAll(".medicine-row").length,bad=[];document.querySelectorAll(".order").forEach(function(o){var e=Number(o.dataset.expected||0),a=o.querySelectorAll(".medicine-row").length;if(e!==a)bad.push(o.dataset.order)});if(actual!==expected||bad.length){document.body.innerHTML="<h2 style=\\"font-family:Arial;padding:24px\\">Print integrity check failed. Expected "+expected+" rows, rendered "+actual+". Orders: "+bad.join(", ")+"</h2>";return}requestAnimationFrame(function(){requestAnimationFrame(function(){window.focus();window.print()})})}window.addEventListener("load",function(){if(document.fonts&&document.fonts.ready)document.fonts.ready.then(go,go);else go()},{once:true})})();<\/script></body></html>';
 }
 window.doPrint=function(){
   if(typeof window.canManageRequests==='function'&&typeof window.isPharmacyDirector==='function'){
-    if(!(window.canManageRequests()||window.isPharmacyDirector()))return toastF('No print permission','err');
+    if(!(window.canManageRequests()||window.isPharmacyDirector()))return R4Toast('No print permission / لا توجد صلاحية للطباعة','err');
   }
-  var ids=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
-  if(!ids.length)return toastF('Select at least one order / اختر طلبًا واحدًا على الأقل','err');
-  var perPage=Number(window.PPP);
-  if([2,3,4,5].indexOf(perPage)<0)perPage=2;
-  var w=window.open('about:blank','_blank');
-  if(!w)return toastF('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Preparing Print Orders…</title></head><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">Preparing Print Orders… / جاري تجهيز طباعة الطلبات…</body></html>');
-  w.document.close();
+  var ids=Array.from(document.querySelectorAll('.pchk:checked')).map(function(x){return x.dataset.id});
+  if(!ids.length)return R4Toast('Select at least one order / اختر طلبًا واحدًا على الأقل','err');
+  var popup=window.open('about:blank','_blank');
+  if(!popup)return R4Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');
   try{
-    var orders=ids.map(requestOrderF).filter(Boolean);
-    var groups=[];for(var i=0;i<orders.length;i+=perPage)groups.push(orders.slice(i,i+perPage));
-    var expected=orders.reduce(function(sum,o){return sum+o.items.length},0);
-    var pages=groups.map(function(g,pi){
-      return '<section class="logical-page"><div class="page-title">Floor Stock Dispensing Orders · Group '+(pi+1)+'/'+groups.length+'</div>'+g.map(orderHtmlF).join('')+'</section>';
-    }).join('');
-    var html='<!doctype html><html><head><meta charset="utf-8"><title>Pharmacy A4 Print Orders</title><style>'+
-      '@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#000;font-family:Arial,Tahoma,sans-serif;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}body{font-size:9pt}.logical-page{break-after:page;page-break-after:always}.logical-page:last-child{break-after:auto;page-break-after:auto}.page-title{font-size:9pt;font-weight:700;text-align:center;border-bottom:1px solid #000;padding-bottom:2mm;margin-bottom:3mm}.order{margin:0 0 5mm;break-inside:auto;page-break-inside:auto}.order-head{display:flex;justify-content:space-between;gap:5mm;align-items:flex-end;background:#111!important;color:#fff!important;padding:1.8mm 2.5mm;font-size:8.5pt;break-after:avoid;page-break-after:avoid}table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tfoot{display:table-footer-group}.item-row,.category-row{break-inside:avoid!important;page-break-inside:avoid!important}th,td{border:1px solid #222;padding:1.7mm 2mm;font-size:8.5pt;line-height:1.25;vertical-align:top;white-space:normal;word-break:normal;overflow-wrap:break-word}th{background:#e9ecef!important;color:#000!important}.category-row td{background:#d9e6f7!important;color:#000!important;font-weight:700}.c-num{width:7%}.c-name{width:67%}.c-qty{width:12%}.c-check{width:14%}.num,.qty{text-align:center}.name{font-weight:600}.qty{font-weight:700}.flags{font-size:7pt;font-weight:700;margin-top:.8mm}.item-row.high-alert td{background:#000!important;color:#fff!important;border-color:#000!important}.item-row.high-alert .flags,.item-row.high-alert .name,.item-row.high-alert .qty,.item-row.high-alert .num{color:#fff!important}.empty{text-align:center;padding:5mm}@media screen{body{padding:7mm}.logical-page{max-width:283mm;margin:0 auto 10mm;border:1px solid #bbb;padding:3mm}}@media print{.item-row.high-alert td{background:#000!important;color:#fff!important}.order-head{background:#111!important;color:#fff!important}}</style></head>'+
-      '<body data-expected="'+expected+'">'+pages+
-      '<script>(function(){function validate(){var e=Number(document.body.dataset.expected||0),a=document.querySelectorAll(".item-row").length;if(a!==e){document.body.innerHTML="<div style=\\"font-family:Arial,Tahoma,sans-serif;padding:24px\\"><h2>Print integrity check failed</h2><p>Expected "+e+" medicine rows but rendered "+a+". Nothing was sent to the printer.</p></div>";return}var bad=[];document.querySelectorAll(".order").forEach(function(o){var oe=Number(o.dataset.expected||0),oa=o.querySelectorAll(".item-row").length;if(oe!==oa)bad.push(o.dataset.orderKey)});if(bad.length){document.body.innerHTML="<h2>Order integrity check failed: "+bad.join(", ")+"</h2>";return}requestAnimationFrame(function(){requestAnimationFrame(function(){window.print()})})}window.addEventListener("load",validate,{once:true})})();<\/script></body></html>';
-    w.document.open();w.document.write(html);w.document.close();
+    var reqs=ids.map(R4RequestById).filter(Boolean);
+    popup.document.open();popup.document.write(R4BuildOrdersDocument(reqs));popup.document.close();
     if(typeof window.persistPrintOrdersMeta==='function'){
       Promise.resolve(window.persistPrintOrdersMeta(ids)).catch(function(e){console.error('Print history save failed',e)});
     }
@@ -10533,37 +10032,206 @@ window.doPrint=function(){
     window.PPP=0;
     document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
   }catch(e){
-    console.error('Print Orders failed',e);
-    w.document.body.innerHTML='<h2 style="font-family:Arial,Tahoma,sans-serif">Unable to prepare Print Orders / تعذر تجهيز طباعة الطلبات</h2><pre>'+escF(e&&e.message||e)+'</pre>';
+    console.error('Print Orders R4 failed',e);
+    try{popup.document.open();popup.document.write('<h2>Unable to prepare Print Orders</h2><pre>'+R4Esc(e&&e.message||e)+'</pre>');popup.document.close()}catch(_e){}
+    R4Toast('Unable to prepare Print Orders / تعذر تجهيز الطباعة','err');
   }
 };
 
-/* Normalize a department user's session identity before the original application builds its pages. */
-var baseStartAppFixpackF=window.startApp;
-if(typeof baseStartAppFixpackF==='function'){
-  window.startApp=function(){
-    repairDepartmentIdentityF();
-    var r=baseStartAppFixpackF.apply(this,arguments);
-    setTimeout(function(){
-      repairDepartmentIdentityF();
-      var active=document.querySelector('.pg.on');
-      if(active&&active.id==='pg-controlled'&&window.CU&&CU.role==='department')repairControlledDepartmentF();
-    },0);
-    return r;
+/* =========================================================
+   C) Controlled Department Custody: direct authoritative print
+   ========================================================= */
+function R4ControlledCurrentDept(){
+  var raw='';
+  try{if(typeof window.ctlCurrentDept==='function')raw=window.ctlCurrentDept()||''}catch(_e){}
+  if(!raw&&window.CU&&String(CU.role)==='department')raw=CU.deptId||CU.departmentId||'';
+  if(!raw){var sel=R4E('ctl-dept');raw=sel&&sel.value||''}
+  return R4S(raw,'');
+}
+function R4ControlledMedicine(id,row){
+  var med={};
+  try{if(typeof window.ctlMedicine==='function')med=window.ctlMedicine(id)||{}}catch(_e){}
+  return {
+    id:R4S(id,''),
+    name:R4S(med.name||row.name||row.medName||row.medicineName,'Unknown medicine / دواء غير معروف'),
+    moh:R4S(med.moh||med.mohCode||row.moh||row.mohCode,''),
+    nupco:R4S(med.nupco||med.nupcoCode||row.nupco||row.nupcoCode,''),
+    classification:R4S(med.classification||row.classification,'narcotic')
   };
 }
-
-/* Re-apply repaired UI after login/start and delayed data hydration. */
-function lateRepairF(){
-  if(window.CU&&CU.master===true&&!window.MASTER_ACTUAL)window.MASTER_ACTUAL=Object.assign({},CU);
-  if(isMasterActualF())window.addMasterSwitchButton();
-  var active=document.querySelector('.pg.on');
-  if(active&&active.id==='pg-schedule')repairScheduleF();
-  if(active&&active.id==='pg-controlled'&&window.CU&&CU.role==='department')repairControlledDepartmentF();
+function R4NormalizeControlled(rows,source){
+  return (Array.isArray(rows)?rows:[]).map(function(row,index){
+    row=row||{};
+    var med=R4ControlledMedicine(row.medId||row.medicationId||row.id,row);
+    return {
+      key:R4S(row.medId||row.medicationId||row.id,'row_'+index),
+      name:med.name,moh:med.moh,nupco:med.nupco,classification:med.classification,
+      required:row.requiredQty!=null?R4N(row.requiredQty):(row.required!=null?R4N(row.required):(row.max!=null?R4N(row.max):'—')),
+      available:row.actualQty!=null?R4N(row.actualQty):(row.available!=null?R4N(row.available):R4N(row.qty)),
+      batches:Array.isArray(row.batches)?row.batches:[],
+      source:source
+    };
+  });
 }
-setTimeout(lateRepairF,0);
-setTimeout(lateRepairF,500);
-setTimeout(lateRepairF,1500);
+function R4PrivateControlled(dept){
+  var candidates=R4DeptCandidates(dept,window.CU&&(CU.deptName||CU.departmentName));
+  for(var i=0;i<candidates.length;i++){
+    try{
+      var rows=typeof window.ctlDeptList==='function'?(window.ctlDeptList(candidates[i])||[]):[];
+      if(Array.isArray(rows)&&rows.length)return {dept:candidates[i],rows:R4NormalizeControlled(rows,'private')};
+    }catch(e){console.error('Controlled custody read failed for '+candidates[i],e)}
+  }
+  return {dept:candidates[0]||dept,rows:[]};
+}
+async function R4PublicControlled(dept){
+  if(!window.FB_DB)return {dept:dept,rows:[]};
+  var candidates=R4DeptCandidates(dept,window.CU&&(CU.deptName||CU.departmentName));
+  for(var i=0;i<candidates.length;i++){
+    var id=candidates[i],ref=window.FB_DB.collection('public_controlled_expiry').doc(String(id));
+    var reads=[
+      function(){return ref.get({source:'server'})},
+      function(){return ref.get()},
+      function(){return ref.get({source:'cache'})}
+    ];
+    for(var j=0;j<reads.length;j++){
+      try{
+        var snap=await reads[j]();
+        if(snap&&snap.exists){
+          var data=snap.data()||{},rows=R4NormalizeControlled(data.items||data.medicines||[],'public');
+          if(rows.length)return {dept:id,rows:rows};
+        }
+      }catch(e){console.warn('Public controlled read failed',id,j,e)}
+    }
+  }
+  return {dept:candidates[0]||dept,rows:[]};
+}
+async function R4ControlledRows(dept){
+  var local=R4PrivateControlled(dept);
+  if(local.rows.length)return local;
+  return R4PublicControlled(local.dept||dept);
+}
+function R4DMY(v){
+  if(!v)return '—';
+  try{if(typeof window.ctlFmtDMY==='function')return window.ctlFmtDMY(v)}catch(_e){}
+  var d=new Date(v);if(isNaN(d))return String(v);
+  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
+}
+function R4BatchText(list){
+  if(!Array.isArray(list)||!list.length)return '—';
+  return list.map(function(b){
+    var q=b&&b.qty!=null?R4N(b.qty)+' × ':'';
+    return q+R4DMY(b&&(b.expiry||b.date))+(b&&b.lot?' · Lot '+R4S(b.lot,''):'');
+  }).join('<br>');
+}
+function R4ClassText(v){
+  return String(v).toLowerCase()==='psychotropic'?'Psychotropic / نفسي':'Narcotic / مخدر';
+}
+function R4ControlledPrintHtml(dept,rows,opts){
+  opts=opts||{};
+  var name=R4DeptName(dept),settings={};
+  try{if(typeof window.ctlPrintSettings==='function')settings=window.ctlPrintSettings(dept)||{}}catch(_e){}
+  var signs=[
+    ['Head Nurse / رئيس التمريض',settings.nursingHead||''],
+    ['Controlled Custodian / أمين العهدة',settings.controlledCustodian||settings.custodyOfficer||''],
+    ['Pharmacy Manager / مدير الصيدلية',settings.pharmacyManager||'']
+  ].map(function(x){return '<div class="sig"><strong>'+R4Esc(x[0])+'</strong><br>'+R4Esc(x[1]||'')+'</div>'}).join('');
+  var body=rows.map(function(r,i){
+    return '<tr class="custody-row"><td>'+(i+1)+'</td><td>'+R4Esc(r.moh||'—')+'</td><td>'+R4Esc(r.nupco||'—')+'</td>'+
+      '<td class="med">'+R4Esc(r.name)+'</td><td>'+R4Esc(R4ClassText(r.classification))+'</td>'+
+      '<td>'+R4Esc(r.required)+'</td><td>'+R4Esc(r.available)+'</td><td class="exp">'+R4BatchText(r.batches)+'</td></tr>';
+  }).join('');
+  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+R4Esc(name)+' — Controlled Custody</title><style>'+
+    '@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}html,body{margin:0;background:#fff;color:#000;font-family:Arial,Tahoma,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+    'header{text-align:center;margin-bottom:4mm}h1{font-size:16pt;margin:0}h2{font-size:12pt;margin:1mm 0}h3{font-size:10pt;margin:0}'+
+    'table{width:100%;border-collapse:collapse;table-layout:fixed}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}th,td{border:1px solid #000;padding:2mm 1.6mm;font-size:8pt;line-height:1.25;text-align:center;vertical-align:top;overflow-wrap:anywhere;background:#fff;color:#000}th{font-weight:800;border-top-width:2px}.med,.exp{text-align:left}.med{font-weight:700;width:27%}.exp{width:20%}'+
+    '.signatures{display:grid;grid-template-columns:repeat(3,1fr);gap:12mm;margin-top:14mm;break-inside:avoid;page-break-inside:avoid}.sig{text-align:center;border-top:1px solid #000;padding-top:2mm;min-height:14mm;font-size:9pt}.cert{text-align:center;border:1px solid #000;padding:2mm;margin-top:6mm;font-size:8pt;break-inside:avoid}.footer{text-align:center;font-size:7pt;margin-top:3mm}'+
+    '</style></head><body data-expected="'+rows.length+'"><header><h1>Controlled and Restricted Medicines List</h1><h2>قائمة الأدوية المخدرة والمقيدة</h2><h3>Controlled Custody — '+R4Esc(name)+'</h3></header>'+
+    '<table><thead><tr><th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine / الدواء</th><th>Class / التصنيف</th><th>Required / المطلوب</th><th>Available / المتوفر</th><th>Expiry / الانتهاء</th></tr></thead><tbody>'+body+'</tbody></table>'+
+    '<div class="signatures">'+signs+'</div><div class="cert">This list is electronically approved and certified and does not require a stamp.<br>هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم.</div><div class="footer">ASDHealth Floor Stock</div>'+
+    '<script>(function(){function go(){var e=Number(document.body.dataset.expected||0),a=document.querySelectorAll(".custody-row").length;if(!e||a!==e){document.body.innerHTML="<h2 style=\\"font-family:Arial;padding:24px\\">Department custody print integrity check failed. Expected "+e+" rows, rendered "+a+".</h2>";return}requestAnimationFrame(function(){requestAnimationFrame(function(){window.focus();window.print()})})}window.addEventListener("load",function(){if(document.fonts&&document.fonts.ready)document.fonts.ready.then(go,go);else go()},{once:true})})();<\/script></body></html>';
+}
+window.printDepartmentCustodyExact=async function(dept,opts){
+  opts=opts||{};
+  dept=R4S(dept||R4ControlledCurrentDept(),'');
+  var popup=opts.printWindow||window.open('about:blank','_blank');
+  if(!popup){R4Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');return false}
+  try{
+    popup.document.open();popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Preparing department custody…</title></head><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">Preparing department custody print…<br>جاري تجهيز طباعة عهدة القسم…</body></html>');popup.document.close();
+    var result=await R4ControlledRows(dept);
+    if(!result.rows.length){
+      popup.document.open();popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px"><h2>No controlled custody rows were found for '+R4Esc(R4DeptName(result.dept||dept))+'.</h2><h2>لم يتم العثور على أصناف عهدة مخدرة أو مقيدة لهذا القسم.</h2></body></html>');popup.document.close();
+      R4Toast('Controlled custody list is empty for this department / قائمة العهدة فارغة لهذا القسم','err');
+      return false;
+    }
+    popup.document.open();popup.document.write(R4ControlledPrintHtml(result.dept||dept,result.rows,opts));popup.document.close();
+    try{if(typeof window.ctlPublishDept==='function')Promise.resolve(window.ctlPublishDept(result.dept||dept)).catch(function(e){console.warn('Controlled publish skipped',e)})}catch(_e){}
+    return true;
+  }catch(e){
+    console.error('Department custody R4 print failed',e);
+    try{popup.document.open();popup.document.write('<h2>Unable to prepare department custody print</h2><pre>'+R4Esc(e&&e.message||e)+'</pre>');popup.document.close()}catch(_e){}
+    R4Toast('Unable to prepare department custody print / تعذر تجهيز طباعة عهدة القسم','err');
+    return false;
+  }
+};
+window.ctlConfirmDepartmentPrint=function(ev){
+  if(ev&&typeof ev.preventDefault==='function')ev.preventDefault();
+  var dept=R4ControlledCurrentDept();
+  if(!dept){R4Toast('Department is not assigned / لم يتم تحديد القسم','err');return false}
+  var popup=window.open('about:blank','_blank');
+  if(!popup){R4Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');return false}
+  return window.printDepartmentCustodyExact(dept,{printWindow:popup,codeMode:'both',persist:false});
+};
+window.printControlledCurrent=function(){
+  return window.ctlConfirmDepartmentPrint();
+};
+window.finalControlledPrintRun=function(){
+  var dept=R4ControlledCurrentDept(),popup=window.open('about:blank','_blank');
+  if(!popup){R4Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');return false}
+  return window.printDepartmentCustodyExact(dept,{printWindow:popup,codeMode:'both',persist:false});
+};
+function R4BindCustodyButton(){
+  var btn=R4E('ctl-dept-authoritative-print-btn');
+  if(btn){
+    btn.onclick=function(ev){return window.ctlConfirmDepartmentPrint(ev)};
+    btn.disabled=false;
+  }
+}
+var R4BaseRenderControlled=window.renderControlled;
+window.renderControlled=function(){
+  var r=typeof R4BaseRenderControlled==='function'?R4BaseRenderControlled.apply(this,arguments):undefined;
+  [0,250,900].forEach(function(ms){setTimeout(R4BindCustodyButton,ms)});
+  return r;
+};
+var R4BaseRenderCtlDepartments=window.renderCtlDepartments;
+window.renderCtlDepartments=function(){
+  var r=typeof R4BaseRenderCtlDepartments==='function'?R4BaseRenderCtlDepartments.apply(this,arguments):undefined;
+  [0,250].forEach(function(ms){setTimeout(R4BindCustodyButton,ms)});
+  return r;
+};
+
+/* Page navigation/start retries without observers or background loops. */
+var R4BaseShowPg=window.showPg;
+window.showPg=function(id){
+  var r=typeof R4BaseShowPg==='function'?R4BaseShowPg.apply(this,arguments):undefined;
+  if(id==='pg-schedule')[0,250,900].forEach(function(ms){setTimeout(R4InitRequestGrid,ms)});
+  if(id==='pg-controlled')[0,250,900].forEach(function(ms){setTimeout(R4BindCustodyButton,ms)});
+  return r;
+};
+var R4BaseStartApp=window.startApp;
+window.startApp=function(){
+  var r=typeof R4BaseStartApp==='function'?R4BaseStartApp.apply(this,arguments):undefined;
+  [0,400,1200].forEach(function(ms){setTimeout(function(){
+    var active=document.querySelector('.pg.on');
+    if(active&&active.id==='pg-schedule')R4InitRequestGrid();
+    if(active&&active.id==='pg-controlled')R4BindCustodyButton();
+  },ms)});
+  return r;
+};
+[0,500,1600].forEach(function(ms){setTimeout(function(){
+  var active=document.querySelector('.pg.on');
+  if(active&&active.id==='pg-schedule')R4InitRequestGrid();
+  if(active&&active.id==='pg-controlled')R4BindCustodyButton();
+},ms)});
 
 })();
 </script>
