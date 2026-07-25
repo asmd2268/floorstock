@@ -9183,7 +9183,7 @@ window.delDept=async function(id){var dept=(gd()||[]).find(function(d){return St
 })();
 </script>
 
-<script id="asdhealth-canonical-r6-3-20260726">
+<script id="asdhealth-canonical-r6-4-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
@@ -10160,21 +10160,43 @@ window.masterResetRole=function(){
   return true;
 };
 window.addMasterSwitchButton=function(){
-  var actual=fsR6ActualMaster(),top=fsR6E('tuser')&&fsR6E('tuser').parentElement;
-  if(!top)return;
-  ['master-switch-btn','master-test-status','master-test-exit'].forEach(function(id){var x=fsR6E(id);if(x)x.remove()});
-  if(!actual)return;
+  var actual=fsR6ActualMaster(),userNode=fsR6E('tuser'),top=userNode&&userNode.parentElement;
+  if(typeof window.floorstockEnforceMasterSystemHealth==='function')window.floorstockEnforceMasterSystemHealth();
+  if(!top)return false;
+  var switchButton=fsR6E('master-switch-btn'),status=fsR6E('master-test-status'),exit=fsR6E('master-test-exit');
+  if(!actual){
+    if(switchButton)switchButton.remove();
+    if(status)status.remove();
+    if(exit)exit.remove();
+    return false;
+  }
   var anchor=fsR6E('themeBtn')||top.lastElementChild;
   if(window.MASTER_EFFECTIVE){
-    var status=document.createElement('span');status.id='master-test-status';status.className='master-test-banner';
-    status.innerHTML='<strong>TEST MODE</strong><br>'+fsR6Esc(fsR6RoleLabel(MASTER_EFFECTIVE.role))+(MASTER_EFFECTIVE.deptName?'<br>'+fsR6Esc(MASTER_EFFECTIVE.deptName):'');
-    top.insertBefore(status,anchor||null);
-    var exit=document.createElement('button');exit.id='master-test-exit';exit.type='button';exit.className='btn bg bsm master-test-exit';exit.textContent='Exit Test Mode';exit.onclick=window.masterResetRole;
-    top.insertBefore(exit,anchor||null);
+    var statusHtml='<strong>TEST MODE</strong><br>'+fsR6Esc(fsR6RoleLabel(MASTER_EFFECTIVE.role))+
+      (MASTER_EFFECTIVE.deptName?'<br>'+fsR6Esc(MASTER_EFFECTIVE.deptName):'');
+    if(!status){
+      status=document.createElement('span');status.id='master-test-status';status.className='master-test-banner';
+      top.insertBefore(status,anchor||null);
+    }
+    if(status.innerHTML!==statusHtml)status.innerHTML=statusHtml;
+    if(!exit){
+      exit=document.createElement('button');exit.id='master-test-exit';exit.type='button';exit.className='btn bg bsm master-test-exit';
+      top.insertBefore(exit,anchor||null);
+    }
+    if(exit.textContent!=='Exit Test Mode')exit.textContent='Exit Test Mode';
+    exit.onclick=window.masterResetRole;
+  }else{
+    if(status)status.remove();
+    if(exit)exit.remove();
   }
-  var button=document.createElement('button');button.id='master-switch-btn';button.type='button';button.className='btn bg bsm';
-  button.textContent=window.MASTER_EFFECTIVE?'Change Test User / Role':'Test User / Role';button.onclick=window.openMasterRoleSwitch;
-  top.insertBefore(button,anchor||null);
+  if(!switchButton){
+    switchButton=document.createElement('button');switchButton.id='master-switch-btn';switchButton.type='button';switchButton.className='btn bg bsm';
+    top.insertBefore(switchButton,anchor||null);
+  }
+  var switchText=window.MASTER_EFFECTIVE?'Change Test User / Role':'Test User / Role';
+  if(switchButton.textContent!==switchText)switchButton.textContent=switchText;
+  switchButton.onclick=window.openMasterRoleSwitch;
+  return true;
 };
 
 /* ---------- System Health: actual Master only ---------- */
@@ -10205,14 +10227,40 @@ function fsR6InitializeCanonical(){
   window.floorstockEnforceMasterSystemHealth();
   window.addMasterSwitchButton();
   window.refreshCrashBulkUi();
-  var crashList=fsR6E('crash-list'),nav=fsR6E('mnav')||document.querySelector('nav'),app=fsR6E('app');
-  if(!window.__FS_R6_OBSERVER__){
-    window.__FS_R6_OBSERVER__=new MutationObserver(function(){
-      window.floorstockEnforceMasterSystemHealth();
-      if(fsR6E('pg-crashcart')&&fsR6E('pg-crashcart').classList.contains('on'))window.refreshCrashBulkUi();
-      window.addMasterSwitchButton();
+  var crashList=fsR6E('crash-list');
+  if(crashList&&!window.__FS_R6_CRASH_OBSERVER__){
+    var observerOptions={childList:true,subtree:true},observerQueued=false;
+    function observeCrashList(){
+      if(crashList&&document.documentElement.contains(crashList)){
+        window.__FS_R6_CRASH_OBSERVER__.observe(crashList,observerOptions);
+      }
+    }
+    window.__FS_R6_CRASH_OBSERVER__=new MutationObserver(function(){
+      if(observerQueued)return;
+      observerQueued=true;
+      setTimeout(function(){
+        window.__FS_R6_CRASH_OBSERVER__.disconnect();
+        try{
+          var page=fsR6E('pg-crashcart');
+          if(page&&page.classList.contains('on'))window.refreshCrashBulkUi();
+        }finally{
+          observerQueued=false;
+          observeCrashList();
+        }
+      },0);
     });
-    [crashList,nav,app].filter(Boolean).forEach(function(node){window.__FS_R6_OBSERVER__.observe(node,{childList:true,subtree:true})});
+    observeCrashList();
+  }
+  if(!window.__FS_R6_CRASH_EVENTS__){
+    window.__FS_R6_CRASH_EVENTS__=true;
+    document.addEventListener('click',function(ev){
+      var target=ev.target&&ev.target.closest?ev.target.closest('[data-pg="pg-crashcart"]'):null;
+      if(target)setTimeout(function(){window.refreshCrashBulkUi()},0);
+    },false);
+    document.addEventListener('change',function(ev){
+      var target=ev.target;
+      if(target&&target.id==='ccx-expiry')setTimeout(function(){window.refreshCrashBulkUi()},0);
+    },false);
   }
   if(!window.__FS_R6_EXIT_CAPTURE__){
     window.__FS_R6_EXIT_CAPTURE__=true;
