@@ -3799,106 +3799,12 @@ function scheduleAutomaticOrderCleanup(){
 }
 
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
-function renderPrint(){
-  var purgeBtn=el('purge-old-orders-btn');if(purgeBtn)purgeBtn.style.display=(CU&&CU.master===true)?'inline-flex':'none';
-  var rs=gr().filter(function(r){return r.status!=='pending'}).slice().reverse();
-  el('ptbl').innerHTML=rs.length
-    ?rs.map(function(r){var d=gd().find(function(x){return x.id===r.deptId});var n=(r.dispensed||[]).filter(function(x){return x.qty>0}).length;
-      return '<tr><td><input type="checkbox" class="pchk" data-id="'+r.id+'"></td><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+fmtDate(r.fulfilledAt)+'</td><td>'+n+' items</td><td style="text-align:center;font-family:var(--mono)">'+(r.printCount||0)+'</td></tr>'
-    }).join('')
-    :'<tr><td colspan="6" style="text-align:center;color:var(--tx2);padding:18px">No fulfilled requests</td></tr>';
-}
+// Final Print Orders renderer/engine is installed later in one canonical module.
 var PPP=0; // employee must choose 2, 3, 4, or 5 orders per page
 function setPPP(n,btn){
   PPP=n;
   document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
-  btn.classList.add('on');
-}
-function doPrint(){
-  var sel=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
-  if(!sel.length)return toast('Select at least one order','err');
-  if([2,3,4,5].indexOf(PPP)<0)return toast('Choose orders per page: 2, 3, 4, or 5','err');
-  var ppp=PPP;
-  var today=fmtDate(nowISO());
-
-  // Collect order data
-  var orders=sel.map(function(id){
-    var r=gr().find(function(x){return x.id===id});if(!r)return null;
-    var dept=gd().find(function(d){return d.id===r.deptId});
-    var ms=getMeds(r.deptId||'');
-    var items=(r.dispensed||[]).filter(function(d){return d.qty>0});
-    return {r:r,dept:dept,ms:ms,items:items};
-  }).filter(Boolean);
-
-  // Layout config per ppp value
-  var cfg={
-    1:{cols:1,headPt:13,namePt:10.5,qtyPt:13,rowPad:'5px 10px',headPad:'8px 12px'},
-    2:{cols:2,headPt:11,namePt:9.5, qtyPt:12,rowPad:'4px 8px', headPad:'7px 10px'},
-    3:{cols:3,headPt:10,namePt:8.5, qtyPt:11,rowPad:'3px 7px', headPad:'6px 8px'},
-    4:{cols:2,headPt:10,namePt:8.5, qtyPt:11,rowPad:'3px 7px', headPad:'6px 8px'},
-    5:{cols:3,headPt:9.5,namePt:8,  qtyPt:10,rowPad:'2px 6px', headPad:'5px 7px'}
-  }[ppp]||{cols:1,headPt:13,namePt:10.5,qtyPt:13,rowPad:'5px 10px',headPad:'8px 12px'};
-  // 4 orders: 2x2 grid; 5 orders: top row 3 + bottom row 2
-  var gridCols=cfg.cols;
-
-  var css=[
-    '@page{size:A4 portrait;margin:8mm}',
-    'body{font-family:Arial,sans-serif;color:#111;margin:0;padding:0}',
-    '.page{width:100%;height:267mm;display:grid;grid-template-rows:auto 1fr auto;page-break-after:always;box-sizing:border-box}',
-    '.page:last-child{page-break-after:avoid}',
-    '.pg-head{text-align:center;font-size:7.5pt;color:#666;border-bottom:1px solid #ccc;padding-bottom:3px;margin-bottom:6px}',
-    '.pg-foot{text-align:center;font-size:6.5pt;color:#bbb;margin-top:4px}',
-    '.grid{display:grid;grid-template-columns:repeat('+gridCols+',1fr);gap:6px;align-content:start;height:100%}',
-    '.ob{border:2px solid #1a3a6e;border-radius:6px;overflow:hidden;display:flex;flex-direction:column}',
-    '.oh{background:#1a3a6e;color:#fff;padding:'+cfg.headPad+';display:flex;justify-content:space-between;align-items:baseline;gap:4px}',
-    '.oh .dn{font-size:'+cfg.headPt+'pt;font-weight:900;line-height:1.1}',
-    '.oh .dm{font-size:6.5pt;opacity:.8;text-align:right;white-space:nowrap}',
-    '.oi{flex:1;padding:2px 0}',
-    '.or{display:flex;align-items:baseline;padding:'+cfg.rowPad+';border-bottom:1px solid #eee;gap:5px}',
-    '.or:last-child{border-bottom:none}',
-    '.or .idx{color:#aaa;font-size:6.5pt;width:14px;text-align:right;flex-shrink:0}',
-    '.or .nm{flex:1;font-size:'+cfg.namePt+'pt;line-height:1.25}',
-    '.or .qty{font-weight:900;font-size:'+cfg.qtyPt+'pt;color:#1a3a6e;min-width:24px;text-align:center;flex-shrink:0}',
-  ].join('');
-
-  // Split into pages
-  var pages=[];
-  for(var i=0;i<orders.length;i+=ppp)pages.push(orders.slice(i,i+ppp));
-
-  var html='<!DOCTYPE html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body>';
-
-  pages.forEach(function(pg,pi){
-    html+='<div class="page">';
-    html+='<div class="pg-head">Floor Stock Dispensing Orders &nbsp;&bull;&nbsp; '+today+' &nbsp;&bull;&nbsp; Page '+(pi+1)+'/'+pages.length+'</div>';
-    html+='<div class="grid">';
-    pg.forEach(function(o){
-      var dname=(o.dept&&o.dept.name)||o.r.deptId;
-      var dispDate=fmtDate(o.r.fulfilledAt||o.r.created);
-      html+='<div class="ob">';
-      html+='<div class="oh"><span class="dn">'+esc(dname)+'</span><span class="dm">'+dispDate+'</span></div>';
-      html+='<div class="oi">';
-      o.items.forEach(function(d,i){
-        var m=o.ms.find(function(x){return x.id===d.medId});
-        html+='<div class="or"><span class="idx">'+(i+1)+'</span><span class="nm">'+esc(m?m.name:d.medId)+'</span><span class="qty">'+d.qty+'</span></div>';
-      });
-      html+='</div></div>';
-    });
-    html+='</div>';
-    html+='<div class="pg-foot">By Ali Abudahash</div>';
-    html+='</div>';
-  });
-
-  html+='<script>window.onload=function(){window.print();}<\/script></body></html>';
-
-  sel.forEach(function(id){
-    var r=gr().find(function(x){return x.id===id});
-    if(r)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:nowISO()});
-  });
-
-  var w=window.open('','_blank');
-  w.document.write(html);
-  w.document.close();
-  renderPrint();
+  if(btn)btn.classList.add('on');
 }
 
 // ── IMPORT ───────────────────────────────────────────────
@@ -6618,14 +6524,7 @@ submitFulfill=function(){
   if(r)S.upd('requests',id,{fulfilledBy:actualActorName(),fulfilledById:(actualUser()||{}).id||'',fulfilledEffectiveRole:(CU||{}).role||''});
   auditAction('request_fulfilled',{requestId:id});
 };
-var _doPrintComprehensive=doPrint;
-doPrint=function(){
-  if(!(canManageRequests()||isPharmacyDirector()))return toast('No print permission','err');
-  var ids=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
-  ids.forEach(function(id){var r=gr().find(function(x){return x.id===id});if(r)S.upd('requests',id,{lastPrintedBy:actualActorName(),lastPrintedById:(actualUser()||{}).id||'',lastPrintedEffectiveRole:(CU||{}).role||''})});
-  auditAction('requests_printed',{requestIds:ids});
-  _doPrintComprehensive();
-};
+/* Print Orders permission/audit logic is handled by the canonical print module below. */
 
 // Add receive/expiry action after fulfillment for departments.
 var _rcardComprehensive=rcard;
@@ -8785,8 +8684,8 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     S.upd('requests',FRID,{dispensed:dispensed,status:'fulfilled',fulfilledAt:nowISO()});
     toast('Saved ✓','succ');CM('mfulfill');renderReqs();renderDash();
   };
-
-
+})();
+</script>
 <script>
 (function(){
   var CLEANUP_KEY='icu_floorstock_test_cleanup_v12';
@@ -9607,7 +9506,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="v13-final-controlled-bulk-print-fix">
 (function(){
 'use strict';
-var BUILD='V13-CONTROLLED-BULK-PRINT-20260720-F';
 function E(id){return document.getElementById(id)}
 function escH(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){var x=Number(v);return isFinite(x)?x:0}
@@ -9655,147 +9553,183 @@ async function applyBulk(){
 function medFlags(m){
  var cls=String(m.classification||'').toLowerCase();return {ha:!!(m.high_alert||m.highAlert||cls.indexOf('high')>=0),hz:!!(m.hazard||m.hazardous||cls.indexOf('hazard')>=0),lasa:!!(m.lasa||m.LASA||cls.indexOf('lasa')>=0),cold:!!(m.refrigerated||m.fridge||m.cold_chain||cls.indexOf('refriger')>=0)}
 }
+function printOrdersCategoryOrder(){
+  var cfg=typeof getPharmacyCategoryConfig==='function'?getPharmacyCategoryConfig():{order:[]};
+  var arr=(cfg.order||[]).slice();
+  var solution=arr.find(function(c){return String(c||'').trim().toLowerCase()==='solutions'});
+  arr=arr.filter(function(c){return String(c||'').trim().toLowerCase()!=='solutions'});
+  if(solution)arr.push(solution);
+  return arr;
+}
+function printOrdersCategoryRank(name,order){
+  var i=order.indexOf(name);
+  if(i<0&&String(name||'').trim().toLowerCase()==='solutions')return 999999;
+  return i<0?9999:i;
+}
+function buildPrintOrdersDocument(ids,perPage,mode){
+  var globalOrder=printOrdersCategoryOrder();
+  var requests=typeof gr==='function'?(gr()||[]):[];
+  var departments=typeof gd==='function'?(gd()||[]):[];
+  var orders=ids.map(function(id){
+    var r=requests.find(function(x){return String(x.id)===String(id)});
+    if(!r)return null;
+    var dept=departments.find(function(d){return String(d.id)===String(r.deptId)});
+    var meds=typeof getMeds==='function'?(getMeds(r.deptId)||[]):[];
+    var items=(r.dispensed||[]).filter(function(x){return n(x.qty)>0}).map(function(di){
+      var m=meds.find(function(x){return String(x.id)===String(di.medId)})||{name:di.medId,category:'Uncategorized'};
+      var f=medFlags(m),cat=String(m.category||'Uncategorized').trim()||'Uncategorized';
+      return {m:m,name:m.name||di.medId,strength:m.strength||'',category:cat,qty:n(di.qty),flags:f,solution:String(cat).toLowerCase()==='solutions'||m.solution===true};
+    }).sort(function(a,b){
+      var cr=printOrdersCategoryRank(a.category,globalOrder)-printOrdersCategoryRank(b.category,globalOrder);
+      return cr||String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base',numeric:true});
+    });
+    return {r:r,dept:dept,items:items};
+  }).filter(Boolean);
+
+  function cloneFiltered(o,fn){return {r:o.r,dept:o.dept,items:o.items.filter(fn)}}
+  var sets=mode==='nonSolutions'
+    ?[{label:'All medicines except Solutions',orders:orders.map(function(o){return cloneFiltered(o,function(x){return !x.solution})})}]
+    :mode==='solutions'
+      ?[{label:'Solutions only',orders:orders.map(function(o){return cloneFiltered(o,function(x){return x.solution})})}]
+      :mode==='split'
+        ?[{label:'All medicines except Solutions',orders:orders.map(function(o){return cloneFiltered(o,function(x){return !x.solution})})},{label:'Solutions only',orders:orders.map(function(o){return cloneFiltered(o,function(x){return x.solution})})}]
+        :[{label:'Complete orders',orders:orders}];
+
+  var pages=[];
+  sets.forEach(function(set){
+    for(var i=0;i<set.orders.length;i+=perPage){
+      var chunk=set.orders.slice(i,i+perPage).filter(function(o){return o.items.length});
+      if(chunk.length)pages.push({label:set.label,orders:chunk,total:chunk.reduce(function(s,o){return s+o.items.length},0)});
+    }
+  });
+  if(!pages.length)return {html:'',pages:[],orders:orders};
+  if(pages.some(function(p){return p.total>170})){
+    var tooMany=new Error('A selected page contains more than 170 dispensed items. Reduce the selected departments or use Split mode.');
+    tooMany.code='PRINT_PAGE_LIMIT';
+    throw tooMany;
+  }
+
+  function deptName(o){return (o.dept&&o.dept.name)||o.r.deptName||o.r.deptId||'Department'}
+  function escPrint(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+  function orderHtml(o,index){
+    var groups={};
+    o.items.forEach(function(x){(groups[x.category]||(groups[x.category]=[])).push(x)});
+    var cats=Object.keys(groups).sort(function(a,b){return printOrdersCategoryRank(a,globalOrder)-printOrdersCategoryRank(b,globalOrder)||String(a).localeCompare(String(b))});
+    var tone=index%2?'tone-gray':'tone-white';
+    var html='<section class="ob '+tone+'"><div class="oh"><span class="dn">'+escPrint(deptName(o))+'</span><span class="dm">'+escPrint(typeof fmtDateTime==='function'?fmtDateTime(o.r.fulfilledAt||o.r.created):'')+'</span></div>';
+    var ix=0;
+    cats.forEach(function(cat){
+      html+='<div class="ch">'+escPrint(cat)+'</div>';
+      groups[cat].forEach(function(x){
+        ix++;
+        var f=x.flags,cl='it'+(f.ha?' ha':'')+(f.hz?' hz':'');
+        var nameHtml='<span class="dn2">'+escPrint(x.name)+'</span>'+(x.strength?'<span class="st">'+escPrint(x.strength)+'</span>':'');
+        var drugHtml=f.ha?('<span class="hb">'+nameHtml+'</span>'):('<span class="dr">'+nameHtml+'</span>');
+        var qcl='qt'+(f.lasa?' la':'')+(f.cold?' rf':'');
+        html+='<div class="'+cl+'"><span class="nx">'+ix+'</span>'+drugHtml+'<span class="'+qcl+'"><span class="qn">'+escPrint(x.qty)+'</span></span></div>';
+      });
+    });
+    return html+'</section>';
+  }
+
+  var css='@page{size:A4 landscape;margin:2.5mm}*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;font-family:Arial,Tahoma,sans-serif;color:#000;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+    +'.pp{width:100%;height:205mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}'
+    +'.pp:last-child{page-break-after:auto;break-after:auto}'
+    +'.pt{height:2mm;line-height:2mm;text-align:center;font-size:4pt;color:#333;border-bottom:.15mm solid #888;flex:0 0 auto;white-space:nowrap;overflow:hidden}'
+    +'.fl{--fs:11pt;flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));grid-template-rows:1fr;align-items:start;gap:0}'
+    +'.fc{min-width:0;overflow:hidden;height:100%;border-right:.22mm solid #bbb}.fc:last-child{border-right:0}'
+    +'.ob{display:block;margin:0;padding:0}.tone-white,.tw{background:#fff!important}.tone-gray,.tg{background:#d5d5d5!important}'
+    +'.oh{display:flex;align-items:center;justify-content:space-between;gap:.3mm;min-height:3.5mm;padding:.1mm .3mm;border-top:.3mm solid #000;border-bottom:.14mm solid #555}'
+    +'.dn{font-size:calc(var(--fs)*.58);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76%}.dm{font-size:calc(var(--fs)*.37);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:24%;color:#555}'
+    +'.ch{background:#444;color:#fff;font-size:calc(var(--fs)*.52);font-weight:900;line-height:1.05;padding:.12mm .3mm;border-top:.1mm solid #111;border-bottom:.1mm solid #111;letter-spacing:.02em}'
+    +'.it{display:flex;align-items:center;gap:.15mm;padding:.03mm .08mm;border-bottom:.08mm solid #ccc;line-height:1;min-height:calc(var(--fs)*1.28)}'
+    +'.nx{flex:0 0 2.8mm;width:2.8mm;text-align:right;font-size:calc(var(--fs)*.46);color:#999;padding-right:.18mm}'
+    +'.dr{display:inline-flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:.12mm;flex:1 1 auto;min-width:0}.dn2{font-size:var(--fs);font-weight:900;line-height:1;overflow-wrap:anywhere}.st{font-size:calc(var(--fs)*.72);font-weight:600;color:#222;line-height:1;white-space:nowrap}'
+    +'.hb{display:inline-flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:.1mm;flex:1 1 auto;min-width:0;padding:.1mm .26mm;border:.26mm solid #000;border-radius:.4mm;position:relative;isolation:isolate}.tw .ha .hb{background:#111!important}.tw .ha .hb .dn2,.tw .ha .hb .st{color:#fff!important;-webkit-text-fill-color:#fff!important}.tg .ha .hb{background:#fff!important}.tg .ha .hb .dn2,.tg .ha .hb .st{color:#000!important;-webkit-text-fill-color:#000!important}'
+    +'.hz .hb::after,.hz:not(.ha) .dr::after{content:"";position:absolute;z-index:3;pointer-events:none;inset:0;background:linear-gradient(to bottom left,transparent calc(50% - .09mm),#000 calc(50% - .09mm),#000 calc(50% + .09mm),transparent calc(50% + .09mm))}.hz:not(.ha) .dr{position:relative;isolation:isolate}.tw .ha.hz .hb::after{background:linear-gradient(to bottom left,transparent calc(50% - .09mm),#fff calc(50% - .09mm),#fff calc(50% + .09mm),transparent calc(50% + .09mm))!important}'
+    +'.qt{flex:0 0 auto;margin-left:.18mm;font-size:var(--fs);font-weight:900;border:.26mm solid #000;border-radius:.5mm;line-height:1;min-width:5mm;min-height:calc(var(--fs)*1.15);padding:.1mm .22mm;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative}.qt.la{border-radius:50%;width:calc(var(--fs)*1.38);height:calc(var(--fs)*1.38);min-width:calc(var(--fs)*1.38);min-height:calc(var(--fs)*1.38);padding:0}.qt.rf{background:#444!important;border-color:#000;color:#fff;box-shadow:inset 0 0 0 .12mm #fff}.qt.rf::before{content:"❄";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--fs)*1.18);color:#fff;opacity:.45}.qn{position:relative;z-index:1}'
+    +'.ft{height:.6mm;line-height:.6mm;text-align:center;font-size:3.5pt;font-weight:700;flex:0 0 auto;color:#555}@media print{html,body{overflow:visible!important}.pp{margin:0!important}}';
+
+  var html='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Pharmacy A4 Print</title><style>'+css+'</style></head><body>';
+  pages.forEach(function(page,pi){
+    html+='<section class="pp"><div class="pt" data-label="'+escPrint(page.label)+'" data-total="'+page.total+'">Floor Stock Dispensing Orders · '+escPrint(page.label)+' · Page '+(pi+1)+'/'+pages.length+'</div>';
+    html+='<div class="fl"><div class="fc">';
+    page.orders.forEach(function(o,i){
+      if(i>0)html+='</div><div class="fc">';
+      html+=orderHtml(o,i);
+    });
+    html+='</div></div><div class="ft">By Ali Abudahash</div></section>';
+  });
+
+  html+='<script>(function(){function fitAndPrint(){document.querySelectorAll(".pp").forEach(function(page){var fl=page.querySelector(".fl"),pt=page.querySelector(".pt");if(!fl||!pt)return;var total=Number(pt.dataset.total)||0,cols=fl.querySelectorAll(".fc").length||1;fl.style.setProperty("--cols",cols);fl.querySelectorAll(".fc").forEach(function(fc){var ob=fc.querySelector(".ob");if(ob)fc.classList.add(ob.classList.contains("tone-gray")?"tg":"tw")});var avail=fl.clientHeight||1;function tallest(){var h=0;fl.querySelectorAll(".fc").forEach(function(fc){h=Math.max(h,fc.scrollHeight)});return h}var lo=7,hi=22,best=7,guard=0;while(lo<=hi&&guard++<80){var mid=Math.round(((lo+hi)/2)*4)/4;fl.style.setProperty("--fs",mid+"pt");void fl.offsetHeight;if(tallest()<=avail-1){best=mid;lo=mid+.25}else{hi=mid-.25}}fl.style.setProperty("--fs",best+"pt");pt.textContent+=" · "+total+" items · "+cols+" col · "+best.toFixed(2)+"pt"});setTimeout(function(){try{window.focus()}catch(e){}window.print()},250)}function ready(){requestAnimationFrame(function(){requestAnimationFrame(fitAndPrint)})}window.addEventListener("load",function(){if(document.fonts&&document.fonts.ready){document.fonts.ready.then(ready,ready)}else ready()},{once:true})})();<\/script></body></html>';
+  return {html:html,pages:pages,orders:orders};
+}
+
+async function persistPrintOrdersMeta(ids){
+  var requests=typeof gr==='function'?(gr()||[]):[];
+  var actor=typeof actualActorName==='function'?actualActorName():'';
+  var actorUser=typeof actualUser==='function'?actualUser():null;
+  var when=typeof nowISO==='function'?nowISO():new Date().toISOString();
+  if(window.S&&S.upd){
+    await Promise.all(ids.map(function(id){
+      var r=requests.find(function(x){return String(x.id)===String(id)});
+      if(!r)return Promise.resolve();
+      return S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:when,lastPrintedBy:actor,lastPrintedById:(actorUser&&actorUser.id)||'',lastPrintedEffectiveRole:(window.CU&&CU.role)||''});
+    }));
+  }
+  if(typeof auditAction==='function')await Promise.resolve(auditAction('requests_printed',{requestIds:ids}));
+}
+
 window.doPrint=function(){
- if(typeof canManageRequests==='function'&&typeof isPharmacyDirector==='function'&&!(canManageRequests()||isPharmacyDirector()))return toast2('No print permission','err');
- var ids=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
- if(!ids.length)return toast2('Select at least one order.','err');
- if(typeof actualActorName==='function')ids.forEach(function(id){var r=(gr()||[]).find(function(x){return String(x.id)===String(id)});if(r&&window.S&&S.upd)S.upd('requests',id,{lastPrintedBy:actualActorName(),lastPrintedById:(typeof actualUser==='function'&&actualUser()&&actualUser().id)||'',lastPrintedEffectiveRole:(window.CU&&CU.role)||''})});
- if(typeof auditAction==='function')auditAction('requests_printed',{requestIds:ids});
- var perPage=Number(window.PPP||PPP);if([2,3,4,5].indexOf(perPage)<0)return toast2('Choose orders per page: 2, 3, 4, or 5.','err');
- function categoryOrder(){var cfg=typeof getPharmacyCategoryConfig==='function'?getPharmacyCategoryConfig():{order:[]},arr=(cfg.order||[]).slice(),solution=arr.find(function(c){return String(c||'').trim().toLowerCase()==='solutions';});arr=arr.filter(function(c){return String(c||'').trim().toLowerCase()!=='solutions';});if(solution)arr.push(solution);return arr}
- function categoryRank(name,order){var i=order.indexOf(name);if(i<0&&String(name||'').trim().toLowerCase()==='solutions')return 999999;return i<0?9999:i}
- var globalOrder=categoryOrder();
- var orders=ids.map(function(id){
-   var r=(typeof gr==='function'?(gr()||[]):[]).find(function(x){return String(x.id)===String(id)});if(!r)return null;
-   var dept=(typeof gd==='function'?(gd()||[]):[]).find(function(d){return String(d.id)===String(r.deptId)}),meds=typeof getMeds==='function'?(getMeds(r.deptId)||[]):[];
-   var items=(r.dispensed||[]).filter(function(x){return n(x.qty)>0}).map(function(di){
-     var m=meds.find(function(x){return String(x.id)===String(di.medId)})||{name:di.medId,category:'Uncategorized'},f=medFlags(m),cat=String(m.category||'Uncategorized').trim()||'Uncategorized';
-     return {m:m,name:m.name||di.medId,strength:m.strength||'',category:cat,qty:n(di.qty),flags:f,solution:String(cat).toLowerCase()==='solutions'||m.solution===true};
-   }).sort(function(a,b){var cr=categoryRank(a.category,globalOrder)-categoryRank(b.category,globalOrder);return cr||String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base',numeric:true})});
-   return {r:r,dept:dept,items:items};
- }).filter(Boolean);
- var mode=(document.getElementById('print-solution-mode')||{}).value||'all';
- function cloneFiltered(o,fn){return {r:o.r,dept:o.dept,items:o.items.filter(fn)}}
- var sets=mode==='nonSolutions'?[{label:'All medicines except Solutions',orders:orders.map(function(o){return cloneFiltered(o,function(x){return !x.solution})})}]:mode==='solutions'?[{label:'Solutions only',orders:orders.map(function(o){return cloneFiltered(o,function(x){return x.solution})})}]:mode==='split'?[{label:'All medicines except Solutions',orders:orders.map(function(o){return cloneFiltered(o,function(x){return !x.solution})})},{label:'Solutions only',orders:orders.map(function(o){return cloneFiltered(o,function(x){return x.solution})})}]:[{label:'Complete orders',orders:orders}];
- var pages=[];sets.forEach(function(set){for(var i=0;i<set.orders.length;i+=perPage){var chunk=set.orders.slice(i,i+perPage).filter(function(o){return o.items.length});if(chunk.length)pages.push({label:set.label,orders:chunk,total:chunk.reduce(function(s,o){return s+o.items.length},0)})}});
- if(!pages.length)return toast2('No dispensed items with quantity greater than zero in the selected orders.','info');
- if(pages.some(function(p){return p.total>170}))return toast2('A selected page contains more than 170 dispensed items. Reduce the selected departments or use Split mode.','err');
- function deptName(o){return (o.dept&&o.dept.name)||o.r.deptName||o.r.deptId||'Department'}
- function escH(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
- function orderHtml(o,index){
-   var groups={};o.items.forEach(function(x){(groups[x.category]||(groups[x.category]=[])).push(x)});
-   var cats=Object.keys(groups).sort(function(a,b){return categoryRank(a,globalOrder)-categoryRank(b,globalOrder)||String(a).localeCompare(String(b))}),
-       tone=index%2?'tone-gray':'tone-white',
-       html='<section class="ob '+tone+'"><div class="oh"><span class="dn">'+escH(deptName(o))+'</span><span class="dm">'+escH(typeof fmtDateTime==='function'?fmtDateTime(o.r.fulfilledAt||o.r.created):'')+'</span></div>',ix=0;
-   cats.forEach(function(cat){
-     html+='<div class="ch">'+escH(cat)+'</div>';
-     groups[cat].forEach(function(x){
-       ix++;
-       var f=x.flags,cl='it'+(f.ha?' ha':'')+(f.hz?' hz':'');
-       var nameHtml='<span class="dn2">'+escH(x.name)+'</span>'+(x.strength?'<span class="st">'+escH(x.strength)+'</span>':'');
-       var drugHtml=f.ha?('<span class="hb">'+nameHtml+'</span>'):('<span class="dr">'+nameHtml+'</span>');
-       var qcl='qt'+(f.lasa?' la':'')+(f.cold?' rf':'');
-       html+='<div class="'+cl+'"><span class="nx">'+ix+'</span>'+drugHtml+'<span class="'+qcl+'"><span class="qn">'+escH(x.qty)+'</span></span></div>';
-     });
-   });
-   return html+'</section>';
- }
- /* ── CSS ── */
- var css='@page{size:A4 landscape;margin:2.5mm}*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;font-family:Arial,Tahoma,sans-serif;color:#000;background:#fff}'
-  +'.pp{width:292mm;height:205mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}'
-  +'.pp:last-child{page-break-after:auto;break-after:auto}'
-  +'.pt{height:2mm;line-height:2mm;text-align:center;font-size:4pt;color:#333;border-bottom:.15mm solid #888;flex:0 0 auto;white-space:nowrap;overflow:hidden}'
-  /* flow = the column container; uses CSS custom props set by JS */
-  +'.fl{--fs:11pt;flex:1;min-height:0;overflow:hidden;display:grid;grid-template-columns:repeat(var(--cols,4),minmax(0,1fr));grid-template-rows:1fr;align-items:start;gap:0}'
-  /* each column stripe */
-  +'.fc{min-width:0;overflow:hidden;height:100%;border-right:.22mm solid #bbb}'
-  +'.fc:last-child{border-right:0}'
-  /* order block */
-  +'.ob{display:block;margin:0;padding:0}'
-  +'.tone-white,.tw{background:#fff!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
-  +'.tone-gray,.tg{background:#d5d5d5!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
-  /* order header */
-  +'.oh{display:flex;align-items:center;justify-content:space-between;gap:.3mm;min-height:3.5mm;padding:.1mm .3mm;border-top:.3mm solid #000;border-bottom:.14mm solid #555}'
-  +'.dn{font-size:calc(var(--fs)*.58);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:76%}'
-  +'.dm{font-size:calc(var(--fs)*.37);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:24%;color:#555}'
-  /* category heading */
-  +'.ch{background:#444;color:#fff;font-size:calc(var(--fs)*.52);font-weight:900;line-height:1.05;padding:.12mm .3mm;border-top:.1mm solid #111;border-bottom:.1mm solid #111;letter-spacing:.02em;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
-  /* item row */
-  +'.it{display:flex;align-items:center;gap:.15mm;padding:.03mm .08mm;border-bottom:.08mm solid #ccc;line-height:1;min-height:calc(var(--fs)*1.28)}'
-  +'.nx{flex:0 0 2.8mm;width:2.8mm;text-align:right;font-size:calc(var(--fs)*.46);color:#999;padding-right:.18mm}'
-  /* drug wrapper (no high-alert) */
-  +'.dr{display:inline-flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:.12mm;flex:1 1 auto;min-width:0}'
-  +'.dn2{font-size:var(--fs);font-weight:900;line-height:1;overflow-wrap:anywhere}'
-  +'.st{font-size:calc(var(--fs)*.72);font-weight:600;color:#222;line-height:1;white-space:nowrap}'
-  /* HIGH ALERT box */
-  +'.hb{display:inline-flex;flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:.1mm;flex:1 1 auto;min-width:0;padding:.1mm .26mm;border:.26mm solid #000;border-radius:.4mm;position:relative;isolation:isolate;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
-  +'.tw .ha .hb{background:#111!important}'
-  +'.tw .ha .hb .dn2,.tw .ha .hb .st{color:#fff!important;-webkit-text-fill-color:#fff!important}'
-  +'.tg .ha .hb{background:#fff!important}'
-  +'.tg .ha .hb .dn2,.tg .ha .hb .st{color:#000!important;-webkit-text-fill-color:#000!important}'
-  /* HAZARD diagonal – on .hb if high-alert, else on .dr */
-  +'.hz .hb::after,.hz:not(.ha) .dr::after{content:"";position:absolute;z-index:3;pointer-events:none;inset:0;background:linear-gradient(to bottom left,transparent calc(50% - .09mm),#000 calc(50% - .09mm),#000 calc(50% + .09mm),transparent calc(50% + .09mm));-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
-  +'.hz:not(.ha) .dr{position:relative;isolation:isolate}'
-  +'.tw .ha.hz .hb::after{background:linear-gradient(to bottom left,transparent calc(50% - .09mm),#fff calc(50% - .09mm),#fff calc(50% + .09mm),transparent calc(50% + .09mm))!important}'
-  /* qty */
-  +'.qt{flex:0 0 auto;margin-left:.18mm;font-size:var(--fs);font-weight:900;border:.26mm solid #000;border-radius:.5mm;line-height:1;min-width:5mm;min-height:calc(var(--fs)*1.15);padding:.1mm .22mm;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;position:relative}'
-  /* LASA circle */
-  +'.qt.la{border-radius:50%;width:calc(var(--fs)*1.38);height:calc(var(--fs)*1.38);min-width:calc(var(--fs)*1.38);min-height:calc(var(--fs)*1.38);padding:0}'
-  /* REFRIGERATED dark box */
-  +'.qt.rf{background:#444!important;border-color:#000;color:#fff;box-shadow:inset 0 0 0 .12mm #fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'
-  +'.qt.rf::before{content:"❄";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--fs)*1.18);color:#fff;opacity:.45}'
-  +'.qn{position:relative;z-index:1}'
-  +'.ft{height:.6mm;line-height:.6mm;text-align:center;font-size:3.5pt;font-weight:700;flex:0 0 auto;color:#555}'
-  +'@media print{html,body{overflow:visible!important}.pp{margin:0!important}}';
+  if(typeof canManageRequests==='function'&&typeof isPharmacyDirector==='function'&&!(canManageRequests()||isPharmacyDirector()))return toast2('No print permission','err');
+  var ids=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
+  if(!ids.length)return toast2('Select at least one order.','err');
+  var perPage=Number(PPP);
+  if([2,3,4,5].indexOf(perPage)<0)return toast2('Choose orders per page: 2, 3, 4, or 5.','err');
 
- /* ── HTML ── */
- var html='<!doctype html><html><head><meta charset="utf-8"><title>Pharmacy A4 Print</title><style>'+css+'</style></head><body>';
- pages.forEach(function(page,pi){
-   html+='<section class="pp"><div class="pt" data-label="'+escH(page.label)+'" data-total="'+page.total+'">Floor Stock Dispensing Orders \xb7 '+escH(page.label)+' \xb7 Page '+(pi+1)+'/'+pages.length+'</div>';
-   /* Each order gets its own column div — JS will arrange them */
-   html+='<div class="fl" id="fl'+(pi)+'"><div class="fc" id="fc'+(pi)+'_0">';
-   page.orders.forEach(function(o,i){
-     if(i>0)html+='</div><div class="fc" id="fc'+(pi)+'_'+i+'">';
-     html+=orderHtml(o,i);
-   });
-   html+='</div></div>';
-   html+='<div class="ft">By Ali Abudahash</div></section>';
- });
+  /* Open immediately while the click is still a trusted user gesture (important on Safari). */
+  var w=window.open('about:blank','_blank');
+  if(!w)return toast2('Allow pop-ups to print.','err');
+  try{
+    w.document.open();
+    w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Preparing print…</title></head><body style="font-family:Arial,sans-serif;padding:24px">Preparing Print Orders…</body></html>');
+    w.document.close();
+  }catch(openErr){
+    try{w.close()}catch(ignore){}
+    console.error('Print Orders window initialization failed',openErr);
+    return toast2('Could not initialize the print window.','err');
+  }
 
- /* ── inline script: auto-fit font per page ── */
- html+='<script>window.onload=function(){setTimeout(function(){'
-  +'document.querySelectorAll(".pp").forEach(function(page){'
-  +'var fl=page.querySelector(".fl");'
-  +'var pt=page.querySelector(".pt");'
-  +'var total=Number(pt.dataset.total)||0;'
-  +'var cols=fl.querySelectorAll(".fc").length;'
-  /* Set column count on the grid */
-  +'fl.style.setProperty("--cols",cols);'
-  /* Apply tone class to each column matching its order-block */
-  +'fl.querySelectorAll(".fc").forEach(function(fc){var ob=fc.querySelector(".ob");if(ob){if(ob.classList.contains("tone-gray")){fc.classList.add("tg");}else{fc.classList.add("tw");}}});'
-  /* Binary-search best font: tallest column must fit in available height */
-  +'var avail=fl.clientHeight;'
-  +'function tallest(){'
-  +'var h=0;fl.querySelectorAll(".fc").forEach(function(fc){h=Math.max(h,fc.scrollHeight);});return h;}'
-  +'var lo=7,hi=22,best=lo;'
-  +'while(lo<=hi){'
-  +'var mid=Math.round((lo+hi)*4)/4/1;'  /* quarter-pt steps */
-  +'fl.style.setProperty("--fs",mid+"pt");'
-  +'void fl.offsetHeight;'
-  +'if(tallest()<=avail-1){best=mid;lo=mid+0.25;}else{hi=mid-0.25;}}'
-  +'fl.style.setProperty("--fs",best+"pt");'
-  +'pt.textContent+=" \xb7 "+total+" items \xb7 "+cols+" col \xb7 "+best.toFixed(2)+"pt";'
-  +'});'
-  +'setTimeout(function(){window.print();},400);'
-  +'},200);};<\/script></body></html>';
+  try{
+    var mode=(document.getElementById('print-solution-mode')||{}).value||'all';
+    var built=buildPrintOrdersDocument(ids,perPage,mode);
+    if(!built.pages.length){
+      try{w.close()}catch(ignore){}
+      return toast2('No dispensed items with quantity greater than zero in the selected orders.','info');
+    }
+    w.document.open();
+    w.document.write(built.html);
+    w.document.close();
 
- ids.forEach(function(id){var r=(gr()||[]).find(function(x){return String(x.id)===String(id)});if(r&&window.S&&S.upd)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:typeof nowISO==='function'?nowISO():new Date().toISOString()})});
- var w=window.open('','_blank');if(!w)return toast2('Allow pop-ups to print.','err');w.document.open();w.document.write(html);w.document.close();if(typeof renderPrint==='function')renderPrint();
- setTimeout(function(){PPP=0;document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});},0);
+    persistPrintOrdersMeta(ids).catch(function(e){
+      console.error('Print Orders metadata save failed',e);
+      if(typeof toast2==='function')toast2('Print opened, but print history could not be saved: '+(e&&e.message||e),'err');
+    });
+    if(typeof renderPrint==='function')renderPrint();
+    PPP=0;
+    document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
+  }catch(e){
+    console.error('Print Orders generation failed',e);
+    try{
+      w.document.open();
+      w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Print Orders error</title></head><body style="font-family:Arial,sans-serif;padding:24px"><h2>Unable to prepare Print Orders</h2><p>'+String(e&&e.message||e).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})+'</p></body></html>');
+      w.document.close();
+    }catch(ignore){}
+    return toast2(e&&e.code==='PRINT_PAGE_LIMIT'?e.message:'Unable to prepare Print Orders: '+(e&&e.message||e),'err');
+  }
 };
 
-function stamp(){var x=E('v13-build-stamp');if(!x){x=document.createElement('div');x.id='v13-build-stamp';x.style.cssText='position:fixed;left:8px;bottom:6px;z-index:9999;font:9px monospace;color:#6e7781;opacity:.75;pointer-events:none';document.body.appendChild(x)}x.textContent=BUILD}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){createModals();stamp()});else{createModals();stamp()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',createModals);else createModals();
 })();
 </script>
 <style id="v13-a4-bw-shelves-final-style">
@@ -9923,7 +9857,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="v13-post-i-consolidated-patch">
 (function(){
 'use strict';
-var BUILD='V13-POST-I-CONSOLIDATED-20260721-AB-ONLINE-LOGIN-FIX';
 function E(id){return document.getElementById(id)}
 function escV(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function normExact(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
@@ -9973,8 +9906,7 @@ var reqBase=window.renderReqForm;window.renderReqForm=function(){var root=E('rfb
 /* Single live QR and required/available columns for controlled stock print. */
 var priorFinalPrint=window.finalControlledPrintRun;window.finalControlledPrintRun=async function(){var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';if(!dept)return toast('Select a department first.','err');var codeMode=(E('final-ctl-code')||{}).value,expiryMode=(E('final-ctl-expiry')||{}).value;if(!codeMode||!expiryMode)return toast('Select both print options.','err');var name=typeof ctlDeptName==='function'?ctlDeptName(dept):dept,s=typeof ctlPrintSettings==='function'?ctlPrintSettings(dept):{},logo=typeof ctlLogo==='function'?ctlLogo():'';if(typeof ctlPublishDept==='function')await ctlPublishDept(dept);var url=typeof ctlPublicUrl==='function'?ctlPublicUrl(dept):(location.origin+location.pathname+'?view=controlled-expiry&dept='+encodeURIComponent(dept)),qr='https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url),showExpiry=expiryMode==='show';var rows=(ctlDeptList(dept)||[]).map(function(x,i){var m=ctlMedicine(x.medId)||{},code=codeMode==='moh'?m.moh:(codeMode==='nupco'?m.nupco:''),required=Number(x.requiredQty!=null?x.requiredQty:(m.max||0)),available=Number(x.actualQty!=null?x.actualQty:(x.qty||0)),exp=(x.batches||[]).map(function(b){return (b.qty?escV(b.qty)+' → ':'')+escV(typeof ctlFmtDMY==='function'?ctlFmtDMY(b.expiry):b.expiry)+(b.lot?' — '+escV(b.lot):'')}).join('<br>')||'—';return '<tr><td>'+(i+1)+'</td>'+(codeMode==='none'?'':'<td>'+escV(code||'—')+'</td>')+'<td class="med">'+escV(m.name||'')+'</td><td>'+available+'</td><td>'+required+'</td>'+(showExpiry?'<td>'+exp+'</td>':'')+'</tr>'}).join('');var body='<div class="head"><div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div><div><h1>قائمة الأدوية المخدرة والمقيدة</h1><h2>Controlled Medicines List</h2><h2>'+escV(name)+'</h2></div><div><img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Live public list<br>بدون تسجيل دخول</div></div></div><table dir="ltr"><thead><tr><th>#</th>'+(codeMode==='none'?'':'<th>'+(codeMode==='moh'?'MOH Code':'NUPCO Code')+'</th>')+'<th class="med">Medicine / اسم الدواء</th><th>Available Qty / المتوفر فعليًا</th><th>Required Qty / المطلوب</th>'+(showExpiry?'<th>Expiry date → Qty</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table><div class="signs" style="grid-template-columns:repeat(3,1fr)"><div class="sig">Department Head<br>رئيس القسم<br><b>'+escV(s.departmentHead||s.nursingHead||'')+'</b></div><div class="sig">Controlled Medicines Custodian<br>أمين عهدة الأدوية المخدرة<br><b>'+escV(s.controlledCustodian||'')+'</b></div><div class="sig">Pharmacy Manager<br>مدير الصيدلية<br><b>'+escV(s.pharmacyManager||'')+'</b></div></div><div style="text-align:center;font-size:9px;margin-top:10px">Gregorian print date: '+new Date().toLocaleDateString('en-GB')+' · By Ali Abudahash</div>';CM('mfinal-ctl-print');ctlPrintHTML(name,body)};
 
-function stamp(){var old=E('v13-build-stamp');if(old)old.textContent=BUILD;else{var b=document.createElement('div');b.id='v13-build-stamp';b.textContent=BUILD;b.style.cssText='position:fixed;left:8px;bottom:5px;z-index:9999;font:9px monospace;color:#777;pointer-events:none';document.body.appendChild(b)}}
-function init(){ensureBulkModal();extendBulkReplacement();extendControlledBulk();stamp()}
+function init(){ensureBulkModal();extendBulkReplacement();extendControlledBulk()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
@@ -9988,7 +9920,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="v13-w-supervisor-inventory-fix">
 (function(){
 'use strict';
-var BUILD_W='V13-POST-I-CONSOLIDATED-20260721-W-SUPERVISOR-INVENTORY-FIX';
 var state={rows:[],filtered:[],shown:0,pageSize:200,selected:new Map()};
 function el(id){return document.getElementById(id)}
 function escW(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -10082,8 +10013,7 @@ window.openAllDepartmentsInventory=function(){
  document.body.insertAdjacentHTML('beforeend',html);document.body.style.overflow='hidden';el('v13w-all-inv-close').onclick=window.closeAllDepartmentsInventory;el('v13w-close-bottom').onclick=window.closeAllDepartmentsInventory;el('all-inv-modal').addEventListener('click',function(ev){if(ev.target===this)window.closeAllDepartmentsInventory()});['all-inv-search','all-inv-variants','all-inv-hide-identical','all-inv-class-mismatch'].forEach(function(id){var x=el(id);x.addEventListener(id==='all-inv-search'?'input':'change',filterRowsW)});renderRowsW()
 };
 var oldShowPg=window.showPg;window.showPg=function(id){var r=oldShowPg&&oldShowPg.apply(this,arguments);if(id==='pg-inv')setTimeout(ensureBulkReplacementButtonW,0);return r};
-function stampW(){var s=el('v13-build-stamp');if(s)s.textContent=BUILD_W}
-function initW(){ensureBulkReplacementButtonW();stampW();var pg=el('pg-inv');if(pg)new MutationObserver(function(){ensureBulkReplacementButtonW()}).observe(pg,{childList:true,subtree:true});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&el('all-inv-modal'))window.closeAllDepartmentsInventory()})}
+function initW(){ensureBulkReplacementButtonW();var pg=el('pg-inv');if(pg)new MutationObserver(function(){ensureBulkReplacementButtonW()}).observe(pg,{childList:true,subtree:true});document.addEventListener('keydown',function(e){if(e.key==='Escape'&&el('all-inv-modal'))window.closeAllDepartmentsInventory()})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',initW);else initW();
 })();
 </script>
@@ -10103,7 +10033,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="v13-x-controlled-request-fix">
 (function(){
 'use strict';
-var BUILD='V13-POST-I-CONSOLIDATED-20260721-X2-LOGIN-FIXED';
 function E(id){return document.getElementById(id)}
 function escX(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function numX(v){var n=Number(v);return isFinite(n)?n:0}
@@ -10141,8 +10070,7 @@ function ensurePrintOptionsX(){var modal=E('mfinal-ctl-print')||E('mctlprintopts
 
 function resolveDeptX(){var id=(window.CU&&CU.deptId)||(window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.deptId)||'';var ds=typeof window.gd==='function'?(gd()||[]):[];return ds.find(function(d){return String(d.id)===String(id)})||null}
 window.renderReqForm=function(){var root=E('rfbody'),sub=E('dnsub');if(!root)return;var d=resolveDeptX();if(!d){root.innerHTML='<div class="alert-banner">No department is linked to this account. Assign a department in User Management.</div>';return}if(window.CU){CU.deptId=d.id;CU.deptName=d.name||''}if(sub)sub.textContent=(d.name||'Department')+' — Enter quantities needed';var meds=typeof window.getMeds==='function'?(getMeds(d.id)||[]):[];var q=((E('rsrch')||{}).value||'').toLowerCase().trim();meds=meds.filter(function(m){return m&&m.id&&m.name&&(!q||String(m.name).toLowerCase().indexOf(q)>=0)});if(!meds.length){root.innerHTML='<div class="v13x-empty">No medicines are assigned to this department.</div>';if(E('rcnt'))E('rcnt').textContent='0';return}var groups={};meds.forEach(function(m){var c=m.category||'Uncategorized';(groups[c]||(groups[c]=[])).push(m)});var cats=Object.keys(groups);var cfg=typeof getPharmacyCategoryConfig==='function'?getPharmacyCategoryConfig(d.id):{order:[]};var order=cfg.order||[];cats.sort(function(a,b){var ai=order.indexOf(a),bi=order.indexOf(b);if(ai<0)ai=999;if(bi<0)bi=999;return ai-bi||String(a).localeCompare(String(b))});root.innerHTML=cats.map(function(c){var items=groups[c]||[];items.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base',numeric:true})});return '<div class="cath">'+escX(c)+'</div><div class="tw"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th></tr></thead><tbody>'+items.map(function(m,i){var max=Math.max(0,numX(m.max));return '<tr class="'+(typeof window.rowCls==='function'?rowCls(m):'')+'"><td>'+(i+1)+'</td><td><b>'+escX(m.name)+'</b></td><td>'+(typeof window.bdg==='function'?bdg(m):'')+'</td><td>'+numX(m.min)+'</td><td>'+max+'</td><td><div class="qwrap"><input type="number" class="rqi" data-mid="'+escX(m.id)+'" data-max="'+max+'" min="0" max="'+max+'" placeholder="0" oninput="valQ(this)"><span class="qlim">/'+max+'</span></div></td></tr>'}).join('')+'</tbody></table></div>'}).join('');if(typeof window.cntItems==='function')cntItems()};
-function stamp(){var n=E('v13-build-stamp');if(n)n.textContent=BUILD}
-function init(){ensureModalsX();stamp();document.addEventListener('keydown',function(e){if(e.key==='Escape'){['v13x-med-modal','v13x-stock-modal','v13x-ops-modal'].forEach(closeX)}})}
+function init(){ensureModalsX();document.addEventListener('keydown',function(e){if(e.key==='Escape'){['v13x-med-modal','v13x-stock-modal','v13x-ops-modal'].forEach(closeX)}})}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
@@ -10152,7 +10080,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="v13y-fixes">
 (function(){
 'use strict';
-var BUILD='V13-POST-I-CONSOLIDATED-20260721-Y-CONTROLLED-DEPT-FIX';
 function E(id){return document.getElementById(id)}
 function escY(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function nY(v){var x=Number(v);return isFinite(x)?x:0}
@@ -10198,7 +10125,7 @@ function ensureBothOption(){var s=E('final-ctl-code');if(s&&!Array.from(s.option
 var oldFinal=window.finalControlledPrintRun;window.finalControlledPrintRun=async function(){var s=E('final-ctl-code');ensureBothOption();if(!s||s.value!=='both')return oldFinal?oldFinal.apply(this,arguments):undefined;var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';if(!dept)return toastY('Select a department first.','err');var expiryMode=(E('final-ctl-expiry')||{}).value;if(!expiryMode)return toastY('Select expiry option.','err');var name=typeof ctlDeptName==='function'?ctlDeptName(dept):dept,ps=typeof ctlPrintSettings==='function'?ctlPrintSettings(dept):{},logo=typeof ctlLogo==='function'?ctlLogo():'';if(typeof ctlPublishDept==='function')await ctlPublishDept(dept);var showExpiry=expiryMode==='show',rows=(ctlDeptList(dept)||[]).map(function(x,i){var m=ctlMedicine(x.medId)||{},required=nY(x.requiredQty!=null?x.requiredQty:(m.max||0)),actual=nY(x.actualQty!=null?x.actualQty:(x.qty||0));return '<tr><td>'+(i+1)+'</td><td>'+escY(m.moh||'—')+'</td><td>'+escY(m.nupco||'—')+'</td><td>'+escY(m.name||'')+'</td><td>'+actual+'</td><td>'+required+'</td>'+(showExpiry?'<td>'+batchesY(x.batches)+'</td>':'')+'</tr>'}).join('');var body='<div class="head"><div>'+(logo?'<img class="logo" src="'+logo+'">':'')+'</div><div><h1>قائمة الأدوية المخدرة والمقيدة</h1><h2>Controlled Medicines List</h2><h2>'+escY(name)+'</h2></div></div><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th><th>Actual Qty</th><th>Required Qty</th>'+(showExpiry?'<th>Expiry date → Qty</th>':'')+'</tr></thead><tbody>'+rows+'</tbody></table><div class="signs"><div class="sig">Head Nurse / رئيس تمريض القسم<br><b>'+escY(ps.nursingHead||'')+'</b></div><div class="sig">Controlled Medicines Officer / مسؤول الأدوية المخدرة والمقيدة<br><b>'+escY(ps.controlledCustodian||ps.pharmacyControlledOfficer||'')+'</b></div><div class="sig">Pharmacy Manager / مدير الصيدلية<br><b>'+escY(ps.pharmacyManager||'')+'</b></div></div>';if(typeof CM==='function')CM('mfinal-ctl-print');if(typeof ctlPrintHTML==='function')ctlPrintHTML(name,body)};
 window.delDept=async function(id){if(!window.CU||!(CU.master===true||CU.role==='pharmacy'))return toastY('Only Pharmacy Manager or Master can delete departments.','err');var depts=(typeof gd==='function'?gd():[])||[],dept=depts.find(function(d){return String(d.id)===String(id)});if(!dept)return toastY('Department already deleted.','info');if(!await uiConfirm('Permanently delete department "'+dept.name+'"? This cannot be undone.'))return;try{var remaining=depts.filter(function(d){return String(d.id)!==String(id)});await S.s('departments',remaining);await Promise.all(['meds_'+id,'expiry_'+id,'shelves_'+id,'alerts_'+id,'controlled_dept_list_'+id,'controlled_settings_'+id].map(function(k){return S.rm(k)}));if(window.FB_DB){await Promise.all([FB_DB.collection('public_expiry').doc(id).delete().catch(function(){}),FB_DB.collection('public_controlled_expiry').doc(id).delete().catch(function(){})])}var snap=await FB_DB.collection('floorstock_state').doc('departments').get({source:'server'}),saved=snap.exists?snap.data().value:[];if((saved||[]).some(function(d){return String(d.id)===String(id)}))throw new Error('Firebase verification failed: department still exists.');S.cache.departments=remaining;if(typeof renderUsers==='function')renderUsers();if(typeof fillDS==='function')fillDS();if(typeof populateInvDeptSel==='function')populateInvDeptSel();toastY('Department permanently deleted ✓','succ')}catch(e){console.error(e);toastY(e.message||'Department deletion failed.','err')}};
 
-function init(){createModal();ensureBothOption();var b=E('v13-build-stamp');if(b)b.textContent=BUILD;else{b=document.createElement('div');b.id='v13-build-stamp';b.style.cssText='position:fixed;left:8px;bottom:6px;z-index:9999;font:9px monospace;color:#6e7781;opacity:.75;pointer-events:none';b.textContent=BUILD;document.body.appendChild(b)}}
+function init(){createModal();ensureBothOption()}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
@@ -10335,7 +10262,7 @@ function inlineExpiryA(batch){var d=daysA(batch&&batch.expiry),r=rulesA(),style=
 window.ctlConfirmDepartmentPrint=async function(){var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';if(!dept)return toast('Select department first','err');var name=((typeof gd==='function'?gd():[])||[]).find(function(d){return String(d.id)===String(dept)});name=name?name.name:dept;var checked=document.querySelector('input[name="ctl-print-code"]:checked'),s=Object.assign({},typeof ctlPrintSettings==='function'?ctlPrintSettings(dept):{}),codeMode=checked?checked.value:(s.printCodeMode||'both');s.printCodeMode=codeMode;await S.s('controlled_settings_'+dept,s);if(typeof ctlPublishDept==='function')await ctlPublishDept(dept);if(typeof CM==='function')CM('mctlprintopts');var logo=typeof ctlLogo==='function'?ctlLogo():'',url=typeof ctlPublicUrl==='function'?ctlPublicUrl(dept):'',qr=url?'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url):'';var rows=(typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x,i){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{},cells='';if(codeMode==='moh')cells='<td>'+escA(m.moh||'—')+'</td>';else if(codeMode==='nupco')cells='<td>'+escA(m.nupco||'—')+'</td>';else if(codeMode==='both')cells='<td>'+escA(m.moh||'—')+'</td><td>'+escA(m.nupco||'—')+'</td>';var required=numA(x.requiredQty!=null?x.requiredQty:(m.max||0)),actual=numA(x.actualQty!=null?x.actualQty:(x.qty||0)),exp=(x.batches||[]).map(inlineExpiryA).join('<br>')||'—';return '<tr><td>'+(i+1)+'</td>'+cells+'<td class="med">'+escA(m.name||'')+'</td><td>'+required+'</td><td>'+actual+'</td><td class="expiry">'+exp+'</td></tr>'}).join('');var heads=codeMode==='moh'?'<th>MOH Code</th>':codeMode==='nupco'?'<th>NUPCO Code</th>':codeMode==='both'?'<th>MOH Code</th><th>NUPCO Code</th>':'';var custodians=escA(s.controlledCustodian||'').replace(/,\s*/g,'<br>');var body='<div class="head"><div>'+(logo?'<img class="logo" style="max-width:270px!important;max-height:160px!important;width:270px!important;height:auto!important" src="'+logo+'">':'')+'</div><div><h1>قائمة عهدة الأدوية المخدرة والمقيدة</h1><h2>Custody of Narcotic and Controlled Medication</h2><h2>'+escA(name)+'</h2></div><div>'+(qr?'<img class="qr" src="'+qr+'"><div style="font-size:8px;text-align:center">Expiry follow-up<br>متابعة الانتهاء</div>':'')+'</div></div><table><thead><tr><th>#</th>'+heads+'<th class="med">Medicine / اسم الدواء</th><th>Required Qty<br>الكمية المفترض توفرها</th><th>Actual Qty<br>الكمية الفعلية</th><th>Expiry batches / تواريخ الانتهاء</th></tr></thead><tbody>'+rows+'</tbody></table><div class="signs" style="grid-template-columns:repeat(3,1fr)"><div class="sig">رئيس تمريض القسم<br>Head Nurse<br><b>'+escA(s.nursingHead||'')+'</b></div><div class="sig">أمين عهدة الأدوية المقيدة<br>Controlled Medicines Custodian<br><b>'+custodians+'</b></div><div class="sig">مدير الصيدلية<br>Pharmacy Manager<br><b>'+escA(s.pharmacyManager||'')+'</b></div></div>';if(typeof ctlPrintHTML==='function')ctlPrintHTML(name,body)};
 function ensureBothA(){var grid=E('ctl-print-code-grid');if(grid&&!grid.querySelector('input[value="both"]'))grid.insertAdjacentHTML('beforeend','<label class="print-option-card"><input type="radio" name="ctl-print-code" value="both"><b>MOH + NUPCO</b><div class="fhint">الكود الوزاري + كود نوبكو</div></label>');var sel=E('final-ctl-code');if(sel&&!Array.from(sel.options).some(function(o){return o.value==='both'})){var op=document.createElement('option');op.value='both';op.textContent='MOH + NUPCO';sel.appendChild(op)}}
 var oldOpen=window.ctlOpenDepartmentPrintOptions;window.ctlOpenDepartmentPrintOptions=function(){var r=oldOpen&&oldOpen.apply(this,arguments);setTimeout(function(){ensureBothA();var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';var s=dept&&typeof ctlPrintSettings==='function'?ctlPrintSettings(dept):{};var radio=document.querySelector('input[name="ctl-print-code"][value="'+escA((s&&s.printCodeMode)||'both')+'"]');if(radio)radio.checked=true},0);return r};
-function bootA(){ensureModalA();var b=E('v13-build-stamp')||E('z-build-label');if(b)b.textContent=BUILD;setTimeout(function(){if(window.CU&&typeof renderControlled==='function')renderControlled();ensureBothA()},250)}
+function bootA(){ensureModalA();setTimeout(function(){if(window.CU&&typeof renderControlled==='function')renderControlled();ensureBothA()},250)}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',bootA);else bootA();
 })();
 </script>
@@ -10528,7 +10455,6 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 <script id="v13-ar-crash-filtered-bulk-replacement">
 (function(){
 'use strict';
-var BUILD='V13-POST-I-CONSOLIDATED-20260721-AR-CRASH-FILTERED-BULK-REPLACEMENT';
 function E(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){var x=Number(v);return Number.isFinite(x)?x:0}
@@ -10601,7 +10527,6 @@ window.__crashFilteredRefresh=enhance;
 window.v13AQOpenCrashBulk=function(){openModal(selectedIds())};
 window.v13AQCrashMode=function(){openModal(selectedIds())};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',enhance,{once:true});else enhance();
-var s=E('v13-build-stamp');if(s)s.textContent=BUILD;
 })();
 </script>
 <style id="v13-as-crash-opening-log-style">
@@ -10626,7 +10551,6 @@ var s=E('v13-build-stamp');if(s)s.textContent=BUILD;
 <script id="v13-as-crash-opening-log">
 (function(){
 'use strict';
-var BUILD='V13-POST-I-CONSOLIDATED-20260721-AS-CRASH-OPENING-LOG';
 function E(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>\"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]})}
 function allowed(){return !!(window.CU&&['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>-1)}
@@ -10653,7 +10577,6 @@ function printLog(){var rows=visibleReports();if(!rows.length)return window.toas
 var prior=window.renderCrashCarts;window.renderCrashCarts=function(){var r=prior&&prior.apply(this,arguments);setTimeout(ensureUI,0);return r};
 window.__crashOpeningLogRefresh=ensureUI;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',ensureUI,{once:true});else ensureUI();
-var stamp=E('v13-build-stamp');if(stamp)stamp.textContent=BUILD;
 })();
 </script>
 <style id="v13-final-operations-patch-style">
