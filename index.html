@@ -800,6 +800,7 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 <span id="tuser" style="font-size:12px;color:var(--tx2)"></span>
 <button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle">🌙</button>
 <button class="btn bg bsm" id="print-branding-btn" onclick="openLogoSettings()" style="display:none" title="Print header settings">⚙ Official Print Header</button>
+<button class="btn bs bsm" id="master-local-backup-top-btn" onclick="masterSaveLocalBackupToDevice()" title="Master only: save a complete local JSON backup">💾 Local Backup</button>
 <button class="btn bg bsm" onclick="doLogout()">Sign Out</button>
 </div>
 </div>
@@ -844,7 +845,7 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 <div class="fl g8 ic" style="flex-wrap:wrap">
 <select class="psel" id="inv-dept-sel" onchange="renderInv()"><option value="">Select Dept...</option></select>
 <button class="btn bp" onclick="openAddDrug()">+ Add</button>
-<button class="btn bg bsm" onclick="openManageCats()">🏷 Categories</button>
+<button class="btn bg bsm" onclick="openManageCats()">🏷 Categories &amp; order / التصنيفات والترتيب</button>
 </div>
 </div>
 <div class="alert-banner-y" id="dup-banner" style="display:none">
@@ -1517,6 +1518,7 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 <div class="fl g8" style="margin-top:14px;flex-wrap:wrap">
 <button class="btn bp" onclick="masterCreateLocalBackup(true)">Create local backup now</button>
+<button class="btn bs" id="master-local-device-backup-btn" onclick="masterSaveLocalBackupToDevice()">💾 Save backup to this device / حفظ نسخة محلية على الجهاز</button>
 <button class="btn bg" onclick="masterDownloadLatestLocalBackup()">Download latest local backup</button>
 <button class="btn bg" onclick="masterRefreshSystemHealth()">Refresh health</button>
 </div>
@@ -1776,7 +1778,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <button class="btn bp" onclick="addCategory()">Add</button>
 </div>
 <div id="dept-cat-context" style="padding:10px 12px;margin-bottom:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:12px"></div>
-<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Use ↑ and ↓ to set this department’s category order. Solutions is always enabled and fixed at the bottom.</div>
+<div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Use ↑ and ↓ to set the global Pharmacy category order. The same order is used in Inventory, New Request, and Pharmacy Print. Solutions is always fixed at the bottom.</div>
 <div id="cat-list" style="max-height:360px;overflow-y:auto"></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
 <button class="btn bg" onclick="CM('mcat-mgr')">Close</button>
@@ -2740,14 +2742,14 @@ function renderInv(){
     var medCats=ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i});
     // Merge
     medCats.forEach(function(c){if(allCats.indexOf(c)<0)allCats.push(c)});
-    allCats.sort();
+    allCats=sortDeptInventoryCategories(deptId,allCats);
     var cur=csel.value;
     csel.innerHTML='<option value="">All Categories</option>'+allCats.map(function(c){return '<option value="'+c+'"'+(c===cur?' selected':'')+'>'+c+'</option>'}).join('');
   }
   // populate bulk cat selector
   var bcs=el('bulk-cat-sel');
   if(bcs){
-    var bc=getCategories().concat(ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i})).filter(function(v,i,a){return a.indexOf(v)===i}).sort();
+    var bc=sortDeptInventoryCategories(deptId,getCategories().concat(ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i})).filter(function(v,i,a){return a.indexOf(v)===i}));
     bcs.innerHTML='<option value="">Change category to...</option>'+bc.map(function(c){return '<option value="'+c+'">'+c+'</option>'}).join('');
   }
   // Drug modal dept sel
@@ -7466,7 +7468,14 @@ crashPrint=function(id){
   var BACKUP_COLLECTIONS=['floorstock_state','users','public_expiry','public_controlled_expiry'];
   var pendingBackup=null;
 
-  function isMasterBackupLocal(){return typeof window.isMaster==='function'?window.isMaster():!!(window.CU&&CU.master===true)}
+  function isMasterBackupLocal(){
+    try{
+      if(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)return true;
+      if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
+      if(typeof window.isMaster==='function'&&window.isMaster())return true;
+      return !!(window.CU&&window.CU.master===true);
+    }catch(e){return false}
+  }
   function requireMaster(){if(!isMasterBackupLocal()){toast('Master permission required','err');return false}return true}
 
   /* Warehouse must never see or open inpatient department lists. */
@@ -7566,7 +7575,13 @@ crashPrint=function(id){
 (function(){
   var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365;
   var AH_COLLECTIONS=['floorstock_state','users','public_expiry','public_controlled_expiry'];
-  function masterOnly(){return !!(window.CU&&CU.master===true)}
+  function masterOnly(){
+    try{
+      if(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)return true;
+      if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
+      return !!(window.CU&&window.CU.master===true);
+    }catch(e){return false}
+  }
   function ahOpen(){return new Promise(function(resolve,reject){try{if(!window.indexedDB)return reject(new Error('IndexedDB is unavailable'));var r=indexedDB.open(AH_DB,1);r.onupgradeneeded=function(){var db=r.result;if(!db.objectStoreNames.contains(AH_STORE)){var st=db.createObjectStore(AH_STORE,{keyPath:'id'});st.createIndex('createdAt','createdAt')}};r.onsuccess=function(){resolve(r.result)};r.onerror=function(){reject(r.error||new Error('IndexedDB open failed'))}}catch(e){reject(e)}})}
   function ahReq(req){return new Promise(function(resolve,reject){req.onsuccess=function(){resolve(req.result)};req.onerror=function(){reject(req.error)}})}
   function enc(v){if(v===null||v===undefined||typeof v==='string'||typeof v==='number'||typeof v==='boolean')return v;if(v instanceof Date)return{__pharm_type:'date',value:v.toISOString()};if(v&&typeof v.toDate==='function'&&typeof v.seconds==='number')return{__pharm_type:'timestamp',seconds:v.seconds,nanoseconds:v.nanoseconds||0};if(Array.isArray(v))return v.map(enc);if(typeof v==='object'){var o={};Object.keys(v).forEach(function(k){o[k]=enc(v[k])});return o}return null}
@@ -7576,8 +7591,43 @@ crashPrint=function(id){
   async function allBackups(){try{var db=await ahOpen();var tx=db.transaction(AH_STORE,'readonly');var a=await ahReq(tx.objectStore(AH_STORE).getAll());db.close();return(a||[]).sort(function(x,y){return String(y.createdAt).localeCompare(String(x.createdAt))})}catch(e){return []}}
   async function saveBackup(obj){var txt=JSON.stringify(obj),rec={id:String(obj.exportedAt).slice(0,10),createdAt:obj.exportedAt,size:txt.length,payload:obj};var db=await ahOpen();var tx=db.transaction(AH_STORE,'readwrite'),st=tx.objectStore(AH_STORE);await ahReq(st.put(rec));var all=await ahReq(st.getAll());all.sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))});for(var i=AH_MAX;i<all.length;i++)await ahReq(st.delete(all[i].id));db.close();return rec}
   async function saveWithQuota(obj){try{return await saveBackup(obj)}catch(e){if(e&&(/quota/i.test(e.name||'')||/quota/i.test(e.message||''))){var db=await ahOpen(),tx=db.transaction(AH_STORE,'readwrite'),st=tx.objectStore(AH_STORE),all=await ahReq(st.getAll());all.sort(function(a,b){return String(a.createdAt).localeCompare(String(b.createdAt))});for(var i=0;i<Math.max(1,Math.ceil(all.length/4));i++)await ahReq(st.delete(all[i].id));db.close();return await saveBackup(obj)}throw e}}
-  window.masterCreateLocalBackup=async function(manual){if(!masterOnly()||!window.FB_DB)return;var msg=document.getElementById('auto-backup-message');if(msg)msg.textContent='Creating protected local snapshot…';try{var p=await payload(),r=await saveWithQuota(p);localStorage.setItem('abhealth_last_auto_backup',r.createdAt);if(msg)msg.textContent='Local backup saved: '+new Date(r.createdAt).toLocaleString();if(manual&&window.toast)toast('Local backup saved ✓','succ');await window.masterRefreshSystemHealth()}catch(e){console.error(e);if(msg)msg.textContent='Local backup failed: '+(e.message||e);if(manual&&window.toast)toast('Local backup failed','err')}};
-  window.masterDownloadLatestLocalBackup=async function(){if(!masterOnly())return;var a=await allBackups();if(!a.length)return toast('No local backup is available yet.','info');var obj=a[0].payload,blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),x=document.createElement('a');x.href=url;x.download='ASDHealth_Pharmacy_Backup_'+String(obj.exportedAt).replace(/[:.]/g,'-')+'.json';document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000)};
+  window.masterCreateLocalBackup=async function(manual){
+    if(!masterOnly()||!window.FB_DB){if(manual&&window.toast)toast('Master permission required','err');return null}
+    var msg=document.getElementById('auto-backup-message');
+    if(msg)msg.textContent='Creating protected local snapshot…';
+    try{
+      var p=await payload(),r=await saveWithQuota(p);
+      localStorage.setItem('abhealth_last_auto_backup',r.createdAt);
+      if(msg)msg.textContent='Local backup saved: '+new Date(r.createdAt).toLocaleString();
+      if(manual&&window.toast)toast('Local backup saved ✓','succ');
+      await window.masterRefreshSystemHealth();
+      return r;
+    }catch(e){
+      console.error(e);
+      if(msg)msg.textContent='Local backup failed: '+(e.message||e);
+      if(manual&&window.toast)toast('Local backup failed','err');
+      return null;
+    }
+  };
+  window.masterDownloadLatestLocalBackup=async function(){
+    if(!masterOnly()){if(window.toast)toast('Master permission required','err');return false}
+    var a=await allBackups();
+    if(!a.length){if(window.toast)toast('No local backup is available yet.','info');return false}
+    var obj=a[0].payload,blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),x=document.createElement('a');
+    x.href=url;x.download='ASDHealth_Pharmacy_Backup_'+String(obj.exportedAt).replace(/[:.]/g,'-')+'.json';document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);
+    return true;
+  };
+  window.masterSaveLocalBackupToDevice=async function(){
+    if(!masterOnly()){if(window.toast)toast('Master permission required','err');return}
+    var btn=document.getElementById('master-local-device-backup-btn');
+    if(btn)btn.disabled=true;
+    try{
+      var saved=await window.masterCreateLocalBackup(true);
+      if(!saved)return;
+      var downloaded=await window.masterDownloadLatestLocalBackup();
+      if(downloaded&&window.toast)toast('Local backup saved to this device ✓','succ');
+    }finally{if(btn)btn.disabled=false}
+  };
   window.masterRefreshSystemHealth=async function(){if(!masterOnly())return;try{var depts=typeof gd==='function'?gd():[],users=typeof gu==='function'?gu():[],reqs=typeof gr==='function'?gr():[],meds=0;depts.forEach(function(d){try{meds+=(getMeds(d.id)||[]).length}catch(e){}});var carts=typeof crashCarts==='function'?crashCarts():[],reports=typeof crashReports==='function'?crashReports():[],ctl=typeof ctlCatalog==='function'?ctlCatalog():[],a=await allBackups(),last=a[0]||null;var vals={"health-depts":depts.length,"health-users":users.length,"health-meds":meds,"health-requests":reqs.length,"health-carts":carts.length,"health-controlled":ctl.length,"health-cart-pending":reports.filter(function(r){return r.status==='pending'}).length,"health-backup-count":a.length};Object.keys(vals).forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=vals[id]});var e=document.getElementById('health-last-backup');if(e)e.textContent=last?new Date(last.createdAt).toLocaleString():'No local backup yet';e=document.getElementById('health-backup-size');if(e)e.textContent=last?sizeLabel(last.size):'—';e=document.getElementById('health-last-restore');if(e)e.textContent=localStorage.getItem('abhealth_last_restore')||'Never recorded';e=document.getElementById('auto-backup-state');if(e){e.textContent=last?'Protected':'Not backed up';e.className='badge '+(last?'bgn':'byl')}}catch(err){console.error(err)}};
   async function daily(){if(!masterOnly()||!window.FB_DB)return;var today=new Date().toISOString().slice(0,10),last=String(localStorage.getItem('abhealth_last_auto_backup')||'').slice(0,10);if(last!==today)await window.masterCreateLocalBackup(false);else await window.masterRefreshSystemHealth()}
   var oldBuild=window.buildNav;if(typeof oldBuild==='function')window.buildNav=function(){var r=oldBuild.apply(this,arguments);setTimeout(function(){daily().catch(function(){})},800);return r};
@@ -9401,10 +9451,13 @@ window.doPrint=function(){
     });
     return uniq(a);
   }
+  function isSolutionsCategory(c){return String(c||'').trim().toLowerCase()==='solutions';}
   function normalizeConfig(cfg){
     var all=allCats();cfg=cfg||{};
-    var order=uniq((cfg.order||[]).concat(all)).filter(function(c){return all.indexOf(c)>=0;});
-    /* Category hiding from New Request is managed separately. All categories remain available here. */
+    var solutionName=all.find(function(c){return isSolutionsCategory(c);})||'Solutions';
+    var order=uniq((cfg.order||[]).concat(all)).filter(function(c){return all.indexOf(c)>=0&&!isSolutionsCategory(c);});
+    if(all.some(function(c){return isSolutionsCategory(c);}))order.push(solutionName);
+    /* Category hiding from New Request is managed separately. Solutions is always fixed at the bottom. */
     return {order:order,enabled:order.slice()};
   }
   function syncLegacyDepartmentConfigs(cfg){
@@ -9457,21 +9510,21 @@ window.doPrint=function(){
   /* Backward-compatible no-op: separate department ordering was removed intentionally. */
   window.setCategoryOrderScope=function(){renderCatList();};
   window.openManageCats=function(){
-    if(!canManageCategoryNames())return toast('Category management is available only to the Pharmacy Director and Inpatient Pharmacy Supervisor.','err');
+    if(!canManageCategoryNames())return toast('Category management is available only to authorized Pharmacy users and Master.','err');
     renderCatList();OM('mcat-mgr');
   };
   window.renderCatList=function(){
     var box=document.getElementById('cat-list');if(!box)return;
     var allowed=canManageCategoryNames(),ordered=getScopeConfig().order||[];
     var ctx=document.getElementById('dept-cat-context');
-    if(ctx)ctx.innerHTML='<div><b>Global category order / ترتيب التصنيفات الموحد</b></div><div class="fhint" style="margin-top:6px">This exact order is saved automatically and used for Inventory, New Request, shelves and Print in every department. No category is forced first or last.</div>';
+    if(ctx)ctx.innerHTML='<div><b>Global category order / ترتيب التصنيفات الموحد</b></div><div class="fhint" style="margin-top:6px">This exact order is saved automatically and used for Inventory, New Request, shelves and Pharmacy Print in every department. Solutions is always fixed at the bottom.</div>';
     var addWrap=document.getElementById('new-cat-inp')&&document.getElementById('new-cat-inp').parentElement;if(addWrap)addWrap.style.display=allowed?'flex':'none';
     box.innerHTML=ordered.map(function(c,i){
-      var q=String(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      var q=String(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'"),locked=isSolutionsCategory(c),lastMovable=ordered.length-(ordered.some(isSolutionsCategory)?2:1);
       return '<div class="category-manage-row" style="display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--bd)" data-cat="'+esc(c)+'">'
-       +'<input value="'+esc(c)+'" style="margin:0;padding:7px 9px;font-weight:600" onchange="renameManagedCategory(\''+q+'\',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur()}">'
-       +'<div style="display:flex;gap:5px"><button type="button" class="btn bg bsm" title="Move up" '+(i===0?'disabled':'')+' onclick="moveManagedCategory(\''+q+'\',-1)">↑</button><button type="button" class="btn bg bsm" title="Move down" '+(i>=ordered.length-1?'disabled':'')+' onclick="moveManagedCategory(\''+q+'\',1)">↓</button></div>'
-       +'<button type="button" class="btn bd2c bsm" onclick="removeManagedCategory(\''+q+'\')">Delete</button></div>';
+       +'<input value="'+esc(c)+'" '+(locked?'disabled title="Solutions is fixed at the bottom"':'')+' style="margin:0;padding:7px 9px;font-weight:600" onchange="renameManagedCategory(\''+q+'\',this.value)" onkeydown="if(event.key===\'Enter\'){this.blur()}">'
+       +'<div style="display:flex;gap:5px"><button type="button" class="btn bg bsm" title="Move up" '+(locked||i===0?'disabled':'')+' onclick="moveManagedCategory(\''+q+'\',-1)">↑</button><button type="button" class="btn bg bsm" title="Move down" '+(locked||i>=lastMovable?'disabled':'')+' onclick="moveManagedCategory(\''+q+'\',1)">↓</button></div>'
+       +(locked?'<span class="badge bgr" title="Always last">Fixed last</span>':'<button type="button" class="btn bd2c bsm" onclick="removeManagedCategory(\''+q+'\')">Delete</button>')+'</div>';
     }).join('');
   };
   window.addCategory=function(){
@@ -9479,11 +9532,14 @@ window.doPrint=function(){
     var inp=document.getElementById('new-cat-inp'),n=(inp&&inp.value||'').trim();if(!n)return toast('Enter a category name.','err');
     var cats=allCats();if(cats.some(function(c){return c.toLowerCase()===n.toLowerCase();}))return toast('Category already exists.','err');
     cats.push(n);setCategories(cats);if(inp)inp.value='';
-    var cfg=getScopeConfig();cfg.order.push(n);saveScopeConfig(cfg);
+    var cfg=getScopeConfig(),solutionIndex=cfg.order.findIndex(function(c){return isSolutionsCategory(c);});
+    if(solutionIndex<0)cfg.order.push(n);else cfg.order.splice(solutionIndex,0,n);
+    saveScopeConfig(cfg);
     if(typeof refreshCatSelectors==='function')refreshCatSelectors();refreshDeptCategorySelectors();renderCatList();if(typeof renderInv==='function')renderInv();toast('Category added for all departments.','succ');
   };
   window.renameManagedCategory=function(oldName,newValue){
     if(!canManageCategoryNames())return;
+    if(isSolutionsCategory(oldName))return toast('Solutions is fixed and cannot be renamed.','info');
     var n=String(newValue||'').trim();if(!n)return renderCatList();
     var cats=allCats();if(cats.some(function(c){return c!==oldName&&c.toLowerCase()===n.toLowerCase();})){toast('Category name already exists.','err');return renderCatList();}
     var global=typeof getCategories==='function'?getCategories().slice():cats.slice();
@@ -9495,12 +9551,15 @@ window.doPrint=function(){
     if(typeof refreshCatSelectors==='function')refreshCatSelectors();refreshDeptCategorySelectors();renderCatList();if(typeof renderInv==='function')renderInv();toast('Category renamed everywhere.','succ');
   };
   window.moveManagedCategory=function(cat,dir){
-    var cfg=getScopeConfig(),arr=cfg.order.slice(),i=arr.indexOf(cat),j=i+dir;if(i<0||j<0||j>=arr.length)return;
-    var t=arr[i];arr[i]=arr[j];arr[j]=t;cfg.order=arr;saveScopeConfig(cfg);
+    if(isSolutionsCategory(cat))return;
+    var cfg=getScopeConfig(),solution=cfg.order.find(function(c){return isSolutionsCategory(c);}),arr=cfg.order.filter(function(c){return !isSolutionsCategory(c);}),i=arr.indexOf(cat),j=i+dir;
+    if(i<0||j<0||j>=arr.length)return;
+    var t=arr[i];arr[i]=arr[j];arr[j]=t;if(solution)arr.push(solution);cfg.order=arr;saveScopeConfig(cfg);
     renderCatList();refreshDeptCategorySelectors();if(typeof renderInv==='function')renderInv();if(typeof renderReqForm==='function')renderReqForm();
   };
   window.removeManagedCategory=async function(name){
     if(!canManageCategoryNames())return;
+    if(isSolutionsCategory(name))return toast('Solutions is fixed at the bottom and cannot be deleted.','info');
     var used=false;
     (typeof gd==='function'?gd():[]).some(function(d){return (getMeds(d.id)||[]).some(function(m){if(m.category===name){used=true;return true;}return false;});});
     if(used)return toast('Reassign medicines in this category before deleting it.','err');
@@ -9871,10 +9930,40 @@ function medFlags(m){
  var cls=String(m.classification||'').toLowerCase();return {ha:!!(m.high_alert||m.highAlert||cls.indexOf('high')>=0),hz:!!(m.hazard||m.hazardous||cls.indexOf('hazard')>=0),lasa:!!(m.lasa||m.LASA||cls.indexOf('lasa')>=0),cold:!!(m.refrigerated||m.fridge||m.cold_chain||cls.indexOf('refriger')>=0)}
 }
 window.doPrint=function(){
- var ids=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});if(!ids.length)return toast2('Select at least one order.','err');var orders=ids.map(function(id){var r=(typeof gr==='function'?(gr()||[]):[]).find(function(x){return String(x.id)===String(id)});if(!r)return null;var dept=(typeof gd==='function'?(gd()||[]):[]).find(function(d){return String(d.id)===String(r.deptId)});var meds=typeof getMeds==='function'?(getMeds(r.deptId)||[]):[];var items=(r.dispensed||[]).filter(function(x){return n(x.qty)>0}).map(function(di){var m=meds.find(function(x){return String(x.id)===String(di.medId)})||{name:di.medId,category:'Uncategorized'};return {m:m,qty:n(di.qty)}});return {r:r,dept:dept,items:items}}).filter(Boolean);var total=orders.reduce(function(a,o){return a+o.items.length},0);var cols=total<=28?3:total<=48?4:5;var fs=total<=28?9.4:total<=48?8.1:total<=72?7.1:6.2;var pad=total<=48?2.6:1.8;
- var css='@page{size:A4 landscape;margin:5mm}*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;font-family:Arial,Tahoma,sans-serif;color:#111}.page{height:199mm;display:grid;grid-template-rows:auto 1fr auto;overflow:hidden}.top{font-size:7pt;text-align:center;padding-bottom:1.5mm;border-bottom:.4pt solid #777}.flow{column-count:'+cols+';column-gap:2.2mm;column-rule:.35pt solid #999;padding-top:1.5mm;overflow:hidden}.order{break-inside:auto}.dept{break-after:avoid;break-inside:avoid;background:#17365d;color:#fff;font-weight:900;font-size:'+(fs+1.2)+'pt;padding:2mm 1.5mm;margin:0 0 .8mm}.cat{break-after:avoid;break-inside:avoid;background:#e7e7e7;border-top:.5pt solid #555;border-bottom:.5pt solid #888;font-weight:900;font-size:'+fs+'pt;padding:1mm 1.4mm;margin:.7mm 0 0}.item{position:relative;display:flex;align-items:center;gap:1mm;border-bottom:.25pt solid #bbb;padding:'+pad+'px 1.2mm;break-inside:avoid;font-size:'+fs+'pt;line-height:1.12;overflow:hidden}.num{width:4mm;text-align:center;color:#666;font-size:'+(fs-1)+'pt}.name{flex:1;font-weight:700;padding:.5mm}.qty{min-width:7mm;text-align:center;font-weight:900;font-size:'+(fs+1)+'pt;position:relative;z-index:2}.ha .name{background:#111;color:#fff;border-radius:1mm}.lasa .qty{width:7mm;height:7mm;line-height:6.2mm;border:1.1pt solid #005bbb;border-radius:50%;color:#005bbb}.cold .qty:before{content:"❄";position:absolute;inset:-1.2mm;border-radius:50%;background:#dff4ff;color:#005b96;font-size:'+(fs+2)+'pt;line-height:8mm;z-index:-1}.hazard:after{content:"";position:absolute;right:-8%;top:50%;width:116%;border-top:.7pt solid #111;transform:rotate(-8deg);transform-origin:center;pointer-events:none}.hazard.ha:after{border-color:#fff}.foot{text-align:center;font-size:6.6pt;padding-top:1mm;border-top:.4pt solid #777}.legend{font-size:6pt;opacity:.8;margin-left:3mm}';
- var html='<!doctype html><html><head><meta charset="utf-8"><title>Print Orders</title><style>'+css+'</style></head><body><section class="page"><div class="top">Floor Stock Dispensing Orders · '+escH(typeof fmtDate==='function'?fmtDate(typeof nowISO==='function'?nowISO():new Date()):new Date().toLocaleDateString())+'<span class="legend">High Alert: inverse name · LASA: circled quantity · Refrigerated: snowflake quantity · Hazard: diagonal line</span></div><div class="flow">';orders.forEach(function(o){var groups={};o.items.forEach(function(x){var c=String(x.m.category||'Uncategorized').trim()||'Uncategorized';(groups[c]||(groups[c]=[])).push(x)});html+='<div class="order"><div class="dept">'+escH(o.dept&&o.dept.name||o.r.deptId)+'</div>';var ix=0;Object.keys(groups).sort().forEach(function(cat){html+='<div class="cat">'+escH(cat)+'</div>';groups[cat].forEach(function(x){ix++;var f=medFlags(x.m),cl=(f.ha?' ha':'')+(f.hz?' hazard':'')+(f.lasa?' lasa':'')+(f.cold?' cold':'');html+='<div class="item'+cl+'"><span class="num">'+ix+'</span><span class="name">'+escH(x.m.name)+'</span><span class="qty">'+x.qty+'</span></div>'})});html+='</div>'});html+='</div><div class="foot">By Ali Abudahash</div></section><script>window.onload=function(){setTimeout(function(){window.print()},250)}<\\/script></body></html>';
- ids.forEach(function(id){var r=(gr()||[]).find(function(x){return String(x.id)===String(id)});if(r&&window.S&&S.upd)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:typeof nowISO==='function'?nowISO():new Date().toISOString()})});var w=window.open('','_blank');if(!w)return toast2('Allow pop-ups to print.','err');w.document.open();w.document.write(html);w.document.close();if(typeof renderPrint==='function')renderPrint()
+ var ids=Array.from(document.querySelectorAll('.pchk:checked')).map(function(c){return c.dataset.id});
+ if(!ids.length)return toast2('Select at least one order.','err');
+ var perPage=Number(window.PPP||PPP);if([2,3,4,5].indexOf(perPage)<0)return toast2('Choose orders per page: 2, 3, 4, or 5.','err');
+ function categoryOrder(){var cfg=typeof getPharmacyCategoryConfig==='function'?getPharmacyCategoryConfig():{order:[]},arr=(cfg.order||[]).slice(),solution=arr.find(function(c){return String(c||'').trim().toLowerCase()==='solutions';});arr=arr.filter(function(c){return String(c||'').trim().toLowerCase()!=='solutions';});if(solution)arr.push(solution);return arr}
+ function categoryRank(name,order){var i=order.indexOf(name);if(i<0&&String(name||'').trim().toLowerCase()==='solutions')return 999999;return i<0?9999:i}
+ var globalOrder=categoryOrder();
+ var orders=ids.map(function(id){
+   var r=(typeof gr==='function'?(gr()||[]):[]).find(function(x){return String(x.id)===String(id)});if(!r)return null;
+   var dept=(typeof gd==='function'?(gd()||[]):[]).find(function(d){return String(d.id)===String(r.deptId)}),meds=typeof getMeds==='function'?(getMeds(r.deptId)||[]):[];
+   var items=(r.dispensed||[]).filter(function(x){return n(x.qty)>0}).map(function(di){
+     var m=meds.find(function(x){return String(x.id)===String(di.medId)})||{name:di.medId,category:'Uncategorized'},f=medFlags(m),cat=String(m.category||'Uncategorized').trim()||'Uncategorized';
+     return {m:m,name:m.name||di.medId,strength:m.strength||'',category:cat,qty:n(di.qty),flags:f,solution:String(cat).toLowerCase()==='solutions'||m.solution===true};
+   }).sort(function(a,b){var cr=categoryRank(a.category,globalOrder)-categoryRank(b.category,globalOrder);return cr||String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base',numeric:true})});
+   return {r:r,dept:dept,items:items};
+ }).filter(Boolean);
+ var mode=(document.getElementById('print-solution-mode')||{}).value||'all';
+ function cloneFiltered(o,fn){return {r:o.r,dept:o.dept,items:o.items.filter(fn)}}
+ var sets=mode==='nonSolutions'?[{label:'All medicines except Solutions',orders:orders.map(function(o){return cloneFiltered(o,function(x){return !x.solution})})}]:mode==='solutions'?[{label:'Solutions only',orders:orders.map(function(o){return cloneFiltered(o,function(x){return x.solution})})}]:mode==='split'?[{label:'All medicines except Solutions',orders:orders.map(function(o){return cloneFiltered(o,function(x){return !x.solution})})},{label:'Solutions only',orders:orders.map(function(o){return cloneFiltered(o,function(x){return x.solution})})}]:[{label:'Complete orders',orders:orders}];
+ var pages=[];sets.forEach(function(set){for(var i=0;i<set.orders.length;i+=perPage){var chunk=set.orders.slice(i,i+perPage).filter(function(o){return o.items.length});if(chunk.length)pages.push({label:set.label,orders:chunk,total:chunk.reduce(function(s,o){return s+o.items.length},0)})}});
+ if(!pages.length)return toast2('No dispensed items with quantity greater than zero in the selected orders.','info');
+ if(pages.some(function(p){return p.total>170}))return toast2('A selected page contains more than 170 dispensed items. Reduce the selected departments or use Split mode.','err');
+ function deptName(o){return (o.dept&&o.dept.name)||o.r.deptName||o.r.deptId||'Department'}
+ function orderHtml(o,index){
+   var groups={};o.items.forEach(function(x){(groups[x.category]||(groups[x.category]=[])).push(x)});
+   var cats=Object.keys(groups).sort(function(a,b){return categoryRank(a,globalOrder)-categoryRank(b,globalOrder)||String(a).localeCompare(String(b))}),html='<section class="order-block '+(index%2?'tone-gray':'tone-white')+'"><div class="order-head"><span class="dept">'+escH(deptName(o))+'</span><span class="date">'+escH(typeof fmtDateTime==='function'?fmtDateTime(o.r.fulfilledAt||o.r.created):'')+'</span></div>',ix=0;
+   cats.forEach(function(cat){html+='<div class="category-head">'+escH(cat)+'</div>';groups[cat].forEach(function(x){ix++;var f=x.flags,cl=(f.ha?' high-alert':'')+(f.hz?' hazard':'');html+='<div class="item'+cl+'"><span class="num">'+ix+'</span><span class="drug"><span class="drug-name">'+escH(x.name)+'</span>'+(x.strength?'<span class="strength">'+escH(x.strength)+'</span>':'')+'</span><span class="qty'+(f.lasa?' look-alike':'')+(f.cold?' refrigerated':'')+'"><span class="qty-number">'+escH(x.qty)+'</span></span></div>'})});
+   return html+'</section>';
+ }
+ var css='@page{size:A4 landscape;margin:2.5mm}*{box-sizing:border-box}html,body{margin:0;padding:0;width:100%;font-family:Arial,Tahoma,sans-serif;color:#000;background:#fff}.print-page{width:292mm;height:205mm;overflow:hidden;page-break-after:always;break-after:page;display:flex;flex-direction:column}.print-page:last-child{page-break-after:auto;break-after:auto}.page-top{height:2.2mm;line-height:2.2mm;text-align:center;font-size:4.4pt;color:#333;border-bottom:.16mm solid #777;flex:0 0 auto;white-space:nowrap;overflow:hidden}.flow{--fs:11pt;--cols:4;flex:1;min-height:0;overflow:hidden;column-count:var(--cols);column-fill:auto;column-gap:.9mm;column-rule:.22mm solid #444;padding-top:.25mm}.order-block{display:block;margin:0;padding:0;break-inside:auto;box-decoration-break:clone;-webkit-box-decoration-break:clone}.tone-white{background:#fff!important}.tone-gray{background:#d5d5d5!important}.tone-white,.tone-gray{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.order-head{display:flex;align-items:center;justify-content:space-between;gap:.35mm;min-height:3.7mm;padding:.15mm .32mm;border-top:.3mm solid #111;border-bottom:.16mm solid #555;break-after:avoid}.dept{font-size:calc(var(--fs)*.58);font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:78%}.date{font-size:calc(var(--fs)*.38);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:22%}.category-head{break-after:avoid;break-inside:avoid;background:#777;color:#fff;font-size:calc(var(--fs)*.55);font-weight:900;line-height:1.05;padding:.18mm .32mm;border-top:.12mm solid #222;border-bottom:.12mm solid #222;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.item{break-inside:avoid;display:flex;align-items:center;justify-content:flex-start;gap:0;padding:.04mm .12mm;border-bottom:.09mm solid #aaa;line-height:1;max-width:100%;min-height:calc(var(--fs)*1.33)}.num{flex:0 0 3.2mm;width:3.2mm;text-align:center;font-size:calc(var(--fs)*.52);color:#555}.drug{display:inline-flex;flex-direction:column;flex:0 1 auto;width:max-content;min-width:0;max-width:calc(100% - 9mm);line-height:1;margin:0;padding:0}.drug-name,.strength{font-size:var(--fs);line-height:1;max-width:100%;white-space:normal;overflow-wrap:anywhere}.drug-name{font-weight:900}.strength{font-size:calc(var(--fs)*.76);font-weight:700}.qty{position:relative;flex:0 0 auto;margin:0 0 0 .18mm;font-size:var(--fs);font-weight:900;border:.28mm solid #000;border-radius:.55mm;line-height:1;min-width:5.7mm;min-height:calc(var(--fs)*1.2);padding:.14mm .28mm;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;overflow:hidden}.qty.look-alike{border-radius:50%;width:calc(var(--fs)*1.42);height:calc(var(--fs)*1.42);min-width:calc(var(--fs)*1.42);min-height:calc(var(--fs)*1.42);padding:0}.qty.refrigerated{border-radius:.45mm;width:auto;height:calc(var(--fs)*1.45);min-width:calc(var(--fs)*1.52);background:#555!important;border-color:#000;color:#fff;box-shadow:inset 0 0 0 .15mm #fff;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.qty.refrigerated:before{content:"❄";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:calc(var(--fs)*1.28);font-weight:900;color:#fff;opacity:.55}.qty-number{position:relative;z-index:1}.item.high-alert .drug,.item.hazard .drug{padding:.16mm .32mm;border:.3mm solid #000;border-radius:.55mm;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.tone-white .item.high-alert .drug{background:#111!important;color:#fff!important}.tone-gray .item.high-alert .drug{background:#fff!important;color:#000!important}.tone-white .item.high-alert .drug *{color:#fff!important;-webkit-text-fill-color:#fff!important}.tone-gray .item.high-alert .drug *{color:#000!important;-webkit-text-fill-color:#000!important}.item.hazard .drug{position:relative;isolation:isolate}.item.hazard .drug:after{content:"";position:absolute;z-index:3;pointer-events:none;inset:0;background:linear-gradient(to bottom left,transparent calc(50% - .10mm),#000 calc(50% - .10mm),#000 calc(50% + .10mm),transparent calc(50% + .10mm));-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}.tone-white .item.high-alert.hazard .drug:after{background:linear-gradient(to bottom left,transparent calc(50% - .10mm),#fff calc(50% - .10mm),#fff calc(50% + .10mm),transparent calc(50% + .10mm))!important}.foot{height:.7mm;line-height:.7mm;text-align:center;font-size:4pt;font-weight:700;flex:0 0 auto}@media print{html,body{overflow:visible!important}.print-page{margin:0!important}}';
+ var html='<!doctype html><html><head><meta charset="utf-8"><title>Pharmacy A4 Flow Print</title><style>'+css+'</style></head><body>';
+ pages.forEach(function(page,pi){html+='<section class="print-page"><div class="page-top" data-items="'+page.total+'">Floor Stock Dispensing Orders · '+escH(page.label)+' · Page '+(pi+1)+'/'+pages.length+'</div><div class="flow">';page.orders.forEach(function(o,i){html+=orderHtml(o,i)});html+='</div><div class="foot">By Ali Abudahash</div></section>'});
+ html+='<script>window.onload=function(){setTimeout(function(){document.querySelectorAll(".print-page").forEach(function(page){var flow=page.querySelector(".flow"),items=Number(page.querySelector(".page-top").dataset.items)||0,best=null;for(var font=16;font>=7.5;font-=0.25){for(var cols=1;cols<=6;cols++){flow.style.setProperty("--fs",font+"pt");flow.style.setProperty("--cols",cols);void flow.offsetHeight;var fits=flow.scrollWidth<=flow.clientWidth+2&&flow.scrollHeight<=flow.clientHeight+2;if(fits){best={font:font,cols:cols};break}}if(best)break}if(!best)best={font:7.5,cols:6};flow.style.setProperty("--fs",best.font+"pt");flow.style.setProperty("--cols",best.cols);page.querySelector(".page-top").textContent+=" · "+items+" items · "+best.cols+" columns · "+best.font.toFixed(1)+"pt"});setTimeout(function(){window.print()},300)},120)};<\/script></body></html>';
+ ids.forEach(function(id){var r=(gr()||[]).find(function(x){return String(x.id)===String(id)});if(r&&window.S&&S.upd)S.upd('requests',id,{printCount:(r.printCount||0)+1,lastPrintedAt:typeof nowISO==='function'?nowISO():new Date().toISOString()})});
+ var w=window.open('','_blank');if(!w)return toast2('Allow pop-ups to print.','err');w.document.open();w.document.write(html);w.document.close();if(typeof renderPrint==='function')renderPrint();
 };
 
 function stamp(){var x=E('v13-build-stamp');if(!x){x=document.createElement('div');x.id='v13-build-stamp';x.style.cssText='position:fixed;left:8px;bottom:6px;z-index:9999;font:9px monospace;color:#6e7781;opacity:.75;pointer-events:none';document.body.appendChild(x)}x.textContent=BUILD}
@@ -11760,6 +11849,8 @@ window.__V16_USER_FIXPACK__=BUILD;
 })();
 </script>
 <style id="final-role-routing-system-health-style">
+#master-local-backup-top-btn{display:none}
+body.real-master-ui #master-local-backup-top-btn{display:inline-flex}
 body:not(.real-master-ui) #pg-system-health,
 body:not(.real-master-ui) #pg-backup-restore{display:none!important}
 </style>
@@ -11780,7 +11871,13 @@ body:not(.real-master-ui) #pg-backup-restore{display:none!important}
   };
   var RENDERERS={'pg-controlled':'renderControlled','pg-ctl-analytics':'renderCtlAnalytics','pg-announcements':'renderAnnouncements'};
   function role(){return String((window.CU&&CU.role)||'')}
-  function realMaster(){return !!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE)}
+  function realMaster(){
+    try{
+      if(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)return true;
+      if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
+      return !!(window.CU&&window.CU.master===true);
+    }catch(e){return false}
+  }
   function fallbackFor(r){return (r==='controlled_pharmacy'||r==='warehouse')?'pg-controlled':(r==='department'?'pg-newreq':'pg-dash')}
   function specFor(r){return RESTRICTED[r]||null}
   function restrictedPages(r){return (specFor(r)||[]).map(function(x){return x[0]})}
@@ -12216,6 +12313,10 @@ window.__WEEKLY_REQUEST_GRID_CLEAN__='20260724-flat-firestore';
 .sim-group-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--s3)}.sim-group-head label{display:flex;align-items:center;gap:8px;margin:0}
 .sim-variants{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:7px;padding:10px}.sim-variant-row{display:flex;align-items:flex-start;gap:8px;margin:0;padding:8px;border:1px solid var(--bd);border-radius:7px;background:var(--s)}
 .sim-variant-row span{min-width:0}.sim-variant-row b{display:block;overflow-wrap:anywhere}.sim-variant-row small{display:block;color:var(--tx2);margin-top:3px;line-height:1.35}
+.sim-variant-select{display:flex;align-items:flex-start;gap:8px;flex:1;min-width:0;margin:0;cursor:pointer}
+.sim-separate-btn{flex:0 0 auto;align-self:center;border-color:var(--yl)!important;color:var(--yll)!important}
+.sim-merge-help{width:100%;font-size:11px;color:var(--tx2);line-height:1.45;margin-top:2px}
+.sim-manual-rule{display:inline-flex;align-items:center;gap:5px;color:var(--yll);font-size:10px;font-weight:600;margin-top:4px}
 .sim-merge-row{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap;padding:10px;border-top:1px solid var(--bd)}.sim-merge-row label{flex:1;min-width:260px;margin:0}.sim-merge-row select{margin:4px 0 0}
 .sim-empty{text-align:center;padding:34px;color:var(--tx2);border:1px dashed var(--bd);border-radius:10px}
 @media(max-width:700px){.sim-modal{padding:12px!important}.sim-class-toolbar{top:-12px}.sim-filterbar>*{width:100%}.sim-filterbar .sbr{max-width:none}.sim-merge-row>*{width:100%}}
@@ -12225,20 +12326,43 @@ window.__WEEKLY_REQUEST_GRID_CLEAN__='20260724-flat-firestore';
 'use strict';
 var MODAL_ID='similar-medicines-modal-v2';
 var state={groups:[],selected:new Set(),query:'',mode:'similar'};
+var SEPARATION_KEY='similar_medicine_separations_v1',separationCache=null;
 function E(id){return document.getElementById(id)}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/(\d)(mg|mcg|gm|g|ml|iu|mmol|meq)\b/gi,'$1 $2').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
-var FORM_WORDS={tablet:1,tablets:1,tab:1,tabs:1,capsule:1,capsules:1,cap:1,caps:1,injection:1,injections:1,inj:1,ampoule:1,ampoules:1,amp:1,amps:1,vial:1,vials:1,bottle:1,bottles:1,bag:1,bags:1,solution:1,solutions:1,soln:1,suspension:1,susp:1,syrup:1,cream:1,ointment:1,drops:1,drop:1,inhaler:1,inhalers:1,suppository:1,suppositories:1,oral:1,iv:1,im:1,sc:1,infusion:1,premix:1,pack:1,packs:1,for:1,of:1,محلول:1,محاليل:1,حقن:1,حقنة:1,امبول:1,امبولات:1,فيال:1,فيالات:1,قرص:1,اقراص:1,كبسول:1,كبسولات:1};
+var FORM_WORDS={tablet:1,tablets:1,tab:1,tabs:1,capsule:1,capsules:1,cap:1,caps:1,injection:1,injections:1,inj:1,ampoule:1,ampoules:1,amp:1,amps:1,vial:1,vials:1,bottle:1,bottles:1,bag:1,bags:1,solution:1,solutions:1,soln:1,suspension:1,susp:1,syrup:1,cream:1,ointment:1,drops:1,drop:1,inhaler:1,inhalers:1,nebuliser:1,nebulisers:1,nebulizer:1,nebulizers:1,nebule:1,nebules:1,suppository:1,suppositories:1,oral:1,iv:1,im:1,sc:1,infusion:1,premix:1,pack:1,packs:1,for:1,of:1,unit:1,units:1,محلول:1,محاليل:1,حقن:1,حقنة:1,امبول:1,امبولات:1,فيال:1,فيالات:1,قرص:1,اقراص:1,كبسول:1,كبسولات:1};
 function tokens(v){return norm(v).split(/\s+/).filter(function(t){return t&&!FORM_WORDS[t]})}
 function doseTokens(v){return tokens(v).filter(function(t){return /^\d/.test(t)||/^(mg|mcg|g|gm|ml|iu|mmol|meq)$/.test(t)})}
+function ingredientTokens(v){return tokens(v).filter(function(t){return !/^\d/.test(t)&&!/^(mg|mcg|g|gm|ml|iu|mmol|meq)$/.test(t)})}
 function identity(v){return tokens(v).join(' ')}
+function pairKey(a,b){var p=[norm(a),norm(b)].sort();return p[0]+'||'+p[1]}
+function getSeparationRules(){
+ if(separationCache&&typeof separationCache==='object')return separationCache;
+ try{var r=window.S&&S.g?S.g(SEPARATION_KEY):null;if(r&&typeof r==='object'&&!Array.isArray(r)){separationCache=r;return separationCache}}catch(e){}
+ try{var x=JSON.parse(localStorage.getItem(SEPARATION_KEY)||'{}');separationCache=x&&typeof x==='object'&&!Array.isArray(x)?x:{};return separationCache}catch(e){separationCache={};return separationCache}
+}
+async function saveSeparationRules(rules){
+ separationCache=rules||{};
+ try{localStorage.setItem(SEPARATION_KEY,JSON.stringify(separationCache))}catch(e){}
+ if(window.S&&S.s)await S.s(SEPARATION_KEY,separationCache);
+}
+function isManuallySeparated(a,b){return !!getSeparationRules()[pairKey(a,b)]}
+async function addSeparationRules(left,right){
+ var rules=copy(getSeparationRules()),actor=typeof actualActorName==='function'?actualActorName():String((window.CU&&(CU.name||CU.email))||'user'),at=new Date().toISOString();
+ left.forEach(function(a){right.forEach(function(b){if(norm(a)===norm(b))return;rules[pairKey(a,b)]={a:String(a),b:String(b),createdAt:at,createdBy:actor}})});
+ await saveSeparationRules(rules);
+}
 function sameMedicine(a,b){
+ if(isManuallySeparated(a,b))return false;
  var aa=tokens(a),bb=tokens(b);if(!aa.length||!bb.length)return false;
  var da=doseTokens(a).join(' '),db=doseTokens(b).join(' ');if(da&&db&&da!==db)return false;
- var A=new Set(aa),B=new Set(bb),common=aa.filter(function(t){return B.has(t)}).length;
  if(identity(a)===identity(b))return true;
+ var ia=ingredientTokens(a),ib=ingredientTokens(b),IB=new Set(ib),ingredientCommon=ia.filter(function(t){return IB.has(t)}).length;
+ /* Matching strength alone is never enough: at least one medicine-name token must match. */
+ if(ia.length&&ib.length&&ingredientCommon===0)return false;
+ var A=new Set(aa),B=new Set(bb),common=aa.filter(function(t){return B.has(t)}).length;
  var shorter=Math.min(A.size,B.size),longer=Math.max(A.size,B.size);
- return common>=1&&common/shorter>=0.8&&common/longer>=0.55;
+ return ingredientCommon>=1&&common/shorter>=0.8&&common/longer>=0.55;
 }
 function canManage(){var r=String((window.CU&&CU.role)||'');return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(r)>-1))}
 function getDepartments(){try{return typeof gd==='function'?(gd()||[]):[]}catch(e){return[]}}
@@ -12279,9 +12403,10 @@ function renderGroups(){
   var shownNames=displayNames(g),shownMembers=displayMembers(g),allSelected=shownMembers.length&&shownMembers.every(function(r){return state.selected.has(r.deptId+'::'+r.med.id)});
   var variants=shownNames.map(function(n){
    var members=exactNameMembers(g,n),depts=Array.from(new Set(members.map(function(r){return r.deptName}))).join(', '),cats=Array.from(new Set(members.map(function(r){return r.med.category||'—'}))).join(', '),classes=Array.from(new Set(members.map(function(r){return classLabels(r.med)}))),conflict=classes.length>1,all=members.length&&members.every(function(r){return state.selected.has(r.deptId+'::'+r.med.id)}),deptClasses=Array.from(new Set(members.map(function(r){return r.deptName+': '+classLabels(r.med)}))).join(' · ');
-   return '<label class="sim-variant-row '+(conflict?'has-class-conflict':'')+'"><input type="checkbox" class="sim-variant-check" data-group="'+esc(g.id)+'" data-name="'+esc(n)+'" '+(all?'checked':'')+'><span><b>'+esc(n)+'</b><small>'+esc(depts)+' · '+esc(cats)+'</small><small>'+esc(deptClasses)+'</small>'+(conflict?'<span class="badge sim-conflict-badge">Classification mismatch / اختلاف التصنيف</span>':'')+'</span></label>';
+   var separated=g.names.some(function(other){return norm(other)!==norm(n)&&isManuallySeparated(n,other)});
+   return '<div class="sim-variant-row '+(conflict?'has-class-conflict':'')+'"><label class="sim-variant-select"><input type="checkbox" class="sim-variant-check" data-group="'+esc(g.id)+'" data-name="'+esc(n)+'" '+(all?'checked':'')+'><span><b>'+esc(n)+'</b><small>'+esc(depts)+' · '+esc(cats)+'</small><small>'+esc(deptClasses)+'</small>'+(conflict?'<span class="badge sim-conflict-badge">Classification mismatch / اختلاف التصنيف</span>':'')+(separated?'<span class="sim-manual-rule">✓ Manually kept separate / مفصول يدويًا</span>':'')+'</span></label><button type="button" class="btn bg bxs sim-separate-btn" data-group="'+esc(g.id)+'" data-name="'+esc(n)+'">Not the same / علاج مختلف</button></div>';
   }).join('');
-  var merge=g.variant&&state.mode!=='classification'?'<div class="sim-merge-row"><label>Canonical name / الاسم القياسي<select class="sim-canonical" data-group="'+esc(g.id)+'">'+g.names.map(function(n){return '<option value="'+esc(n)+'" '+(n===g.canonical?'selected':'')+'>'+esc(n)+'</option>'}).join('')+'</select></label><button type="button" class="btn bp bsm sim-merge-btn" data-group="'+esc(g.id)+'">Merge this group / دمج المجموعة</button></div>':'';
+  var merge=g.variant&&state.mode!=='classification'?'<div class="sim-merge-row"><label>Canonical name / الاسم القياسي<select class="sim-canonical" data-group="'+esc(g.id)+'">'+g.names.map(function(n){return '<option value="'+esc(n)+'" '+(n===g.canonical?'selected':'')+'>'+esc(n)+'</option>'}).join('')+'</select></label><button type="button" class="btn bp bsm sim-merge-btn" data-group="'+esc(g.id)+'">Merge selected names / دمج الأسماء المحددة</button><div class="sim-merge-help">حدد فقط الأسماء التي تمثل نفس العلاج. أي اسم غير محدد سيبقى علاجًا مستقلاً، وسيحفظ النظام قرار الفصل حتى لا يجمعه تلقائيًا مرة أخرى.</div></div>':'';
   var badges=(g.variant?'<span class="chip">Name variants / اختلاف الاسم</span>':'')+(g.classConflict?'<span class="badge sim-conflict-badge">Different classifications / تصنيفات مختلفة</span>':'');
   return '<section class="sim-group '+(g.variant?'is-variant ':'')+(g.classConflict?'is-class-conflict':'')+'"><div class="sim-group-head"><label><input type="checkbox" class="sim-group-check" data-group="'+esc(g.id)+'" '+(allSelected?'checked':'')+'><strong>'+esc(g.canonical)+'</strong></label><div class="fl ic g8">'+badges+'<span class="chip">'+shownNames.length+' names · '+shownMembers.length+' records</span></div></div><div class="sim-variants">'+variants+'</div>'+merge+'</section>';
  }).join('');
@@ -12289,8 +12414,8 @@ function renderGroups(){
 }
 function renderModal(){
  var old=E(MODAL_ID);if(old)old.remove();
- state.groups=buildGroups();state.selected.clear();state.query='';state.mode='similar';
- var html='<div class="modal-bg on" id="'+MODAL_ID+'"><div class="modal sim-modal"><div class="mh"><div><div class="mt">Similar medicines across all departments / الأدوية المتشابهة في جميع الأقسام</div><div class="fhint">التصنيف والدمج يتمان في هذه الصفحة، والحفظ مرة واحدة لكل العناصر المحددة.</div></div><button type="button" class="xbtn" id="sim-close">×</button></div>'+ 
+ separationCache=null;state.groups=buildGroups();state.selected.clear();state.query='';state.mode='similar';
+ var html='<div class="modal-bg on" id="'+MODAL_ID+'"><div class="modal sim-modal"><div class="mh"><div><div class="mt">Similar medicines across all departments / الأدوية المتشابهة في جميع الأقسام</div><div class="fhint">حدد الأسماء المتطابقة فعليًا فقط. تشابه الجرعة وحده لا يعني أن العلاج واحد، ويمكن فصل أي اسم خاطئ من نفس الصفحة.</div></div><button type="button" class="xbtn" id="sim-close">×</button></div>'+ 
  '<div class="sim-class-toolbar"><div class="sim-class-title">Bulk Classification / تعديل التصنيف بالجملة</div><div class="fhint" style="margin-bottom:7px">التصنيفات المختارة تستبدل التصنيفات الحالية لكل الأدوية المحددة، ثم يتم الحفظ مرة واحدة.</div><div class="sim-class-options"><label><input type="checkbox" id="sim-class-high_alert"> High Alert</label><label><input type="checkbox" id="sim-class-hazard"> Hazard</label><label><input type="checkbox" id="sim-class-lasa"> LASA</label><label><input type="checkbox" id="sim-class-refrigerated"> Refrigerated</label></div><div class="sim-class-actions"><button type="button" class="btn bs" id="sim-save-class">Save classifications / حفظ التصنيفات</button><button type="button" class="btn bg" id="sim-clear-selection">Clear selection</button><span class="chip" id="sim-selected-count">0 selected / محدد</span></div></div>'+ 
  '<div class="sim-filterbar"><div class="sbr"><span class="sic">🔎</span><input id="sim-search" placeholder="Search medicine, department, category or classification..." style="margin:0"></div><select id="sim-mode-filter" class="sim-mode-filter"><option value="similar">Similar names / أسماء متشابهة</option><option value="classification">Same name with different classification / نفس الاسم وتصنيف مختلف</option><option value="both">Both issues / كل التعارضات</option><option value="all">All medicines for classification / جميع الأدوية</option></select></div><div id="sim-message" class="fhint"></div><div id="sim-groups" class="sim-groups"></div></div></div>';
  document.body.insertAdjacentHTML('beforeend',html);renderGroups();
@@ -12301,7 +12426,13 @@ function renderModal(){
  E('sim-clear-selection').onclick=function(){state.selected.clear();renderGroups()};
  E('sim-save-class').onclick=saveClassifications;
  E('sim-groups').addEventListener('change',function(e){var t=e.target;if(t.classList.contains('sim-group-check')){var g=state.groups.find(function(x){return x.id===t.dataset.group});if(g)setGroupSelected(g,t.checked);renderGroups()}else if(t.classList.contains('sim-variant-check')){var g2=state.groups.find(function(x){return x.id===t.dataset.group});if(g2)g2.members.filter(function(r){return norm(r.med.name)===norm(t.dataset.name)}).forEach(function(r){var k=r.deptId+'::'+r.med.id;if(t.checked)state.selected.add(k);else state.selected.delete(k)});renderGroups()}});
- E('sim-groups').addEventListener('click',function(e){var b=e.target.closest('.sim-merge-btn');if(b)mergeGroup(b.dataset.group)});
+ E('sim-groups').addEventListener('click',function(e){var s=e.target.closest('.sim-separate-btn');if(s){separateNameFromGroup(s.dataset.group,s.dataset.name);return}var b=e.target.closest('.sim-merge-btn');if(b)mergeGroup(b.dataset.group)});
+}
+async function separateNameFromGroup(groupId,name){
+ var g=state.groups.find(function(x){return x.id===groupId});if(!g)return;var others=g.names.filter(function(n){return norm(n)!==norm(name)});if(!others.length)return;
+ var question='Keep “'+name+'” as a different medicine from the other '+others.length+' name(s)? / هل تريد إبقاء هذا الاسم كعلاج مختلف ومستقل؟';
+ var ok=typeof uiConfirm==='function'?await uiConfirm(question):window.confirm(question);if(!ok)return;
+ await addSeparationRules([name],others);state.selected.clear();state.groups=buildGroups();renderGroups();var msg=E('sim-message');if(msg)msg.textContent='Kept “'+name+'” as a separate medicine. The system will remember this decision. / تم فصل العلاج وحفظ القرار.';if(typeof toast==='function')toast('Medicine kept separate ✓','succ');
 }
 async function saveClassifications(){
  var rows=selectedRows();if(!rows.length){return typeof toast==='function'?toast('Select at least one medicine.','err'):null}
@@ -12323,15 +12454,22 @@ async function migrateRuleMap(key,names,canonical){
  await S.s(key,map)
 }
 async function mergeGroup(groupId){
- var g=state.groups.find(function(x){return x.id===groupId});if(!g||!g.variant)return;var sel=Array.from(E(MODAL_ID).querySelectorAll('.sim-canonical')).find(function(x){return x.dataset.group===groupId}),canonical=sel&&sel.value;if(!canonical)return;
- var ok=typeof uiConfirm==='function'?await uiConfirm('Merge '+g.names.length+' names into “'+canonical+'”?'):window.confirm('Merge into '+canonical+'?');if(!ok)return;
- var selectedNames=g.names.map(norm),changed=0,removed=0;
+ var g=state.groups.find(function(x){return x.id===groupId});if(!g||!g.variant)return;
+ var checked=Array.from(E(MODAL_ID).querySelectorAll('.sim-variant-check[data-group="'+groupId+'"]:checked')).map(function(x){return x.dataset.name}).filter(Boolean);
+ checked=Array.from(new Set(checked));
+ if(checked.length<2){if(typeof toast==='function')toast('Select at least two names to merge / حدد اسمين على الأقل للدمج','err');return}
+ var sel=Array.from(E(MODAL_ID).querySelectorAll('.sim-canonical')).find(function(x){return x.dataset.group===groupId}),canonical=sel&&sel.value;
+ if(checked.map(norm).indexOf(norm(canonical))<0){canonical=checked[0];if(sel)sel.value=canonical}
+ var unselected=g.names.filter(function(n){return checked.map(norm).indexOf(norm(n))<0});
+ var ok=typeof uiConfirm==='function'?await uiConfirm('Merge only the '+checked.length+' selected names into “'+canonical+'”? Unselected names will remain separate. / دمج الأسماء المحددة فقط؟'):window.confirm('Merge selected names into '+canonical+'?');if(!ok)return;
+ var selectedNames=checked.map(norm),changed=0,removed=0;
  for(var di=0;di<getDepartments().length;di++){var d=getDepartments()[di],meds=getDeptMeds(d.id).slice(),matches=meds.filter(function(m){return selectedNames.indexOf(norm(m.name))>-1});if(!matches.length)continue;var merged=mergeRecordSet(matches,canonical),ids=new Set(matches.map(function(m){return String(m.id)})),survivor=matches.find(function(m){return norm(m.name)===norm(canonical)})||matches[0];merged.id=survivor.id;var inserted=false,next=[];meds.forEach(function(m){if(!ids.has(String(m.id))){next.push(m);return}if(!inserted){next.push(merged);inserted=true}else removed++});await setMeds(d.id,next);if(typeof getExpiry==='function'&&typeof setExpiry==='function'){var exp=(getExpiry(d.id)||[]).map(function(x){return ids.has(String(x.medId))?Object.assign({},x,{medId:merged.id,medName:canonical}):x});await setExpiry(d.id,exp)}changed++}
- await migrateRuleMap('medication_visibility_rules_v3',g.names,canonical);await migrateRuleMap('medication_freeze_rules_v3',g.names,canonical);await migrateRuleMap('global_request_freeze_v2',g.names,canonical);
- state.selected.clear();state.groups=buildGroups();renderGroups();var msg=E('sim-message');if(msg)msg.textContent='Merged successfully. The duplicate group was removed immediately. / تم الدمج واختفت المجموعة المتشابهة مباشرة.';if(typeof toast==='function')toast('Merged across '+changed+' department(s); '+removed+' duplicate record(s) removed.','succ')
+ if(unselected.length)await addSeparationRules(unselected,[canonical].concat(checked));
+ await migrateRuleMap('medication_visibility_rules_v3',checked,canonical);await migrateRuleMap('medication_freeze_rules_v3',checked,canonical);await migrateRuleMap('global_request_freeze_v2',checked,canonical);
+ state.selected.clear();state.groups=buildGroups();renderGroups();var msg=E('sim-message');if(msg)msg.textContent='Merged the selected names only. '+unselected.length+' unselected name(s) remain independent and will not be grouped again. / تم دمج المحدد فقط وإبقاء البقية مستقلة.';if(typeof toast==='function')toast('Merged selected names across '+changed+' department(s); '+removed+' duplicate record(s) removed.','succ')
 }
 window.openSimilarMedicinesAllDepartments=function(){if(!canManage())return typeof toast==='function'?toast('Not authorized.','err'):null;renderModal()};
-window.__SIMILAR_MEDICINES_WORKBENCH_V2__='20260724-classification-filter';
+window.__SIMILAR_MEDICINES_WORKBENCH_V2__='20260725-selective-merge-manual-separation';
 })();
 
 </script>
@@ -13321,6 +13459,16 @@ var showBase=window.showPg;
 if(typeof showBase==='function')window.showPg=function(id){var out=showBase.apply(this,arguments);if(id==='pg-controlled')schedule();return out};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',schedule,{once:true});else schedule();
 window.__ASDH_AUDIT_FIXES__='20260725-print-render-permissions-clean';
+})();
+</script>
+
+<script id="final-category-order-safety-20260725">
+(function(){
+  function isSol(c){return String(c||'').trim().toLowerCase()==='solutions'}
+  function normalize(cfg){cfg=cfg||{};var order=(cfg.order||[]).filter(function(v,i,a){return v&&a.indexOf(v)===i}),sol=order.find(isSol)||'Solutions';order=order.filter(function(c){return !isSol(c)});order.push(sol);return {order:order,enabled:order.slice()}}
+  var oldGet=window.getPharmacyCategoryConfig,oldSet=window.setPharmacyCategoryConfig;
+  window.getPharmacyCategoryConfig=function(){return normalize(typeof oldGet==='function'?oldGet():{})};
+  window.setPharmacyCategoryConfig=function(cfg){var fixed=normalize(cfg);return typeof oldSet==='function'?oldSet(fixed):(window.S&&S.s?S.s('pharmacy_category_config',fixed):fixed)};
 })();
 </script>
 </body>
