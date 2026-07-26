@@ -647,6 +647,49 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 }
 </style>
 
+
+<style id="controlled-department-batch-expiry-r612">
+.ctl-dept-custody-scroll{
+  display:block!important;
+  width:100%!important;
+  max-width:100%!important;
+  overflow-x:auto!important;
+  overflow-y:visible!important;
+  -webkit-overflow-scrolling:touch!important
+}
+.ctl-dept-custody-table{
+  width:100%!important;
+  min-width:1180px!important;
+  table-layout:fixed!important
+}
+.ctl-dept-custody-table th,
+.ctl-dept-custody-table td{
+  vertical-align:top!important;
+  overflow-wrap:anywhere!important
+}
+.ctl-dept-custody-table th:nth-child(8),
+.ctl-dept-custody-table th:nth-child(9){
+  background:var(--s3)!important;
+  color:var(--tx)!important
+}
+.ctl-batch-number-cell,
+.ctl-expiry-date-cell{
+  min-width:170px!important;
+  white-space:normal!important
+}
+.ctl-batch-line,
+.ctl-expiry-line{
+  display:block!important;
+  padding:3px 0!important;
+  border-bottom:1px dotted var(--bd2)!important;
+  color:var(--tx)!important
+}
+.ctl-batch-line:last-child,
+.ctl-expiry-line:last-child{
+  border-bottom:0!important
+}
+</style>
+
 </head>
 <body>
 <div id="auth">
@@ -9896,7 +9939,187 @@ function daysUntil(v){if(!v)return null;var d=new Date(String(v).slice(0,10)+'T0
 function expClass(exp){var d=daysUntil(exp),r=rules();if(d===null)return'missing';if(d<0)return'expired';if(d<=r.urgentDays)return'urgent';if(d<=r.nearDays)return'near';return'normal'}
 function fmtDateFinal(v){try{return typeof fmtDate==='function'?fmtDate(v):String(v||'—')}catch(e){return String(v||'—')}}
 function deptName(id){try{var d=(typeof gd==='function'?gd():[]).find(function(x){return String(x.id)===String(id)});return d?d.name:String(id||'—')}catch(e){return String(id||'—')}}
-window.crashPrint=async function(id){var c=typeof crashCart==='function'?crashCart(id):null;if(!c)return;var open=(typeof crashReports==='function'?crashReports():[]).some(function(x){return String(x.cartId)===String(id)&&x.status==='open'});if(open&&role()==='department'){if(typeof toast==='function')toast('Cannot print while an opening report is still open.','err');return}Promise.resolve(publishPublic([c])).catch(function(e){console.warn(e)});var reports=typeof crashReports==='function'?(crashReports()||[]):[],closed=reports.filter(function(x){return String(x.cartId)===String(c.id)&&x.status==='closed'}).sort(function(a,b){return String(b.closedAt||b.lastEditedAt||'').localeCompare(String(a.closedAt||a.lastEditedAt||''))})[0]||{},base=new URL(location.href);base.search='';base.hash='';var url=base.toString()+'?view=crash-cart-public&id='+encodeURIComponent(c.id),qr=typeof makeReadableQR==='function'?makeReadableQR(url):'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url),items=(c.items||[]).slice(),font='6.5',pad='.8mm',rows=items.map(function(it,i){var med=normalizedMedication(it.name,it.concentration||it.strength),required=num(it.qty),available=num(it.present==null?it.qty:it.present),status=available<=0?'Out of stock':(available<required?'Partially available':'Available'),batches=(it.batches||[]).map(function(b){var cls=expClass(b.expiry);return '<div class="exp '+cls+'">'+esc(fmtDateFinal(b.expiry))+' → '+esc(b.qty==null?'—':b.qty)+(b.lot?' · '+esc(b.lot):'')+'</div>'}).join('')||'<div class="exp missing">No expiry</div>';return '<tr class="'+(available<=0?'out':'')+'"><td>'+(i+1)+'</td><td><b>'+esc(med.name)+'</b></td><td>'+esc(med.concentration||'—')+'</td><td>'+required+'</td><td>'+available+'</td><td>'+esc(status)+'</td><td>'+batches+'</td></tr>'}).join(''),closedAt=closed.closedAt||closed.lastEditedAt||c.lastClosedAt||'',closedBy=closed.closedByName||closed.closedBy||c.lastClosedByName||'—',closedUser=closed.closedByUser||c.lastClosedByUser||'—',r=rules(),html='<!doctype html><html dir="ltr"><head><meta charset="utf-8"><title>'+esc(c.name||'Crash Cart')+'</title><style>@page{size:A4 portrait;margin:4mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}html,body{margin:0;padding:0;width:100%;height:auto!important;max-height:none!important;overflow:visible!important;font-family:Arial,Tahoma,sans-serif;color:#111;direction:ltr}.sheet{width:100%;height:auto!important;max-height:none!important;overflow:visible!important;transform:none!important}.top{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;gap:3mm;margin-bottom:1mm}.title{text-align:center}.title h1{font-size:13pt;margin:0}.title h2{font-size:8.5pt;margin:.6mm 0}.qr{text-align:center;font-size:5pt;line-height:1.1}.qr img{width:68px;height:68px;border:1px solid #111;padding:2px;background:#fff}.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:.6mm 3mm;border:1px solid #333;padding:1.2mm 1.6mm;font-size:6.5pt;line-height:1.2;margin-bottom:1mm}.rules{grid-column:1/-1;background:#f0f3f6;padding:.7mm 1mm}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:'+font+'pt;page-break-inside:auto;break-inside:auto}thead{display:table-header-group}tbody{display:table-row-group}tr{page-break-inside:avoid!important;break-inside:avoid!important}th,td{border:1px solid #222;padding:'+pad+' .55mm;text-align:left;line-height:1.15;vertical-align:middle}th{background:#e8e8e8}th:nth-child(1){width:4%}th:nth-child(2){width:22%}th:nth-child(3){width:14%}th:nth-child(4){width:10%}th:nth-child(5){width:9%}th:nth-child(6){width:14%}th:nth-child(7){width:27%}.exp{display:block;padding:.25mm .5mm;margin:.15mm 0;border-radius:1mm}.exp.expired{background:#f5b7b1;color:#7b0000;font-weight:700}.exp.urgent{background:#ffd2a8;color:#6f3100;font-weight:700}.exp.near{background:#fff0a8;color:#5d4a00;font-weight:700}.exp.normal{background:#d8f3dc;color:#14532d}.exp.missing{background:#e5e7eb;color:#374151}.out td{background:#f3dada;font-weight:700}.foot{text-align:center;font-size:6pt;margin-top:1.2mm;page-break-inside:avoid;break-inside:avoid}@media print{html,body,.sheet{height:auto!important;max-height:none!important;overflow:visible!important}table{page-break-inside:auto!important;break-inside:auto!important}thead{display:table-header-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}}</style></head><body><div class="sheet">'+(typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'')+'<div class="top"><div></div><div class="title"><h1>'+esc(c.name||'Crash Cart')+'</h1><h2>'+esc(deptName(c.deptId))+'</h2></div><div class="qr"><img src="'+qr+'"><div>Live check — no login</div></div></div><div class="meta"><div><b>Cart:</b> '+esc(c.number||'—')+'</div><div><b>Seal number:</b> '+esc(c.seal||'—')+'</div><div><b>Location:</b> '+esc(c.location||'—')+'</div><div><b>Last closure:</b> '+esc(closedAt?fmtDateFinal(closedAt):'—')+'</div><div><b>Closed by:</b> '+esc(closedBy)+'</div><div><b>System user:</b> '+esc(closedUser)+'</div><div class="rules"><b>Expiry Track:</b> Expired before today · Urgent 0–'+r.urgentDays+' days · Near expiry '+(r.urgentDays+1)+'–'+r.nearDays+' days</div></div><table><thead><tr><th>#</th><th>Generic name</th><th>Concentration</th><th>Standard quantity</th><th>Available</th><th>Stock status</th><th>Expiry date → Quantity</th></tr></thead><tbody>'+rows+'</tbody></table><div class="foot">Printed by: '+esc(actor().name)+' · '+esc(actor().user)+' · By Ali Abudahash</div></div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,250)},{once:true});setTimeout(go,1800)})();<\/script></body></html>';var w=window.open('','_blank');if(!w){if(typeof toast==='function')toast('Allow pop-ups to print.','err');return}w.document.open();w.document.write(html);w.document.close();if(typeof auditAction==='function')auditAction('crash_cart_print',{cartId:id,multiPage:true,leftToRight:true,publicQr:true,expiryColors:true})};
+window.crashPrint=async function(id){
+  var c=typeof crashCart==='function'?crashCart(id):null;
+  if(!c)return;
+
+  var open=(typeof crashReports==='function'?crashReports():[]).some(function(report){
+    return String(report.cartId)===String(id)&&report.status==='open';
+  });
+  if(open&&role()==='department'){
+    if(typeof toast==='function'){
+      toast('Cannot print while an opening report is still open.','err');
+    }
+    return;
+  }
+
+  Promise.resolve(publishPublic([c])).catch(function(error){console.warn(error)});
+
+  var reports=typeof crashReports==='function'?(crashReports()||[]):[];
+  var closed=reports.filter(function(report){
+    return String(report.cartId)===String(c.id)&&report.status==='closed';
+  }).sort(function(a,b){
+    return String(b.closedAt||b.lastEditedAt||'').localeCompare(
+      String(a.closedAt||a.lastEditedAt||'')
+    );
+  })[0]||{};
+
+  var base=new URL(location.href);
+  base.search='';
+  base.hash='';
+  var url=base.toString()+'?view=crash-cart-public&id='+encodeURIComponent(c.id);
+  var qr=typeof makeReadableQR==='function'
+    ?makeReadableQR(url)
+    :'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+
+      encodeURIComponent(url);
+
+  var printNow=new Date();
+  var printDayUtc=Date.UTC(
+    printNow.getFullYear(),
+    printNow.getMonth(),
+    printNow.getDate()
+  );
+  var printDateText=
+    String(printNow.getDate()).padStart(2,'0')+'/'+
+    String(printNow.getMonth()+1).padStart(2,'0')+'/'+
+    printNow.getFullYear();
+
+  function expiryDay(value){
+    if(!value)return null;
+    var text=String(value).trim();
+    var match=text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+    if(match)return Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]));
+    var date=new Date(value);
+    if(isNaN(date.getTime()))return null;
+    return Date.UTC(date.getFullYear(),date.getMonth(),date.getDate());
+  }
+
+  function isNear30(batches){
+    return (Array.isArray(batches)?batches:[]).some(function(batch){
+      var day=expiryDay(batch&&batch.expiry);
+      if(day===null)return false;
+      var remaining=Math.round((day-printDayUtc)/86400000);
+      return remaining>=0&&remaining<=30;
+    });
+  }
+
+  var items=(c.items||[]).slice();
+  var font='6.5';
+  var pad='.8mm';
+
+  var rows=items.map(function(item,index){
+    var med=normalizedMedication(item.name,item.concentration||item.strength);
+    var required=num(item.qty);
+    var available=num(item.present==null?item.qty:item.present);
+    var status=available<=0?'Out of stock':
+      (available<required?'Partially available':'Available');
+    var near=isNear30(item.batches);
+
+    var batches=(item.batches||[]).map(function(batch){
+      var cls=expClass(batch.expiry);
+      return '<div class="exp '+cls+'">'+
+        esc(fmtDateFinal(batch.expiry))+' → '+
+        esc(batch.qty==null?'—':batch.qty)+
+        (batch.lot?' · '+esc(batch.lot):'')+
+      '</div>';
+    }).join('')||'<div class="exp missing">No expiry</div>';
+
+    var rowClasses=[];
+    if(available<=0)rowClasses.push('out');
+    if(near)rowClasses.push('near-expiry-30');
+
+    return '<tr class="'+rowClasses.join(' ')+'">'+
+      '<td>'+(index+1)+'</td>'+
+      '<td><b>'+esc(med.name)+'</b></td>'+
+      '<td>'+esc(med.concentration||'—')+'</td>'+
+      '<td>'+required+'</td>'+
+      '<td>'+available+'</td>'+
+      '<td>'+esc(status)+'</td>'+
+      '<td>'+batches+'</td>'+
+    '</tr>';
+  }).join('');
+
+  var closedAt=closed.closedAt||closed.lastEditedAt||c.lastClosedAt||'';
+  var closedBy=closed.closedByName||closed.closedBy||c.lastClosedByName||'—';
+  var closedUser=closed.closedByUser||c.lastClosedByUser||'—';
+  var r=rules();
+
+  var html='<!doctype html><html dir="ltr"><head><meta charset="utf-8">'+
+    '<title>'+esc(c.name||'Crash Cart')+'</title>'+
+    '<style>'+
+    '@page{size:A4 portrait;margin:4mm}'+
+    '*{box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'+
+    'html,body{margin:0;padding:0;width:100%;height:auto!important;max-height:none!important;overflow:visible!important;font-family:Arial,Tahoma,sans-serif;color:#111;direction:ltr}'+
+    '.sheet{width:100%;height:auto!important;max-height:none!important;overflow:visible!important;transform:none!important}'+
+    '.top{display:grid;grid-template-columns:72px 1fr 72px;align-items:center;gap:3mm;margin-bottom:1mm}'+
+    '.title{text-align:center}.title h1{font-size:13pt;margin:0}.title h2{font-size:8.5pt;margin:.6mm 0}'+
+    '.qr{text-align:center;font-size:5pt;line-height:1.1}.qr img{width:68px;height:68px;border:1px solid #111;padding:2px;background:#fff}'+
+    '.meta{display:grid;grid-template-columns:repeat(3,1fr);gap:.6mm 3mm;border:1px solid #333;padding:1.2mm 1.6mm;font-size:6.5pt;line-height:1.2;margin-bottom:.7mm}'+
+    '.rules{grid-column:1/-1;background:#f0f3f6;padding:.7mm 1mm}'+
+    '.print-legend{display:flex;align-items:center;justify-content:space-between;gap:3mm;border:1px solid #222;padding:.45mm .8mm;margin:0 0 .7mm;font-size:5.8pt;line-height:1.15;break-inside:avoid}'+
+    '.legend-item{display:flex;align-items:center;gap:1mm}.legend-swatch{display:inline-block;width:4mm;height:3mm;background:#000!important;border:1px solid #000;flex:0 0 auto}.print-date{font-weight:700;white-space:nowrap}'+
+    'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:'+font+'pt;page-break-inside:auto;break-inside:auto}'+
+    'thead{display:table-header-group}tbody{display:table-row-group}tr{page-break-inside:avoid!important;break-inside:avoid!important}'+
+    'th,td{border:1px solid #222;padding:'+pad+' .55mm;text-align:left;line-height:1.15;vertical-align:middle}th{background:#e8e8e8}'+
+    'th:nth-child(1){width:4%}th:nth-child(2){width:22%}th:nth-child(3){width:14%}th:nth-child(4){width:10%}th:nth-child(5){width:9%}th:nth-child(6){width:14%}th:nth-child(7){width:27%}'+
+    '.exp{display:block;padding:.25mm .5mm;margin:.15mm 0;border-radius:1mm}'+
+    '.exp.expired{background:#f5b7b1;color:#7b0000;font-weight:700}.exp.urgent{background:#ffd2a8;color:#6f3100;font-weight:700}.exp.near{background:#fff0a8;color:#5d4a00;font-weight:700}.exp.normal{background:#d8f3dc;color:#14532d}.exp.missing{background:#e5e7eb;color:#374151}'+
+    '.out td{background:#f3dada;font-weight:700}'+
+    '.near-expiry-30 td,.near-expiry-30 td *{background:#000!important;background-color:#000!important;color:#fff!important;-webkit-text-fill-color:#fff!important;forced-color-adjust:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}'+
+    '.near-expiry-30 .exp{border:0!important}'+
+    '.foot{text-align:center;font-size:6pt;margin-top:1.2mm;page-break-inside:avoid;break-inside:avoid}'+
+    '@media print{html,body,.sheet{height:auto!important;max-height:none!important;overflow:visible!important}table{page-break-inside:auto!important;break-inside:auto!important}thead{display:table-header-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}}'+
+    '</style></head><body><div class="sheet">'+
+    (typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'')+
+    '<div class="top"><div></div><div class="title"><h1>'+
+      esc(c.name||'Crash Cart')+'</h1><h2>'+esc(deptName(c.deptId))+
+      '</h2></div><div class="qr"><img src="'+qr+'"><div>Live check — no login</div></div></div>'+
+    '<div class="meta">'+
+      '<div><b>Cart:</b> '+esc(c.number||'—')+'</div>'+
+      '<div><b>Seal number:</b> '+esc(c.seal||'—')+'</div>'+
+      '<div><b>Location:</b> '+esc(c.location||'—')+'</div>'+
+      '<div><b>Last closure:</b> '+esc(closedAt?fmtDateFinal(closedAt):'—')+'</div>'+
+      '<div><b>Closed by:</b> '+esc(closedBy)+'</div>'+
+      '<div><b>System user:</b> '+esc(closedUser)+'</div>'+
+      '<div class="rules"><b>Expiry Track:</b> Expired before today · Urgent 0–'+
+        r.urgentDays+' days · Near expiry '+(r.urgentDays+1)+'–'+r.nearDays+' days</div>'+
+    '</div>'+
+    '<div class="print-legend">'+
+      '<div class="legend-item"><span class="legend-swatch"></span>'+
+        '<span>Expiry within 30 days / قريب الانتهاء خلال 30 يومًا</span></div>'+
+      '<div class="print-date">Print date / تاريخ الطباعة: '+
+        esc(printDateText)+'</div>'+
+    '</div>'+
+    '<table><thead><tr>'+
+      '<th>#</th><th>Generic name</th><th>Concentration</th>'+
+      '<th>Standard quantity</th><th>Available</th><th>Stock status</th>'+
+      '<th>Expiry date → Quantity</th>'+
+    '</tr></thead><tbody>'+rows+'</tbody></table>'+
+    '<div class="foot">Printed by: '+esc(actor().name)+' · '+
+      esc(actor().user)+' · By Ali Abudahash</div>'+
+    '</div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,250)},{once:true});setTimeout(go,1800)})();<\/script></body></html>';
+
+  var w=window.open('','_blank');
+  if(!w){
+    if(typeof toast==='function')toast('Allow pop-ups to print.','err');
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+
+  if(typeof auditAction==='function'){
+    auditAction('crash_cart_print',{
+      cartId:id,
+      multiPage:true,
+      leftToRight:true,
+      publicQr:true,
+      expiryColors:true,
+      nearExpiry30:true,
+      printDate:true
+    });
+  }
+};
 
 
 })();
@@ -10001,7 +10224,7 @@ window.delDept=async function(id){var dept=(gd()||[]).find(function(d){return St
 })();
 </script>
 
-<script id="asdhealth-canonical-r6-10-20260726">
+<script id="asdhealth-canonical-r6-12-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
@@ -10277,14 +10500,14 @@ body{position:fixed!important;inset:0!important}
   background-color:#fff!important;
   background-image:linear-gradient(#fff,#fff)!important;
   color:#000!important;
-  -webkit-text-fill-color:#000!important
+  forced-color-adjust:none!important
 }
 .tone-gray{
   background-color:#d2d2d2!important;
   background-image:linear-gradient(#d2d2d2,#d2d2d2)!important;
   box-shadow:inset 0 0 0 100px #d2d2d2!important;
   color:#000!important;
-  -webkit-text-fill-color:#000!important
+  forced-color-adjust:none!important
 }
 .department-title,.category-title,.medicine-item{
   width:100%;
@@ -10335,11 +10558,33 @@ body{position:fixed!important;inset:0!important}
   max-width:100%;
   padding:.58mm .72mm;
   border:1px solid transparent;
+  border-radius:.8mm;
   font-weight:800;
+  overflow:hidden;
   overflow-wrap:anywhere;
   word-break:normal;
   color:#000!important;
-  -webkit-text-fill-color:#000!important
+  -webkit-text-fill-color:#000!important;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important
+}
+.med-name:before{
+  content:attr(data-index);
+  position:absolute;
+  inset-inline-end:.7mm;
+  top:50%;
+  z-index:0;
+  transform:translateY(-50%);
+  font-size:1.05em;
+  font-weight:400;
+  line-height:1;
+  white-space:nowrap;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  opacity:.11;
+  pointer-events:none;
+  forced-color-adjust:none!important
 }
 .med-label{
   position:relative;
@@ -10347,41 +10592,59 @@ body{position:fixed!important;inset:0!important}
   display:block;
   width:100%;
   min-width:0;
-  color:inherit!important;
-  -webkit-text-fill-color:inherit!important
-}
-.med-name.high-alert:before{
-  content:"";
-  position:absolute;
-  inset:0;
-  z-index:0;
-  border-radius:.8mm;
-  pointer-events:none;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  -webkit-text-stroke:0 transparent!important;
+  text-shadow:0 0 0 #000!important;
+  opacity:1!important;
+  mix-blend-mode:normal!important;
+  forced-color-adjust:none!important;
   -webkit-print-color-adjust:exact!important;
   print-color-adjust:exact!important
 }
-.medicine-item.tone-white .med-name.high-alert:before{
+.medicine-item.tone-white .med-name.high-alert{
   background:#000!important;
+  background-color:#000!important;
   background-image:linear-gradient(#000,#000)!important;
-  border:1px solid #000!important
+  border:1px solid #000!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  forced-color-adjust:none!important
 }
-.medicine-item.tone-white .med-name.high-alert,
 .medicine-item.tone-white .med-name.high-alert .med-label{
   color:#fff!important;
   -webkit-text-fill-color:#fff!important;
-  text-shadow:none!important
+  -webkit-text-stroke:.01px #fff!important;
+  text-shadow:0 0 0 #fff!important;
+  opacity:1!important
 }
-.medicine-item.tone-gray .med-name.high-alert:before{
+.medicine-item.tone-white .med-name.high-alert:before{
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  opacity:.18
+}
+.medicine-item.tone-gray .med-name.high-alert{
   background:#fff!important;
+  background-color:#fff!important;
   background-image:linear-gradient(#fff,#fff)!important;
-  border:1.4px solid #000!important
+  border:1.4px solid #000!important;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  forced-color-adjust:none!important
 }
-.medicine-item.tone-gray .med-name.high-alert,
 .medicine-item.tone-gray .med-name.high-alert .med-label{
   color:#000!important;
   -webkit-text-fill-color:#000!important;
-  text-shadow:none!important
+  -webkit-text-stroke:.01px #000!important;
+  text-shadow:0 0 0 #000!important;
+  opacity:1!important
 }
+.medicine-item.tone-gray .med-name.high-alert:before{
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  opacity:.14
+}
+.medicine-item.tone-gray .med-name:not(.high-alert):before{opacity:.13}
 .med-name.hazard:after{
   content:"";
   position:absolute;
@@ -10426,35 +10689,91 @@ body{position:fixed!important;inset:0!important}
 }
 .qty-value.lasa{border:1.35px solid currentColor;border-radius:50%}
 .qty-box.refrigerated{
+  --snow-size:.92em;
   background:#111!important;
+  background-color:#111!important;
   background-image:linear-gradient(#111,#111)!important;
   color:#fff!important;
   -webkit-text-fill-color:#fff!important;
   border:1px solid #000;
   border-radius:.9mm;
-  padding:0
+  padding:0;
+  overflow:hidden;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important
 }
+.qty-box.refrigerated.qty-len-1{--snow-size:1.02em}
+.qty-box.refrigerated.qty-len-2{--snow-size:.92em}
+.qty-box.refrigerated.qty-len-3{--snow-size:.82em}
+.qty-box.refrigerated.qty-len-4{--snow-size:.72em}
 .qty-box.refrigerated:before{
   content:"❄";
   position:absolute;
-  inset:0;
+  left:50%;
+  top:50%;
   z-index:1;
+  width:1em;
+  height:1em;
+  max-width:68%;
+  max-height:68%;
+  transform:translate(-50%,-50%);
   display:flex;
   align-items:center;
   justify-content:center;
-  font-size:13pt;
+  overflow:hidden;
+  font-size:var(--snow-size);
   font-weight:400;
   line-height:1;
   color:#fff!important;
   -webkit-text-fill-color:#fff!important;
-  opacity:.24;
-  pointer-events:none
+  opacity:.16;
+  pointer-events:none;
+  forced-color-adjust:none!important
 }
 .qty-box.refrigerated .qty-value{
   z-index:2;
   color:#fff!important;
   -webkit-text-fill-color:#fff!important;
-  text-shadow:0 0 1px #000
+  -webkit-text-stroke:.01px #fff!important;
+  text-shadow:0 0 0 #fff,0 0 1px #000!important;
+  opacity:1!important
+}
+.qty-box.qty-len-4 .qty-value{font-size:.82em}
+@media print{
+  .tone-white,.tone-gray,.med-name,.med-label,.qty-box,.qty-value{
+    forced-color-adjust:none!important;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important
+  }
+  .medicine-item.tone-white .med-name.high-alert{
+    background:#000!important;
+    background-color:#000!important;
+    background-image:linear-gradient(#000,#000)!important;
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important
+  }
+  .medicine-item.tone-white .med-name.high-alert .med-label{
+    color:#fff!important;
+    -webkit-text-fill-color:#fff!important;
+    -webkit-text-stroke:.01px #fff!important;
+    text-shadow:0 0 0 #fff!important;
+    opacity:1!important
+  }
+  .medicine-item.tone-gray .med-name.high-alert{
+    background:#fff!important;
+    background-color:#fff!important;
+    background-image:linear-gradient(#fff,#fff)!important;
+    color:#000!important;
+    -webkit-text-fill-color:#000!important
+  }
+  .medicine-item.tone-gray .med-name.high-alert .med-label{
+    color:#000!important;
+    -webkit-text-fill-color:#000!important;
+    -webkit-text-stroke:.01px #000!important;
+    text-shadow:0 0 0 #000!important;
+    opacity:1!important
+  }
 }
 .print-error{padding:15mm;text-align:center;font-family:Arial,Tahoma,sans-serif}
 @media print and (orientation:landscape){
@@ -10536,12 +10855,30 @@ function partitionRows(count,orientation){
 function rowHtml(row){
   var tone=toneClass(row);
   var nameClass='med-name'+(row.high?' high-alert':'')+(row.hazard?' hazard':'');
-  var quantityClass='qty-box'+(row.cold?' refrigerated':'');
+  var quantityText=String(row.qty==null?'':row.qty);
+  var quantityDigits=quantityText.replace(/[^0-9]/g,'').length;
+  var quantityLengthClass=quantityDigits<=1?'qty-len-1':quantityDigits===2?'qty-len-2':quantityDigits===3?'qty-len-3':'qty-len-4';
+  var quantityClass='qty-box '+quantityLengthClass+(row.cold?' refrigerated':'');
   var valueClass='qty-value'+(row.lasa?' lasa':'');
+  var isWhiteHigh=row.high&&row.tone==='white';
+  var isGrayHigh=row.high&&row.tone==='gray';
+  var nameStyle=isWhiteHigh
+    ?'background:#000!important;background-color:#000!important;background-image:linear-gradient(#000,#000)!important;border:1px solid #000!important;color:#fff!important;-webkit-text-fill-color:#fff!important;forced-color-adjust:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;'
+    :isGrayHigh
+      ?'background:#fff!important;background-color:#fff!important;background-image:linear-gradient(#fff,#fff)!important;border:1.4px solid #000!important;color:#000!important;-webkit-text-fill-color:#000!important;forced-color-adjust:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;'
+      :'color:#000!important;-webkit-text-fill-color:#000!important;forced-color-adjust:none!important;';
+  var labelStyle=isWhiteHigh
+    ?'color:#fff!important;-webkit-text-fill-color:#fff!important;-webkit-text-stroke:.01px #fff!important;text-shadow:0 0 0 #fff!important;forced-color-adjust:none!important;opacity:1!important;'
+    :'color:#000!important;-webkit-text-fill-color:#000!important;-webkit-text-stroke:.01px #000!important;text-shadow:0 0 0 #000!important;forced-color-adjust:none!important;opacity:1!important;';
+
   return '<div class="flow-chunk '+tone+'">'+
     '<div class="medicine-item '+tone+'" data-positive="1" data-order="'+esc(row.orderId)+'">'+
-      '<span class="'+nameClass+'"><span class="med-label">'+esc(row.name)+'</span></span>'+
-      '<span class="'+quantityClass+'"><span class="'+valueClass+'">'+esc(row.qty)+'</span></span>'+
+      '<span class="'+nameClass+'" data-index="'+esc(row.itemIndex)+'" style="'+nameStyle+'">'+
+        '<span class="med-label" style="'+labelStyle+'">'+esc(row.name)+'</span>'+
+      '</span>'+
+      '<span class="'+quantityClass+'" data-qty-length="'+quantityDigits+'">'+
+        '<span class="'+valueClass+'">'+esc(quantityText)+'</span>'+
+      '</span>'+
     '</div>'+
   '</div>';
 }
@@ -10775,11 +11112,54 @@ function fsR5NormalizeControlled(rows,source){
     row=row||{};
     var id=row.medId||row.medicationId||row.id;
     var m=fsR5ControlledMedicine(id,row);
+    var rawBatches=[];
+
+    if(Array.isArray(row.batches))rawBatches=row.batches;
+    else if(Array.isArray(row.batchList))rawBatches=row.batchList;
+    else if(Array.isArray(row.lots))rawBatches=row.lots;
+    else if(Array.isArray(row.expiryBatches))rawBatches=row.expiryBatches;
+    else if(
+      row.expiry||row.expiryDate||row.expDate||row.date||
+      row.lot||row.lotNo||row.batch||row.batchNo||row.batchNumber
+    ){
+      rawBatches=[row];
+    }
+
+    var batches=rawBatches.map(function(batch){
+      batch=batch||{};
+      var lot=batch.lot!=null?batch.lot:
+        (batch.lotNo!=null?batch.lotNo:
+        (batch.batch!=null?batch.batch:
+        (batch.batchNo!=null?batch.batchNo:
+        (batch.batchNumber!=null?batch.batchNumber:''))));
+      var expiry=batch.expiry||batch.expiryDate||batch.expDate||batch.date||'';
+      var qty=batch.qty!=null?batch.qty:
+        (batch.quantity!=null?batch.quantity:
+        (batch.available!=null?batch.available:
+        (batch.actualQty!=null?batch.actualQty:'')));
+
+      return {
+        lot:fsR5S(lot,''),
+        expiry:fsR5S(expiry,''),
+        qty:qty===''?'':fsR5N(qty)
+      };
+    }).filter(function(batch){
+      return batch.lot||batch.expiry||batch.qty!=='';
+    });
+
     return {
-      key:fsR5S(id,'row_'+i),name:m.name,moh:m.moh,nupco:m.nupco,classification:m.classification,
-      required:row.requiredQty!=null?fsR5N(row.requiredQty):(row.required!=null?fsR5N(row.required):(row.max!=null?fsR5N(row.max):'—')),
-      actual:row.actualQty!=null?fsR5N(row.actualQty):(row.available!=null?fsR5N(row.available):fsR5N(row.qty)),
-      batches:Array.isArray(row.batches)?row.batches:[],source:source
+      key:fsR5S(id,'row_'+i),
+      name:m.name,
+      moh:m.moh,
+      nupco:m.nupco,
+      classification:m.classification,
+      required:row.requiredQty!=null?fsR5N(row.requiredQty):
+        (row.required!=null?fsR5N(row.required):
+        (row.max!=null?fsR5N(row.max):'—')),
+      actual:row.actualQty!=null?fsR5N(row.actualQty):
+        (row.available!=null?fsR5N(row.available):fsR5N(row.qty)),
+      batches:batches,
+      source:source
     };
   });
 }
@@ -10903,12 +11283,80 @@ function fsR5DMY(v){
   var d=new Date(v);if(isNaN(d))return String(v);
   return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
 }
+function fsR12DateOnly(value){
+  if(!value)return null;
+  if(value instanceof Date){
+    if(isNaN(value.getTime()))return null;
+    return Date.UTC(value.getFullYear(),value.getMonth(),value.getDate());
+  }
+
+  var text=String(value).trim();
+  var match=text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if(match)return Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]));
+
+  var date=new Date(value);
+  if(isNaN(date.getTime()))return null;
+  return Date.UTC(date.getFullYear(),date.getMonth(),date.getDate());
+}
+
+function fsR12PrintDate(){
+  var now=new Date();
+  return {
+    date:now,
+    dayUtc:Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()),
+    text:String(now.getDate()).padStart(2,'0')+'/'+
+      String(now.getMonth()+1).padStart(2,'0')+'/'+
+      now.getFullYear()
+  };
+}
+
+function fsR12ExpiryDays(value,printDayUtc){
+  var expiryDay=fsR12DateOnly(value);
+  if(expiryDay===null)return null;
+  return Math.round((expiryDay-printDayUtc)/86400000);
+}
+
+function fsR12HasNearExpiry(batches,days,printDayUtc){
+  return (Array.isArray(batches)?batches:[]).some(function(batch){
+    var remaining=fsR12ExpiryDays(batch&&batch.expiry,printDayUtc);
+    return remaining!==null&&remaining>=0&&remaining<=days;
+  });
+}
+
+function fsR12BatchLotHtml(batches){
+  if(!Array.isArray(batches)||!batches.length)return '—';
+  return batches.map(function(batch,index){
+    var lot=fsR5S(batch&&batch.lot,'');
+    var qty=batch&&batch.qty!==''&&batch.qty!=null?fsR5N(batch.qty):'';
+    var label=lot||('Batch '+(index+1));
+    return '<div class="ctl-batch-line"><b>'+fsR5Esc(label)+'</b>'+
+      (qty!==''?' <span class="chip">'+fsR5Esc(qty)+'</span>':'')+'</div>';
+  }).join('');
+}
+
+function fsR12BatchExpiryHtml(batches){
+  if(!Array.isArray(batches)||!batches.length)return '—';
+  return batches.map(function(batch){
+    return '<div class="ctl-expiry-line">'+
+      fsR5Esc(fsR5DMY(batch&&batch.expiry))+
+      '</div>';
+  }).join('');
+}
+
 function fsR5BatchText(batches,html){
   if(!Array.isArray(batches)||!batches.length)return '—';
-  return batches.map(function(b){
-    var t=(b&&b.qty!=null?fsR5N(b.qty)+' × ':'')+fsR5DMY(b&&(b.expiry||b.date))+(b&&b.lot?' · Lot '+fsR5S(b.lot,''):'');
-    return html?fsR5Esc(t):t;
-  }).join(html?' ; ':' ; ');
+  return batches.map(function(batch,index){
+    var lot=fsR5S(batch&&batch.lot,'');
+    var expiry=fsR5DMY(batch&&batch.expiry);
+    var qty=batch&&batch.qty!==''&&batch.qty!=null?fsR5N(batch.qty):'';
+    var parts=[];
+    if(lot)parts.push('Lot '+lot);
+    else parts.push('Batch '+(index+1));
+    if(qty!=='')parts.push('Qty '+qty);
+    parts.push('Exp '+expiry);
+    if(!html)return parts.join(' · ');
+    return '<div class="ctl-batch-print-line">'+parts.map(fsR5Esc).join(' · ')+'</div>';
+  }).join(html?'':' ; ');
 }
 function fsR5Class(v){return String(v||'').toLowerCase()==='psychotropic'?'Psychotropic / نفسي':'Narcotic / مخدر'}
 function fsR5ExpiryDays(row){
@@ -10945,54 +11393,108 @@ window.renderDepartmentControlledPanel=async function(){
 
   try{
     var requested=fsR5ControlledDept();
-    var result=await fsLoginTimeout(fsR5ControlledRows(requested),18000,'Controlled custody loading timed out.');
-    var dept=result.dept||requested,rows=result.rows||[],days=fsR5NearDays(dept);
+    var result=await fsLoginTimeout(
+      fsR5ControlledRows(requested),
+      18000,
+      'Controlled custody loading timed out.'
+    );
+    var dept=result.dept||requested;
+    var rows=result.rows||[];
+    var days=fsR5NearDays(dept);
+
     var shown=window.CTL_DEPT_ONLY_SOON?rows.filter(function(row){
       var remaining=fsR5ExpiryDays(row);
       return remaining!==null&&remaining<=days;
     }):rows;
+
     var soon=rows.filter(function(row){
       var remaining=fsR5ExpiryDays(row);
       return remaining!==null&&remaining<=days&&remaining>0;
     }).length;
+
     var expired=rows.filter(function(row){
       var remaining=fsR5ExpiryDays(row);
       return remaining!==null&&remaining<=0;
     }).length;
+
     var body=shown.map(function(row,index){
-      return '<tr><td>'+(index+1)+'</td><td>'+fsR5Esc(row.moh||'—')+'</td><td>'+fsR5Esc(row.nupco||'—')+'</td>'+
-        '<td><b>'+fsR5Esc(row.name)+'</b></td><td>'+fsR5Esc(fsR5Class(row.classification))+'</td>'+
-        '<td>'+fsR5Esc(row.required)+'</td><td>'+fsR5Esc(row.actual)+'</td><td>'+fsR5BatchText(row.batches,true)+'</td></tr>';
+      return '<tr>'+
+        '<td>'+(index+1)+'</td>'+
+        '<td>'+fsR5Esc(row.moh||'—')+'</td>'+
+        '<td>'+fsR5Esc(row.nupco||'—')+'</td>'+
+        '<td><b>'+fsR5Esc(row.name)+'</b></td>'+
+        '<td>'+fsR5Esc(fsR5Class(row.classification))+'</td>'+
+        '<td>'+fsR5Esc(row.required)+'</td>'+
+        '<td>'+fsR5Esc(row.actual)+'</td>'+
+        '<td class="ctl-batch-number-cell">'+fsR12BatchLotHtml(row.batches)+'</td>'+
+        '<td class="ctl-expiry-date-cell">'+fsR12BatchExpiryHtml(row.batches)+'</td>'+
+      '</tr>';
     }).join('');
+
     if(!body){
-      body='<tr><td colspan="8" style="text-align:center;padding:24px">No medicines are assigned to this department custody / لا توجد أدوية مسندة لعهدة هذا القسم</td></tr>';
+      body='<tr><td colspan="9" style="text-align:center;padding:24px">'+
+        'No medicines are assigned to this department custody / لا توجد أدوية مسندة لعهدة هذا القسم'+
+      '</td></tr>';
     }
 
-    var deptName=effective.deptName||effective.departmentName||window.floorstockDepartmentName({id:dept});
+    var deptName=effective.deptName||effective.departmentName||
+      window.floorstockDepartmentName({id:dept});
+
     host.innerHTML=
-      '<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div><div class="stitle">My controlled list / عهدتي</div>'+
-      '<div class="ssub" style="margin:0">Controlled Custody — '+fsR5Esc(deptName)+' · Read-only</div></div>'+
-      '<span class="badge bbl">View only / للاطلاع</span></div>'+
+      '<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">'+
+        '<div><div class="stitle">My controlled list / عهدتي</div>'+
+        '<div class="ssub" style="margin:0">Controlled Custody — '+
+          fsR5Esc(deptName)+' · Read-only</div></div>'+
+        '<span class="badge bbl">View only / للاطلاع</span>'+
+      '</div>'+
       '<div class="card"><div class="cb"><div class="ctl-rulebar">'+
-      '<div class="fg"><label>Near-expiry rule (days)</label><input id="ctl-dept-final-days" type="number" min="1" value="'+days+'"></div>'+
-      '<button class="btn bp" onclick="ctlDeptFinalApply()">Apply rule</button>'+
-      '<button class="btn bg" onclick="ctlDeptFinalToggle()">'+(window.CTL_DEPT_ONLY_SOON?'Show all medicines':'Show near-expiry only')+'</button>'+
-      '<button class="btn bp" id="ctl-dept-authoritative-print-btn" onclick="ctlConfirmDepartmentPrint(event)">🖨 Print My controlled list / طباعة عهدتي</button>'+
-      '</div><div class="ctl-summary"><div class="sc"><div class="sl">Total medicines</div><div class="sv">'+rows.length+'</div></div>'+
-      '<div class="sc"><div class="sl">Near expiry ≤ '+days+' days</div><div class="sv">'+soon+'</div></div>'+
-      '<div class="sc"><div class="sl">Expired</div><div class="sv">'+expired+'</div></div></div>'+
-      '<div class="fhint" style="margin-top:8px">Data source: '+fsR5Esc(result.source||'unknown')+'</div></div></div>'+
-      '<div class="card"><div class="ch"><span class="ct">Controlled and Restricted Medicines List / قائمة الأدوية المخدرة والمقيدة</span></div>'+
-      '<div class="tw"><table><thead><tr><th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th><th>Class</th><th>Required</th><th>Actual</th><th>Batch & Expiry</th></tr></thead>'+
-      '<tbody>'+body+'</tbody></table></div></div>';
+        '<div class="fg"><label>Near-expiry rule (days)</label>'+
+          '<input id="ctl-dept-final-days" type="number" min="1" value="'+days+'"></div>'+
+        '<button class="btn bp" onclick="ctlDeptFinalApply()">Apply rule</button>'+
+        '<button class="btn bg" onclick="ctlDeptFinalToggle()">'+
+          (window.CTL_DEPT_ONLY_SOON?'Show all medicines':'Show near-expiry only')+
+        '</button>'+
+        '<button class="btn bp" id="ctl-dept-authoritative-print-btn" '+
+          'onclick="ctlConfirmDepartmentPrint(event)">🖨 Print My controlled list / طباعة عهدتي</button>'+
+      '</div>'+
+      '<div class="ctl-summary">'+
+        '<div class="sc"><div class="sl">Total medicines</div><div class="sv">'+rows.length+'</div></div>'+
+        '<div class="sc"><div class="sl">Near expiry ≤ '+days+' days</div><div class="sv">'+soon+'</div></div>'+
+        '<div class="sc"><div class="sl">Expired</div><div class="sv">'+expired+'</div></div>'+
+      '</div>'+
+      '<div class="fhint" style="margin-top:8px">Data source: '+
+        fsR5Esc(result.source||'unknown')+'</div></div></div>'+
+      '<div class="card">'+
+        '<div class="ch"><span class="ct">Controlled and Restricted Medicines List / قائمة الأدوية المخدرة والمقيدة</span></div>'+
+        '<div class="fhint" style="padding:0 14px 8px">Scroll horizontally when needed to view Batch No. and Expiry Date / مرّر أفقيًا عند الحاجة لرؤية رقم التشغيلة وتاريخ الصلاحية</div>'+
+        '<div class="tw ctl-dept-custody-scroll">'+
+          '<table class="ctl-dept-custody-table">'+
+            '<colgroup>'+
+              '<col style="width:4%"><col style="width:8%"><col style="width:9%">'+
+              '<col style="width:22%"><col style="width:10%"><col style="width:7%">'+
+              '<col style="width:7%"><col style="width:17%"><col style="width:16%">'+
+            '</colgroup>'+
+            '<thead><tr>'+
+              '<th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th>'+
+              '<th>Class</th><th>Required</th><th>Actual</th>'+
+              '<th>Batch No. / رقم التشغيلة</th>'+
+              '<th>Expiry Date / تاريخ الصلاحية</th>'+
+            '</tr></thead>'+
+            '<tbody>'+body+'</tbody>'+
+          '</table>'+
+        '</div>'+
+      '</div>';
+
     host.style.display='block';
     return true;
   }catch(error){
     console.error('Department controlled custody render failed.',error);
     host.style.display='block';
-    host.innerHTML='<div class="card"><div class="cb"><div class="alert-banner">Controlled custody could not be loaded / تعذر تحميل عهدة القسم</div>'+
+    host.innerHTML='<div class="card"><div class="cb">'+
+      '<div class="alert-banner">Controlled custody could not be loaded / تعذر تحميل عهدة القسم</div>'+
       '<p style="margin-top:10px">'+fsR5Esc(error&&error.message||error)+'</p>'+
-      '<button class="btn bp" type="button" onclick="renderDepartmentControlledPanel()">Retry / إعادة المحاولة</button></div></div>';
+      '<button class="btn bp" type="button" onclick="renderDepartmentControlledPanel()">'+
+        'Retry / إعادة المحاولة</button></div></div>';
     return false;
   }
 };
@@ -11004,25 +11506,47 @@ function fsR5Logo(){try{if(typeof window.ctlLogo==='function')return window.ctlL
 function fsR5PrintSettings(dept){try{if(typeof window.ctlPrintSettings==='function')return window.ctlPrintSettings(dept)||{}}catch(e){}return {}}
 function fsR5ControlledPrintHtml(dept,rows){
   var effective=window.MASTER_EFFECTIVE||window.CU||{};
-  var name=window.floorstockDepartmentName({id:dept,name:effective.deptName||effective.departmentName});
-  var settings=fsR5PrintSettings(dept),url=fsR5PublicUrl(dept);
+  var name=window.floorstockDepartmentName({
+    id:dept,
+    name:effective.deptName||effective.departmentName
+  });
+  var settings=fsR5PrintSettings(dept);
+  var url=fsR5PublicUrl(dept);
   var official=typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'';
-  var qr='https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url);
+  var printInfo=fsR12PrintDate();
+  var qr='https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+
+    encodeURIComponent(url);
+
   var body=rows.map(function(row,index){
-    return '<tr class="custody-row"><td>'+(index+1)+'</td><td>'+fsR5Esc(row.moh||'—')+'</td><td>'+fsR5Esc(row.nupco||'—')+'</td>'+
-      '<td class="medicine">'+fsR5Esc(row.name)+'</td><td>'+fsR5Esc(fsR5Class(row.classification))+'</td>'+
-      '<td>'+fsR5Esc(row.required)+'</td><td>'+fsR5Esc(row.actual)+'</td><td class="batch">'+fsR5BatchText(row.batches,true)+'</td></tr>';
+    var near=fsR12HasNearExpiry(row.batches,30,printInfo.dayUtc);
+    return '<tr class="custody-row'+(near?' near-expiry-30':'')+'">'+
+      '<td>'+(index+1)+'</td>'+
+      '<td>'+fsR5Esc(row.moh||'—')+'</td>'+
+      '<td>'+fsR5Esc(row.nupco||'—')+'</td>'+
+      '<td class="medicine">'+fsR5Esc(row.name)+'</td>'+
+      '<td>'+fsR5Esc(fsR5Class(row.classification))+'</td>'+
+      '<td>'+fsR5Esc(row.required)+'</td>'+
+      '<td>'+fsR5Esc(row.actual)+'</td>'+
+      '<td class="batch">'+fsR5BatchText(row.batches,true)+'</td>'+
+    '</tr>';
   }).join('');
+
   var signatures=[
     ['Head Nurse / رئيس التمريض',settings.nursingHead||''],
-    ['Controlled Medicines Officer / مسؤول الأدوية المخدرة والمقيدة',settings.controlledOfficer||settings.controlledPharmacyOfficer||''],
+    ['Controlled Medicines Officer / مسؤول الأدوية المخدرة والمقيدة',
+      settings.controlledOfficer||settings.controlledPharmacyOfficer||''],
     ['Pharmacy Manager / مدير الصيدلية',settings.pharmacyManager||'']
   ].map(function(signature){
-    return '<div class="signature"><b>'+fsR5Esc(signature[0])+'</b><span>'+fsR5Esc(signature[1]||'')+'</span></div>';
+    return '<div class="signature"><b>'+fsR5Esc(signature[0])+'</b>'+
+      '<span>'+fsR5Esc(signature[1]||'')+'</span></div>';
   }).join('');
 
   var css=`@page{size:auto;margin:3mm}
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important
+}
 html,body{
   margin:0!important;
   padding:0!important;
@@ -11059,13 +11583,35 @@ body{position:fixed!important;inset:0!important}
   align-items:center;
   min-height:20mm;
   border-bottom:1.4px solid #000;
-  margin-bottom:1.2mm
+  margin-bottom:.8mm
 }
 .titles{text-align:center}
 .titles h1{font-size:13pt;margin:0}
 .titles h2{font-size:10pt;margin:.6mm 0}
 .titles h3{font-size:8.2pt;margin:0}
 .qr{width:var(--qr);height:var(--qr);justify-self:end;object-fit:contain}
+.print-legend{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:3mm;
+  margin:0 0 .8mm;
+  padding:.45mm .8mm;
+  border:1px solid #000;
+  font-size:5.9pt;
+  line-height:1.15;
+  break-inside:avoid
+}
+.legend-item{display:flex;align-items:center;gap:1mm}
+.legend-swatch{
+  display:inline-block;
+  width:4mm;
+  height:3mm;
+  background:#000!important;
+  border:1px solid #000;
+  flex:0 0 auto
+}
+.print-date{white-space:nowrap;font-weight:700}
 table{
   width:100%;
   border-collapse:collapse;
@@ -11085,6 +11631,18 @@ th,td{
 th{font-weight:900}
 .medicine,.batch{text-align:left}
 .medicine{font-weight:800}
+.ctl-batch-print-line{display:block;padding:.15mm 0}
+.near-expiry-30 td,
+.near-expiry-30 td *,
+.near-expiry-30 .ctl-batch-print-line{
+  background:#000!important;
+  background-color:#000!important;
+  color:#fff!important;
+  -webkit-text-fill-color:#fff!important;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important
+}
 .signatures{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -11099,6 +11657,32 @@ th{font-weight:900}
   font-size:6.2pt
 }
 .signature b,.signature span{display:block}
+.electronic-certification{
+  margin-top:1.6mm;
+  padding-top:.9mm;
+  border-top:.7px solid #777;
+  text-align:center;
+  font-size:5.7pt;
+  line-height:1.35;
+  font-weight:700;
+  color:#000!important;
+  -webkit-text-fill-color:#000!important;
+  break-inside:avoid;
+  page-break-inside:avoid;
+  forced-color-adjust:none!important;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important
+}
+.electronic-certification .cert-ar{
+  display:block;
+  direction:rtl;
+  unicode-bidi:plaintext
+}
+.electronic-certification .cert-en{
+  display:block;
+  direction:ltr;
+  unicode-bidi:plaintext
+}
 .footer{text-align:center;font-size:5.8pt;margin-top:.7mm}
 .print-error{padding:15mm;text-align:center}
 @media print and (orientation:landscape){
@@ -11120,12 +11704,44 @@ th{font-weight:900}
   .portrait-layout{display:block!important;visibility:visible!important}
 }`;
 
+  var legend=
+    '<div class="print-legend">'+
+      '<div class="legend-item"><span class="legend-swatch"></span>'+
+        '<span>Expiry within 30 days / قريب الانتهاء خلال 30 يومًا</span></div>'+
+      '<div class="print-date">Print date / تاريخ الطباعة: '+
+        fsR5Esc(printInfo.text)+'</div>'+
+    '</div>';
+
   var content='<div class="fit">'+official+
-    '<header class="document-head"><div class="titles"><h1>Controlled and Restricted Medicines List</h1><h2>قائمة الأدوية المخدرة والمقيدة</h2><h3>My controlled list / عهدتي — '+fsR5Esc(name)+'</h3></div>'+
-    '<img class="qr" src="'+fsR5Esc(qr)+'" alt="Live controlled list QR"></header>'+
-    '<table><colgroup><col style="width:4%"><col style="width:8%"><col style="width:9%"><col style="width:25%"><col style="width:11%"><col style="width:7%"><col style="width:7%"><col style="width:29%"></colgroup>'+
-    '<thead><tr><th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine / الدواء</th><th>Class / التصنيف</th><th>Required / المطلوب</th><th>Actual / الفعلي</th><th>Batch & Expiry / الدفعة والانتهاء</th></tr></thead>'+
-    '<tbody>'+body+'</tbody></table><div class="signatures">'+signatures+'</div><div class="footer">Live list: '+fsR5Esc(url)+'</div></div>';
+    '<header class="document-head">'+
+      '<div class="titles">'+
+        '<h1>Controlled and Restricted Medicines List</h1>'+
+        '<h2>قائمة الأدوية المخدرة والمقيدة</h2>'+
+        '<h3>My controlled list / عهدتي — '+fsR5Esc(name)+'</h3>'+
+      '</div>'+
+      '<img class="qr" src="'+fsR5Esc(qr)+'" alt="Live controlled list QR">'+
+    '</header>'+
+    legend+
+    '<table>'+
+      '<colgroup>'+
+        '<col style="width:4%"><col style="width:8%"><col style="width:9%">'+
+        '<col style="width:25%"><col style="width:11%"><col style="width:7%">'+
+        '<col style="width:7%"><col style="width:29%">'+
+      '</colgroup>'+
+      '<thead><tr>'+
+        '<th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine / الدواء</th>'+
+        '<th>Class / التصنيف</th><th>Required / المطلوب</th>'+
+        '<th>Actual / الفعلي</th><th>Batch & Expiry / الدفعة والانتهاء</th>'+
+      '</tr></thead>'+
+      '<tbody>'+body+'</tbody>'+
+    '</table>'+
+    '<div class="signatures">'+signatures+'</div>'+
+    '<div class="electronic-certification">'+
+      '<span class="cert-ar">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم</span>'+
+      '<span class="cert-en">This list is electronically approved and certified and does not require a stamp.</span>'+
+    '</div>'+
+    '<div class="footer">Live list: '+fsR5Esc(url)+'</div>'+
+  '</div>';
 
   var runtime=`(function(){
 function imagesReady(){
@@ -11139,7 +11755,8 @@ function imagesReady(){
   }));
 }
 function over(layout,fit){
-  return fit.scrollHeight>layout.clientHeight+1||fit.scrollWidth>layout.clientWidth+1;
+  return fit.scrollHeight>layout.clientHeight+1||
+    fit.scrollWidth>layout.clientWidth+1;
 }
 function fitOne(layout){
   var fit=layout.querySelector('.fit');
@@ -11182,7 +11799,8 @@ function fitOne(layout){
   var expected=Number(layout.dataset.expected||0);
   var actual=layout.querySelectorAll('.custody-row').length;
   if(expected===0||actual!==expected){
-    layout.innerHTML='<div class="print-error"><h2>Controlled list integrity check failed</h2><p>Expected '+expected+' rows; rendered '+actual+'.</p></div>';
+    layout.innerHTML='<div class="print-error"><h2>Controlled list integrity check failed</h2>'+
+      '<p>Expected '+expected+' rows; rendered '+actual+'.</p></div>';
     layout.dataset.failed='1';
   }else{
     layout.dataset.ready='1';
@@ -11207,14 +11825,20 @@ function start(){
     if(document.fonts&&document.fonts.ready){
       document.fonts.ready.then(function(){
         fitAll();
-        if(document.body.dataset.ready==='1')setTimeout(function(){window.focus();window.print()},180);
+        if(document.body.dataset.ready==='1'){
+          setTimeout(function(){window.focus();window.print()},180);
+        }
       },function(){
         fitAll();
-        if(document.body.dataset.ready==='1')setTimeout(function(){window.focus();window.print()},180);
+        if(document.body.dataset.ready==='1'){
+          setTimeout(function(){window.focus();window.print()},180);
+        }
       });
     }else{
       fitAll();
-      if(document.body.dataset.ready==='1')setTimeout(function(){window.focus();window.print()},180);
+      if(document.body.dataset.ready==='1'){
+        setTimeout(function(){window.focus();window.print()},180);
+      }
     }
   });
 }
@@ -11223,11 +11847,15 @@ window.addEventListener('load',start,{once:true});
 
   function layoutHtml(orientation){
     var label=orientation==='landscape'?'landscape-layout':'portrait-layout';
-    return '<section class="controlled-layout '+label+'" data-orientation="'+orientation+'" data-expected="'+rows.length+'">'+content+'</section>';
+    return '<section class="controlled-layout '+label+
+      '" data-orientation="'+orientation+
+      '" data-expected="'+rows.length+'">'+content+'</section>';
   }
 
-  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
-    '<title>'+fsR5Esc(name)+' — My controlled list</title><style>'+css+'</style></head><body>'+
+  return '<!doctype html><html><head><meta charset="utf-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>'+fsR5Esc(name)+' — My controlled list</title>'+
+    '<style>'+css+'</style></head><body>'+
     '<main class="sheet">'+layoutHtml('landscape')+layoutHtml('portrait')+'</main>'+
     '<script>'+runtime+'<\/script></body></html>';
 }
