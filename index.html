@@ -8606,6 +8606,17 @@ function canCatalogC(){return masterC()||roleC()==='controlled_pharmacy'}
 function canWarehouseC(){return masterC()||roleC()==='warehouse'}
 function canPharmacyC(){return masterC()||roleC()==='pharmacy'||roleC()==='controlled_pharmacy'}
 function canDispenseC(){return masterC()||roleC()==='pharmacy'||roleC()==='controlled_pharmacy'}
+window.canControlledPharmacyStorage=function(){
+  try{
+    var permissions=window.CU&&CU.permissions;
+    return masterC()||
+      roleC()==='controlled_pharmacy'||
+      !!(permissions&&permissions.controlledStorage===true);
+  }catch(error){
+    console.error('Controlled storage permission check failed:',error);
+    return false;
+  }
+};
 function fmtBatchC(list){return (list||[]).length?(list||[]).map(function(b){return '<div><span class="chip">'+numC(b.qty)+'</span> '+escC(typeof ctlFmtDMY==='function'?ctlFmtDMY(b.expiry):(b.expiry||'—'))+(b.lot?' · '+escC(b.lot):'')+'</div>'}).join(''):'—'}
 function classC(m){return String((m&&m.classification)||'narcotic')==='psychotropic'?'<span class="badge bpu">Psychotropic / نفسي</span>':'<span class="badge brd">Narcotic / مخدر</span>'}
 function statusC(m,w,p){try{return typeof ctlStatus==='function'?ctlStatus(m,w,p):{key:'ok',html:'<span class="badge bgn">OK</span>'}}catch(e){return {key:'ok',html:'<span class="badge bgn">OK</span>'}}}
@@ -8656,7 +8667,7 @@ window.ctlTabs=function(){
     tabs=[['overview','Controlled stock / المخزون المقيد']];
   }else{
     tabs=[['overview','Controlled stock / المخزون المقيد']];
-    if(typeof canStorage==='function'&&canStorage()){
+    if(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage()){
       tabs.push(['storage','Cabinets & Shelves / الدواليب والأرفف']);
     }
     tabs.push(['departments','Inpatient departments / أقسام التنويم']);
@@ -8735,7 +8746,7 @@ window.renderControlled=function(){
   }catch(error){}
 
   window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);
-  if(window.CTL_VIEW==='storage'&&!(typeof canStorage==='function'&&canStorage())){
+  if(window.CTL_VIEW==='storage'&&!(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage())){
     window.CTL_VIEW='overview';
   }
   var displayView=window.CTL_VIEW;
@@ -11240,21 +11251,6 @@ function controlledMeds(){
   }).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
 }
 
-function storageEffectiveRole(){
-  return String((window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||(window.CU&&CU.role)||'');
-}
-function storageActualMaster(){
-  try{
-    if(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)return true;
-    if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
-    return !!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE);
-  }catch(error){return false;}
-}
-function canStorage(){
-  if(storageActualMaster())return true;
-  if(window.CU&&CU.permissions&&CU.permissions.controlledStorage===true)return true;
-  return storageEffectiveRole()==='controlled_pharmacy';
-}
 function rowLetter(index){
   var output='',number=index+1;
   while(number>0){number--;output=String.fromCharCode(65+(number%26))+output;number=Math.floor(number/26);}
@@ -11352,7 +11348,7 @@ window.controlledStorageEditUnit=function(unitId){
   E('controlled-storage-name').focus();E('controlled-storage-name').scrollIntoView({behavior:'smooth',block:'center'});
 };
 window.controlledStorageSaveUnit=async function(){
-  if(!canStorage())return toast('You are not authorized to manage controlled-pharmacy storage.','err');
+  if(!(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage()))return toast('You are not authorized to manage controlled-pharmacy storage.','err');
   var name=String((E('controlled-storage-name')||{}).value||'').trim();
   var type=String((E('controlled-storage-type')||{}).value||'cabinet');
   var counts=storageReadCounts();var editId=String((E('controlled-storage-edit-id')||{}).value||'');var button=E('controlled-storage-save');
@@ -11394,7 +11390,7 @@ function storageBatchText(medicine){
 window.renderControlledStorage=async function(){
   var panel=E('ctl-storage-view'),notice=E('controlled-storage-auth-message'),workspace=E('controlled-storage-workspace');
   if(!panel||!notice||!workspace)return;
-  if(!canStorage()){
+  if(!(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage())){
     notice.style.display='block';notice.textContent='Not authorized. This tab is available to the actual Master, the Controlled Medicines Pharmacy Officer, or a user with the controlledStorage permission.';workspace.style.display='none';return;
   }
   notice.style.display='none';workspace.style.display='block';
@@ -11481,7 +11477,7 @@ async function publicStorageView(){
   }catch(error){host.innerHTML='<div style="color:#b00">'+esc(error&&error.message||error)+'</div>';}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
-})();</script><script id="asdhealth-canonical-r6-22-20260726">
+})();</script><script id="asdhealth-canonical-r6-23-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
