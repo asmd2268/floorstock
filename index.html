@@ -11231,24 +11231,60 @@ async function removeLegacyDepartmentStorage(){
   }
 }
 
+function normalizeControlledStorageClassification(value){
+  value=String(value||'').trim().toLowerCase();
+  return value==='psychotropic'?'psychotropic':'narcotic';
+}
+
 function controlledMeds(){
   var catalog=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[];
   var pharmacy=typeof ctlPharmacy==='function'?(ctlPharmacy()||{}):{};
-  var byId={};
+  var medicinesById={};
+
   catalog.forEach(function(medicine){
-    if(medicine&&medicine.id)byId[String(medicine.id)]=medicine;
-  });
-  return Object.keys(pharmacy).map(function(id){
+    if(!medicine||medicine.id==null||String(medicine.id).trim()==='')return;
+    var id=String(medicine.id);
     var stock=pharmacy[id]||{};
-    var medicine=byId[String(id)]||{};
-    return {
-      id:String(id),
+    medicinesById[id]={
+      id:id,
       name:medicine.name||stock.name||id,
-      classification:medicine.classification||stock.classification||'narcotic',
+      classification:normalizeControlledStorageClassification(
+        medicine.classification||stock.classification
+      ),
       batches:Array.isArray(stock.batches)?stock.batches:[],
-      qty:stock.qty!=null?stock.qty:(stock.actualQty!=null?stock.actualQty:0)
+      qty:stock.qty!=null
+        ?stock.qty
+        :(stock.actualQty!=null?stock.actualQty:0),
+      hasPharmacyStock:Object.prototype.hasOwnProperty.call(pharmacy,id)
     };
-  }).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
+  });
+
+  Object.keys(pharmacy).forEach(function(id){
+    if(medicinesById[id])return;
+    var stock=pharmacy[id]||{};
+    medicinesById[id]={
+      id:String(id),
+      name:stock.name||id,
+      classification:normalizeControlledStorageClassification(
+        stock.classification
+      ),
+      batches:Array.isArray(stock.batches)?stock.batches:[],
+      qty:stock.qty!=null
+        ?stock.qty
+        :(stock.actualQty!=null?stock.actualQty:0),
+      hasPharmacyStock:true
+    };
+  });
+
+  return Object.keys(medicinesById).map(function(id){
+    return medicinesById[id];
+  }).sort(function(a,b){
+    var classOrder=
+      (a.classification==='psychotropic'?1:0)-
+      (b.classification==='psychotropic'?1:0);
+    return classOrder||
+      String(a.name).localeCompare(String(b.name));
+  });
 }
 
 function rowLetter(index){
@@ -11376,9 +11412,26 @@ window.controlledStorageSaveUnit=async function(){
   finally{if(button)button.disabled=false;}
 };
 function storageMedicineOptions(medicines,selectedId){
-  var html='<option value="">Empty / فارغة</option>';
-  medicines.forEach(function(medicine){html+='<option value="'+esc(medicine.id)+'"'+(String(medicine.id)===String(selectedId)?' selected':'')+'>'+esc(medicine.name)+'</option>';});
-  return html;
+  function groupOptions(list){
+    return list.map(function(medicine){
+      return '<option value="'+esc(medicine.id)+'"'+
+        (String(medicine.id)===String(selectedId)?' selected':'')+
+        '>'+esc(medicine.name)+' — Qty '+n(medicine.qty)+'</option>';
+    }).join('');
+  }
+
+  var narcotic=medicines.filter(function(medicine){
+    return medicine.classification!=='psychotropic';
+  });
+  var psychotropic=medicines.filter(function(medicine){
+    return medicine.classification==='psychotropic';
+  });
+
+  return '<option value="">Empty / فارغة</option>'+
+    '<optgroup label="Narcotic & restricted / مخدر ومقيد ('+
+      narcotic.length+')">'+groupOptions(narcotic)+'</optgroup>'+
+    '<optgroup label="Psychotropic / نفسي ('+
+      psychotropic.length+')">'+groupOptions(psychotropic)+'</optgroup>';
 }
 function storageAssignedMap(data){
   var assigned={};data.units.forEach(function(unit){(unit.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(cell.medId)assigned[String(cell.medId)]={unitId:unit.id,unitName:unit.name,code:cell.code};});});});return assigned;
@@ -11397,15 +11450,39 @@ window.renderControlledStorage=async function(){
   await removeLegacyDepartmentStorage();
   var data=storageState();var mode=E('controlled-storage-mode');if(mode)mode.value=data.mode||'map';
   var filter=E('controlled-storage-filter'),oldFilter=filter.value;
-  filter.innerHTML='<option value="all">All pharmacy-custody medicines / كل أدوية عهدة الصيدلية</option><option value="unassigned">Not assigned / غير مضافة لخانة</option>'+data.units.map(function(unit){return '<option value="unit:'+esc(unit.id)+'">'+esc(unit.name)+'</option>';}).join('');
+  filter.innerHTML='<option value="all">All controlled & psychotropic medicines / كل الأدوية المخدرة والنفسية</option><option value="unassigned">Not assigned / غير مضافة لخانة</option>'+data.units.map(function(unit){return '<option value="unit:'+esc(unit.id)+'">'+esc(unit.name)+'</option>';}).join('');
   if(Array.from(filter.options).some(function(option){return option.value===oldFilter;}))filter.value=oldFilter;
   var medicines=controlledMeds(),assigned=storageAssignedMap(data),unitFilter=filter.value;
   var units=data.units.filter(function(unit){return unitFilter.indexOf('unit:')===0?String(unit.id)===unitFilter.slice(5):true;});
-  var summary=E('controlled-storage-summary');if(summary)summary.innerHTML='<span>Controlled pharmacy custody / عهدة مسؤول الأدوية المقيدة</span><span class="chip" style="margin-inline-start:auto">'+medicines.length+' medicine(s)</span><span class="chip">'+data.units.length+' unit(s)</span>';
+  var narcoticStorageCount=medicines.filter(function(medicine){
+    return medicine.classification!=='psychotropic';
+  }).length;
+  var psychotropicStorageCount=medicines.filter(function(medicine){
+    return medicine.classification==='psychotropic';
+  }).length;
+  var summary=E('controlled-storage-summary');
+  if(summary)summary.innerHTML=
+    '<span>Controlled & psychotropic pharmacy storage / تخزين الأدوية المخدرة والنفسية</span>'+
+    '<span class="chip" style="margin-inline-start:auto">Total '+medicines.length+'</span>'+
+    '<span class="chip">Narcotic & restricted '+narcoticStorageCount+'</span>'+
+    '<span class="chip">Psychotropic '+psychotropicStorageCount+'</span>'+
+    '<span class="chip">'+data.units.length+' unit(s)</span>';
   if(!E('controlled-storage-shelf-rows').children.length)renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
   if(unitFilter==='unassigned'){
     var unassigned=medicines.filter(function(medicine){return !assigned[String(medicine.id)];});
-    E('controlled-storage-root').innerHTML='<div class="card"><div class="ch"><span class="ct">Pharmacy-custody medicines not assigned to a cell / أدوية عهدة الصيدلية غير المضافة لخانة</span></div><div class="cb"><div class="r21-storage-unassigned-list">'+(unassigned.length?unassigned.map(function(medicine){return '<span class="chip">'+esc(medicine.name)+'</span>';}).join(''):'<span class="fhint">Every pharmacy-custody medicine is assigned to a cell.</span>')+'</div></div></div>';return;
+    E('controlled-storage-root').innerHTML=
+      '<div class="card"><div class="ch"><span class="ct">'+
+      'Controlled & psychotropic medicines not assigned to a cell / '+
+      'الأدوية المخدرة والنفسية غير المضافة لخانة</span></div>'+
+      '<div class="cb"><div class="r21-storage-unassigned-list">'+
+      (unassigned.length?unassigned.map(function(medicine){
+        return '<span class="chip">'+
+          (medicine.classification==='psychotropic'?'Psychotropic · ':'Narcotic · ')+
+          esc(medicine.name)+'</span>';
+      }).join(''):
+      '<span class="fhint">Every controlled and psychotropic medicine is assigned to a cell.</span>')+
+      '</div></div></div>';
+    return;
   }
   if(!data.units.length){E('controlled-storage-root').innerHTML='<div class="r21-storage-empty"><b>No cabinets or safes yet / لا توجد دواليب أو خزائن</b><div style="margin-top:6px">Use the form above to define the first unit for the controlled-pharmacy custody.</div></div>';return;}
   E('controlled-storage-root').innerHTML=units.map(function(unit){
@@ -11477,7 +11554,7 @@ async function publicStorageView(){
   }catch(error){host.innerHTML='<div style="color:#b00">'+esc(error&&error.message||error)+'</div>';}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
-})();</script><script id="asdhealth-canonical-r6-23-20260726">
+})();</script><script id="asdhealth-canonical-r6-24-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
