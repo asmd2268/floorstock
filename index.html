@@ -10224,7 +10224,7 @@ window.delDept=async function(id){var dept=(gd()||[]).find(function(d){return St
 })();
 </script>
 
-<script id="asdhealth-canonical-r6-12-20260726">
+<script id="asdhealth-canonical-r6-13-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
@@ -10367,7 +10367,7 @@ function fsR5OrderRow(row,index){
 function fsR5OrdersHtml(orders){
   var printData=[],total=0;
 
-  orders.forEach(function(order,orderIndex){
+  (orders||[]).forEach(function(order,orderIndex){
     var tone=orderIndex%2===0?'white':'gray';
     var categoryOrder=[],categoryRows={};
 
@@ -10382,12 +10382,14 @@ function fsR5OrdersHtml(orders){
 
     var orderedRows=[];
     categoryOrder.forEach(function(category){
-      categoryRows[category].forEach(function(row){orderedRows.push(row);});
+      categoryRows[category].forEach(function(row){
+        orderedRows.push(row);
+      });
     });
 
     orderedRows.forEach(function(row,index){
       printData.push({
-        orderId:String(order.request.id||('order_'+orderIndex)),
+        orderId:String(order.request&&order.request.id||('order_'+orderIndex)),
         orderIndex:orderIndex,
         department:window.floorstockDepartmentName(order.dept),
         category:row.category||'UNCATEGORIZED / غير مصنف',
@@ -10404,10 +10406,16 @@ function fsR5OrdersHtml(orders){
     });
   });
 
-  var safeJson=JSON.stringify(printData).replace(/</g,'\\u003c').replace(/<\/script/gi,'<\\/script');
+  var safeJson=JSON.stringify(printData)
+    .replace(/</g,'\\u003c')
+    .replace(/<\/script/gi,'<\\/script');
 
   var css=`@page{size:auto;margin:2.5mm}
-*{box-sizing:border-box}
+*{
+  box-sizing:border-box;
+  -webkit-print-color-adjust:exact!important;
+  print-color-adjust:exact!important
+}
 html,body{
   margin:0!important;
   padding:0!important;
@@ -10416,9 +10424,8 @@ html,body{
   overflow:hidden!important;
   background:#fff!important;
   color:#000!important;
-  font-family:Arial,Tahoma,sans-serif;
-  -webkit-print-color-adjust:exact!important;
-  print-color-adjust:exact!important
+  color-scheme:only light;
+  font-family:Arial,Tahoma,sans-serif
 }
 body{position:fixed!important;inset:0!important}
 .sheet{
@@ -10429,10 +10436,7 @@ body{position:fixed!important;inset:0!important}
 }
 .print-layout{
   position:absolute;
-  top:0;
-  right:0;
-  left:auto;
-  bottom:0;
+  inset:0 0 0 auto;
   width:100%;
   max-width:100%;
   height:100%;
@@ -10492,29 +10496,23 @@ body{position:fixed!important;inset:0!important}
   min-width:0;
   margin:0;
   padding:0;
-  overflow:hidden;
-  -webkit-print-color-adjust:exact!important;
-  print-color-adjust:exact!important
+  overflow:hidden
 }
 .tone-white{
-  background-color:#fff!important;
-  background-image:linear-gradient(#fff,#fff)!important;
+  background:#fff!important;
   color:#000!important;
   forced-color-adjust:none!important
 }
 .tone-gray{
-  background-color:#d2d2d2!important;
-  background-image:linear-gradient(#d2d2d2,#d2d2d2)!important;
-  box-shadow:inset 0 0 0 100px #d2d2d2!important;
+  background:#d2d2d2!important;
   color:#000!important;
+  box-shadow:inset 0 0 0 100px #d2d2d2!important;
   forced-color-adjust:none!important
 }
 .department-title,.category-title,.medicine-item{
   width:100%;
   min-width:0;
-  max-width:100%;
-  -webkit-print-color-adjust:exact!important;
-  print-color-adjust:exact!important
+  max-width:100%
 }
 .department-title{
   border:1.35px solid #000;
@@ -10556,35 +10554,26 @@ body{position:fixed!important;inset:0!important}
   width:100%;
   min-width:0;
   max-width:100%;
-  padding:.58mm .72mm;
+  padding:.58mm 3.1mm .58mm .72mm;
   border:1px solid transparent;
   border-radius:.8mm;
-  font-weight:800;
   overflow:hidden;
   overflow-wrap:anywhere;
   word-break:normal;
+  font-weight:800;
   color:#000!important;
-  -webkit-text-fill-color:#000!important;
-  forced-color-adjust:none!important;
-  -webkit-print-color-adjust:exact!important;
-  print-color-adjust:exact!important
-}
-.med-name:before{
-  content:attr(data-index);
-  position:absolute;
-  inset-inline-end:.7mm;
-  top:50%;
-  z-index:0;
-  transform:translateY(-50%);
-  font-size:1.05em;
-  font-weight:400;
-  line-height:1;
-  white-space:nowrap;
-  color:#000!important;
-  -webkit-text-fill-color:#000!important;
-  opacity:.11;
-  pointer-events:none;
+  background:transparent;
   forced-color-adjust:none!important
+}
+.med-name.high-dark{
+  background:#000!important;
+  border-color:#000!important;
+  color:#fff!important
+}
+.med-name.high-light{
+  background:#fff!important;
+  border:1.4px solid #000!important;
+  color:#000!important
 }
 .med-label{
   position:relative;
@@ -10592,72 +10581,54 @@ body{position:fixed!important;inset:0!important}
   display:block;
   width:100%;
   min-width:0;
-  color:#000!important;
-  -webkit-text-fill-color:#000!important;
-  -webkit-text-stroke:0 transparent!important;
-  text-shadow:0 0 0 #000!important;
+  color:inherit!important;
   opacity:1!important;
-  mix-blend-mode:normal!important;
-  forced-color-adjust:none!important;
-  -webkit-print-color-adjust:exact!important;
-  print-color-adjust:exact!important
-}
-.medicine-item.tone-white .med-name.high-alert{
-  background:#000!important;
-  background-color:#000!important;
-  background-image:linear-gradient(#000,#000)!important;
-  border:1px solid #000!important;
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
   forced-color-adjust:none!important
 }
-.medicine-item.tone-white .med-name.high-alert .med-label{
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  -webkit-text-stroke:.01px #fff!important;
-  text-shadow:0 0 0 #fff!important;
-  opacity:1!important
-}
-.medicine-item.tone-white .med-name.high-alert:before{
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  opacity:.18
-}
-.medicine-item.tone-gray .med-name.high-alert{
-  background:#fff!important;
-  background-color:#fff!important;
-  background-image:linear-gradient(#fff,#fff)!important;
-  border:1.4px solid #000!important;
+.item-index-watermark{
+  position:absolute;
+  inset-inline-end:.55mm;
+  top:.45mm;
+  z-index:3;
+  display:block;
+  min-width:2mm;
+  padding:0;
+  font-size:.64em;
+  font-weight:400;
+  line-height:1;
+  text-align:right;
   color:#000!important;
-  -webkit-text-fill-color:#000!important;
+  opacity:.28;
+  pointer-events:none;
+  white-space:nowrap;
   forced-color-adjust:none!important
 }
-.medicine-item.tone-gray .med-name.high-alert .med-label{
-  color:#000!important;
-  -webkit-text-fill-color:#000!important;
-  -webkit-text-stroke:.01px #000!important;
-  text-shadow:0 0 0 #000!important;
-  opacity:1!important
+.med-name.high-dark .item-index-watermark{
+  color:#fff!important;
+  opacity:.38
 }
-.medicine-item.tone-gray .med-name.high-alert:before{
-  color:#000!important;
-  -webkit-text-fill-color:#000!important;
-  opacity:.14
-}
-.medicine-item.tone-gray .med-name:not(.high-alert):before{opacity:.13}
 .med-name.hazard:after{
   content:"";
   position:absolute;
   inset:0;
-  z-index:3;
+  z-index:4;
   pointer-events:none;
-  background:linear-gradient(to bottom left,transparent calc(50% - .45px),#000 calc(50% - .45px),#000 calc(50% + .45px),transparent calc(50% + .45px))
+  background:linear-gradient(
+    to bottom left,
+    transparent calc(50% - .45px),
+    #000 calc(50% - .45px),
+    #000 calc(50% + .45px),
+    transparent calc(50% + .45px)
+  )
 }
-.medicine-item.tone-white .med-name.high-alert.hazard:after{
-  background:linear-gradient(to bottom left,transparent calc(50% - .45px),#fff calc(50% - .45px),#fff calc(50% + .45px),transparent calc(50% + .45px))
-}
-.medicine-item.tone-gray .med-name.high-alert.hazard:after{
-  background:linear-gradient(to bottom left,transparent calc(50% - .45px),#000 calc(50% - .45px),#000 calc(50% + .45px),transparent calc(50% + .45px))
+.med-name.high-dark.hazard:after{
+  background:linear-gradient(
+    to bottom left,
+    transparent calc(50% - .45px),
+    #fff calc(50% - .45px),
+    #fff calc(50% + .45px),
+    transparent calc(50% + .45px)
+  )
 }
 .qty-box{
   position:relative;
@@ -10673,109 +10644,76 @@ body{position:fixed!important;inset:0!important}
   font-weight:900;
   text-align:center;
   color:#000!important;
-  -webkit-text-fill-color:#000!important
+  forced-color-adjust:none!important
+}
+.qty-box.refrigerated{
+  background:#111!important;
+  border:1px solid #000;
+  border-radius:.9mm;
+  color:#fff!important
 }
 .qty-value{
   position:relative;
-  z-index:2;
+  isolation:isolate;
   display:flex;
   align-items:center;
   justify-content:center;
   min-width:5.6mm;
   min-height:5.6mm;
+  max-width:100%;
+  max-height:100%;
   padding:.22mm;
-  color:inherit!important;
-  -webkit-text-fill-color:inherit!important
-}
-.qty-value.lasa{border:1.35px solid currentColor;border-radius:50%}
-.qty-box.refrigerated{
-  --snow-size:.92em;
-  background:#111!important;
-  background-color:#111!important;
-  background-image:linear-gradient(#111,#111)!important;
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  border:1px solid #000;
-  border-radius:.9mm;
-  padding:0;
   overflow:hidden;
-  forced-color-adjust:none!important;
-  -webkit-print-color-adjust:exact!important;
-  print-color-adjust:exact!important
+  color:inherit!important;
+  forced-color-adjust:none!important
 }
-.qty-box.refrigerated.qty-len-1{--snow-size:1.02em}
-.qty-box.refrigerated.qty-len-2{--snow-size:.92em}
-.qty-box.refrigerated.qty-len-3{--snow-size:.82em}
-.qty-box.refrigerated.qty-len-4{--snow-size:.72em}
-.qty-box.refrigerated:before{
-  content:"❄";
+.qty-value.lasa{
+  border:1.35px solid currentColor;
+  border-radius:50%
+}
+.qty-value.qty-compact{font-size:.82em}
+.qty-snow{
   position:absolute;
   left:50%;
   top:50%;
-  z-index:1;
-  width:1em;
-  height:1em;
-  max-width:68%;
-  max-height:68%;
-  transform:translate(-50%,-50%);
+  z-index:0;
   display:flex;
   align-items:center;
   justify-content:center;
+  width:.72em;
+  height:.72em;
+  max-width:.72em;
+  max-height:.72em;
+  transform:translate(-50%,-50%);
   overflow:hidden;
-  font-size:var(--snow-size);
+  font-size:.72em;
   font-weight:400;
   line-height:1;
   color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  opacity:.16;
-  pointer-events:none;
-  forced-color-adjust:none!important
+  opacity:.18;
+  pointer-events:none
 }
-.qty-box.refrigerated .qty-value{
-  z-index:2;
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  -webkit-text-stroke:.01px #fff!important;
-  text-shadow:0 0 0 #fff,0 0 1px #000!important;
+.qty-number{
+  position:relative;
+  z-index:1;
+  display:block;
+  color:inherit!important;
   opacity:1!important
 }
-.qty-box.qty-len-4 .qty-value{font-size:.82em}
+.print-error{
+  padding:15mm;
+  text-align:center;
+  font-family:Arial,Tahoma,sans-serif
+}
 @media print{
-  .tone-white,.tone-gray,.med-name,.med-label,.qty-box,.qty-value{
+  html,body,.sheet,.print-layout,.flow-chunk,
+  .tone-white,.tone-gray,.med-name,.med-label,
+  .item-index-watermark,.qty-box,.qty-value,.qty-number,.qty-snow{
     forced-color-adjust:none!important;
     -webkit-print-color-adjust:exact!important;
     print-color-adjust:exact!important
   }
-  .medicine-item.tone-white .med-name.high-alert{
-    background:#000!important;
-    background-color:#000!important;
-    background-image:linear-gradient(#000,#000)!important;
-    color:#fff!important;
-    -webkit-text-fill-color:#fff!important
-  }
-  .medicine-item.tone-white .med-name.high-alert .med-label{
-    color:#fff!important;
-    -webkit-text-fill-color:#fff!important;
-    -webkit-text-stroke:.01px #fff!important;
-    text-shadow:0 0 0 #fff!important;
-    opacity:1!important
-  }
-  .medicine-item.tone-gray .med-name.high-alert{
-    background:#fff!important;
-    background-color:#fff!important;
-    background-image:linear-gradient(#fff,#fff)!important;
-    color:#000!important;
-    -webkit-text-fill-color:#000!important
-  }
-  .medicine-item.tone-gray .med-name.high-alert .med-label{
-    color:#000!important;
-    -webkit-text-fill-color:#000!important;
-    -webkit-text-stroke:.01px #000!important;
-    text-shadow:0 0 0 #000!important;
-    opacity:1!important
-  }
 }
-.print-error{padding:15mm;text-align:center;font-family:Arial,Tahoma,sans-serif}
 @media print and (orientation:landscape){
   .landscape-layout{display:flex!important}
   .portrait-layout{display:none!important}
@@ -10804,22 +10742,35 @@ function esc(value){
     .replace(/"/g,'&quot;')
     .split(String.fromCharCode(39)).join('&#39;');
 }
-function clamp(min,value,max){return Math.max(min,Math.min(max,value))}
-function toneClass(row){return row.tone==='gray'?'tone-gray':'tone-white'}
-
+function clamp(min,value,max){
+  return Math.max(min,Math.min(max,value));
+}
+function toneClass(row){
+  return row.tone==='gray'?'tone-gray':'tone-white';
+}
+function sourceSequenceValid(){
+  var expected={};
+  for(var i=0;i<rows.length;i++){
+    var row=rows[i];
+    expected[row.orderId]=(expected[row.orderId]||0)+1;
+    if(Number(row.itemIndex)!==expected[row.orderId])return false;
+  }
+  return true;
+}
 function itemWeight(row,orientation,previous){
   var chars=orientation==='landscape'?28:21;
   var lines=Math.max(1,Math.ceil(String(row.name||'').length/chars));
   var weight=1+(lines-1)*.7;
   if(!previous||previous.orderId!==row.orderId)weight+=1.05;
-  if(!previous||previous.orderId!==row.orderId||previous.category!==row.category)weight+=.66;
+  if(!previous||previous.orderId!==row.orderId||
+     previous.category!==row.category)weight+=.66;
   if(row.high||row.hazard)weight+=.08;
   return weight;
 }
-
 function partitionRows(count,orientation){
   if(!rows.length)return [];
   count=Math.min(count,rows.length);
+
   var weights=[],totalWeight=0;
   rows.forEach(function(row,index){
     var weight=itemWeight(row,orientation,index?rows[index-1]:null);
@@ -10834,111 +10785,155 @@ function partitionRows(count,orientation){
       partitions.push(rows.slice(start));
       break;
     }
+
     var target=totalWeight*(column+1)/count;
     var end=start;
     while(end<rows.length){
       var rowsAfter=rows.length-(end+1);
       var columnsAfter=remainingColumns-1;
-      if(end>start&&cumulative+weights[end]>target&&rowsAfter>=columnsAfter)break;
+      if(end>start&&cumulative+weights[end]>target&&
+         rowsAfter>=columnsAfter)break;
       cumulative+=weights[end];
       end++;
       if(rowsAfter<columnsAfter)break;
     }
+
     if(end<=start)end=start+1;
     partitions.push(rows.slice(start,end));
     start=end;
   }
+
   while(partitions.length<count)partitions.push([]);
   return partitions;
 }
-
 function rowHtml(row){
   var tone=toneClass(row);
-  var nameClass='med-name'+(row.high?' high-alert':'')+(row.hazard?' hazard':'');
+  var alertClass=row.high
+    ?(row.tone==='gray'?' high-light':' high-dark')
+    :'';
+  var nameClass='med-name'+alertClass+(row.hazard?' hazard':'');
   var quantityText=String(row.qty==null?'':row.qty);
-  var quantityDigits=quantityText.replace(/[^0-9]/g,'').length;
-  var quantityLengthClass=quantityDigits<=1?'qty-len-1':quantityDigits===2?'qty-len-2':quantityDigits===3?'qty-len-3':'qty-len-4';
-  var quantityClass='qty-box '+quantityLengthClass+(row.cold?' refrigerated':'');
-  var valueClass='qty-value'+(row.lasa?' lasa':'');
-  var isWhiteHigh=row.high&&row.tone==='white';
-  var isGrayHigh=row.high&&row.tone==='gray';
-  var nameStyle=isWhiteHigh
-    ?'background:#000!important;background-color:#000!important;background-image:linear-gradient(#000,#000)!important;border:1px solid #000!important;color:#fff!important;-webkit-text-fill-color:#fff!important;forced-color-adjust:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;'
-    :isGrayHigh
-      ?'background:#fff!important;background-color:#fff!important;background-image:linear-gradient(#fff,#fff)!important;border:1.4px solid #000!important;color:#000!important;-webkit-text-fill-color:#000!important;forced-color-adjust:none!important;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;'
-      :'color:#000!important;-webkit-text-fill-color:#000!important;forced-color-adjust:none!important;';
-  var labelStyle=isWhiteHigh
-    ?'color:#fff!important;-webkit-text-fill-color:#fff!important;-webkit-text-stroke:.01px #fff!important;text-shadow:0 0 0 #fff!important;forced-color-adjust:none!important;opacity:1!important;'
-    :'color:#000!important;-webkit-text-fill-color:#000!important;-webkit-text-stroke:.01px #000!important;text-shadow:0 0 0 #000!important;forced-color-adjust:none!important;opacity:1!important;';
+  var compactClass=quantityText.length>=4?' qty-compact':'';
+  var valueClass='qty-value'+(row.lasa?' lasa':'')+compactClass;
+  var quantityClass='qty-box'+(row.cold?' refrigerated':'');
+  var labelColor=row.high&&row.tone!=='gray'?'#fff':'#000';
+  var indexColor=row.high&&row.tone!=='gray'?'#fff':'#000';
+  var snow=row.cold
+    ?'<span class="qty-snow" aria-hidden="true">❄</span>'
+    :'';
 
   return '<div class="flow-chunk '+tone+'">'+
-    '<div class="medicine-item '+tone+'" data-positive="1" data-order="'+esc(row.orderId)+'">'+
-      '<span class="'+nameClass+'" data-index="'+esc(row.itemIndex)+'" style="'+nameStyle+'">'+
-        '<span class="med-label" style="'+labelStyle+'">'+esc(row.name)+'</span>'+
+    '<div class="medicine-item '+tone+
+      '" data-positive="1" data-order="'+esc(row.orderId)+
+      '" data-item-index="'+esc(row.itemIndex)+'">'+
+      '<span class="'+nameClass+'" style="color:'+labelColor+'!important">'+
+        '<span class="item-index-watermark" aria-hidden="true" '+
+          'style="color:'+indexColor+'!important">'+
+          esc(row.itemIndex)+
+        '</span>'+
+        '<span class="med-label" style="color:'+labelColor+'!important">'+
+          esc(row.name)+
+        '</span>'+
       '</span>'+
-      '<span class="'+quantityClass+'" data-qty-length="'+quantityDigits+'">'+
-        '<span class="'+valueClass+'">'+esc(quantityText)+'</span>'+
+      '<span class="'+quantityClass+'">'+
+        '<span class="'+valueClass+'">'+snow+
+          '<span class="qty-number">'+esc(quantityText)+'</span>'+
+        '</span>'+
       '</span>'+
     '</div>'+
   '</div>';
 }
-
 function columnHtml(slice,index){
   var content='<section class="print-column" data-column="'+index+'">';
   var lastOrder='',lastCategory='';
+
   slice.forEach(function(row){
     var tone=toneClass(row);
+
     if(row.orderId!==lastOrder){
-      content+='<div class="flow-chunk '+tone+'"><div class="department-title '+tone+'" data-order-title="'+esc(row.orderId)+'">'+esc(row.department)+'</div></div>';
+      content+='<div class="flow-chunk '+tone+'">'+
+        '<div class="department-title '+tone+
+          '" data-order-title="'+esc(row.orderId)+'">'+
+          esc(row.department)+
+        '</div>'+
+      '</div>';
       lastOrder=row.orderId;
       lastCategory='';
     }
+
     if(row.category!==lastCategory){
-      content+='<div class="flow-chunk '+tone+'"><div class="category-title '+tone+'">'+esc(row.category)+'</div></div>';
+      content+='<div class="flow-chunk '+tone+'">'+
+        '<div class="category-title '+tone+'">'+
+          esc(row.category)+
+        '</div>'+
+      '</div>';
       lastCategory=row.category;
     }
+
     content+=rowHtml(row);
   });
+
   return content+'</section>';
 }
-
 function renderLayout(layout,count){
   var orientation=layout.dataset.orientation;
   var host=layout.querySelector('.columns');
   var partitions=partitionRows(count,orientation);
+
   host.style.setProperty('--columns',count);
   host.innerHTML=partitions.map(columnHtml).join('');
   void host.offsetHeight;
+
   return Array.from(layout.querySelectorAll('.print-column'));
 }
-
 function hasOverflow(columns){
   return columns.some(function(column){
     return column.scrollHeight>column.clientHeight+1||
       column.scrollWidth>column.clientWidth+1;
   });
 }
-
 function usedColumns(columns){
   return columns.filter(function(column){
     return !!column.querySelector('.medicine-item');
   });
 }
-
 function tallestRatio(columns){
   var active=usedColumns(columns);
   if(!active.length)return 0;
+
   return Math.max.apply(null,active.map(function(column){
     return column.scrollHeight/Math.max(1,column.clientHeight);
   }));
 }
+function renderedSequenceValid(layout){
+  var expected={};
+  var items=Array.from(
+    layout.querySelectorAll('.medicine-item[data-positive="1"]')
+  );
 
+  for(var i=0;i<items.length;i++){
+    var item=items[i];
+    var orderId=String(item.dataset.order||'');
+    var itemIndex=Number(item.dataset.itemIndex||0);
+    var watermark=item.querySelector('.item-index-watermark');
+
+    expected[orderId]=(expected[orderId]||0)+1;
+    if(itemIndex!==expected[orderId])return false;
+    if(!watermark||Number(watermark.textContent)!==itemIndex)return false;
+  }
+
+  return true;
+}
 function fitLayout(layout){
   var orientation=layout.dataset.orientation;
-  var minColumns=orientation==='landscape'?2:2;
+  var minColumns=2;
   var maxColumns=orientation==='landscape'?6:4;
   var targetPerColumn=orientation==='landscape'?24:36;
-  var count=clamp(minColumns,Math.ceil(rows.length/targetPerColumn),Math.min(maxColumns,Math.max(1,rows.length)));
+  var count=clamp(
+    minColumns,
+    Math.ceil(rows.length/targetPerColumn),
+    Math.min(maxColumns,Math.max(1,rows.length))
+  );
   var font=orientation==='landscape'?8.5:8.0;
   var pad=orientation==='landscape'?.68:.56;
   var gap=orientation==='landscape'?1.2:.95;
@@ -10967,6 +10962,7 @@ function fitLayout(layout){
     }else{
       break;
     }
+
     columns=renderLayout(layout,count);
     guard++;
   }
@@ -10974,11 +10970,13 @@ function fitLayout(layout){
   while(count>minColumns){
     var previous=count;
     var fewer=renderLayout(layout,count-1);
+
     if(hasOverflow(fewer)){
       count=previous;
       columns=renderLayout(layout,count);
       break;
     }
+
     count--;
     columns=fewer;
   }
@@ -10989,6 +10987,7 @@ function fitLayout(layout){
 
   while(tallestRatio(columns)<.94&&fillGuard<55){
     var oldFont=font,oldPad=pad;
+
     if(font<maxFont){
       font=Math.min(maxFont,font+.11);
       layout.style.setProperty('--font',font+'pt');
@@ -10998,6 +10997,7 @@ function fitLayout(layout){
     }else{
       break;
     }
+
     var filled=renderLayout(layout,count);
     if(hasOverflow(filled)){
       font=oldFont;
@@ -11007,16 +11007,26 @@ function fitLayout(layout){
       columns=renderLayout(layout,count);
       break;
     }
+
     columns=filled;
     fillGuard++;
   }
 
-  var expected=Number(layout.dataset.expected||0);
-  var actual=layout.querySelectorAll('.medicine-item[data-positive="1"]').length;
+  var expectedCount=Number(layout.dataset.expected||0);
+  var actualCount=layout.querySelectorAll(
+    '.medicine-item[data-positive="1"]'
+  ).length;
   var activeColumns=usedColumns(columns);
+  var sequenceOk=renderedSequenceValid(layout);
 
-  if(actual!==expected||!activeColumns.length||hasOverflow(columns)){
-    layout.innerHTML='<div class="print-error"><h2>Print integrity check failed</h2><p>Expected '+expected+' medicines; rendered '+actual+'.</p></div>';
+  if(actualCount!==expectedCount||!activeColumns.length||
+     hasOverflow(columns)||!sequenceOk){
+    layout.innerHTML='<div class="print-error">'+
+      '<h2>Print integrity check failed</h2>'+
+      '<p>Expected '+expectedCount+
+      ' medicines; rendered '+actualCount+
+      '. Numbering sequence valid: '+sequenceOk+'.</p>'+
+    '</div>';
     layout.dataset.failed='1';
   }else{
     var tallest=Math.max.apply(null,activeColumns.map(function(column){
@@ -11025,7 +11035,9 @@ function fitLayout(layout){
     var shortest=Math.min.apply(null,activeColumns.map(function(column){
       return column.scrollHeight/Math.max(1,column.clientHeight);
     }));
+
     layout.dataset.ready='1';
+    layout.dataset.sequence='1';
     layout.dataset.columns=String(activeColumns.length);
     layout.dataset.tallest=String(tallest);
     layout.dataset.shortest=String(shortest);
@@ -11034,42 +11046,76 @@ function fitLayout(layout){
   layout.style.removeProperty('display');
   layout.style.removeProperty('visibility');
 }
-
 function fitAll(){
+  if(!sourceSequenceValid()){
+    document.body.dataset.failed='1';
+    document.querySelectorAll('.print-layout').forEach(function(layout){
+      layout.innerHTML='<div class="print-error">'+
+        '<h2>Source numbering integrity check failed</h2>'+
+      '</div>';
+      layout.dataset.failed='1';
+    });
+    return;
+  }
+
   var layouts=Array.from(document.querySelectorAll('.print-layout'));
   layouts.forEach(fitLayout);
-  if(layouts.some(function(layout){return layout.dataset.failed==='1'})){
+
+  if(layouts.some(function(layout){
+    return layout.dataset.failed==='1';
+  })){
     document.body.dataset.failed='1';
     return;
   }
+
   document.body.dataset.ready='1';
 }
-
 function start(){
   fitAll();
   if(document.body.dataset.ready==='1'){
-    setTimeout(function(){window.focus();window.print()},180);
+    setTimeout(function(){
+      window.focus();
+      window.print();
+    },180);
   }
 }
-
 window.addEventListener('load',function(){
-  if(document.fonts&&document.fonts.ready)document.fonts.ready.then(start,start);
-  else start();
+  if(document.fonts&&document.fonts.ready){
+    document.fonts.ready.then(start,start);
+  }else{
+    start();
+  }
 },{once:true});
 })();`;
 
   function layoutHtml(orientation){
-    var className=orientation==='landscape'?'landscape-layout':'portrait-layout';
-    return '<section class="print-layout '+className+'" data-orientation="'+orientation+'" data-expected="'+total+'">'+
-      '<div class="head"><span>Floor Stock Dispensing Orders</span><span>One page · automatic orientation</span></div>'+
+    var className=orientation==='landscape'
+      ?'landscape-layout'
+      :'portrait-layout';
+
+    return '<section class="print-layout '+className+
+      '" data-orientation="'+orientation+
+      '" data-expected="'+total+'">'+
+      '<div class="head">'+
+        '<span>Floor Stock Dispensing Orders</span>'+
+        '<span>One page · automatic orientation</span>'+
+      '</div>'+
       '<div class="columns"></div>'+
     '</section>';
   }
 
-  return '<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">'+
-    '<title>Print Orders — One Page</title><style>'+css+'</style></head><body>'+
-    '<main class="sheet">'+layoutHtml('landscape')+layoutHtml('portrait')+'</main>'+
-    '<script>'+runtime+'<\/script></body></html>';
+  return '<!doctype html><html><head>'+
+    '<meta charset="utf-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>Print Orders — One Page</title>'+
+    '<style>'+css+'</style>'+
+    '</head><body>'+
+    '<main class="sheet">'+
+      layoutHtml('landscape')+
+      layoutHtml('portrait')+
+    '</main>'+
+    '<script>'+runtime+'<\/script>'+
+    '</body></html>';
 }
 window.doPrint=function(){
   if(typeof window.canManageRequests==='function'&&typeof window.isPharmacyDirector==='function'&&!(window.canManageRequests()||window.isPharmacyDirector()))return fsR5Toast('No print permission / لا توجد صلاحية للطباعة','err');
