@@ -699,6 +699,38 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 <style id="r617-integrated-operations-style">
 .r17-grid4{display:grid;grid-template-columns:repeat(4,minmax(150px,1fr));gap:10px}.r17-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:8px}.r17-check{display:flex;gap:8px;align-items:flex-start;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}.r17-check input{width:auto;margin:2px 0 0}.r17-replacement{border:1px solid var(--bd);border-radius:9px;padding:10px;margin-top:8px;background:var(--s2)}.r17-cart-matrix{border:1px solid var(--bd);border-radius:9px;padding:10px;margin-top:10px}.r17-cart-matrix-grid{display:grid;grid-template-columns:minmax(180px,1fr) repeat(auto-fit,minmax(180px,1fr));gap:8px;align-items:start}.r17-unit{border:1px solid var(--bd);border-radius:10px;margin-bottom:12px;overflow:hidden;background:var(--s)}.r17-unit-head{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:10px 12px;background:var(--s2)}.r17-storage-row{display:grid;gap:7px;padding:7px;border-top:1px solid var(--bd)}.r17-cell{min-height:92px;border:1px solid var(--bd2);border-radius:8px;padding:7px;background:var(--s2);position:relative}.r17-cell-code{font:700 11px var(--mono);color:var(--acl);margin-bottom:5px}.r17-cell select{font-size:11px;padding:5px;margin:0}.r17-account-stats{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:8px}.r17-status-returned{background:rgba(218,54,51,.12)}.r17-status-verified{background:rgba(46,160,67,.12)}.r17-admin-row{display:grid;grid-template-columns:1.3fr .7fr 1fr 1fr auto;gap:8px;align-items:end;padding:8px 0;border-bottom:1px solid var(--bd)}
 @media(max-width:900px){.r17-grid4{grid-template-columns:1fr 1fr}.r17-admin-row{grid-template-columns:1fr 1fr}.r17-account-stats{grid-template-columns:1fr 1fr}}@media(max-width:600px){.r17-grid4{grid-template-columns:1fr}.r17-admin-row{grid-template-columns:1fr}}
+
+.r21-storage-summary{min-height:38px;display:flex;align-items:center;padding:8px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-weight:700}
+.r21-storage-builder-main{display:grid;grid-template-columns:2fr 1fr 1fr;gap:10px}
+.r21-storage-shelf-editor{margin-top:12px;border:1px solid var(--bd);border-radius:10px;overflow:hidden}
+.r21-storage-shelf-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:9px 11px;background:var(--s2);border-bottom:1px solid var(--bd);font-size:12px}
+.r21-storage-shelf-head span{color:var(--tx2);font-size:11px}
+.r21-storage-shelf-config{display:grid;grid-template-columns:90px minmax(150px,1fr) 2fr;gap:10px;align-items:end;padding:9px 11px;border-bottom:1px solid var(--bd)}
+.r21-storage-shelf-config:last-child{border-bottom:0}
+.r21-storage-shelf-label{font:800 13px var(--mono);color:var(--acl);padding-bottom:9px}
+.r21-storage-shelf-codes{display:flex;gap:5px;align-items:center;flex-wrap:wrap;min-height:38px;padding-bottom:2px}
+.r21-storage-code{display:inline-flex;align-items:center;justify-content:center;min-width:31px;height:27px;border:1px solid var(--bd2);border-radius:6px;background:var(--s2);font:700 10px var(--mono)}
+.r21-storage-preview-wrap{margin:12px 0;padding:10px;border:1px dashed var(--bd2);border-radius:10px;background:var(--s2)}
+.r21-storage-code-preview{display:grid;gap:7px;margin-top:8px}
+.r21-storage-preview-row{display:flex;align-items:center;gap:5px;flex-wrap:wrap}
+.r21-storage-preview-row>b{width:26px;font:800 11px var(--mono);color:var(--acl)}
+.r21-storage-inline-error{margin:10px 0;padding:9px 11px;border:1px solid rgba(218,54,51,.45);border-radius:8px;background:rgba(218,54,51,.1);color:var(--rdl);font-size:12px;font-weight:700}
+.r21-storage-empty{padding:28px;text-align:center;border:1px dashed var(--bd2);border-radius:10px;color:var(--tx2);background:var(--s2)}
+.r21-storage-unit-meta{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.r21-storage-unit-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.r21-storage-cell-assigned{border-color:var(--acl);box-shadow:inset 0 0 0 1px rgba(35,134,255,.16)}
+.r21-storage-unassigned-list{display:flex;gap:6px;flex-wrap:wrap}
+@media(max-width:900px){
+  .r21-storage-builder-main{grid-template-columns:1fr 1fr}
+  .r21-storage-builder-main .fg:first-child{grid-column:1/-1}
+  .r21-storage-shelf-config{grid-template-columns:70px 1fr}
+  .r21-storage-shelf-codes{grid-column:1/-1}
+}
+@media(max-width:600px){
+  .r21-storage-builder-main{grid-template-columns:1fr}
+  .r21-storage-builder-main .fg:first-child{grid-column:auto}
+  .r21-storage-shelf-head{align-items:flex-start;flex-direction:column}
+}
 </style><style id="r618-clean-operations-style">
 .r18-request-limit-warn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:18px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin:6px 0}.r18-request-limit-warn.blocked{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .r18-crash-correction-modal{width:min(1120px,97vw)!important;max-height:94vh;overflow:auto}.r18-cc-item{border:1px solid var(--bd);border-radius:10px;padding:10px;margin:10px 0;background:var(--s2)}.r18-cc-item-head{display:grid;grid-template-columns:2fr 1fr .7fr .7fr auto;gap:8px;align-items:end}.r18-cc-batches{margin-top:8px}.r18-cc-batch{display:grid;grid-template-columns:1fr .8fr 1fr auto;gap:8px;align-items:end;padding:7px;border-top:1px dashed var(--bd2)}.r18-cc-seal-readonly{font-family:var(--mono);font-weight:800}.r18-master-correction-btn{border-color:var(--yl)!important;color:var(--yll)!important}@media(max-width:760px){.r18-cc-item-head,.r18-cc-batch{grid-template-columns:1fr}.r18-crash-correction-modal{width:98vw!important}}
@@ -1379,10 +1411,94 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 
 <div class="pg" id="pg-controlled-storage">
-<div class="stitle">Controlled Storage Maps / خرائط دواليب وخزن الأدوية المقيدة</div>
-<div class="ssub">Create multiple cabinets or safes. Every row may contain a different number of coded cells.</div>
-<div class="card"><div class="cb"><div class="r17-grid4"><div class="fg"><label>Department</label><select id="r17-storage-dept" onchange="renderControlledStorage()"></select></div><div class="fg"><label>Display mode</label><select id="r17-storage-mode" onchange="r17StorageModeChanged()"><option value="map">Map / خريطة</option><option value="list">List / قائمة</option></select></div><div class="fg"><label>Medicine filter</label><select id="r17-storage-filter" onchange="renderControlledStorage()"><option value="all">All custody medicines</option><option value="unassigned">Not assigned to a cell</option></select></div><div class="fg"><label> </label><button class="btn bp" onclick="r17StorageOpenCreate()">+ Cabinet / Safe</button></div></div></div></div>
-<div id="r17-storage-root"></div>
+<div class="stitle">Controlled Cabinets &amp; Safes / دواليب وخزائن الأدوية المخدرة</div>
+<div class="ssub">Build multiple storage units with a different number of coded cells on every shelf. Creation, editing and assignment are completed on this page.</div>
+
+<div id="controlled-storage-auth-message" class="alert-banner" style="display:none"></div>
+
+<div id="controlled-storage-workspace">
+  <div class="card">
+    <div class="ch"><span class="ct">Storage view / عرض التخزين</span></div>
+    <div class="cb">
+      <div class="r17-grid4">
+        <div class="fg">
+          <label>Department / القسم</label>
+          <select id="controlled-storage-dept" onchange="renderControlledStorage()"></select>
+        </div>
+        <div class="fg">
+          <label>Display mode / طريقة العرض</label>
+          <select id="controlled-storage-mode" onchange="controlledStorageModeChanged()">
+            <option value="map">Map / خريطة</option>
+            <option value="list">List / قائمة</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Medicine filter / فلتر الأدوية</label>
+          <select id="controlled-storage-filter" onchange="renderControlledStorage()">
+            <option value="all">All custody medicines / كل أدوية العهدة</option>
+            <option value="unassigned">Not assigned / غير مضافة لخانة</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Current department / القسم الحالي</label>
+          <div id="controlled-storage-dept-summary" class="r21-storage-summary">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card r21-storage-builder">
+    <div class="ch">
+      <div>
+        <span class="ct" id="controlled-storage-builder-title">Create cabinet or safe / إنشاء دولاب أو خزنة</span>
+        <div class="fhint">Define every shelf separately. Cell codes are created automatically: A1, A2… B1, B2…</div>
+      </div>
+    </div>
+    <div class="cb">
+      <input type="hidden" id="controlled-storage-edit-id">
+      <div class="r21-storage-builder-main">
+        <div class="fg">
+          <label>Unit name / اسم الوحدة</label>
+          <input id="controlled-storage-name" type="text" placeholder="Example: Narcotic Cabinet A">
+        </div>
+        <div class="fg">
+          <label>Unit type / النوع</label>
+          <select id="controlled-storage-type">
+            <option value="cabinet">Cabinet / دولاب</option>
+            <option value="safe">Safe / خزنة</option>
+            <option value="refrigerator">Refrigerator / ثلاجة</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Number of shelves / عدد الأرفف</label>
+          <input id="controlled-storage-shelf-count" type="number" min="1" max="26" value="5" oninput="controlledStorageShelfCountChanged()">
+        </div>
+      </div>
+
+      <div class="r21-storage-shelf-editor">
+        <div class="r21-storage-shelf-head">
+          <b>Shelf structure / تكوين الأرفف</b>
+          <span>Each shelf may have a different number of cells.</span>
+        </div>
+        <div id="controlled-storage-shelf-rows"></div>
+      </div>
+
+      <div class="r21-storage-preview-wrap">
+        <b>Cell-code preview / معاينة رموز الخانات</b>
+        <div id="controlled-storage-code-preview" class="r21-storage-code-preview"></div>
+      </div>
+
+      <div id="controlled-storage-builder-error" class="r21-storage-inline-error" style="display:none"></div>
+
+      <div class="fl" style="gap:8px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn bg" type="button" id="controlled-storage-cancel-edit" onclick="controlledStorageCancelEdit()" style="display:none">Cancel edit / إلغاء التعديل</button>
+        <button class="btn bp" type="button" id="controlled-storage-save" onclick="controlledStorageSaveUnit()">Save storage unit / حفظ الوحدة</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="controlled-storage-root"></div>
+</div>
 </div>
 <div class="pg" id="pg-med-accountability">
 <div class="stitle">Medication Accountability &amp; Verification / صرف ومطابقة استخدام الدواء</div>
@@ -3714,7 +3830,7 @@ function renderShelfAlertSettings(){
   if(el('alert-days2'))el('alert-days2').value=cfg.d2||7;
 }
 function openAddExpiry(){
-  el('mexpiry-title').textContent='Add Batch / إضافة دفعة';
+  el('mexpiry-title').textContent='Add Expiry / إضافة تاريخ صلاحية';
   var ms=getMeds(CU.deptId);
   el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+m.id+'">'+m.name+'</option>'}).join('');
   el('exp-batch-inp').value='';
@@ -3723,7 +3839,7 @@ function openAddExpiry(){
   OM('mexpiry');
 }
 function openEditExpiry(btn){
-  el('mexpiry-title').textContent='Edit Batch / تعديل دفعة';
+  el('mexpiry-title').textContent='Edit Expiry / تعديل تاريخ الصلاحية';
   var ms=getMeds(CU.deptId);
   el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+m.id+'"'+(m.id===btn.dataset.mid?' selected':'')+'>'+m.name+'</option>'}).join('');
   el('exp-batch-inp').value=btn.dataset.batch||'';
@@ -5909,7 +6025,7 @@ function shelfExpiryCell(medId){
     return '<div class="'+cls+'" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">'
       +'<span><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <small>('+label+')</small></span>'
       +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" onclick="openEditExpiry(this)">✎</button> '
-      +'<button class="btn bd2c bxs" data-bid="'+b.id+'" onclick="delBatch(this.dataset.bid);renderShelves()">×</button></span></div>';
+      +'<button class="btn bd2c bxs" data-bid="'+b.id+'" onclick="delBatch(this.dataset.bid,this)">×</button></span></div>';
   }).join('');
   return (rows||'<span style="color:var(--tx3)">No expiry batches</span>')
     +'<div style="margin-top:5px"><button class="btn bg bxs" data-mid="'+medId+'" onclick="openAddExpiryForMed(this.dataset.mid)">+ Add expiry</button></div>';
@@ -6417,6 +6533,14 @@ function encodeValue(v){
     else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-controlled-storage','🗄 Controlled storage maps'],['pg-ctl-analytics','📊 Controlled analytics']];
     else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
     else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody'],['pg-med-accountability','🧾 Medication documentation']];
+    var storagePermission=!!(
+      (typeof isMasterActual==='function'&&isMasterActual())||
+      rRole==='controlled_pharmacy'||
+      (window.CU&&CU.permissions&&CU.permissions.controlledStorage===true)
+    );
+    if(storagePermission&&!items.some(function(item){return item[0]==='pg-controlled-storage'})){
+      items.push(['pg-controlled-storage','🗄 Cabinets & Shelves / الدواليب والأرفف']);
+    }
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
     if((typeof isMasterActual==='function'&&isMasterActual())||(CU&&rRole==='pharmacy')){var zb=document.createElement('button');zb.id='zebra-labels-nav';zb.className='nb';zb.dataset.pg='pg-zebra-labels';zb.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';zb.onclick=function(){showPg('pg-zebra-labels')};nav.appendChild(zb)}
@@ -8437,7 +8561,13 @@ body:not(.real-master-ui) #pg-backup-restore{display:none!important}
     ]
   };
   var RENDERERS={'pg-controlled':'renderControlled','pg-controlled-storage':'renderControlledStorage','pg-ctl-analytics':'renderCtlAnalytics','pg-announcements':'renderAnnouncements'};
-  function role(){return String((window.CU&&CU.role)||'')}
+  function role(){
+    return String(
+      (window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||
+      (window.CU&&CU.role)||
+      ''
+    )
+  }
   function realMaster(){
     try{
       if(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)return true;
@@ -9005,85 +9135,365 @@ function renderRequestGridOrphans(){
     }).join('');
 }
 
+async function floorstockDeletionStep(report,name,task){
+  try{
+    await task();
+    report.completed.push(name);
+    return true;
+  }catch(error){
+    var message=String(error&&error.message||error||'Unknown error');
+    report.failed.push({step:name,message:message});
+    var wrapped=new Error(name+': '+message);
+    wrapped.deletionReport=report;
+    throw wrapped;
+  }
+}
+
+function floorstockDeleteMatchesFactory(values){
+  var map={};
+  (values||[]).forEach(function(value){
+    value=String(value==null?'':value).trim().toLowerCase();
+    if(value)map[value]=true;
+  });
+  return function(value){
+    return !!map[String(value==null?'':value).trim().toLowerCase()];
+  };
+}
+
+function floorstockDeleteUiRefresh(){
+  var failures=[];
+  [
+    ['Users',function(){if(typeof renderUsers==='function')renderUsers();}],
+    ['Department selectors',function(){if(typeof fillDS==='function')fillDS();}],
+    ['Inventory department selector',function(){
+      if(typeof populateInvDeptSel==='function')populateInvDeptSel();
+    }],
+    ['Request schedule',function(){
+      if(typeof window.renderRequestHourGridUI==='function'){
+        window.renderRequestHourGridUI();
+      }
+    }]
+  ].forEach(function(step){
+    try{step[1]();}
+    catch(error){
+      failures.push({
+        step:step[0],
+        message:String(error&&error.message||error)
+      });
+      console.warn('Post-deletion UI refresh failed:',step[0],error);
+    }
+  });
+  return failures;
+}
+
 async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
   id=String(id||'').trim();
-  aliases=(Array.isArray(aliases)?aliases:[]).map(function(value){return String(value||'').trim();}).filter(Boolean);
+  aliases=(Array.isArray(aliases)?aliases:[])
+    .map(function(value){return String(value||'').trim();})
+    .filter(Boolean);
+
+  if(!id)throw new Error('Department ID is missing.');
   if(aliases.indexOf(id)<0)aliases.unshift(id);
-  var aliasSet={};
-  aliases.forEach(function(value){aliasSet[value.toLowerCase()]=1;});
-  function matches(value){return !!aliasSet[String(value==null?'':value).trim().toLowerCase()];}
 
-  var jobs=[];
-  var deleted=window.S&&typeof S.g==='function'?(S.g('deleted_departments')||[]):[];
-  deleted=(Array.isArray(deleted)?deleted:[]).slice();
-  aliases.forEach(function(value){if(!deleted.some(function(item){return String(item).toLowerCase()===value.toLowerCase();}))deleted.push(value);});
-  jobs.push(S.s('deleted_departments',deleted));
+  var matches=floorstockDeleteMatchesFactory(aliases);
+  var report={
+    departmentId:id,
+    aliases:aliases.slice(),
+    completed:[],
+    failed:[],
+    optionalFailed:[]
+  };
 
-  if(removeOfficial)jobs.push(S.del('departments',id));
-
-  var prefixes=['meds_','expiry_','shelves_','alerts_','controlled_dept_list_','controlled_settings_'];
-  aliases.forEach(function(alias){prefixes.forEach(function(prefix){jobs.push(S.rm(prefix+alias));});});
-
-  var windows=typeof window.getReqWindows==='function'?(getReqWindows()||[]):[];
-  jobs.push(setReqWindows(windows.filter(function(item){return !item||!matches(item.dept);}))); 
-
-  var slots=typeof window.getDispSlots==='function'?(getDispSlots()||[]):[];
-  jobs.push(setDispSlots(slots.filter(function(item){return !item||!matches(item.dept||item.deptId);}))); 
-
-  var limits=typeof window.getMonthlyLimits==='function'?Object.assign({},getMonthlyLimits()||{}):{};
-  Object.keys(limits).forEach(function(key){if(matches(key))delete limits[key];});
-  jobs.push(setMonthlyLimits(limits));
-
-  var requestCountLimits=window.S&&typeof S.g==='function'?Object.assign({},S.g('request_count_limits_v1')||{}):{};
-  Object.keys(requestCountLimits).forEach(function(key){if(matches(key))delete requestCountLimits[key];});
-  jobs.push(S.s('request_count_limits_v1',requestCountLimits));
-
-  var maps=window.S&&typeof S.g==='function'?Object.assign({},S.g(GRID_KEY)||{}):{};
-  Object.keys(maps).forEach(function(key){if(matches(key))delete maps[key];});
-  jobs.push(S.s(GRID_KEY,maps));
-
-  if(window.FB_DB&&window.FB_AUTH&&FB_AUTH.currentUser){
-    aliases.forEach(function(alias){
-      jobs.push(FB_DB.collection('public_expiry').doc(alias).delete().catch(function(){}));
-      jobs.push(FB_DB.collection('public_controlled_expiry').doc(alias).delete().catch(function(){}));
+  var storageMaps=Object.assign(
+    {},
+    (window.S&&typeof S.g==='function'
+      ?S.g('controlled_storage_maps_v1')
+      :null)||{}
+  );
+  var publicStorageUnits=[];
+  Object.keys(storageMaps).forEach(function(key){
+    if(!matches(key))return;
+    (storageMaps[key]&&storageMaps[key].units||[]).forEach(function(unit){
+      if(unit&&unit.id)publicStorageUnits.push({
+        dept:key,
+        unitId:unit.id
+      });
     });
+    delete storageMaps[key];
+  });
+
+  var deleted=(window.S&&typeof S.g==='function'
+    ?S.g('deleted_departments')
+    :null)||[];
+  deleted=Array.isArray(deleted)?deleted.slice():[];
+
+  aliases.forEach(function(value){
+    if(!deleted.some(function(item){
+      return String(item).toLowerCase()===String(value).toLowerCase();
+    })){
+      deleted.push(value);
+    }
+  });
+
+  await floorstockDeletionStep(
+    report,
+    'Save deletion marker',
+    function(){return S.s('deleted_departments',deleted);}
+  );
+
+  var prefixes=[
+    'meds_',
+    'expiry_',
+    'shelves_',
+    'alerts_',
+    'controlled_dept_list_',
+    'controlled_settings_'
+  ];
+
+  for(var aliasIndex=0;aliasIndex<aliases.length;aliasIndex++){
+    var alias=aliases[aliasIndex];
+    for(var prefixIndex=0;prefixIndex<prefixes.length;prefixIndex++){
+      var key=prefixes[prefixIndex]+alias;
+      if(!S.cache||!Object.prototype.hasOwnProperty.call(S.cache,key))continue;
+      await floorstockDeletionStep(
+        report,
+        'Delete state '+key,
+        function(keyCopy){return function(){return S.rm(keyCopy);};}(key)
+      );
+    }
   }
 
-  await Promise.all(jobs);
-  return true;
+  var windows=(S.g('req_windows')||[]).filter(function(item){
+    return !item||!matches(item.dept||item.deptId);
+  });
+  await floorstockDeletionStep(
+    report,
+    'Remove request schedules',
+    function(){return S.s('req_windows',windows);}
+  );
+
+  var slots=(S.g('disp_slots')||[]).filter(function(item){
+    return !item||!matches(item.dept||item.deptId);
+  });
+  await floorstockDeletionStep(
+    report,
+    'Remove dispense slots',
+    function(){return S.s('disp_slots',slots);}
+  );
+
+  var monthly=Object.assign({},S.g('monthly_limits')||{});
+  Object.keys(monthly).forEach(function(key){
+    if(matches(key))delete monthly[key];
+  });
+  await floorstockDeletionStep(
+    report,
+    'Remove monthly limits',
+    function(){return S.s('monthly_limits',monthly);}
+  );
+
+  var requestLimits=Object.assign(
+    {},
+    S.g('request_count_limits_v1')||{}
+  );
+  Object.keys(requestLimits).forEach(function(key){
+    if(matches(key))delete requestLimits[key];
+  });
+  await floorstockDeletionStep(
+    report,
+    'Remove request-count limits',
+    function(){return S.s('request_count_limits_v1',requestLimits);}
+  );
+
+  var hourMaps=Object.assign(
+    {},
+    S.g('request_hour_grids_v1')||{}
+  );
+  Object.keys(hourMaps).forEach(function(key){
+    if(matches(key))delete hourMaps[key];
+  });
+  await floorstockDeletionStep(
+    report,
+    'Remove weekly request-hour grid',
+    function(){return S.s('request_hour_grids_v1',hourMaps);}
+  );
+
+  await floorstockDeletionStep(
+    report,
+    'Remove controlled storage maps',
+    function(){return S.s('controlled_storage_maps_v1',storageMaps);}
+  );
+
+  var accountabilityCatalog=(S.g('accountability_catalog_v1')||[])
+    .map(function(item){
+      item=Object.assign({},item);
+      item.departmentIds=(item.departmentIds||[]).filter(function(deptId){
+        return !matches(deptId);
+      });
+      return item;
+    });
+  await floorstockDeletionStep(
+    report,
+    'Remove medication-accountability assignments',
+    function(){
+      return S.s('accountability_catalog_v1',accountabilityCatalog);
+    }
+  );
+
+  var accountabilityStock=Object.assign(
+    {},
+    S.g('accountability_dept_stock_v1')||{}
+  );
+  Object.keys(accountabilityStock).forEach(function(key){
+    var deptPart=String(key).split('|')[0];
+    if(matches(deptPart))delete accountabilityStock[key];
+  });
+  await floorstockDeletionStep(
+    report,
+    'Remove medication-accountability balances',
+    function(){
+      return S.s('accountability_dept_stock_v1',accountabilityStock);
+    }
+  );
+
+  if(removeOfficial){
+    await floorstockDeletionStep(
+      report,
+      'Delete official department record',
+      function(){return S.del('departments',id);}
+    );
+  }
+
+  var officialRemaining=(S.g('departments')||[]).some(function(department){
+    return matches(department&&department.id);
+  });
+  if(removeOfficial&&officialRemaining){
+    var verifyError=new Error(
+      'Delete official department record: read-back verification failed.'
+    );
+    report.failed.push({
+      step:'Verify official department removal',
+      message:verifyError.message
+    });
+    verifyError.deletionReport=report;
+    throw verifyError;
+  }
+
+  report.completed.push('Verify department deletion');
+
+  if(window.FB_DB&&window.FB_AUTH&&FB_AUTH.currentUser){
+    var publicJobs=[];
+    aliases.forEach(function(alias){
+      publicJobs.push({
+        name:'public_expiry/'+alias,
+        run:function(){
+          return FB_DB.collection('public_expiry').doc(alias).delete();
+        }
+      });
+      publicJobs.push({
+        name:'public_controlled_expiry/'+alias,
+        run:function(){
+          return FB_DB.collection('public_controlled_expiry').doc(alias).delete();
+        }
+      });
+    });
+    publicStorageUnits.forEach(function(record){
+      publicJobs.push({
+        name:'public controlled storage '+record.unitId,
+        run:function(){
+          return FB_DB.collection('public_controlled_expiry')
+            .doc('storage_'+record.dept+'_'+record.unitId)
+            .delete();
+        }
+      });
+    });
+
+    for(var publicIndex=0;publicIndex<publicJobs.length;publicIndex++){
+      try{
+        await publicJobs[publicIndex].run();
+      }catch(error){
+        report.optionalFailed.push({
+          step:publicJobs[publicIndex].name,
+          message:String(error&&error.message||error)
+        });
+        console.warn(
+          'Optional public department cleanup failed:',
+          publicJobs[publicIndex].name,
+          error
+        );
+      }
+    }
+  }
+
+  return report;
 }
 
 window.purgeOrphanDepartment=async function(id){
   if(!window.CU||CU.master!==true){
-    if(typeof toast==='function')toast('Only Master can permanently delete orphaned department records.','err');
+    if(typeof toast==='function'){
+      toast(
+        'Only Master can permanently delete orphaned department records.',
+        'err'
+      );
+    }
     return false;
   }
-  var record=requestGridOrphans().find(function(item){return String(item.id)===String(id);});
+
+  var record=requestGridOrphans().find(function(item){
+    return String(item.id)===String(id);
+  });
+
   if(!record){
     renderRequestGridOrphans();
     return true;
   }
+
   if(record.userCount){
-    if(typeof toast==='function')toast('Delete or reassign the linked user accounts first.','err');
+    if(typeof toast==='function'){
+      toast('Delete or reassign the linked user accounts first.','err');
+    }
     if(typeof showPg==='function')showPg('pg-users');
     return false;
   }
+
   var confirmed=await uiConfirm(
-    'Permanently delete orphaned department records for "'+(record.name||record.id)+'"?\n\n'+
-    'This removes schedules, limits, medicines, expiry, shelves, alerts and controlled-custody state. Historical completed requests are retained for audit.'
+    'Permanently delete orphaned department records for "'+
+    (record.name||record.id)+'"?\n\n'+
+    'This removes schedules, limits, medicines, expiry, shelves, alerts, '+
+    'controlled custody, storage maps, and current accountability balances. '+
+    'Historical completed requests are retained for audit.'
   );
   if(!confirmed)return false;
+
+  var deletionReport;
   try{
-    await floorstockPurgeDepartmentState(record.id,[record.id,record.name],false);
-    window.renderRequestHourGridUI();
-    if(typeof toast==='function')toast('Orphaned department records deleted permanently ✓','info');
-    return true;
+    deletionReport=await floorstockPurgeDepartmentState(
+      record.id,
+      [record.id,record.name],
+      false
+    );
   }catch(error){
     console.error(error);
-    if(typeof toast==='function')toast('Orphaned department deletion was not completed.','err');
+    if(typeof toast==='function'){
+      toast(
+        'Orphan deletion stopped at: '+
+        String(error&&error.message||error),
+        'err'
+      );
+    }
     return false;
   }
-}
+
+  var uiFailures=floorstockDeleteUiRefresh();
+  if(typeof toast==='function'){
+    toast(
+      uiFailures.length
+        ?'Orphan records were deleted. Refresh one UI panel if it still shows old data.'
+        :'Orphaned department records deleted permanently ✓',
+      uiFailures.length?'info':'succ'
+    );
+  }
+  return deletionReport;
+};
 function renderTargets(depts){
   var host=E('request-grid-targets');
   if(!host)return;
@@ -10384,8 +10794,59 @@ window.submitFulfill=async function(){
 
 /* Expiry and department receipt saves are batched into one Firestore write. */
 window.saveAlertSettings=async function(){if(!window.CU)return;var d1=Math.max(1,+el('alert-days1').value||30),d2=Math.max(1,+el('alert-days2').value||7);if(d2>=d1)return toast('Urgent alert must be shorter than early alert','err');try{await setAlertSettings(CU.deptId,{d1:d1,d2:d2});toast('Department alert periods saved ✓','succ');renderShelfAlertSettings()}catch(e){toast('Alert settings were not saved.','err')}};
-window.delBatch=async function(id){if(!await uiConfirm('Delete this expiry record? Batch/Lot may be blank.'))return;try{await delExpBatch(CU.deptId,id);toast('Expiry record deleted and verified ✓','info');renderExpiry()}catch(e){console.error(e);toast(String(e&&e.message||'Expiry deletion was not saved.'),'err')}};
-window.saveExpiry=async function(){if(!window.CU)return;var medId=el('exp-med-sel').value,date=el('exp-date-inp').value;if(!medId||!date)return toast('Medicine and expiry date are required. Batch/Lot is optional.','err');var editId=el('exp-edit-id').value,lot=el('exp-batch-inp').value.trim(),b={medId:medId,batch:lot,lot:lot,date:date,expiry:date};try{if(editId)await updExpBatch(CU.deptId,editId,b);else await addExpBatch(CU.deptId,b);CM('mexpiry');renderExpiry();toast('Expiry saved and verified. Batch/Lot remained optional ✓','succ')}catch(e){console.error(e);toast(String(e&&e.message||'Expiry was not saved.'),'err')}};
+window.delBatch=async function(id,button){
+  if(!await uiConfirm('Delete this expiry record? Batch/Lot may be blank.'))return;
+  if(button)button.disabled=true;
+  try{
+    await delExpBatch(CU.deptId,id);
+    renderShelves();
+    toast('Expiry record deleted and verified ✓','info');
+  }catch(e){
+    console.error(e);
+    if(button)button.disabled=false;
+    toast(String(e&&e.message||'Expiry deletion was not saved.'),'err');
+  }
+};
+window.saveExpiry=async function(){
+  if(!window.CU)return;
+  var medId=el('exp-med-sel').value;
+  var date=el('exp-date-inp').value;
+  if(!medId||!date){
+    return toast(
+      'Medicine and expiry date are required. Batch/Lot is optional.',
+      'err'
+    );
+  }
+
+  var button=el('exp-save-btn');
+  var editId=el('exp-edit-id').value;
+  var lot=el('exp-batch-inp').value.trim();
+  var row={
+    medId:medId,
+    batch:lot,
+    lot:lot,
+    date:date,
+    expiry:date
+  };
+
+  if(button)button.disabled=true;
+  try{
+    if(editId)await updExpBatch(CU.deptId,editId,row);
+    else await addExpBatch(CU.deptId,row);
+
+    CM('mexpiry');
+    renderShelves();
+    toast(
+      'Expiry saved and verified. Batch/Lot remained optional ✓',
+      'succ'
+    );
+  }catch(e){
+    console.error(e);
+    toast(String(e&&e.message||'Expiry was not saved.'),'err');
+  }finally{
+    if(button)button.disabled=false;
+  }
+};
 window.v13SaveReceive=async function(){var modal=el('v13-receive-modal'),requestId=modal&&modal.dataset?String(modal.dataset.requestId||''):'';var req=(gr()||[]).find(function(x){return String(x.id)===requestId});if(!req)return toast('Request not available','err');var arr=(getExpiry(CU.deptId)||[]).slice(),received=[];document.querySelectorAll('#v13-receive-body tr[data-med]').forEach(function(tr){var date=tr.querySelector('.v13-r-exp').value,lot=tr.querySelector('.v13-r-lot').value.trim(),medId=tr.dataset.med,qty=Number(tr.dataset.qty||0);if(date){arr.push({id:'ex_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),medId:medId,expiry:date,date:date,batch:lot,lot:lot,qty:qty,sourceRequestId:requestId,receivedAt:typeof nowISO==='function'?nowISO():new Date().toISOString()});received.push({medId:medId,qty:qty,expiry:date,batch:lot})}});try{await setExpiry(CU.deptId,arr);await S.upd('requests',requestId,{receivedAt:typeof nowISO==='function'?nowISO():new Date().toISOString(),receivedBy:typeof actualActorName==='function'?actualActorName():CU.username,receivedExpiry:received});await auditAction('department_request_received',{requestId:requestId,items:received});if(modal&&modal.dataset)delete modal.dataset.requestId;CM('v13-receive-modal');if(typeof renderMyReqs==='function')renderMyReqs();toast('All received items saved permanently ✓','succ')}catch(e){console.error(e);toast('Received items were not fully saved.','err')}};
 
 /* Notes. */
@@ -10412,34 +10873,98 @@ window.saveBulkLimits=async function(){var lims=Object.assign({},getMonthlyLimit
 /* Departments are committed as one awaited operation set. */
 window.addDept=async function(){var n=el('ndname').value.trim();if(!n)return toast('Enter department name','err');var base=n.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,20)||'dept',id=base,c=2;while((gd()||[]).some(function(d){return d.id===id})){id=base+'_'+c++}var copy=(el('ndcopy')||{value:'empty'}).value||'empty',meds=[];if(copy==='default')meds=(window.MEDS||[]).map(function(m){return {id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:m.n,category:m.c,min:m.mn,max:m.mx,monthly:null,high_alert:!!m.ha,hazard:!!m.hz,lasa:!!m.ls,created:typeof nowISO==='function'?nowISO():new Date().toISOString()}});else if(copy!=='empty')meds=(getMeds(copy)||[]).map(function(m){return Object.assign({},m,{id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)})});try{await Promise.all([S.push('departments',{id:id,name:n,created:typeof nowISO==='function'?nowISO():new Date().toISOString()}),setMeds(id,meds)]);el('ndname').value='';renderUsers();fillDS();populateInvDeptSel();if(typeof window.renderRequestHourGridUI==='function')window.renderRequestHourGridUI();toast('"'+n+'" added and saved with '+meds.length+' medication(s) ✓','succ')}catch(e){console.error(e);toast('Department was not fully saved.','err')}};
 window.delDept=async function(id){
-  var dept=(gd()||[]).find(function(item){return String(item.id)===String(id)});
+  var dept=(gd()||[]).find(function(item){
+    return String(item.id)===String(id);
+  });
   if(!dept)return window.purgeOrphanDepartment(id);
-  var linked=(gu()||[]).filter(function(user){return String(user.deptId||'')===String(id)});
+
+  var linked=(gu()||[]).filter(function(user){
+    return [
+      user&&user.deptId,
+      user&&user.departmentId,
+      user&&user.department
+    ].some(function(value){
+      return String(value||'')===String(id);
+    });
+  });
+
   if(linked.length){
-    if(typeof toast==='function')toast('Delete or reassign '+linked.length+' linked user account(s) before deleting this department.','err');
+    if(typeof toast==='function'){
+      toast(
+        'Delete or reassign '+linked.length+
+        ' linked user account(s) before deleting this department.',
+        'err'
+      );
+    }
     if(typeof showPg==='function')showPg('pg-users');
     return false;
   }
+
+  var linkedCarts=(S.g('crash_carts')||[]).filter(function(cart){
+    return String(cart&&cart.deptId||'')===String(id);
+  });
+
+  if(linkedCarts.length){
+    if(typeof toast==='function'){
+      toast(
+        'Move or delete '+linkedCarts.length+
+        ' crash cart(s) before deleting this department.',
+        'err'
+      );
+    }
+    if(typeof showPg==='function')showPg('pg-crash-ops');
+    return false;
+  }
+
   var count=(getMeds(id)||[]).length;
   var confirmed=await uiConfirm(
     'Delete department "'+(dept.name||id)+'" permanently?\n\n'+
-    'This removes '+count+' medications, expiry, shelves, alerts, controlled custody, request schedules, dispense slots and monthly limits. Historical completed requests are retained for audit.'
+    'This removes '+count+
+    ' medications, expiry, shelves, alerts, controlled custody, storage maps, '+
+    'request schedules, limits, and current accountability balances. '+
+    'Historical completed requests are retained for audit.'
   );
   if(!confirmed)return false;
+
+  var deletionReport;
   try{
-    var aliases=[id,dept.name,dept.code].filter(Boolean);
-    await floorstockPurgeDepartmentState(id,aliases,true);
-    renderUsers();
-    fillDS();
-    populateInvDeptSel();
-    window.renderRequestHourGridUI();
-    if(typeof toast==='function')toast('Department deleted permanently ✓','info');
-    return true;
+    deletionReport=await floorstockPurgeDepartmentState(
+      id,
+      [id,dept.name,dept.code].filter(Boolean),
+      true
+    );
   }catch(error){
     console.error(error);
-    if(typeof toast==='function')toast('Department deletion was not completed.','err');
+    if(typeof toast==='function'){
+      toast(
+        'Department deletion stopped at: '+
+        String(error&&error.message||error),
+        'err'
+      );
+    }
     return false;
   }
+
+  var uiFailures=floorstockDeleteUiRefresh();
+
+  if(typeof toast==='function'){
+    if(uiFailures.length){
+      toast(
+        'Department was deleted and verified. One screen refresh failed; '+
+        'reopen the page to refresh that panel.',
+        'info'
+      );
+    }else if(deletionReport.optionalFailed.length){
+      toast(
+        'Department deleted. A public QR cleanup will retry later.',
+        'info'
+      );
+    }else{
+      toast('Department deleted permanently and verified ✓','succ');
+    }
+  }
+
+  return deletionReport;
 };
 
 })();
@@ -10656,28 +11181,726 @@ window.r17AccSubmitUsage=async function(id){var get=function(kind){var x=documen
 window.r17AccRenderVerify=function(){var host=E('r17-acc-verify');if(!host)return;var from=(E('r17-acc-from')||{}).value||'',to=(E('r17-acc-to')||{}).value||'',dept=(E('r17-acc-filter-dept')||{}).value||'',status=(E('r17-acc-filter-status')||{}).value||'',rows=accUsage().filter(function(x){return(!from||x.date>=from)&&(!to||x.date<=to)&&(!dept||String(x.deptId)===String(dept))&&(!status||x.status===status)});host.innerHTML='<div class="tw"><table><thead><tr><th>Date</th><th>Department</th><th>Medicine</th><th>Patient file</th><th>Units</th><th>Dose</th><th>Doctor</th><th>Status</th><th>Decision</th></tr></thead><tbody>'+rows.map(function(u){var m=accCatalog().find(function(x){return x.id===u.medId})||{};return '<tr><td>'+esc(u.date)+'</td><td>'+esc(deptName(u.deptId))+'</td><td>'+esc(m.name||u.medName)+'</td><td>'+esc(u.patientFile)+'</td><td>'+n(u.units)+'</td><td>'+esc(u.dose||'—')+'</td><td>'+esc(u.doctor)+'</td><td>'+esc(accStatusLabel(u.status))+'</td><td><input id="r17-acc-note-'+u.id+'" placeholder="Rejection note required"><button class="btn bs bxs" onclick="r17AccDecision(\''+u.id+'\',true)">Verify</button> <button class="btn bd2c bxs" onclick="r17AccDecision(\''+u.id+'\',false)">Return</button></td></tr>'}).join('')+'</tbody></table></div>';if(!rows.length)host.innerHTML='<div class="alert-banner-y">No documentation found for the selected filter. Pharmacy may change the date range or department; no silent verification is created.</div>'};
 window.r17AccDecision=async function(id,verify){var rows=accUsage().map(function(x){return Object.assign({},x)}),u=rows.find(function(x){return x.id===id});if(!u)return;var note=(E('r17-acc-note-'+id)||{}).value||'';if(!verify&&!note.trim())return toast('A return/rejection note is required.','err');if(verify){var stocks=Object.assign({},accDeptStock()),key=u.deptId+'|'+u.medId;if(n(stocks[key])<n(u.units))return toast('Department documented more units than its recorded balance. Return it with a note.','err');stocks[key]=n(stocks[key])-n(u.units);await S.s('accountability_dept_stock_v1',stocks);u.status='verified';u.verifiedAt=now();u.verifiedBy=actor().name;u.pharmacyNote=note.trim()}else{u.status='returned';u.returnedAt=now();u.returnedBy=actor().name;u.pharmacyNote=note.trim()}await S.s('accountability_nursing_v1',rows);toast(verify?'Verified ✓':'Returned to nursing ✓','succ');r17AccRenderVerify()};
 
-/* ---------- Controlled medicine cabinets and safes ---------- */
-function storageAll(){return S.g('controlled_storage_maps_v1')||{}}
-function storageDept(id){var all=storageAll();return clone(all[id]||{mode:'map',units:[]})}
-function controlledMeds(dept){var list=typeof ctlDeptList==='function'?(ctlDeptList(dept)||[]):[],cat=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[];return list.map(function(x){var m=cat.find(function(c){return String(c.id)===String(x.medId)})||{};return {id:x.medId,name:m.name||x.name||x.medId,batches:x.batches||[],qty:x.actualQty!=null?x.actualQty:x.qty}})}
-function canStorage(){return permission('controlledStorage',['controlled_pharmacy'])}
-function rowLetter(i){var out='',n=i+1;while(n>0){n--;out=String.fromCharCode(65+n%26)+out;n=Math.floor(n/26)}return out}
-function createUnit(name,type,counts){return {id:uid('storage'),name:name,type:type,createdAt:now(),rows:counts.map(function(count,ri){return {id:uid('row'),label:rowLetter(ri),cells:Array.from({length:count},function(_,ci){return {id:uid('cell'),code:rowLetter(ri)+(ci+1),medId:''}})}})}}
-window.R17Core=Object.assign(window.R17Core||{},{createStorageUnit:createUnit});
-window.renderControlledStorage=function(){var page=E('pg-controlled-storage');if(!page)return;if(!canStorage()){page.innerHTML='<div class="alert-banner">Not authorized.</div>';return}var sel=E('r17-storage-dept'),cur=sel.value;sel.innerHTML=depts().map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');if(cur&&depts().some(function(d){return d.id===cur}))sel.value=cur;var dept=sel.value;if(!dept)return;var data=storageDept(dept);E('r17-storage-mode').value=data.mode||'map';var filter=E('r17-storage-filter'),old=filter.value;filter.innerHTML='<option value="all">All custody medicines</option><option value="unassigned">Not assigned to a cell</option>'+data.units.map(function(u){return '<option value="unit:'+u.id+'">'+esc(u.name)+'</option>'}).join('');if(Array.from(filter.options).some(function(o){return o.value===old}))filter.value=old;var meds=controlledMeds(dept),assigned={};data.units.forEach(function(u){u.rows.forEach(function(r){r.cells.forEach(function(c){if(c.medId)assigned[c.medId]=u.id})})});var mode=data.mode||'map',unitFilter=filter.value;var units=data.units.filter(function(u){return unitFilter.indexOf('unit:')===0?u.id===unitFilter.slice(5):true});var options='<option value="">Empty / فارغة</option>'+meds.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'}).join('');var body='<div class="fl jb ic mb14"><div><b>'+esc(deptName(dept))+'</b><div class="fhint">'+data.units.length+' cabinet/safe unit(s)</div></div></div>';if(unitFilter==='unassigned'){body+='<div class="card"><div class="ch"><span class="ct">Medicines not assigned to any cell</span></div><div class="cb">'+meds.filter(function(m){return !assigned[m.id]}).map(function(m){return '<span class="chip" style="margin:4px">'+esc(m.name)+'</span>'}).join('')+'</div></div>'}else body+=units.map(function(u){if(mode==='list'){var rows=[];u.rows.forEach(function(r){r.cells.forEach(function(c){var m=meds.find(function(x){return x.id===c.medId});if(m)rows.push('<tr><td>'+esc(c.code)+'</td><td>'+esc(m.name)+'</td><td>'+n(m.qty)+'</td><td>'+esc((m.batches||[]).map(function(b){return (b.expiry||'—')+(b.lot?' · '+b.lot:'')}).join(' | ')||'—')+'</td></tr>')})});return '<div class="r17-unit"><div class="r17-unit-head"><b>'+esc(u.name)+' — '+esc(u.type)+'</b><div><button class="btn bg bxs" onclick="r17StoragePrint(\''+u.id+'\',\'list\')">Print list</button> <button class="btn bg bxs" onclick="r17StoragePrint(\''+u.id+'\',\'map\')">Print map</button> <button class="btn bd2c bxs" onclick="r17StorageDeleteUnit(\''+u.id+'\')">Delete</button></div></div><div class="tw"><table><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch/Expiry</th></tr></thead><tbody>'+rows.join('')+'</tbody></table></div></div>'}return '<div class="r17-unit"><div class="r17-unit-head"><b>'+esc(u.name)+' — '+esc(u.type)+'</b><div><button class="btn bg bxs" onclick="r17StoragePrint(\''+u.id+'\',\'list\')">Print list</button> <button class="btn bg bxs" onclick="r17StoragePrint(\''+u.id+'\',\'map\')">Print map</button> <button class="btn bd2c bxs" onclick="r17StorageDeleteUnit(\''+u.id+'\')">Delete</button></div></div>'+u.rows.map(function(r,ri){return '<div class="r17-storage-row" style="grid-template-columns:repeat('+r.cells.length+',minmax(120px,1fr))">'+r.cells.map(function(c,ci){var m=meds.find(function(x){return x.id===c.medId});return '<div class="r17-cell"><div class="r17-cell-code">'+esc(c.code)+'</div><select onchange="r17StorageAssign(\''+u.id+'\','+ri+','+ci+',this.value)">'+options.replace('value="'+esc(c.medId)+'"','value="'+esc(c.medId)+'" selected')+'</select>'+(m?'<div class="fhint" style="margin-top:5px">Qty '+n(m.qty)+'<br>'+esc((m.batches||[]).map(function(b){return b.expiry||'—'}).join(', '))+'</div>':'')+'</div>'}).join('')+'</div>'}).join('')+'</div>'}).join('');E('r17-storage-root').innerHTML=body};
-window.r17StorageModeChanged=async function(){var dept=E('r17-storage-dept').value,all=storageAll(),data=storageDept(dept);data.mode=E('r17-storage-mode').value;all[dept]=data;await S.s('controlled_storage_maps_v1',all);renderControlledStorage()};
-window.r17StorageOpenCreate=function(){var name=prompt('Cabinet/Safe name / اسم الدولاب أو الخزنة');if(!name)return;var type=prompt('Type: cabinet or safe / النوع', 'cabinet')||'cabinet';var raw=prompt('Cell counts per row, comma-separated. Example: 7,5,4,9,2','7,5,4,9,2');if(!raw)return;var counts=raw.split(',').map(function(x){return Math.max(1,Math.floor(n(x)))}).filter(Boolean);if(!counts.length)return toast('Enter at least one row.','err');r17StorageCreate(name,type,counts)};
-window.r17StorageCreate=async function(name,type,counts){var dept=E('r17-storage-dept').value,all=storageAll(),data=storageDept(dept);data.units.push(createUnit(name,type,counts));all[dept]=data;await S.s('controlled_storage_maps_v1',all);toast('Storage unit created with coded cells ✓','succ');renderControlledStorage()};
-window.r17StorageAssign=async function(unitId,rowIndex,cellIndex,medId){var dept=E('r17-storage-dept').value,all=storageAll(),data=storageDept(dept),u=data.units.find(function(x){return x.id===unitId});if(!u)return;data.units.forEach(function(unit){unit.rows.forEach(function(r){r.cells.forEach(function(c){if(medId&&c.medId===medId)c.medId=''})})});u.rows[rowIndex].cells[cellIndex].medId=medId;all[dept]=data;await S.s('controlled_storage_maps_v1',all);renderControlledStorage()};
-window.r17StorageDeleteUnit=async function(id){if(!(await uiConfirm('Delete this cabinet/safe? Medicines return to the unassigned filter.')))return;var dept=E('r17-storage-dept').value,all=storageAll(),data=storageDept(dept);data.units=data.units.filter(function(x){return x.id!==id});all[dept]=data;await S.s('controlled_storage_maps_v1',all);renderControlledStorage()};
+/* ---------- Controlled cabinets and safes ---------- */
+var CONTROLLED_STORAGE_KEY='controlled_storage_maps_v1';
+var CONTROLLED_STORAGE_UI={
+  editingUnitId:'',
+  draftCounts:[7,5,4,9,2]
+};
+
+function storageAll(){
+  var value=S.g(CONTROLLED_STORAGE_KEY);
+  return value&&typeof value==='object'?value:{};
+}
+
+function storageDept(id){
+  var all=storageAll();
+  var value=clone(all[id]||{mode:'map',units:[]});
+  if(!value||typeof value!=='object')value={mode:'map',units:[]};
+  if(!Array.isArray(value.units))value.units=[];
+  if(value.mode!=='list')value.mode='map';
+  return value;
+}
+
+function controlledMeds(dept){
+  var list=typeof ctlDeptList==='function'?(ctlDeptList(dept)||[]):[];
+  var catalog=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[];
+  return list.map(function(item){
+    var med=catalog.find(function(candidate){
+      return String(candidate.id)===String(item.medId);
+    })||{};
+    return {
+      id:String(item.medId||''),
+      name:med.name||item.name||item.medId,
+      batches:Array.isArray(item.batches)?item.batches:[],
+      qty:item.actualQty!=null?item.actualQty:item.qty
+    };
+  }).filter(function(item){return !!item.id;});
+}
+
+function storageEffectiveRole(){
+  return String(
+    (window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||
+    (window.CU&&CU.role)||
+    ''
+  );
+}
+
+function storageActualMaster(){
+  try{
+    if(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)return true;
+    if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
+    return !!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE);
+  }catch(error){
+    return false;
+  }
+}
+
+function canStorage(){
+  if(storageActualMaster())return true;
+  var permissions=window.CU&&CU.permissions;
+  if(permissions&&permissions.controlledStorage===true)return true;
+  return storageEffectiveRole()==='controlled_pharmacy';
+}
+
+function rowLetter(index){
+  var output='',number=index+1;
+  while(number>0){
+    number--;
+    output=String.fromCharCode(65+(number%26))+output;
+    number=Math.floor(number/26);
+  }
+  return output;
+}
+
+function normalizedCellCount(value){
+  value=Math.floor(Number(value));
+  return isFinite(value)?Math.max(1,Math.min(50,value)):1;
+}
+
+function normalizeStorageCounts(values){
+  return (Array.isArray(values)?values:[])
+    .slice(0,26)
+    .map(normalizedCellCount);
+}
+
+function createStorageUnit(name,type,counts,existing){
+  existing=existing||{};
+  var previousByCode={};
+
+  (existing.rows||[]).forEach(function(row){
+    (row.cells||[]).forEach(function(cell){
+      previousByCode[String(cell.code||'')]=cell.medId||'';
+    });
+  });
+
+  return {
+    id:existing.id||uid('storage'),
+    name:String(name||'').trim(),
+    type:['cabinet','safe','refrigerator'].indexOf(type)>=0
+      ?type
+      :'cabinet',
+    createdAt:existing.createdAt||now(),
+    updatedAt:now(),
+    rows:normalizeStorageCounts(counts).map(function(count,rowIndex){
+      var label=rowLetter(rowIndex);
+      return {
+        id:(existing.rows&&existing.rows[rowIndex]&&
+          existing.rows[rowIndex].id)||uid('row'),
+        label:label,
+        cells:Array.from({length:count},function(_,cellIndex){
+          var code=label+(cellIndex+1);
+          return {
+            id:(existing.rows&&existing.rows[rowIndex]&&
+              existing.rows[rowIndex].cells&&
+              existing.rows[rowIndex].cells[cellIndex]&&
+              existing.rows[rowIndex].cells[cellIndex].id)||uid('cell'),
+            code:code,
+            medId:previousByCode[code]||''
+          };
+        })
+      };
+    })
+  };
+}
+
+function storageBuilderError(message){
+  var box=E('controlled-storage-builder-error');
+  if(!box)return;
+  box.textContent=message||'';
+  box.style.display=message?'block':'none';
+}
+
+function storageReadCounts(){
+  return Array.from(
+    document.querySelectorAll(
+      '#controlled-storage-shelf-rows [data-storage-cell-count]'
+    )
+  ).map(function(input){
+    return normalizedCellCount(input.value);
+  });
+}
+
+function storagePreviewHtml(counts){
+  return normalizeStorageCounts(counts).map(function(count,index){
+    var label=rowLetter(index);
+    var cells=Array.from({length:count},function(_,cellIndex){
+      return '<span class="r21-storage-code">'+
+        esc(label+(cellIndex+1))+
+      '</span>';
+    }).join('');
+    return '<div class="r21-storage-preview-row">'+
+      '<b>'+esc(label)+'</b>'+cells+
+    '</div>';
+  }).join('');
+}
+
+function renderStorageBuilder(counts){
+  counts=normalizeStorageCounts(
+    counts&&counts.length?counts:CONTROLLED_STORAGE_UI.draftCounts
+  );
+  if(!counts.length)counts=[7,5,4,9,2];
+  CONTROLLED_STORAGE_UI.draftCounts=counts.slice();
+
+  var countInput=E('controlled-storage-shelf-count');
+  if(countInput)countInput.value=String(counts.length);
+
+  var rows=E('controlled-storage-shelf-rows');
+  if(rows){
+    rows.innerHTML=counts.map(function(count,index){
+      var label=rowLetter(index);
+      return '<div class="r21-storage-shelf-config">'+
+        '<div class="r21-storage-shelf-label">Shelf '+esc(label)+
+          '<br><small>الرف '+(index+1)+'</small></div>'+
+        '<div class="fg">'+
+          '<label>Cells on this shelf / عدد الخانات</label>'+
+          '<input type="number" min="1" max="50" value="'+count+
+            '" data-storage-cell-count="'+index+
+            '" oninput="controlledStorageCountsChanged()">'+
+        '</div>'+
+        '<div class="r21-storage-shelf-codes">'+
+          Array.from({length:count},function(_,cellIndex){
+            return '<span class="r21-storage-code">'+
+              esc(label+(cellIndex+1))+
+            '</span>';
+          }).join('')+
+        '</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  var preview=E('controlled-storage-code-preview');
+  if(preview)preview.innerHTML=storagePreviewHtml(counts);
+}
+
+window.controlledStorageCountsChanged=function(){
+  var counts=storageReadCounts();
+  CONTROLLED_STORAGE_UI.draftCounts=counts;
+  var preview=E('controlled-storage-code-preview');
+  if(preview)preview.innerHTML=storagePreviewHtml(counts);
+};
+
+window.controlledStorageShelfCountChanged=function(){
+  var requested=Math.floor(Number(
+    (E('controlled-storage-shelf-count')||{}).value
+  ));
+  requested=isFinite(requested)?Math.max(1,Math.min(26,requested)):1;
+
+  var current=storageReadCounts();
+  var defaults=[7,5,4,9,2];
+
+  while(current.length<requested){
+    current.push(defaults[current.length]||1);
+  }
+  current=current.slice(0,requested);
+  renderStorageBuilder(current);
+};
+
+function resetStorageBuilder(){
+  CONTROLLED_STORAGE_UI.editingUnitId='';
+  CONTROLLED_STORAGE_UI.draftCounts=[7,5,4,9,2];
+
+  var edit=E('controlled-storage-edit-id');
+  var name=E('controlled-storage-name');
+  var type=E('controlled-storage-type');
+  var title=E('controlled-storage-builder-title');
+  var cancel=E('controlled-storage-cancel-edit');
+  var save=E('controlled-storage-save');
+
+  if(edit)edit.value='';
+  if(name)name.value='';
+  if(type)type.value='cabinet';
+  if(title)title.textContent='Create cabinet or safe / إنشاء دولاب أو خزنة';
+  if(cancel)cancel.style.display='none';
+  if(save)save.textContent='Save storage unit / حفظ الوحدة';
+
+  storageBuilderError('');
+  renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
+}
+
+window.controlledStorageCancelEdit=function(){
+  resetStorageBuilder();
+};
+
+window.controlledStorageEditUnit=function(unitId){
+  var dept=(E('controlled-storage-dept')||{}).value;
+  var data=storageDept(dept);
+  var unit=data.units.find(function(item){
+    return String(item.id)===String(unitId);
+  });
+  if(!unit)return;
+
+  CONTROLLED_STORAGE_UI.editingUnitId=unit.id;
+  CONTROLLED_STORAGE_UI.draftCounts=(unit.rows||[]).map(function(row){
+    return (row.cells||[]).length||1;
+  });
+
+  E('controlled-storage-edit-id').value=unit.id;
+  E('controlled-storage-name').value=unit.name||'';
+  E('controlled-storage-type').value=unit.type||'cabinet';
+  E('controlled-storage-builder-title').textContent=
+    'Edit storage unit / تعديل الوحدة';
+  E('controlled-storage-cancel-edit').style.display='inline-flex';
+  E('controlled-storage-save').textContent=
+    'Save changes / حفظ التعديلات';
+
+  storageBuilderError('');
+  renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
+  E('controlled-storage-name').focus();
+  E('controlled-storage-name').scrollIntoView({
+    behavior:'smooth',
+    block:'center'
+  });
+};
+
+window.controlledStorageSaveUnit=async function(){
+  if(!canStorage()){
+    return toast('You are not authorized to manage controlled storage.','err');
+  }
+
+  var dept=(E('controlled-storage-dept')||{}).value;
+  var name=String((E('controlled-storage-name')||{}).value||'').trim();
+  var type=String((E('controlled-storage-type')||{}).value||'cabinet');
+  var counts=storageReadCounts();
+  var editId=String((E('controlled-storage-edit-id')||{}).value||'');
+  var button=E('controlled-storage-save');
+
+  storageBuilderError('');
+
+  if(!dept){
+    storageBuilderError('Choose a department first.');
+    return;
+  }
+  if(!name){
+    storageBuilderError('Enter a cabinet, safe, or refrigerator name.');
+    return;
+  }
+  if(!counts.length){
+    storageBuilderError('Add at least one shelf.');
+    return;
+  }
+
+  var all=Object.assign({},storageAll());
+  var data=storageDept(dept);
+  var existing=editId?data.units.find(function(unit){
+    return String(unit.id)===editId;
+  }):null;
+
+  if(editId&&!existing){
+    storageBuilderError('The storage unit no longer exists. Refresh and try again.');
+    return;
+  }
+
+  if(existing){
+    var keptCodes={};
+    counts.forEach(function(count,rowIndex){
+      var label=rowLetter(rowIndex);
+      for(var cellIndex=0;cellIndex<count;cellIndex++){
+        keptCodes[label+(cellIndex+1)]=true;
+      }
+    });
+
+    var removedAssignments=[];
+    (existing.rows||[]).forEach(function(row){
+      (row.cells||[]).forEach(function(cell){
+        if(cell.medId&&!keptCodes[cell.code]){
+          removedAssignments.push(cell.code);
+        }
+      });
+    });
+
+    if(removedAssignments.length){
+      storageBuilderError(
+        'Move medicines out of these cells before reducing the layout: '+
+        removedAssignments.join(', ')
+      );
+      return;
+    }
+  }
+
+  var duplicate=data.units.find(function(unit){
+    return String(unit.id)!==editId&&
+      String(unit.name||'').trim().toLowerCase()===name.toLowerCase();
+  });
+  if(duplicate){
+    storageBuilderError(
+      'A storage unit with this name already exists in the department.'
+    );
+    return;
+  }
+
+  var next=createStorageUnit(name,type,counts,existing);
+  if(existing){
+    data.units=data.units.map(function(unit){
+      return String(unit.id)===editId?next:unit;
+    });
+  }else{
+    data.units.push(next);
+  }
+
+  all[dept]=data;
+  if(button)button.disabled=true;
+
+  try{
+    await S.s(CONTROLLED_STORAGE_KEY,all);
+    var saved=storageDept(dept).units.find(function(unit){
+      return String(unit.id)===String(next.id);
+    });
+    if(!saved)throw new Error('Storage unit read-back verification failed.');
+
+    resetStorageBuilder();
+    renderControlledStorage();
+    toast(
+      existing
+        ?'Storage unit updated and verified ✓'
+        :'Storage unit created and verified ✓',
+      'succ'
+    );
+  }catch(error){
+    console.error(error);
+    storageBuilderError(
+      String(error&&error.message||'Storage unit was not saved.')
+    );
+  }finally{
+    if(button)button.disabled=false;
+  }
+};
+
+function storageMedicineOptions(medicines,selectedId){
+  var html='<option value="">Empty / فارغة</option>';
+  medicines.forEach(function(medicine){
+    html+='<option value="'+esc(medicine.id)+'"'+
+      (String(medicine.id)===String(selectedId)?' selected':'')+
+      '>'+esc(medicine.name)+'</option>';
+  });
+  return html;
+}
+
+function storageAssignedMap(data){
+  var assigned={};
+  data.units.forEach(function(unit){
+    (unit.rows||[]).forEach(function(row){
+      (row.cells||[]).forEach(function(cell){
+        if(cell.medId){
+          assigned[String(cell.medId)]={
+            unitId:unit.id,
+            unitName:unit.name,
+            code:cell.code
+          };
+        }
+      });
+    });
+  });
+  return assigned;
+}
+
+function storageBatchText(medicine){
+  var text=(medicine.batches||[]).map(function(batch){
+    var expiry=batch.expiry||batch.date||'—';
+    var lot=batch.lot||batch.batch||'';
+    return expiry+(lot?' · '+lot:'');
+  }).join(' | ');
+  return text||'No expiry dates';
+}
+
+window.renderControlledStorage=function(){
+  var page=E('pg-controlled-storage');
+  var notice=E('controlled-storage-auth-message');
+  var workspace=E('controlled-storage-workspace');
+  if(!page||!notice||!workspace)return;
+
+  if(!canStorage()){
+    notice.style.display='block';
+    notice.textContent=
+      'Not authorized. This page is available to the actual Master, the '+
+      'Controlled Medicines Pharmacy Officer, or a user with the '+
+      'controlledStorage permission.';
+    workspace.style.display='none';
+    return;
+  }
+
+  notice.style.display='none';
+  workspace.style.display='block';
+
+  var departments=depts();
+  var select=E('controlled-storage-dept');
+  var previous=select.value;
+
+  select.innerHTML=departments.map(function(department){
+    return '<option value="'+esc(department.id)+'">'+
+      esc(deptName(department.id))+
+    '</option>';
+  }).join('');
+
+  if(previous&&departments.some(function(department){
+    return String(department.id)===String(previous);
+  })){
+    select.value=previous;
+  }
+
+  var dept=select.value;
+  if(!dept){
+    E('controlled-storage-dept-summary').textContent='No departments available';
+    E('controlled-storage-root').innerHTML=
+      '<div class="r21-storage-empty">Create a department before building controlled storage.</div>';
+    return;
+  }
+
+  var data=storageDept(dept);
+  var mode=E('controlled-storage-mode');
+  mode.value=data.mode||'map';
+
+  var filter=E('controlled-storage-filter');
+  var oldFilter=filter.value;
+  filter.innerHTML=
+    '<option value="all">All custody medicines / كل أدوية العهدة</option>'+
+    '<option value="unassigned">Not assigned / غير مضافة لخانة</option>'+
+    data.units.map(function(unit){
+      return '<option value="unit:'+esc(unit.id)+'">'+
+        esc(unit.name)+
+      '</option>';
+    }).join('');
+
+  if(Array.from(filter.options).some(function(option){
+    return option.value===oldFilter;
+  })){
+    filter.value=oldFilter;
+  }
+
+  var medicines=controlledMeds(dept);
+  var assigned=storageAssignedMap(data);
+  var unitFilter=filter.value;
+  var units=data.units.filter(function(unit){
+    return unitFilter.indexOf('unit:')===0
+      ?String(unit.id)===unitFilter.slice(5)
+      :true;
+  });
+
+  E('controlled-storage-dept-summary').innerHTML=
+    '<span>'+esc(deptName(dept))+'</span>'+
+    '<span class="chip" style="margin-inline-start:auto">'+
+      data.units.length+' unit(s)'+
+    '</span>';
+
+  if(!E('controlled-storage-shelf-rows').children.length){
+    renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
+  }
+
+  var body='';
+
+  if(unitFilter==='unassigned'){
+    var unassigned=medicines.filter(function(medicine){
+      return !assigned[String(medicine.id)];
+    });
+
+    body='<div class="card">'+
+      '<div class="ch"><span class="ct">Medicines not assigned to a cell / أدوية غير مضافة لخانة</span></div>'+
+      '<div class="cb"><div class="r21-storage-unassigned-list">'+
+        (unassigned.length
+          ?unassigned.map(function(medicine){
+            return '<span class="chip">'+esc(medicine.name)+'</span>';
+          }).join('')
+          :'<span class="fhint">Every custody medicine is assigned to a cell.</span>')+
+      '</div></div>'+
+    '</div>';
+
+    E('controlled-storage-root').innerHTML=body;
+    return;
+  }
+
+  if(!data.units.length){
+    E('controlled-storage-root').innerHTML=
+      '<div class="r21-storage-empty">'+
+        '<b>No cabinets or safes yet / لا توجد دواليب أو خزائن</b>'+
+        '<div style="margin-top:6px">Use the form above to define the first unit and its shelf-by-shelf cell structure.</div>'+
+      '</div>';
+    return;
+  }
+
+  body=units.map(function(unit){
+    var actionButtons=
+      '<div class="r21-storage-unit-actions">'+
+        '<button class="btn bg bxs" type="button" onclick="controlledStorageEditUnit(\''+unit.id+'\')">Edit layout</button>'+
+        '<button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'list\')">Print list</button>'+
+        '<button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'map\')">Print map</button>'+
+        '<button class="btn bd2c bxs" type="button" onclick="controlledStorageDeleteUnit(\''+unit.id+'\')">Delete</button>'+
+      '</div>';
+
+    var head='<div class="r17-unit-head">'+
+      '<div class="r21-storage-unit-meta">'+
+        '<b>'+esc(unit.name)+'</b>'+
+        '<span class="chip">'+esc(unit.type)+'</span>'+
+        '<span class="chip">'+(unit.rows||[]).length+' shelf/shelves</span>'+
+      '</div>'+
+      actionButtons+
+    '</div>';
+
+    if(data.mode==='list'){
+      var listRows=[];
+      (unit.rows||[]).forEach(function(row){
+        (row.cells||[]).forEach(function(cell){
+          var medicine=medicines.find(function(item){
+            return String(item.id)===String(cell.medId);
+          });
+          if(medicine){
+            listRows.push(
+              '<tr>'+
+                '<td><b>'+esc(cell.code)+'</b></td>'+
+                '<td>'+esc(medicine.name)+'</td>'+
+                '<td>'+n(medicine.qty)+'</td>'+
+                '<td>'+esc(storageBatchText(medicine))+'</td>'+
+              '</tr>'
+            );
+          }
+        });
+      });
+
+      return '<div class="r17-unit">'+head+
+        '<div class="tw"><table>'+
+          '<thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch/Lot (optional) &amp; Expiry</th></tr></thead>'+
+          '<tbody>'+
+            (listRows.length
+              ?listRows.join('')
+              :'<tr><td colspan="4">No medicines assigned to this unit.</td></tr>')+
+          '</tbody>'+
+        '</table></div>'+
+      '</div>';
+    }
+
+    var optionsCache={};
+    function options(selected){
+      var key=String(selected||'');
+      if(!optionsCache[key]){
+        optionsCache[key]=storageMedicineOptions(medicines,key);
+      }
+      return optionsCache[key];
+    }
+
+    var map=(unit.rows||[]).map(function(row,rowIndex){
+      return '<div class="r17-storage-row" style="grid-template-columns:repeat('+
+        Math.max(1,(row.cells||[]).length)+
+        ',minmax(120px,1fr))">'+
+        (row.cells||[]).map(function(cell,cellIndex){
+          var medicine=medicines.find(function(item){
+            return String(item.id)===String(cell.medId);
+          });
+
+          return '<div class="r17-cell'+(medicine?' r21-storage-cell-assigned':'')+'">'+
+            '<div class="r17-cell-code">'+esc(cell.code)+'</div>'+
+            '<select onchange="controlledStorageAssign(\''+unit.id+'\','+
+              rowIndex+','+cellIndex+',this.value)">'+
+              options(cell.medId)+
+            '</select>'+
+            (medicine
+              ?'<div class="fhint" style="margin-top:5px">'+
+                'Qty '+n(medicine.qty)+'<br>'+
+                esc(storageBatchText(medicine))+
+              '</div>'
+              :'')+
+          '</div>';
+        }).join('')+
+      '</div>';
+    }).join('');
+
+    return '<div class="r17-unit">'+head+map+'</div>';
+  }).join('');
+
+  E('controlled-storage-root').innerHTML=body;
+};
+
+window.controlledStorageModeChanged=async function(){
+  var dept=(E('controlled-storage-dept')||{}).value;
+  if(!dept)return;
+  var all=Object.assign({},storageAll());
+  var data=storageDept(dept);
+  data.mode=E('controlled-storage-mode').value==='list'?'list':'map';
+  all[dept]=data;
+  await S.s(CONTROLLED_STORAGE_KEY,all);
+  renderControlledStorage();
+};
+
+window.controlledStorageAssign=async function(unitId,rowIndex,cellIndex,medId){
+  var dept=(E('controlled-storage-dept')||{}).value;
+  if(!dept)return;
+
+  var all=Object.assign({},storageAll());
+  var data=storageDept(dept);
+  var unit=data.units.find(function(item){
+    return String(item.id)===String(unitId);
+  });
+  if(!unit||!unit.rows[rowIndex]||!unit.rows[rowIndex].cells[cellIndex])return;
+
+  var movedFrom='';
+  data.units.forEach(function(candidateUnit){
+    (candidateUnit.rows||[]).forEach(function(row){
+      (row.cells||[]).forEach(function(cell){
+        if(medId&&String(cell.medId)===String(medId)){
+          movedFrom=candidateUnit.name+' '+cell.code;
+          cell.medId='';
+        }
+      });
+    });
+  });
+
+  unit.rows[rowIndex].cells[cellIndex].medId=medId||'';
+  all[dept]=data;
+
+  try{
+    await S.s(CONTROLLED_STORAGE_KEY,all);
+    renderControlledStorage();
+    if(medId&&movedFrom){
+      toast('Medicine moved from '+movedFrom+' ✓','info');
+    }
+  }catch(error){
+    console.error(error);
+    toast('Cell assignment was not saved.','err');
+    renderControlledStorage();
+  }
+};
+
+window.controlledStorageDeleteUnit=async function(unitId){
+  var dept=(E('controlled-storage-dept')||{}).value;
+  if(!dept)return;
+
+  var data=storageDept(dept);
+  var unit=data.units.find(function(item){
+    return String(item.id)===String(unitId);
+  });
+  if(!unit)return;
+
+  var confirmed=await uiConfirm(
+    'Delete "'+unit.name+'"?\n\n'+
+    'Assigned medicines will return to the unassigned filter.'
+  );
+  if(!confirmed)return;
+
+  var all=Object.assign({},storageAll());
+  data.units=data.units.filter(function(item){
+    return String(item.id)!==String(unitId);
+  });
+  all[dept]=data;
+
+  try{
+    await S.s(CONTROLLED_STORAGE_KEY,all);
+    if(String(CONTROLLED_STORAGE_UI.editingUnitId)===String(unitId)){
+      resetStorageBuilder();
+    }
+    renderControlledStorage();
+    toast('Storage unit deleted ✓','info');
+  }catch(error){
+    console.error(error);
+    toast('Storage unit deletion was not saved.','err');
+  }
+};
+
 function near30(batches){var today=new Date();today=new Date(today.getFullYear(),today.getMonth(),today.getDate());return (batches||[]).some(function(b){if(!b.expiry)return false;var d=new Date(String(b.expiry).slice(0,10)+'T00:00:00'),days=Math.round((d-today)/86400000);return days>=0&&days<=30})}
 async function publishStorage(dept,u,meds){if(!window.FB_DB)return;var rows=[];u.rows.forEach(function(r){r.cells.forEach(function(c){var m=meds.find(function(x){return x.id===c.medId});if(m)rows.push({cell:c.code,name:m.name,qty:n(m.qty),batches:m.batches||[]})})});await FB_DB.collection('public_controlled_expiry').doc('storage_'+dept+'_'+u.id).set({department:deptName(dept),unit:u.name,type:u.type,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),rows:rows},{merge:true})}
-window.r17StoragePrint=async function(id,mode){var dept=E('r17-storage-dept').value,data=storageDept(dept),u=data.units.find(function(x){return x.id===id}),meds=controlledMeds(dept);if(!u)return;try{await publishStorage(dept,u,meds)}catch(e){if(typeof warnPublicSync==='function')warnPublicSync('Controlled storage QR',e)}var base=new URL(location.href);base.search='';base.hash='';var url=base.toString()+'?view=controlled-storage-public&dept='+encodeURIComponent(dept)+'&unit='+encodeURIComponent(id),qr='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+encodeURIComponent(url),date=new Date().toLocaleDateString('en-GB'),content='';if(mode==='list'){var rows=[];u.rows.forEach(function(r){r.cells.forEach(function(c){var m=meds.find(function(x){return x.id===c.medId});if(m)rows.push('<tr class="'+(near30(m.batches)?'near':'')+'"><td>'+esc(c.code)+'</td><td>'+esc(m.name)+'</td><td>'+n(m.qty)+'</td><td>'+esc((m.batches||[]).map(function(b){return (b.expiry||'—')+(b.lot?' · '+b.lot:'')}).join(' | ')||'—')+'</td></tr>')})});content='<table><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch (optional) & Expiry</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'}else content='<div class="map">'+u.rows.map(function(r){return '<div class="prow" style="grid-template-columns:repeat('+r.cells.length+',1fr)">'+r.cells.map(function(c){var m=meds.find(function(x){return x.id===c.medId});return '<div class="pcell '+(m&&near30(m.batches)?'near':'')+'"><b>'+esc(c.code)+'</b><span>'+esc(m?m.name:'Empty')+'</span><small>'+esc(m?(m.batches||[]).map(function(b){return b.expiry||'—'}).join(', '):'')+'</small></div>'}).join('')+'</div>'}).join('')+'</div>';var html='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial;margin:0;color:#000}.head{display:grid;grid-template-columns:1fr 25mm;gap:8mm;align-items:center;text-align:center}.head img{width:25mm}.legend{font-size:8px;margin:4px 0}.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #000;padding:4px}.near td,.pcell.near{background:#000!important;color:#fff!important}.map{display:grid;gap:5px}.prow{display:grid;gap:5px}.pcell{border:1px solid #000;min-height:90px;padding:5px;display:flex;flex-direction:column}.pcell span{font-weight:700;margin-top:8px}.pcell small{margin-top:auto}.cert{text-align:center;font-size:8px;margin-top:8px}</style></head><body><div class="head"><div><h2>'+esc(u.name)+' — '+esc(deptName(dept))+'</h2><div>Controlled storage '+esc(mode)+' / طباعة خريطة أو قائمة العهدة</div></div><img src="'+qr+'"></div><div class="legend"><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا · Print date: '+esc(date)+'</div>'+content+'<div class="cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';var w=window.open('','_blank');if(!w)return toast('Allow pop-ups.','err');w.document.write(html);w.document.close()};
+window.controlledStoragePrint=async function(id,mode){var dept=E('r17-storage-dept').value,data=storageDept(dept),u=data.units.find(function(x){return x.id===id}),meds=controlledMeds(dept);if(!u)return;try{await publishStorage(dept,u,meds)}catch(e){if(typeof warnPublicSync==='function')warnPublicSync('Controlled storage QR',e)}var base=new URL(location.href);base.search='';base.hash='';var url=base.toString()+'?view=controlled-storage-public&dept='+encodeURIComponent(dept)+'&unit='+encodeURIComponent(id),qr='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+encodeURIComponent(url),date=new Date().toLocaleDateString('en-GB'),content='';if(mode==='list'){var rows=[];u.rows.forEach(function(r){r.cells.forEach(function(c){var m=meds.find(function(x){return x.id===c.medId});if(m)rows.push('<tr class="'+(near30(m.batches)?'near':'')+'"><td>'+esc(c.code)+'</td><td>'+esc(m.name)+'</td><td>'+n(m.qty)+'</td><td>'+esc((m.batches||[]).map(function(b){return (b.expiry||'—')+(b.lot?' · '+b.lot:'')}).join(' | ')||'—')+'</td></tr>')})});content='<table><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch (optional) & Expiry</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'}else content='<div class="map">'+u.rows.map(function(r){return '<div class="prow" style="grid-template-columns:repeat('+r.cells.length+',1fr)">'+r.cells.map(function(c){var m=meds.find(function(x){return x.id===c.medId});return '<div class="pcell '+(m&&near30(m.batches)?'near':'')+'"><b>'+esc(c.code)+'</b><span>'+esc(m?m.name:'Empty')+'</span><small>'+esc(m?(m.batches||[]).map(function(b){return b.expiry||'—'}).join(', '):'')+'</small></div>'}).join('')+'</div>'}).join('')+'</div>';var html='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial;margin:0;color:#000}.head{display:grid;grid-template-columns:1fr 25mm;gap:8mm;align-items:center;text-align:center}.head img{width:25mm}.legend{font-size:8px;margin:4px 0}.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #000;padding:4px}.near td,.pcell.near{background:#000!important;color:#fff!important}.map{display:grid;gap:5px}.prow{display:grid;gap:5px}.pcell{border:1px solid #000;min-height:90px;padding:5px;display:flex;flex-direction:column}.pcell span{font-weight:700;margin-top:8px}.pcell small{margin-top:auto}.cert{text-align:center;font-size:8px;margin-top:8px}</style></head><body><div class="head"><div><h2>'+esc(u.name)+' — '+esc(deptName(dept))+'</h2><div>Controlled storage '+esc(mode)+' / طباعة خريطة أو قائمة العهدة</div></div><img src="'+qr+'"></div><div class="legend"><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا · Print date: '+esc(date)+'</div>'+content+'<div class="cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';var w=window.open('','_blank');if(!w)return toast('Allow pop-ups.','err');w.document.write(html);w.document.close()};
 
 /* Public controlled-storage QR view. */
 async function publicStorageView(){var q=new URLSearchParams(location.search);if(q.get('view')!=='controlled-storage-public')return;var auth=E('auth'),app=E('app');if(auth)auth.style.display='none';if(app)app.style.display='none';var host=document.createElement('div');host.style.cssText='font-family:Arial;padding:20px;max-width:1100px;margin:auto';host.innerHTML='<h2>Loading controlled storage…</h2>';document.body.appendChild(host);try{initFirebase();var doc=await FB_DB.collection('public_controlled_expiry').doc('storage_'+q.get('dept')+'_'+q.get('unit')).get();if(!doc.exists)throw new Error('Public storage record not found');var d=doc.data(),rows=d.rows||[];host.innerHTML='<h1>'+esc(d.unit||'Controlled storage')+'</h1><h3>'+esc(d.department||'')+'</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch/Expiry</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td style="border:1px solid #444;padding:6px">'+esc(r.cell)+'</td><td style="border:1px solid #444;padding:6px">'+esc(r.name)+'</td><td style="border:1px solid #444;padding:6px">'+n(r.qty)+'</td><td style="border:1px solid #444;padding:6px">'+esc((r.batches||[]).map(function(b){return (b.expiry||'—')+(b.lot?' · '+b.lot:'')}).join(' | '))+'</td></tr>'}).join('')+'</tbody></table>'}catch(e){host.innerHTML='<div style="color:#b00">'+esc(e&&e.message||e)+'</div>'}}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
-})();</script><script id="asdhealth-canonical-r6-18-20260726">
+})();</script><script id="asdhealth-canonical-r6-21-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
@@ -12266,23 +13489,34 @@ function fsR6EnsureStyles(){
     '#pg-crashcart .fsr6-select-col input{width:16px;height:16px;margin:0}'+
     '#pg-crashcart tr.fsr6-selected td{box-shadow:inset 0 0 0 1px var(--ac);background:rgba(31,111,235,.10)!important}'+
     '#fsr6-crash-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-inline-start:auto}'+
-    '#fsr6-crash-actions .btn{margin:0}.fsr6-dialog{width:min(1320px,98vw)!important;max-width:98vw!important;height:min(94vh,940px);max-height:94vh;display:flex;flex-direction:column;padding:0!important;overflow:hidden!important}'+
+    '#fsr6-crash-actions .btn{margin:0}.fsr6-dialog{width:min(1380px,98vw)!important;max-width:98vw!important;height:min(96vh,980px);max-height:96vh;display:flex;flex-direction:column;padding:0!important;overflow:hidden!important}'+
     '.fsr6-head{padding:16px 20px;border-bottom:1px solid var(--bd);display:flex;justify-content:space-between;gap:12px;align-items:flex-start}'+
-    '.fsr6-body{padding:14px 20px;overflow:auto;flex:1;min-height:0}.fsr6-tools{display:flex;gap:8px;align-items:end;flex-wrap:wrap;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--s2);margin-bottom:12px}'+
-    '.fsr6-tools .fg{min-width:210px;flex:1}.fsr6-tools input,.fsr6-tools select{margin:0}.fsr6-seeds{font-size:12px;color:var(--tx2);margin-bottom:10px}'+
-    '.fsr6-cart{border:1px solid var(--bd);border-radius:10px;margin-bottom:12px;overflow:hidden}.fsr6-cart.off{opacity:.58}.fsr6-cart-head{display:grid;grid-template-columns:auto 1fr minmax(220px,320px);gap:10px;align-items:center;padding:11px 13px;background:var(--s2);border-bottom:1px solid var(--bd)}'+
-    '.fsr6-cart-head input{margin:0}.fsr6-seal input{margin:0}.fsr6-table{width:100%;border-collapse:collapse}.fsr6-table th,.fsr6-table td{border:1px solid var(--bd);padding:7px;font-size:12px;vertical-align:middle}.fsr6-table input{margin:0}.fsr6-table .fsr6-row-check{width:16px;height:16px}'+
-    '.fsr6-footer{padding:12px 20px;border-top:1px solid var(--bd);display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}.fsr6-footer textarea{margin:0;min-height:58px}.fsr6-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.fsr6-status{font-size:11px;color:var(--tx2)}.fsr6-status.err{color:var(--rdl)}'+
-    '.fsr6-invalid{border-color:var(--rdl)!important;box-shadow:0 0 0 1px var(--rdl)}'+
+    '.fsr6-body{padding:14px 20px;overflow:auto;flex:1;min-height:0}.fsr6-seeds{font-size:12px;color:var(--tx2);margin-bottom:12px}'+
+    '.fsr6-workflow-note{padding:10px 12px;border:1px solid var(--ac);border-radius:10px;background:rgba(31,111,235,.08);margin-bottom:12px;font-size:12px;line-height:1.6}'+
+    '.fsr6-plan{border:1px solid var(--bd);border-radius:12px;margin-bottom:14px;overflow:hidden;background:var(--s1)}'+
+    '.fsr6-plan.off{opacity:.62}.fsr6-plan-head{display:grid;grid-template-columns:auto minmax(260px,1fr) auto;gap:10px;align-items:center;padding:12px 14px;background:var(--s2);border-bottom:1px solid var(--bd)}'+
+    '.fsr6-plan-title{font-weight:800}.fsr6-plan-meta{font-size:11px;color:var(--tx2);margin-top:3px}.fsr6-plan-actions{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}'+
+    '.fsr6-plan-body{padding:12px}.fsr6-alloc-box{border:1px solid var(--bd);border-radius:10px;padding:10px;background:var(--s2);margin-bottom:10px}'+
+    '.fsr6-alloc-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}.fsr6-alloc-list{display:grid;gap:7px}'+
+    '.fsr6-alloc-row{display:grid;grid-template-columns:minmax(150px,1fr) minmax(100px,.55fr) minmax(140px,.8fr) auto;gap:8px;align-items:end}.fsr6-alloc-row input{margin:0}'+
+    '.fsr6-cart-plan{border:1px solid var(--bd);border-radius:10px;margin-top:9px;overflow:hidden}.fsr6-cart-plan-head{display:grid;grid-template-columns:auto minmax(220px,1fr) 130px 180px;gap:8px;align-items:end;padding:9px 10px;background:var(--s2)}'+
+    '.fsr6-cart-plan-head input,.fsr6-cart-plan-head select{margin:0}.fsr6-cart-custom{padding:10px;border-top:1px dashed var(--bd);background:var(--s1)}'+
+    '.fsr6-review-title{margin:20px 0 8px;padding-top:12px;border-top:2px solid var(--bd);font-size:16px;font-weight:900}'+
+    '.fsr6-review-card{border:1px solid var(--bd);border-radius:12px;margin-bottom:12px;overflow:hidden}.fsr6-review-head{display:grid;grid-template-columns:auto minmax(220px,1fr) minmax(230px,320px);gap:10px;align-items:center;padding:11px 13px;background:var(--s2)}'+
+    '.fsr6-review-card.pending{border-color:var(--yl)}.fsr6-review-card.ready{border-color:var(--gn)}.fsr6-review-lines{padding:0 12px 10px}.fsr6-review-line{padding:9px 0;border-bottom:1px dashed var(--bd);font-size:12px;line-height:1.55}.fsr6-review-line:last-child{border-bottom:0}'+
+    '.fsr6-review-seal input{margin:0}.fsr6-confirm-label{display:flex;gap:7px;align-items:center;font-weight:800}.fsr6-confirm-label input{width:17px;height:17px;margin:0}'+
+    '.fsr6-footer{padding:12px 20px;border-top:1px solid var(--bd);display:grid;grid-template-columns:1fr auto;gap:12px;align-items:end}.fsr6-footer textarea{margin:0;min-height:58px}.fsr6-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.fsr6-status{font-size:11px;color:var(--tx2);max-width:440px}.fsr6-status.err{color:var(--rdl)}'+
+    '.fsr6-invalid{border-color:var(--rdl)!important;box-shadow:0 0 0 1px var(--rdl)}.fsr6-empty{padding:12px;border:1px dashed var(--bd);border-radius:9px;color:var(--tx2);font-size:12px}'+
     '.master-test-banner{font-size:10px;line-height:1.2;padding:4px 8px;border:1px solid var(--yl);border-radius:8px;color:var(--yll);white-space:nowrap}.master-test-exit{border-color:var(--rd)!important;color:var(--rdl)!important}'+
     '.fsr6-master-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fsr6-master-preview{padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:12px;line-height:1.7}'+
-    '@media(max-width:780px){.fsr6-cart-head,.fsr6-footer,.fsr6-master-grid{grid-template-columns:1fr}.fsr6-actions{justify-content:stretch}.fsr6-actions .btn{flex:1}}';
+    '@media(max-width:860px){.fsr6-plan-head,.fsr6-cart-plan-head,.fsr6-review-head,.fsr6-footer,.fsr6-master-grid{grid-template-columns:1fr}.fsr6-plan-actions,.fsr6-actions{justify-content:stretch}.fsr6-plan-actions .btn,.fsr6-actions .btn{flex:1}.fsr6-alloc-row{grid-template-columns:1fr 1fr}.fsr6-alloc-row .fsr6-remove-alloc{grid-column:1/-1}}';
   document.head.appendChild(style);
 }
 
 /* ---------- Crash Cart smart cross-cart replacement ---------- */
 
 var FS_R6_CRASH_SELECTED=new Map();
+var FS_R6_CRASH_WORKFLOW=null;
 var FS_R6_CRASH_FILTER='';
 var FS_R6_ORDER_NAMES=['Adrenaline (Epinephrine)','Amiodarone','Atropine','Calcium Chloride','Calcium Gluconate','Dextrose','Dobutamine','Dopamine','Lidocaine','Magnesium Sulfate','Naloxone','Norepinephrine','Sodium Bicarbonate'];
 
@@ -12464,173 +13698,300 @@ window.refreshCrashBulkUi=function(){
   });
   fsR6CrashUpdateButton();
 };
-function fsR6CrashCloseModal(){var m=fsR6E('fsr6-crash-modal');if(m)m.remove()}
-function fsR6CrashDateMode(){
-  var mode=(fsR6E('fsr6-date-mode')||{}).value||'common',common=fsR6E('fsr6-common-date');
-  if(common)common.disabled=mode!=='common';
-  document.querySelectorAll('#fsr6-crash-modal .fsr6-exp').forEach(function(input){
-    input.disabled=mode==='common'||!input.closest('.fsr6-cart').querySelector('.fsr6-cart-check').checked||!input.closest('tr').querySelector('.fsr6-row-check').checked;
-    if(mode==='common'&&common&&common.value)input.value=common.value;
-  });
-}
-function fsR6CrashToggleCart(block,on){
-  block.classList.toggle('off',!on);
-  block.querySelectorAll('input,select,textarea').forEach(function(x){
-    if(x.classList.contains('fsr6-cart-check'))return;
-    if(x.classList.contains('fsr6-exp')&&(fsR6E('fsr6-date-mode')||{}).value==='common')x.disabled=true;
-    else x.disabled=!on;
-  });
-  fsR6CrashDateMode();
-}
-function fsR6CrashValidateSeals(){
-  var seen={},ok=true;
-  document.querySelectorAll('#fsr6-crash-modal .fsr6-cart').forEach(function(block){
-    var selected=block.querySelector('.fsr6-cart-check').checked,input=block.querySelector('.fsr6-seal-input');
-    if(!selected){input.classList.remove('fsr6-invalid');return}
-    var value=input.value.trim(),old=input.dataset.old||'',bad=!value||value===old||seen[value];
-    input.classList.toggle('fsr6-invalid',!!bad);if(value)seen[value]=true;if(bad)ok=false;
-  });
-  return ok;
+function fsR6CrashCloseModal(){
+  var m=fsR6E('fsr6-crash-modal');if(m)m.remove();
+  FS_R6_CRASH_WORKFLOW=null;
 }
 function fsR6CrashStatus(message,kind){
   var x=fsR6E('fsr6-status');if(x){x.textContent=message||'';x.className='fsr6-status '+(kind||'')}
 }
-window.openCrashCartSmartBulkReplacement=function(){
-  if(!fsR6CrashCanBulk())return;
-  var level=fsR6CrashFilter();
-  if(!fsR6CrashSelectionAllowed(level))return fsR6Toast('Choose Expired, Urgent, or Near-expiry filter first.','info');
-  var templates=fsR6CrashSeedTemplates();
-  if(!templates.length)return fsR6Toast('Select one or more medicines with a dated batch.','err');
-  var groups=fsR6CrashEligibleGroups(templates);
-  if(!groups.length)return fsR6Toast('No carts have the same selected medicine and expiry date.','err');
-  fsR6CrashCloseModal();
-  var seeds=templates.map(function(t){return '<span class="chip">'+fsR6Esc(t.name)+(t.strength?' · '+fsR6Esc(t.strength):'')+' · '+fsR6Esc(t.oldDate)+'</span>'}).join(' ');
-  var blocks=groups.map(function(group){
-    var cart=group.cart;
-    var rows=group.rows.map(function(row){
-      return '<tr data-item="'+fsR6Esc(row.item.id)+'" data-old-date="'+fsR6Esc(row.template.oldDate)+'">'+
-        '<td><input class="fsr6-row-check" type="checkbox" checked></td>'+
-        '<td><b>'+fsR6Esc(fsR6CrashItemName(row.item))+'</b><div class="fhint">'+fsR6Esc(row.item.strength||row.item.concentration||'')+'</div></td>'+
-        '<td>'+fsR6Esc(row.template.oldDate)+'</td><td>'+row.info.maxQty+'</td>'+
-        '<td><input class="fsr6-qty" type="number" min="1" max="'+row.info.maxQty+'" step="1" value="'+row.info.maxQty+'"></td>'+
-        '<td><input class="fsr6-exp" type="date"></td></tr>';
-    }).join('');
-    return '<section class="fsr6-cart" data-cart="'+fsR6Esc(cart.id)+'">'+
-      '<div class="fsr6-cart-head"><input class="fsr6-cart-check" type="checkbox" checked>'+
-      '<div><b>'+fsR6Esc(cart.name||'Crash Cart')+'</b><div class="fhint">'+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(cart.deptId):cart.deptId)+' · '+fsR6Esc(cart.number||'—')+' · '+fsR6Esc(cart.location||'—')+'<br>Current seal: <b>'+fsR6Esc(cart.seal||'—')+'</b></div></div>'+
-      '<div class="fsr6-seal"><label>New seal for this cart / القفل الجديد لهذه العربة</label><input class="fsr6-seal-input" data-old="'+fsR6Esc(cart.seal||'')+'" placeholder="Required and different / مطلوب ومختلف"></div></div>'+
-      '<table class="fsr6-table"><thead><tr><th></th><th>Medicine</th><th>Matching old expiry</th><th>Maximum qty</th><th>Replacement qty</th><th>New expiry</th></tr></thead><tbody>'+rows+'</tbody></table></section>';
-  }).join('');
-  var html='<div class="modal-bg on" id="fsr6-crash-modal" role="dialog" aria-modal="true"><div class="modal fsr6-dialog">'+
-    '<div class="fsr6-head"><div><div class="mt">Smart cross-cart replacement / الاستبدال الذكي بين العربات</div>'+
-    '<div class="fhint">Matches the selected medicine(s) and the exact old expiry date across all Crash Carts. Every selected cart requires its own new seal.</div></div><button class="xbtn" id="fsr6-close" type="button">×</button></div>'+
-    '<div class="fsr6-body"><div class="fsr6-seeds">'+seeds+'</div><div class="fsr6-tools">'+
-    '<button class="btn bg bsm" id="fsr6-select-carts" type="button">Select all eligible carts / تحديد كل العربات المؤهلة</button>'+
-    '<button class="btn bg bsm" id="fsr6-clear-carts" type="button">Clear carts / إلغاء العربات</button>'+
-    '<div class="fg"><label>New-expiry mode / طريقة التاريخ الجديد</label><select id="fsr6-date-mode"><option value="common">One date for all selected rows / تاريخ واحد للجميع</option><option value="individual">Separate dates / تواريخ منفصلة</option></select></div>'+
-    '<div class="fg"><label>Common new expiry / التاريخ الموحد</label><input id="fsr6-common-date" type="date"></div></div>'+blocks+'</div>'+
-    '<div class="fsr6-footer"><div><label>Pharmacy note / ملاحظة الصيدلية</label><textarea id="fsr6-note" placeholder="Optional note"></textarea></div>'+
-    '<div class="fsr6-actions"><span class="fsr6-status" id="fsr6-status"></span><button class="btn bg" id="fsr6-cancel" type="button">Cancel</button><button class="btn bs" id="fsr6-save" type="button">Save replacement / حفظ الاستبدال</button></div></div></div></div>';
-  document.body.insertAdjacentHTML('beforeend',html);
-  fsR6E('fsr6-close').onclick=fsR6CrashCloseModal;
-  fsR6E('fsr6-cancel').onclick=fsR6CrashCloseModal;
-  fsR6E('fsr6-save').onclick=window.saveCrashCartSmartBulkReplacement;
-  fsR6E('fsr6-date-mode').onchange=fsR6CrashDateMode;
-  fsR6E('fsr6-common-date').oninput=fsR6CrashDateMode;
-  fsR6E('fsr6-select-carts').onclick=function(){document.querySelectorAll('#fsr6-crash-modal .fsr6-cart').forEach(function(b){var c=b.querySelector('.fsr6-cart-check');c.checked=true;fsR6CrashToggleCart(b,true)})};
-  fsR6E('fsr6-clear-carts').onclick=function(){document.querySelectorAll('#fsr6-crash-modal .fsr6-cart').forEach(function(b){var c=b.querySelector('.fsr6-cart-check');c.checked=false;fsR6CrashToggleCart(b,false)})};
-  document.querySelectorAll('#fsr6-crash-modal .fsr6-cart').forEach(function(block){
-    var check=block.querySelector('.fsr6-cart-check');
-    check.onchange=function(){fsR6CrashToggleCart(block,check.checked)};
-    block.querySelectorAll('.fsr6-row-check').forEach(function(rowCheck){
-      rowCheck.onchange=function(){var row=rowCheck.closest('tr');row.querySelectorAll('.fsr6-qty,.fsr6-exp').forEach(function(x){x.disabled=!rowCheck.checked||!check.checked});fsR6CrashDateMode()};
+function fsR6CrashUid(prefix){
+  return String(prefix||'id')+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
+}
+function fsR6CrashClone(value){return JSON.parse(JSON.stringify(value))}
+function fsR6CrashFutureDate(value){
+  var d=new Date(String(value||'')+'T00:00:00'),today=new Date();today.setHours(0,0,0,0);
+  return !!value&&!isNaN(d.getTime())&&d>today;
+}
+function fsR6CrashCreateAllocation(qty){
+  return {id:fsR6CrashUid('alloc'),expiry:'',qty:qty==null?'':qty,lot:''};
+}
+function fsR6CrashCreateWorkflow(templates,groups){
+  var plans=templates.map(function(template){
+    var carts=[];
+    groups.forEach(function(group){
+      group.rows.forEach(function(row){
+        if(row.template.key!==template.key)return;
+        carts.push({
+          cartId:String(group.cart.id),itemId:String(row.item.id),selected:true,
+          maxQty:fsR6N(row.info.maxQty),removeQty:fsR6N(row.info.maxQty),
+          allocationMode:'common',customAllocations:[]
+        });
+      });
     });
-    block.querySelector('.fsr6-seal-input').oninput=fsR6CrashValidateSeals;
+    var quantities=carts.map(function(x){return x.removeQty}),same=quantities.length&&quantities.every(function(x){return x===quantities[0]});
+    return {
+      id:fsR6CrashUid('plan'),enabled:true,template:fsR6CrashClone(template),
+      commonAllocations:[fsR6CrashCreateAllocation(same?quantities[0]:'')],carts:carts
+    };
   });
-  fsR6E('fsr6-crash-modal').onclick=function(ev){if(ev.target===this)fsR6CrashCloseModal()};
-  fsR6CrashDateMode();
-  var first= document.querySelector('#fsr6-crash-modal .fsr6-seal-input');if(first)first.focus();
-};
-function fsR6ApplyExactReplacement(item,oldDate,qty,newDate,reportId,stamp,actorUser){
-  qty=Math.max(0,fsR6N(qty));
+  return {id:fsR6CrashUid('workflow'),plans:plans,review:{},note:''};
+}
+function fsR6CrashFindPlan(planId){
+  return FS_R6_CRASH_WORKFLOW&&(FS_R6_CRASH_WORKFLOW.plans||[]).find(function(x){return x.id===planId});
+}
+function fsR6CrashFindCartPlan(plan,cartId){
+  return plan&&(plan.carts||[]).find(function(x){return String(x.cartId)===String(cartId)});
+}
+function fsR6CrashActiveAllocations(plan,cartPlan){
+  return cartPlan&&cartPlan.allocationMode==='custom'?cartPlan.customAllocations:plan.commonAllocations;
+}
+function fsR6CrashAllocationTotal(allocations){
+  return (allocations||[]).reduce(function(sum,x){return sum+fsR6N(x.qty)},0);
+}
+function fsR6CrashEnsureCustomAllocations(plan,cartPlan){
+  if((cartPlan.customAllocations||[]).length)return;
+  cartPlan.customAllocations=(plan.commonAllocations||[]).map(function(x){
+    return {id:fsR6CrashUid('alloc'),expiry:x.expiry||'',qty:x.qty,lot:x.lot||''};
+  });
+  if(!cartPlan.customAllocations.length)cartPlan.customAllocations=[fsR6CrashCreateAllocation(cartPlan.removeQty)];
+}
+function fsR6CrashAllocationRows(planId,cartId,allocations){
+  var scope=cartId?'custom':'common';
+  return (allocations||[]).map(function(a,index){
+    return '<div class="fsr6-alloc-row" data-plan="'+fsR6Esc(planId)+'" data-cart="'+fsR6Esc(cartId||'')+'" data-allocation="'+fsR6Esc(a.id)+'">'+
+      '<div class="fg"><label>New expiry '+(index+1)+' / تاريخ الصلاحية الجديد</label><input class="fsr6-alloc-expiry" type="date" value="'+fsR6Esc(a.expiry||'')+'"></div>'+
+      '<div class="fg"><label>Quantity / الكمية</label><input class="fsr6-alloc-qty" type="number" min="0.01" step="any" value="'+fsR6Esc(a.qty)+'"></div>'+
+      '<div class="fg"><label>Batch/Lot optional / التشغيلة اختيارية</label><input class="fsr6-alloc-lot" value="'+fsR6Esc(a.lot||'')+'" placeholder="Optional"></div>'+
+      '<button class="btn bd2c bsm fsr6-remove-alloc" type="button" data-action="remove-allocation" data-scope="'+scope+'">Remove / حذف</button></div>';
+  }).join('');
+}
+function fsR6CrashPlanHtml(plan){
+  var t=plan.template;
+  var carts=(plan.carts||[]).map(function(cp){
+    var cart=fsR6CrashCarts().find(function(c){return String(c.id)===String(cp.cartId)})||{};
+    var custom=cp.allocationMode==='custom';
+    return '<div class="fsr6-cart-plan" data-plan="'+fsR6Esc(plan.id)+'" data-cart="'+fsR6Esc(cp.cartId)+'">'+
+      '<div class="fsr6-cart-plan-head">'+
+      '<label class="fsr6-confirm-label"><input class="fsr6-plan-cart-check" type="checkbox" '+(cp.selected?'checked':'')+'>Include / تضمين</label>'+
+      '<div><b>'+fsR6Esc(cart.name||cart.number||cp.cartId)+'</b><div class="fhint">'+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(cart.deptId):cart.deptId)+' · Current seal: '+fsR6Esc(cart.seal||'—')+' · Exact available: '+cp.maxQty+'</div></div>'+
+      '<div class="fg"><label>Replace qty / كمية الاستبدال</label><input class="fsr6-remove-qty" type="number" min="0.01" max="'+cp.maxQty+'" step="any" value="'+fsR6Esc(cp.removeQty)+'" '+(cp.selected?'':'disabled')+'></div>'+
+      '<div class="fg"><label>Date rule / قاعدة التواريخ</label><select class="fsr6-allocation-mode" '+(cp.selected?'':'disabled')+'><option value="common" '+(!custom?'selected':'')+'>Use this medicine dates / تواريخ هذا العلاج</option><option value="custom" '+(custom?'selected':'')+'>Cart exception / استثناء للعربة</option></select></div></div>'+
+      (custom?'<div class="fsr6-cart-custom"><div class="fsr6-alloc-head"><b>Dates only for this cart / تواريخ خاصة بهذه العربة</b><button class="btn bg bsm" type="button" data-action="add-custom-allocation" data-plan="'+fsR6Esc(plan.id)+'" data-cart="'+fsR6Esc(cp.cartId)+'">+ Add date / إضافة تاريخ</button></div><div class="fsr6-alloc-list">'+fsR6CrashAllocationRows(plan.id,cp.cartId,cp.customAllocations)+'</div></div>':'')+
+      '</div>';
+  }).join('');
+  return '<section class="fsr6-plan '+(plan.enabled?'':'off')+'" data-plan="'+fsR6Esc(plan.id)+'">'+
+    '<div class="fsr6-plan-head"><label class="fsr6-confirm-label"><input class="fsr6-plan-enabled" type="checkbox" '+(plan.enabled?'checked':'')+'>Include medicine / تضمين العلاج</label>'+
+    '<div><div class="fsr6-plan-title">'+fsR6Esc(t.name)+(t.strength?' · '+fsR6Esc(t.strength):'')+'</div><div class="fsr6-plan-meta">Old expiry / التاريخ القديم: '+fsR6Esc(t.oldDate)+' · '+plan.carts.length+' eligible cart(s)</div></div>'+
+    '<div class="fsr6-plan-actions"><button class="btn bg bsm" type="button" data-action="select-plan-carts">Select all carts</button><button class="btn bg bsm" type="button" data-action="clear-plan-carts">Clear carts</button></div></div>'+
+    '<div class="fsr6-plan-body"><div class="fsr6-alloc-box"><div class="fsr6-alloc-head"><div><b>Replacement dates for this medicine only / تواريخ الاستبدال لهذا العلاج فقط</b><div class="fhint">These dates apply to selected carts using “medicine dates”. Add more than one date to split the quantity.</div></div><button class="btn bg bsm" type="button" data-action="add-common-allocation">+ Add date / إضافة تاريخ</button></div><div class="fsr6-alloc-list">'+fsR6CrashAllocationRows(plan.id,'',plan.commonAllocations)+'</div></div>'+carts+'</div></section>';
+}
+function fsR6CrashRenderPlans(){
+  var host=fsR6E('fsr6-plan-host');if(!host||!FS_R6_CRASH_WORKFLOW)return;
+  host.innerHTML=(FS_R6_CRASH_WORKFLOW.plans||[]).map(fsR6CrashPlanHtml).join('')||'<div class="fsr6-empty">No medication plans.</div>';
+}
+function fsR6CrashReviewData(){
+  var map={};if(!FS_R6_CRASH_WORKFLOW)return [];
+  (FS_R6_CRASH_WORKFLOW.plans||[]).forEach(function(plan){
+    if(!plan.enabled)return;
+    (plan.carts||[]).forEach(function(cp){
+      if(!cp.selected)return;
+      var cart=fsR6CrashCarts().find(function(c){return String(c.id)===String(cp.cartId)})||{};
+      if(!map[cp.cartId])map[cp.cartId]={cartId:cp.cartId,cart:cart,lines:[]};
+      map[cp.cartId].lines.push({
+        planId:plan.id,itemId:cp.itemId,name:plan.template.name,strength:plan.template.strength||'',
+        oldDate:plan.template.oldDate,removeQty:fsR6N(cp.removeQty),
+        allocations:fsR6CrashClone(fsR6CrashActiveAllocations(plan,cp)||[])
+      });
+    });
+  });
+  return Object.keys(map).map(function(k){
+    if(!FS_R6_CRASH_WORKFLOW.review[k])FS_R6_CRASH_WORKFLOW.review[k]={confirmed:false,newSeal:''};
+    map[k].review=FS_R6_CRASH_WORKFLOW.review[k];return map[k];
+  });
+}
+function fsR6CrashRenderReview(){
+  var host=fsR6E('fsr6-review-host');if(!host)return;
+  var data=fsR6CrashReviewData();
+  if(!data.length){host.innerHTML='<div class="fsr6-empty">Select at least one cart under a medicine plan to build the final review.</div>';return}
+  host.innerHTML=data.map(function(entry){
+    var cart=entry.cart||{},review=entry.review||{},lines=entry.lines.map(function(line){
+      var dates=(line.allocations||[]).map(function(a){return fsR6Esc(a.expiry||'No date')+' × '+fsR6N(a.qty)+(a.lot?' · '+fsR6Esc(a.lot):'')}).join(' + ');
+      return '<div class="fsr6-review-line"><b>'+fsR6Esc(line.name)+(line.strength?' · '+fsR6Esc(line.strength):'')+'</b><br>Remove: '+line.removeQty+' from '+fsR6Esc(line.oldDate)+' → Replace: '+dates+'</div>';
+    }).join('');
+    return '<section class="fsr6-review-card '+(review.confirmed&&review.newSeal?'ready':'pending')+'" data-cart="'+fsR6Esc(entry.cartId)+'"><div class="fsr6-review-head">'+
+      '<label class="fsr6-confirm-label"><input class="fsr6-review-confirm" type="checkbox" '+(review.confirmed?'checked':'')+'>Reviewed / تمت المراجعة</label>'+
+      '<div><b>'+fsR6Esc(cart.name||cart.number||entry.cartId)+'</b><div class="fhint">'+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(cart.deptId):cart.deptId)+' · '+entry.lines.length+' medicine plan(s)<br>Current seal: <b>'+fsR6Esc(cart.seal||'—')+'</b></div></div>'+
+      '<div class="fsr6-review-seal"><label>New unique seal / القفل الجديد الفريد</label><input class="fsr6-seal-input" value="'+fsR6Esc(review.newSeal||'')+'" data-old="'+fsR6Esc(cart.seal||'')+'" placeholder="Required and never used"></div></div><div class="fsr6-review-lines">'+lines+'</div></section>';
+  }).join('');
+  fsR6CrashValidateReview(false);
+}
+function fsR6CrashRenderWorkflow(){fsR6CrashRenderPlans();fsR6CrashRenderReview()}
+function fsR6CrashAllocationByInput(input){
+  var row=input.closest('.fsr6-alloc-row');if(!row)return null;
+  var plan=fsR6CrashFindPlan(row.dataset.plan);if(!plan)return null;
+  var cp=row.dataset.cart?fsR6CrashFindCartPlan(plan,row.dataset.cart):null;
+  var list=cp?cp.customAllocations:plan.commonAllocations;
+  return {plan:plan,cartPlan:cp,list:list,allocation:(list||[]).find(function(x){return x.id===row.dataset.allocation})};
+}
+function fsR6CrashHandlePlanInput(input){
+  var planNode=input.closest('[data-plan]'),plan=planNode&&fsR6CrashFindPlan(planNode.dataset.plan);if(!plan)return;
+  var cartNode=input.closest('[data-cart]'),cp=cartNode&&cartNode.dataset.cart?fsR6CrashFindCartPlan(plan,cartNode.dataset.cart):null;
+  if(input.classList.contains('fsr6-plan-enabled')){plan.enabled=input.checked;fsR6CrashRenderWorkflow();return}
+  if(input.classList.contains('fsr6-plan-cart-check')&&cp){cp.selected=input.checked;fsR6CrashRenderWorkflow();return}
+  if(input.classList.contains('fsr6-remove-qty')&&cp){cp.removeQty=input.value;fsR6CrashRenderReview();return}
+  if(input.classList.contains('fsr6-allocation-mode')&&cp){cp.allocationMode=input.value;if(cp.allocationMode==='custom')fsR6CrashEnsureCustomAllocations(plan,cp);fsR6CrashRenderWorkflow();return}
+  var ref=fsR6CrashAllocationByInput(input);if(!ref||!ref.allocation)return;
+  if(input.classList.contains('fsr6-alloc-expiry'))ref.allocation.expiry=input.value;
+  if(input.classList.contains('fsr6-alloc-qty'))ref.allocation.qty=input.value;
+  if(input.classList.contains('fsr6-alloc-lot'))ref.allocation.lot=input.value;
+  fsR6CrashRenderReview();
+}
+function fsR6CrashHandlePlanAction(button){
+  var action=button.dataset.action,planNode=button.closest('[data-plan]'),plan=planNode&&fsR6CrashFindPlan(planNode.dataset.plan);if(!plan)return;
+  if(action==='select-plan-carts'){plan.carts.forEach(function(x){x.selected=true})}
+  else if(action==='clear-plan-carts'){plan.carts.forEach(function(x){x.selected=false})}
+  else if(action==='add-common-allocation'){plan.commonAllocations.push(fsR6CrashCreateAllocation(''))}
+  else if(action==='add-custom-allocation'){
+    var cp=fsR6CrashFindCartPlan(plan,button.dataset.cart);if(cp){fsR6CrashEnsureCustomAllocations(plan,cp);cp.customAllocations.push(fsR6CrashCreateAllocation(''))}
+  }else if(action==='remove-allocation'){
+    var row=button.closest('.fsr6-alloc-row'),cp=row.dataset.cart?fsR6CrashFindCartPlan(plan,row.dataset.cart):null,list=cp?cp.customAllocations:plan.commonAllocations;
+    if(list.length<=1)return fsR6CrashStatus('Each date plan must keep at least one row.','err');
+    var index=list.findIndex(function(x){return x.id===row.dataset.allocation});if(index>=0)list.splice(index,1);
+  }
+  fsR6CrashRenderWorkflow();
+}
+function fsR6CrashUsedSeals(){
+  var used={};
+  fsR6CrashCarts().forEach(function(c){var s=String(c.seal||'').trim();if(s)used[s.toLowerCase()]=true});
+  if(typeof window.crashReports==='function')(window.crashReports()||[]).forEach(function(r){[r.oldSeal,r.newSeal].forEach(function(v){v=String(v||'').trim();if(v)used[v.toLowerCase()]=true})});
+  return used;
+}
+function fsR6CrashValidateReview(showMessage){
+  if(!FS_R6_CRASH_WORKFLOW)return false;
+  var seen={},used=fsR6CrashUsedSeals(),ok=true,first='';
+  fsR6CrashReviewData().forEach(function(entry){
+    var review=entry.review||{},seal=String(review.newSeal||'').trim(),key=seal.toLowerCase(),old=String(entry.cart&&entry.cart.seal||'').trim().toLowerCase();
+    var badSeal=!seal||key===old||seen[key]||used[key],badConfirm=!review.confirmed;
+    if(key)seen[key]=true;
+    var card=document.querySelector('#fsr6-review-host [data-cart="'+CSS.escape(String(entry.cartId))+'"]');
+    if(card){var input=card.querySelector('.fsr6-seal-input'),confirm=card.querySelector('.fsr6-review-confirm');if(input)input.classList.toggle('fsr6-invalid',!!badSeal);if(confirm)confirm.classList.toggle('fsr6-invalid',!!badConfirm);card.classList.toggle('ready',!badSeal&&!badConfirm);card.classList.toggle('pending',badSeal||badConfirm)}
+    if(badSeal||badConfirm){ok=false;if(!first)first=badConfirm?'Review and confirm every cart.':'Every cart requires a new seal that is unique, different, and never used.'}
+  });
+  if(showMessage&&!ok)fsR6CrashStatus(first,'err');
+  return ok;
+}
+function fsR6CrashCompileWorkflow(){
+  var errors=[],cartMap={},enabledPlans=0;
+  if(!FS_R6_CRASH_WORKFLOW)return {ok:false,errors:['Replacement workflow is not available.'],carts:[]};
+  (FS_R6_CRASH_WORKFLOW.plans||[]).forEach(function(plan){
+    if(!plan.enabled)return;enabledPlans++;
+    var selected=(plan.carts||[]).filter(function(x){return x.selected});
+    if(!selected.length){errors.push(plan.template.name+': select at least one cart.');return}
+    selected.forEach(function(cp){
+      var removeQty=fsR6N(cp.removeQty),allocations=fsR6CrashActiveAllocations(plan,cp)||[];
+      if(!(removeQty>0)||removeQty>fsR6N(cp.maxQty))errors.push(plan.template.name+': invalid quantity for a selected cart.');
+      if(!allocations.length)errors.push(plan.template.name+': add at least one replacement date.');
+      allocations.forEach(function(a){if(!(fsR6N(a.qty)>0))errors.push(plan.template.name+': every replacement date needs a positive quantity.');if(!fsR6CrashFutureDate(a.expiry))errors.push(plan.template.name+': every replacement date must be after today.')});
+      if(Math.abs(fsR6CrashAllocationTotal(allocations)-removeQty)>.0001)errors.push(plan.template.name+': replacement-date quantities must total '+removeQty+'.');
+      if(!cartMap[cp.cartId])cartMap[cp.cartId]={cartId:cp.cartId,lines:[]};
+      cartMap[cp.cartId].lines.push({planId:plan.id,itemId:cp.itemId,medicineKey:plan.template.medicineKey,name:plan.template.name,strength:plan.template.strength||'',oldDate:plan.template.oldDate,removeQty:removeQty,allocations:fsR6CrashClone(allocations)});
+    });
+  });
+  if(!enabledPlans)errors.push('Include at least one medicine plan.');
+  var carts=Object.keys(cartMap).map(function(cartId){var review=FS_R6_CRASH_WORKFLOW.review[cartId]||{};cartMap[cartId].newSeal=String(review.newSeal||'').trim();cartMap[cartId].confirmed=!!review.confirmed;return cartMap[cartId]});
+  if(!carts.length)errors.push('Select at least one cart.');
+  if(!fsR6CrashValidateReview(false))errors.push('Review every cart and enter a valid unique seal.');
+  return {ok:errors.length===0,errors:errors,carts:carts,note:String(FS_R6_CRASH_WORKFLOW.note||'').trim()};
+}
+function fsR6CrashNormalizeAllocations(allocations){
+  var map={};(allocations||[]).forEach(function(a){var expiry=String(a.expiry||''),lot=String(a.lot||'').trim(),key=expiry+'|'+lot.toLowerCase();if(!map[key])map[key]={expiry:expiry,lot:lot,qty:0};map[key].qty+=fsR6N(a.qty)});return Object.keys(map).map(function(k){return map[k]});
+}
+function fsR6ApplyExactReplacementAllocations(item,oldDate,removeQty,allocations,reportId,stamp,actorUser){
+  removeQty=Math.max(0,fsR6N(removeQty));
   var info=fsR6CrashExactInfo(item,oldDate);
-  if(!(qty>0)||qty>info.maxQty)throw new Error('Replacement quantity is outside the allowed range.');
-  var remaining=qty,next=[],old=[];
+  if(!(removeQty>0)||removeQty>info.maxQty)throw new Error('Replacement quantity is outside the allowed range.');
+  var normalized=fsR6CrashNormalizeAllocations(allocations);
+  if(Math.abs(fsR6CrashAllocationTotal(normalized)-removeQty)>.0001)throw new Error('Replacement allocations do not equal the removed quantity.');
+  var remaining=removeQty,next=[],old=[];
   ((item.batches)||[]).forEach(function(batch){
     if(String(batch.expiry||'')!==String(oldDate)){next.push(Object.assign({},batch));return}
-    old.push(Object.assign({},batch));
-    if(remaining<=0){next.push(Object.assign({},batch));return}
+    old.push(Object.assign({},batch));if(remaining<=0){next.push(Object.assign({},batch));return}
     if(batch.qty==null){remaining=0;return}
-    var q=fsR6N(batch.qty),take=Math.min(q,remaining),left=q-take;remaining-=take;
-    if(left>0)next.push(Object.assign({},batch,{qty:left}));
+    var q=fsR6N(batch.qty),take=Math.min(q,remaining),left=q-take;remaining-=take;if(left>0)next.push(Object.assign({},batch,{qty:left}));
   });
-  if(remaining>0)throw new Error('The exact selected expiry quantity could not be matched.');
-  next.push({qty:qty,expiry:newDate,lot:'',source:'pharmacy_smart_cross_cart_replacement',sourceReportId:reportId,replacedExpiry:oldDate,updatedAt:stamp,updatedBy:actorUser});
-  next.sort(function(a,b){return String(a.expiry||'').localeCompare(String(b.expiry||''))});
-  item.batches=next;
-  if(fsR6N(item.present)>fsR6N(item.qty))item.present=fsR6N(item.qty);
-  return {itemId:item.id||'',name:fsR6CrashItemName(item),oldExpiry:oldDate,oldBatches:old,newQty:qty,newExpiry:newDate};
+  if(remaining>.0001)throw new Error('The exact selected expiry quantity could not be matched.');
+  normalized.forEach(function(a){var batchId=fsR6CrashUid('ccb');next.push({id:batchId,batchId:batchId,qty:a.qty,expiry:a.expiry,lot:a.lot||'',source:'pharmacy_smart_cross_cart_replacement',sourceReportId:reportId,replacedExpiry:oldDate,updatedAt:stamp,updatedBy:actorUser})});
+  next.sort(function(a,b){return String(a.expiry||'').localeCompare(String(b.expiry||''))});item.batches=next;
+  return {itemId:item.id||'',name:fsR6CrashItemName(item),strength:item.strength||item.concentration||'',oldExpiry:oldDate,oldBatches:old,removedQty:removeQty,allocations:normalized};
 }
-window.saveCrashCartSmartBulkReplacement=async function(){
-  var mode=(fsR6E('fsr6-date-mode')||{}).value||'common',common=(fsR6E('fsr6-common-date')||{}).value||'',save=fsR6E('fsr6-save');
-  if(!fsR6CrashValidateSeals())return fsR6CrashStatus('Each selected cart requires a unique new seal different from its current seal.','err');
-  var today=new Date();today.setHours(0,0,0,0),plans=[],errors=[];
-  document.querySelectorAll('#fsr6-crash-modal .fsr6-cart').forEach(function(block){
-    if(!block.querySelector('.fsr6-cart-check').checked)return;
-    var rows=[];
-    block.querySelectorAll('tbody tr').forEach(function(row){
-      if(!row.querySelector('.fsr6-row-check').checked)return;
-      var qty=fsR6N(row.querySelector('.fsr6-qty').value),max=fsR6N(row.querySelector('.fsr6-qty').max);
-      var expiry=mode==='common'?common:row.querySelector('.fsr6-exp').value;
-      if(!(qty>0)||qty>max)errors.push('Invalid replacement quantity.');
-      var d=new Date(String(expiry||'')+'T00:00:00');
-      if(!expiry||isNaN(d.getTime())||d<=today)errors.push('Every replacement date must be after today.');
-      rows.push({itemId:row.dataset.item,oldDate:row.dataset.oldDate,qty:qty,newDate:expiry});
+function fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled){
+  var carts=fsR6CrashClone(originalCarts),reports=fsR6CrashClone(originalReports),actor=fsR6Actor(),stamp=fsR6Now(),bulkId='ccsmart_'+Date.now().toString(36),verification=[];
+  compiled.carts.forEach(function(cartPlan,index){
+    var cart=carts.find(function(c){return String(c.id)===String(cartPlan.cartId)});if(!cart)throw new Error('Crash Cart not found: '+cartPlan.cartId);
+    if(reports.some(function(r){return String(r.cartId)===String(cart.id)&&r.status==='open'}))throw new Error((cart.name||'Crash Cart')+' has an open report. Close it first.');
+    var oldSeal=String(cart.seal||''),reportId='ccr_smart_'+Date.now().toString(36)+'_'+index+'_'+Math.random().toString(36).slice(2,7),replacements=[];
+    cartPlan.lines.forEach(function(line){
+      var item=(cart.items||[]).find(function(x){return String(x.id)===String(line.itemId)});if(!item)throw new Error('Medicine no longer exists in '+(cart.name||cart.id));
+      if(fsR6CrashMedicineKey(item)!==line.medicineKey)throw new Error('Medicine identity changed in '+(cart.name||cart.id)+'. Reopen the workflow.');
+      var detail=fsR6ApplyExactReplacementAllocations(item,line.oldDate,line.removeQty,line.allocations,reportId,stamp,actor.user);replacements.push(detail);
+      verification.push({cartId:cart.id,itemId:item.id,reportId:reportId,allocations:detail.allocations});
     });
-    if(rows.length)plans.push({cartId:block.dataset.cart,newSeal:block.querySelector('.fsr6-seal-input').value.trim(),rows:rows});
+    cart.seal=cartPlan.newSeal;cart.updatedAt=stamp;cart.updatedBy=actor.name;cart.lastOpenedAt=stamp;cart.lastOpenedByName=actor.name;cart.lastOpenedByUser=actor.user;cart.lastOpenedByRole=actor.role;cart.lastOpenReason='Smart cross-cart expiry replacement initiated by pharmacy';cart.lastClosedAt=stamp;cart.lastClosedByName=actor.name;cart.lastClosedByUser=actor.user;
+    reports.push({id:reportId,cartId:cart.id,deptId:cart.deptId,status:'closed',type:'pharmacy_smart_cross_cart_replacement',pharmacyInitiated:true,bulkActionId:bulkId,reason:'Smart cross-cart expiry replacement / استبدال ذكي بين عربات الكراش كارت',openedAt:stamp,openedBy:actor.name,openedByName:actor.name,openedByUser:actor.user,openedById:actor.id,openedByRole:actor.role,closedAt:stamp,closedBy:actor.name,closedByName:actor.name,closedByUser:actor.user,closedById:actor.id,oldSeal:oldSeal,newSeal:cartPlan.newSeal,replacements:replacements,pharmacyNote:compiled.note,lastEditedAt:stamp,lastEditedByName:actor.name,lastEditedByUser:actor.user});
   });
-  if(!plans.length)return fsR6CrashStatus('Select at least one cart and one medicine.','err');
-  if(errors.length)return fsR6CrashStatus(errors[0],'err');
-  if(save){save.disabled=true;save.textContent='Saving… / جاري الحفظ'}
-  fsR6CrashStatus('Opening, replacing, resealing and documenting selected carts…','');
+  return {carts:carts,reports:reports,bulkId:bulkId,verification:verification};
+}
+function fsR6CrashVerifyPersisted(result,compiled){
+  var carts=fsR6CrashCarts(),reports=typeof window.crashReports==='function'?(window.crashReports()||[]):[];
+  for(var i=0;i<compiled.carts.length;i++){
+    var cp=compiled.carts[i],cart=carts.find(function(c){return String(c.id)===String(cp.cartId)});if(!cart||String(cart.seal||'')!==String(cp.newSeal))return false;
+  }
+  for(var j=0;j<result.verification.length;j++){
+    var v=result.verification[j],cart2=carts.find(function(c){return String(c.id)===String(v.cartId)}),item=cart2&&(cart2.items||[]).find(function(x){return String(x.id)===String(v.itemId)});if(!item)return false;
+    var added=(item.batches||[]).filter(function(b){return String(b.sourceReportId||'')===String(v.reportId)}),expected=fsR6CrashAllocationTotal(v.allocations),actual=added.reduce(function(s,b){return s+fsR6N(b.qty)},0);if(Math.abs(expected-actual)>.0001)return false;
+    if(!reports.some(function(r){return String(r.id)===String(v.reportId)}))return false;
+  }
+  return true;
+}
+window.openCrashCartSmartBulkReplacement=function(){
+  if(!fsR6CrashCanBulk())return;
+  var level=fsR6CrashFilter();if(!fsR6CrashSelectionAllowed(level))return fsR6Toast('Choose Expired, Urgent, or Near-expiry filter first.','info');
+  var templates=fsR6CrashSeedTemplates();if(!templates.length)return fsR6Toast('Select one or more medicines with a dated batch.','err');
+  var groups=fsR6CrashEligibleGroups(templates);if(!groups.length)return fsR6Toast('No carts have the same selected medicine, strength, and expiry date.','err');
+  fsR6CrashCloseModal();FS_R6_CRASH_WORKFLOW=fsR6CrashCreateWorkflow(templates,groups);
+  var seeds=templates.map(function(t){return '<span class="chip">'+fsR6Esc(t.name)+(t.strength?' · '+fsR6Esc(t.strength):'')+' · '+fsR6Esc(t.oldDate)+'</span>'}).join(' ');
+  var html='<div class="modal-bg on" id="fsr6-crash-modal" role="dialog" aria-modal="true"><div class="modal fsr6-dialog">'+
+    '<div class="fsr6-head"><div><div class="mt">Smart cross-cart replacement / الاستبدال الذكي بين العربات</div><div class="fhint">Each medicine, strength and old expiry has an independent plan. Dates never spill into another medicine plan.</div></div><button class="xbtn" id="fsr6-close" type="button">×</button></div>'+
+    '<div class="fsr6-body"><div class="fsr6-seeds">'+seeds+'</div><div class="fsr6-workflow-note"><b>Workflow:</b> configure replacement dates under each medicine; select carts and any cart-specific exceptions; then review each cart below and only confirm its unique seal.</div><div id="fsr6-plan-host"></div><div class="fsr6-review-title">Final cart review / المراجعة النهائية للعربات</div><div class="fhint" style="margin-bottom:8px">Read-only medicine summary. Check each cart visually, confirm it, and enter its unique new seal.</div><div id="fsr6-review-host"></div></div>'+
+    '<div class="fsr6-footer"><div><label>Pharmacy note / ملاحظة الصيدلية</label><textarea id="fsr6-note" placeholder="Optional note"></textarea></div><div class="fsr6-actions"><span class="fsr6-status" id="fsr6-status"></span><button class="btn bg" id="fsr6-cancel" type="button">Cancel</button><button class="btn bs" id="fsr6-save" type="button">Validate and save / تحقق وحفظ</button></div></div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);fsR6EnsureStyles();fsR6CrashRenderWorkflow();
+  fsR6E('fsr6-close').onclick=fsR6CrashCloseModal;fsR6E('fsr6-cancel').onclick=fsR6CrashCloseModal;fsR6E('fsr6-save').onclick=window.saveCrashCartSmartBulkReplacement;
+  fsR6E('fsr6-note').oninput=function(){if(FS_R6_CRASH_WORKFLOW)FS_R6_CRASH_WORKFLOW.note=this.value};
+  fsR6E('fsr6-plan-host').addEventListener('click',function(ev){var b=ev.target.closest('[data-action]');if(b)fsR6CrashHandlePlanAction(b)});
+  fsR6E('fsr6-plan-host').addEventListener('change',function(ev){if(ev.target.matches('input,select'))fsR6CrashHandlePlanInput(ev.target)});
+  fsR6E('fsr6-plan-host').addEventListener('input',function(ev){if(ev.target.matches('.fsr6-remove-qty,.fsr6-alloc-qty,.fsr6-alloc-lot'))fsR6CrashHandlePlanInput(ev.target)});
+  fsR6E('fsr6-review-host').addEventListener('input',function(ev){var card=ev.target.closest('[data-cart]');if(!card||!FS_R6_CRASH_WORKFLOW)return;var review=FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]||(FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]={confirmed:false,newSeal:''});if(ev.target.classList.contains('fsr6-seal-input'))review.newSeal=ev.target.value;fsR6CrashValidateReview(false)});
+  fsR6E('fsr6-review-host').addEventListener('change',function(ev){var card=ev.target.closest('[data-cart]');if(!card||!FS_R6_CRASH_WORKFLOW)return;var review=FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]||(FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]={confirmed:false,newSeal:''});if(ev.target.classList.contains('fsr6-review-confirm'))review.confirmed=ev.target.checked;fsR6CrashValidateReview(false)});
+  fsR6E('fsr6-crash-modal').onclick=function(ev){if(ev.target===this)fsR6CrashCloseModal()};
+};
+window.saveCrashCartSmartBulkReplacement=async function(){
+  var save=fsR6E('fsr6-save'),compiled=fsR6CrashCompileWorkflow();
+  if(!compiled.ok)return fsR6CrashStatus(compiled.errors[0]||'The replacement plan is incomplete.','err');
+  if(save){save.disabled=true;save.textContent='Saving… / جاري الحفظ'}fsR6CrashStatus('Validating exact dates, replacing, resealing and verifying persistence…','');
+  var originalCarts=fsR6CrashClone(fsR6CrashCarts()),originalReports=fsR6CrashClone(typeof window.crashReports==='function'?(window.crashReports()||[]):[]),cartsSaved=false,reportsSaved=false;
   try{
-    var carts=JSON.parse(JSON.stringify(fsR6CrashCarts())),reports=typeof window.crashReports==='function'?(window.crashReports()||[]).slice():[];
-    var actor=fsR6Actor(),stamp=fsR6Now(),bulkId='ccsmart_'+Date.now().toString(36),note=(fsR6E('fsr6-note')||{}).value||'',changed=0,totalRows=0;
-    plans.forEach(function(plan,index){
-      var cart=carts.find(function(c){return String(c.id)===String(plan.cartId)});
-      if(!cart)throw new Error('Crash Cart not found: '+plan.cartId);
-      var oldSeal=String(cart.seal||''),reportId='ccr_smart_'+Date.now().toString(36)+'_'+index+'_'+Math.random().toString(36).slice(2,6),replacements=[];
-      plan.rows.forEach(function(row){
-        var item=(cart.items||[]).find(function(x){return String(x.id)===String(row.itemId)});
-        if(!item)throw new Error('Medicine no longer exists in '+(cart.name||cart.id));
-        replacements.push(fsR6ApplyExactReplacement(item,row.oldDate,row.qty,row.newDate,reportId,stamp,actor.user));
-        totalRows++;
-      });
-      cart.seal=plan.newSeal;cart.updatedAt=stamp;cart.updatedBy=actor.name;
-      cart.lastOpenedAt=stamp;cart.lastOpenedByName=actor.name;cart.lastOpenedByUser=actor.user;cart.lastOpenedByRole=actor.role;
-      cart.lastOpenReason='Smart cross-cart expiry replacement initiated by pharmacy';
-      cart.lastClosedAt=stamp;cart.lastClosedByName=actor.name;cart.lastClosedByUser=actor.user;
-      reports.push({
-        id:reportId,cartId:cart.id,deptId:cart.deptId,status:'closed',type:'pharmacy_smart_cross_cart_replacement',
-        pharmacyInitiated:true,bulkActionId:bulkId,reason:'Smart cross-cart expiry replacement / استبدال ذكي بين عربات الكراش كارت',
-        openedAt:stamp,openedBy:actor.name,openedByName:actor.name,openedByUser:actor.user,openedById:actor.id,openedByRole:actor.role,
-        closedAt:stamp,closedBy:actor.name,closedByName:actor.name,closedByUser:actor.user,closedById:actor.id,
-        oldSeal:oldSeal,newSeal:plan.newSeal,replacements:replacements,pharmacyNote:note,lastEditedAt:stamp,lastEditedByName:actor.name,lastEditedByUser:actor.user
-      });
-      fsR6Audit('crash_cart_smart_cross_cart_replace_close',{bulkActionId:bulkId,cartId:cart.id,oldSeal:oldSeal,newSeal:plan.newSeal,itemCount:replacements.length});
-      changed++;
-    });
-    await Promise.all([
-      typeof window.setCrashCarts==='function'?window.setCrashCarts(carts):Promise.resolve(),
-      typeof window.setCrashReports==='function'?window.setCrashReports(reports):Promise.resolve()
-    ]);
-    await fsR6Audit('crash_cart_smart_bulk_complete',{bulkActionId:bulkId,carts:changed,replacementRows:totalRows,sourceSelection:FS_R6_CRASH_SELECTED.size});
-    FS_R6_CRASH_SELECTED.clear();fsR6CrashCloseModal();
-    if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
-    fsR6Toast(changed+' Crash Cart(s) replaced and resealed ✓ · '+bulkId,'succ');
+    var result=fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled);
+    if(typeof window.setCrashCarts==='function'){await window.setCrashCarts(result.carts);cartsSaved=true}
+    if(typeof window.setCrashReports==='function'){await window.setCrashReports(result.reports);reportsSaved=true}
+    if(!fsR6CrashVerifyPersisted(result,compiled))throw new Error('Read-back verification failed. No completion was accepted.');
+    await fsR6Audit('crash_cart_smart_bulk_complete',{bulkActionId:result.bulkId,carts:compiled.carts.length,medicinePlans:(FS_R6_CRASH_WORKFLOW.plans||[]).filter(function(x){return x.enabled}).length,sourceSelection:FS_R6_CRASH_SELECTED.size,uniqueSeals:compiled.carts.map(function(x){return x.newSeal})});
+    FS_R6_CRASH_SELECTED.clear();fsR6CrashCloseModal();if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();fsR6Toast(compiled.carts.length+' Crash Cart(s) replaced, reviewed and resealed ✓ · '+result.bulkId,'succ');
   }catch(e){
-    console.error(e);fsR6CrashStatus('Save failed: '+String(e&&e.message||e),'err');
-    if(save){save.disabled=false;save.textContent='Save replacement / حفظ الاستبدال'}
+    console.error(e);
+    try{if(reportsSaved&&typeof window.setCrashReports==='function')await window.setCrashReports(originalReports)}catch(rollbackReportError){console.error('Crash report rollback failed',rollbackReportError)}
+    try{if(cartsSaved&&typeof window.setCrashCarts==='function')await window.setCrashCarts(originalCarts)}catch(rollbackCartError){console.error('Crash Cart rollback failed',rollbackCartError)}
+    fsR6CrashStatus('Save failed and rollback was attempted: '+String(e&&e.message||e),'err');if(save){save.disabled=false;save.textContent='Validate and save / تحقق وحفظ'}
   }
 };
 
