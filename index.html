@@ -1168,6 +1168,89 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 <div class="card"><div class="ch"><span class="ct">Recent custody movements / سجل الحركات</span></div><div class="cb" id="ctl-log"></div></div>
 </div>
+<div id="ctl-storage-view" style="display:none">
+<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
+  <div>
+    <div class="stitle">Pharmacy Controlled Cabinets &amp; Safes / دواليب وخزائن عهدة الصيدلية المقيدة</div>
+    <div class="ssub">This map organizes medicines held in the controlled-pharmacy officer's central custody. It is not linked to inpatient-department custody.</div>
+  </div>
+</div>
+<div id="controlled-storage-auth-message" class="alert-banner" style="display:none"></div>
+<div id="controlled-storage-workspace">
+  <div class="card">
+    <div class="ch"><span class="ct">Storage view / عرض التخزين</span></div>
+    <div class="cb">
+      <div class="r17-grid4">
+        <div class="fg">
+          <label>Display mode / طريقة العرض</label>
+          <select id="controlled-storage-mode" onchange="controlledStorageModeChanged()">
+            <option value="map">Map / خريطة</option>
+            <option value="list">List / قائمة</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Medicine filter / فلتر الأدوية</label>
+          <select id="controlled-storage-filter" onchange="renderControlledStorage()">
+            <option value="all">All pharmacy-custody medicines / كل أدوية عهدة الصيدلية</option>
+            <option value="unassigned">Not assigned / غير مضافة لخانة</option>
+          </select>
+        </div>
+        <div class="fg" style="grid-column:span 2">
+          <label>Custody source / مصدر العهدة</label>
+          <div id="controlled-storage-summary" class="r21-storage-summary">Controlled pharmacy custody / عهدة مسؤول الأدوية المقيدة</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card r21-storage-builder">
+    <div class="ch">
+      <div>
+        <span class="ct" id="controlled-storage-builder-title">Create cabinet or safe / إنشاء دولاب أو خزنة</span>
+        <div class="fhint">Define every shelf separately. Cell codes are created automatically: A1, A2… B1, B2…</div>
+      </div>
+    </div>
+    <div class="cb">
+      <input type="hidden" id="controlled-storage-edit-id">
+      <div class="r21-storage-builder-main">
+        <div class="fg">
+          <label>Unit name / اسم الوحدة</label>
+          <input id="controlled-storage-name" type="text" placeholder="Example: Narcotic Cabinet A">
+        </div>
+        <div class="fg">
+          <label>Unit type / النوع</label>
+          <select id="controlled-storage-type">
+            <option value="cabinet">Cabinet / دولاب</option>
+            <option value="safe">Safe / خزنة</option>
+            <option value="refrigerator">Refrigerator / ثلاجة</option>
+          </select>
+        </div>
+        <div class="fg">
+          <label>Number of shelves / عدد الأرفف</label>
+          <input id="controlled-storage-shelf-count" type="number" min="1" max="26" value="5" oninput="controlledStorageShelfCountChanged()">
+        </div>
+      </div>
+      <div class="r21-storage-shelf-editor">
+        <div class="r21-storage-shelf-head">
+          <b>Shelf structure / تكوين الأرفف</b>
+          <span>Each shelf may have a different number of cells.</span>
+        </div>
+        <div id="controlled-storage-shelf-rows"></div>
+      </div>
+      <div class="r21-storage-preview-wrap">
+        <b>Cell-code preview / معاينة رموز الخانات</b>
+        <div id="controlled-storage-code-preview" class="r21-storage-code-preview"></div>
+      </div>
+      <div id="controlled-storage-builder-error" class="r21-storage-inline-error" style="display:none"></div>
+      <div class="fl" style="gap:8px;justify-content:flex-end;flex-wrap:wrap">
+        <button class="btn bg" type="button" id="controlled-storage-cancel-edit" onclick="controlledStorageCancelEdit()" style="display:none">Cancel edit / إلغاء التعديل</button>
+        <button class="btn bp" type="button" id="controlled-storage-save" onclick="controlledStorageSaveUnit()">Save storage unit / حفظ الوحدة</button>
+      </div>
+    </div>
+  </div>
+  <div id="controlled-storage-root"></div>
+</div>
+</div>
 </div>
 <div class="pg" id="pg-ctl-analytics">
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
@@ -1410,96 +1493,6 @@ Furosemide 40mg tab	5	20</pre>
 <div id="crash-list"></div>
 </div>
 
-<div class="pg" id="pg-controlled-storage">
-<div class="stitle">Controlled Cabinets &amp; Safes / دواليب وخزائن الأدوية المخدرة</div>
-<div class="ssub">Build multiple storage units with a different number of coded cells on every shelf. Creation, editing and assignment are completed on this page.</div>
-
-<div id="controlled-storage-auth-message" class="alert-banner" style="display:none"></div>
-
-<div id="controlled-storage-workspace">
-  <div class="card">
-    <div class="ch"><span class="ct">Storage view / عرض التخزين</span></div>
-    <div class="cb">
-      <div class="r17-grid4">
-        <div class="fg">
-          <label>Department / القسم</label>
-          <select id="controlled-storage-dept" onchange="renderControlledStorage()"></select>
-        </div>
-        <div class="fg">
-          <label>Display mode / طريقة العرض</label>
-          <select id="controlled-storage-mode" onchange="controlledStorageModeChanged()">
-            <option value="map">Map / خريطة</option>
-            <option value="list">List / قائمة</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>Medicine filter / فلتر الأدوية</label>
-          <select id="controlled-storage-filter" onchange="renderControlledStorage()">
-            <option value="all">All custody medicines / كل أدوية العهدة</option>
-            <option value="unassigned">Not assigned / غير مضافة لخانة</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>Current department / القسم الحالي</label>
-          <div id="controlled-storage-dept-summary" class="r21-storage-summary">—</div>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card r21-storage-builder">
-    <div class="ch">
-      <div>
-        <span class="ct" id="controlled-storage-builder-title">Create cabinet or safe / إنشاء دولاب أو خزنة</span>
-        <div class="fhint">Define every shelf separately. Cell codes are created automatically: A1, A2… B1, B2…</div>
-      </div>
-    </div>
-    <div class="cb">
-      <input type="hidden" id="controlled-storage-edit-id">
-      <div class="r21-storage-builder-main">
-        <div class="fg">
-          <label>Unit name / اسم الوحدة</label>
-          <input id="controlled-storage-name" type="text" placeholder="Example: Narcotic Cabinet A">
-        </div>
-        <div class="fg">
-          <label>Unit type / النوع</label>
-          <select id="controlled-storage-type">
-            <option value="cabinet">Cabinet / دولاب</option>
-            <option value="safe">Safe / خزنة</option>
-            <option value="refrigerator">Refrigerator / ثلاجة</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>Number of shelves / عدد الأرفف</label>
-          <input id="controlled-storage-shelf-count" type="number" min="1" max="26" value="5" oninput="controlledStorageShelfCountChanged()">
-        </div>
-      </div>
-
-      <div class="r21-storage-shelf-editor">
-        <div class="r21-storage-shelf-head">
-          <b>Shelf structure / تكوين الأرفف</b>
-          <span>Each shelf may have a different number of cells.</span>
-        </div>
-        <div id="controlled-storage-shelf-rows"></div>
-      </div>
-
-      <div class="r21-storage-preview-wrap">
-        <b>Cell-code preview / معاينة رموز الخانات</b>
-        <div id="controlled-storage-code-preview" class="r21-storage-code-preview"></div>
-      </div>
-
-      <div id="controlled-storage-builder-error" class="r21-storage-inline-error" style="display:none"></div>
-
-      <div class="fl" style="gap:8px;justify-content:flex-end;flex-wrap:wrap">
-        <button class="btn bg" type="button" id="controlled-storage-cancel-edit" onclick="controlledStorageCancelEdit()" style="display:none">Cancel edit / إلغاء التعديل</button>
-        <button class="btn bp" type="button" id="controlled-storage-save" onclick="controlledStorageSaveUnit()">Save storage unit / حفظ الوحدة</button>
-      </div>
-    </div>
-  </div>
-
-  <div id="controlled-storage-root"></div>
-</div>
-</div>
 <div class="pg" id="pg-med-accountability">
 <div class="stitle">Medication Accountability &amp; Verification / صرف ومطابقة استخدام الدواء</div>
 <div class="ssub">Pharmacy allocation, nursing documentation, inventory and pharmacy verification.</div>
@@ -3146,7 +3139,7 @@ function renderPageById(id){
     'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
     'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
     'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule,
-    'pg-controlled':renderControlled,'pg-ctl-analytics':renderCtlAnalytics,'pg-crashcart':renderCrashCarts,'pg-crash-ops':renderCrashOperations,'pg-med-accountability':renderMedicationAccountability,'pg-controlled-storage':renderControlledStorage
+    'pg-controlled':renderControlled,'pg-ctl-analytics':renderCtlAnalytics,'pg-crashcart':renderCrashCarts,'pg-crash-ops':renderCrashOperations,'pg-med-accountability':renderMedicationAccountability
   }[id];
   if(renderer)renderer();
 }
@@ -6530,17 +6523,9 @@ function encodeValue(v){
     if(rRole==='pharmacy')items=commonFull.filter(function(x){return x[0]!=='pg-controlled'}).concat([['pg-users','Users']]);
     else if(rRole==='inpatient_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-crashcart','🚑 Crash Carts'],['pg-crash-ops','🛠 Crash Cart Operations'],['pg-med-accountability','🧾 Medication Accountability']];
     else if(rRole==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-inv','Inventory status / حالة الأدوية'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
-    else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-controlled-storage','🗄 Controlled storage maps'],['pg-ctl-analytics','📊 Controlled analytics']];
+    else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']];
     else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
     else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody'],['pg-med-accountability','🧾 Medication documentation']];
-    var storagePermission=!!(
-      (typeof isMasterActual==='function'&&isMasterActual())||
-      rRole==='controlled_pharmacy'||
-      (window.CU&&CU.permissions&&CU.permissions.controlledStorage===true)
-    );
-    if(storagePermission&&!items.some(function(item){return item[0]==='pg-controlled-storage'})){
-      items.push(['pg-controlled-storage','🗄 Cabinets & Shelves / الدواليب والأرفف']);
-    }
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
     if((typeof isMasterActual==='function'&&isMasterActual())||(CU&&rRole==='pharmacy')){var zb=document.createElement('button');zb.id='zebra-labels-nav';zb.className='nb';zb.dataset.pg='pg-zebra-labels';zb.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';zb.onclick=function(){showPg('pg-zebra-labels')};nav.appendChild(zb)}
@@ -8551,7 +8536,6 @@ body:not(.real-master-ui) #pg-backup-restore{display:none!important}
   var RESTRICTED={
     controlled_pharmacy:[
       ['pg-controlled','🔒 Controlled & psychotropic medicines'],
-      ['pg-controlled-storage','🗄 Controlled storage maps'],
       ['pg-ctl-analytics','📊 Controlled analytics'],
       ['pg-announcements','📢 Announcements / الإعلانات']
     ],
@@ -8560,7 +8544,7 @@ body:not(.real-master-ui) #pg-backup-restore{display:none!important}
       ['pg-ctl-analytics','📊 Warehouse analytics']
     ]
   };
-  var RENDERERS={'pg-controlled':'renderControlled','pg-controlled-storage':'renderControlledStorage','pg-ctl-analytics':'renderCtlAnalytics','pg-announcements':'renderAnnouncements'};
+  var RENDERERS={'pg-controlled':'renderControlled','pg-ctl-analytics':'renderCtlAnalytics','pg-announcements':'renderAnnouncements'};
   function role(){
     return String(
       (window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||
@@ -8616,7 +8600,7 @@ function E(id){return document.getElementById(id)}
 function escC(v){return typeof window.esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function numC(v){v=Number(v);return isFinite(v)?v:0}
 var ctlCleanFilterRoleC='';
-function roleC(){return String((window.CU&&CU.role)||'')}
+function roleC(){return String((window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||(window.CU&&CU.role)||'')}
 function masterC(){try{return !!(window.CU&&CU.master===true&&!(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true&&roleC()!=='pharmacy'))}catch(e){return false}}
 function canCatalogC(){return masterC()||roleC()==='controlled_pharmacy'}
 function canWarehouseC(){return masterC()||roleC()==='warehouse'}
@@ -8625,7 +8609,7 @@ function canDispenseC(){return masterC()||roleC()==='pharmacy'||roleC()==='contr
 function fmtBatchC(list){return (list||[]).length?(list||[]).map(function(b){return '<div><span class="chip">'+numC(b.qty)+'</span> '+escC(typeof ctlFmtDMY==='function'?ctlFmtDMY(b.expiry):(b.expiry||'—'))+(b.lot?' · '+escC(b.lot):'')+'</div>'}).join(''):'—'}
 function classC(m){return String((m&&m.classification)||'narcotic')==='psychotropic'?'<span class="badge bpu">Psychotropic / نفسي</span>':'<span class="badge brd">Narcotic / مخدر</span>'}
 function statusC(m,w,p){try{return typeof ctlStatus==='function'?ctlStatus(m,w,p):{key:'ok',html:'<span class="badge bgn">OK</span>'}}catch(e){return {key:'ok',html:'<span class="badge bgn">OK</span>'}}}
-function normalizeViewC(v){var valid=['overview','departments','pharmacy','warehouse','catalog'];return valid.indexOf(String(v||''))>=0?String(v):'overview'}
+function normalizeViewC(v){var valid=['overview','storage','departments','pharmacy','warehouse','catalog'];return valid.indexOf(String(v||''))>=0?String(v):'overview'}
 
 /* ── Inventory Hide / Freeze: one modal, reliable close, no orphan overlay. ── */
 function invNorm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').trim()}
@@ -8661,7 +8645,35 @@ document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(E('v16
 /* ── One controlled-stock page. Separate Shared Catalogue page is removed. ── */
 window.ctlCanDispense=canDispenseC;
 window.ctlOwnerSource=function(){return canDispenseC()?'pharmacy':''};
-window.ctlTabs=function(){var root=E('ctl-tabs');if(!root||!window.CU)return;var tabs=roleC()==='department'?[['departments','My controlled list / عهدتي']]:roleC()==='warehouse'?[['overview','Controlled stock / المخزون المقيد']]:[['overview','Controlled stock / المخزون المقيد'],['departments','Inpatient departments / أقسام التنويم']];window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);var active=window.CTL_VIEW==='departments'?'departments':'overview';root.innerHTML=tabs.map(function(x){return '<button type="button" class="tbtn '+(active===x[0]?'on':'')+'" data-view="'+x[0]+'">'+x[1]+'</button>'}).join('');root.querySelectorAll('button').forEach(function(b){b.onclick=function(){window.ctlSetView(b.dataset.view)}})};
+window.ctlTabs=function(){
+  var root=E('ctl-tabs');
+  if(!root||!window.CU)return;
+  var currentRole=roleC();
+  var tabs;
+  if(currentRole==='department'){
+    tabs=[['departments','My controlled list / عهدتي']];
+  }else if(currentRole==='warehouse'){
+    tabs=[['overview','Controlled stock / المخزون المقيد']];
+  }else{
+    tabs=[['overview','Controlled stock / المخزون المقيد']];
+    if(typeof canStorage==='function'&&canStorage()){
+      tabs.push(['storage','Cabinets & Shelves / الدواليب والأرفف']);
+    }
+    tabs.push(['departments','Inpatient departments / أقسام التنويم']);
+  }
+  window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);
+  if(!tabs.some(function(item){return item[0]===window.CTL_VIEW;})){
+    window.CTL_VIEW=tabs[0][0];
+  }
+  root.innerHTML=tabs.map(function(item){
+    return '<button type="button" class="tbtn '+
+      (window.CTL_VIEW===item[0]?'on':'')+
+      '" data-view="'+item[0]+'">'+item[1]+'</button>';
+  }).join('');
+  root.querySelectorAll('button').forEach(function(button){
+    button.onclick=function(){window.ctlSetView(button.dataset.view);};
+  });
+};
 window.ctlSetView=function(v){window.CTL_VIEW=normalizeViewC(v);return window.renderControlled()};
 function cleanImportCardC(){if(!canCatalogC())return '';return '<details class="card ctl-clean-import"><summary>Import or paste shared catalogue / استيراد القائمة المشتركة</summary><div class="cb"><div class="g2"><div><label>Excel file (.xlsx, .xls, .csv)</label><input type="file" id="ctl-import-file" accept=".xlsx,.xls,.csv" onchange="ctlImportMasterFile(this.files[0])"><div class="fhint">Imports medicine codes, balances and expiry dates.</div></div><div><label>Paste tab-separated text</label><textarea id="ctl-import-text" rows="4" placeholder="MOH Code    NUPCO Code    Medication ..."></textarea><button type="button" class="btn bp bsm" onclick="ctlImportMasterText()">Import text</button></div></div></div></details>'}
 function overviewActionsC(m){var a=[];if(canWarehouseC()){a.push('<button type="button" class="btn bg bxs" data-id="'+escC(m.id)+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');if(roleC()==='warehouse')a.push('<button type="button" class="btn bs bxs" data-id="'+escC(m.id)+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send to pharmacy</button>')}if(canPharmacyC())a.push('<button type="button" class="btn bp bxs" data-id="'+escC(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>');if(canDispenseC())a.push('<button type="button" class="btn bs bxs" data-id="'+escC(m.id)+'" onclick="ctlOpenDispense(this.dataset.id)">Dispense / صرف</button>');if(canCatalogC())a.push('<button type="button" class="btn bg bxs" data-id="'+escC(m.id)+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit medicine</button>');return a.join(' ')||'<span class="chip">Read only</span>'}
@@ -8698,20 +8710,23 @@ window.renderControlled=function(){
   if(!window.CU)return;
   var effective=window.MASTER_EFFECTIVE||window.CU||{};
   var effectiveRole=String(effective.role||'');
+  var overview=E('ctl-overview-view');
+  var departments=E('ctl-departments-view');
+  var storage=E('ctl-storage-view');
 
   if(effectiveRole==='department'){
     window.CTL_VIEW='departments';
     if(typeof window.ctlTabs==='function')window.ctlTabs();
-    var overview=E('ctl-overview-view'),departments=E('ctl-departments-view');
     if(overview)overview.style.display='none';
+    if(storage)storage.style.display='none';
     if(departments)departments.style.display='block';
-    var note=E('ctl-permission-note');
-    if(note){
-      note.style.display='block';
-      note.textContent='Read-only department custody / عهدة القسم للعرض';
+    var departmentNote=E('ctl-permission-note');
+    if(departmentNote){
+      departmentNote.style.display='block';
+      departmentNote.textContent='Read-only department custody / عهدة القسم للعرض';
     }
-    var mainPrint=E('ctl-main-print-btn');
-    if(mainPrint)mainPrint.style.display='none';
+    var departmentPrint=E('ctl-main-print-btn');
+    if(departmentPrint)departmentPrint.style.display='none';
     return window.renderDepartmentControlledPanel();
   }
 
@@ -8720,29 +8735,50 @@ window.renderControlled=function(){
   }catch(error){}
 
   window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);
-  var displayView=window.CTL_VIEW==='departments'?'departments':'overview';
+  if(window.CTL_VIEW==='storage'&&!(typeof canStorage==='function'&&canStorage())){
+    window.CTL_VIEW='overview';
+  }
+  var displayView=window.CTL_VIEW;
+  if(['overview','storage','departments'].indexOf(displayView)<0){
+    displayView='overview';
+    window.CTL_VIEW='overview';
+  }
   window.ctlTabs();
 
   var mainPrint=E('ctl-main-print-btn');
-  if(mainPrint)mainPrint.style.display=displayView==='departments'&&effectiveRole!=='warehouse'?'inline-flex':'none';
+  if(mainPrint){
+    mainPrint.style.display=displayView==='departments'&&effectiveRole!=='warehouse'
+      ?'inline-flex'
+      :'none';
+  }
 
-  var overview=E('ctl-overview-view'),departments=E('ctl-departments-view');
   if(overview)overview.style.display=displayView==='overview'?'block':'none';
+  if(storage)storage.style.display=displayView==='storage'?'block':'none';
   if(departments)departments.style.display=displayView==='departments'?'block':'none';
 
   var pdf=E('ctl-pdf-receipt-card');
-  if(pdf)pdf.style.display=effectiveRole==='warehouse'&&displayView==='overview'?'block':'none';
+  if(pdf){
+    pdf.style.display=effectiveRole==='warehouse'&&displayView==='overview'
+      ?'block'
+      :'none';
+  }
 
   var note=E('ctl-permission-note');
   if(note){
-    note.style.display=effectiveRole==='warehouse'||effectiveRole==='controlled_pharmacy'?'block':'none';
+    note.style.display=effectiveRole==='warehouse'||effectiveRole==='controlled_pharmacy'
+      ?'block'
+      :'none';
     note.textContent=effectiveRole==='warehouse'
       ?'Warehouse permission: warehouse quantities and deliveries only / صلاحية المستودع للكميات والتوريد فقط'
-      :'Controlled pharmacy permission: pharmacy custody, inpatient dispensing and department lists / صلاحية مسؤول المخدرات للعهدة والصرف للأقسام';
+      :(displayView==='storage'
+        ?'Controlled pharmacy storage: cabinets and safes organize the central pharmacy custody only; inpatient-department custody is separate. / تنظيم دواليب وخزائن عهدة الصيدلية المقيدة فقط، ولا يرتبط بعهدة الأقسام.'
+        :'Controlled pharmacy permission: pharmacy custody, inpatient dispensing and department lists / صلاحية مسؤول المخدرات للعهدة والصرف للأقسام');
   }
 
   if(displayView==='overview'){
     window.renderCtlOverview();
+  }else if(displayView==='storage'){
+    window.renderControlledStorage();
   }else if(typeof renderCtlDepartments==='function'){
     renderCtlDepartments();
     ensureDeptToolsC();
@@ -8751,25 +8787,32 @@ window.renderControlled=function(){
   var signatureButton=E('ctl-sign-btn')||document.querySelector('#ctl-departments-view button[onclick*="ctlEditSignatures"]');
   if(signatureButton){
     var actualMaster=!!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE);
-    signatureButton.style.display=(effectiveRole==='controlled_pharmacy'||actualMaster)?'inline-flex':'none';
+    signatureButton.style.display=displayView==='departments'&&
+      (effectiveRole==='controlled_pharmacy'||actualMaster)
+      ?'inline-flex'
+      :'none';
     signatureButton.textContent='Edit Signatures / تعديل التوقيعات';
   }
 
   if(typeof renderCtlLog==='function'&&displayView==='departments')renderCtlLog();
-  if(typeof renderCtlPdfReceiptPanel==='function'){
-    try{renderCtlPdfReceiptPanel()}catch(error){}
+  if(typeof renderCtlPdfReceiptPanel==='function'&&displayView==='overview'){
+    try{renderCtlPdfReceiptPanel();}catch(error){}
   }
 
-  [
-    window.applyWarehouseControlledUi,
-    window.addWarehouseControlledBulkButtons,
-    window.ensureControlledBulkReplacementButton,
-    window.cleanupDepartmentPrintUi
-  ].forEach(function(step){
-    if(typeof step==='function'){
-      try{step()}catch(error){console.error('Controlled post-render step failed',error)}
-    }
-  });
+  if(displayView!=='storage'){
+    [
+      window.applyWarehouseControlledUi,
+      window.addWarehouseControlledBulkButtons,
+      window.ensureControlledBulkReplacementButton,
+      window.cleanupDepartmentPrintUi
+    ].forEach(function(step){
+      if(typeof step==='function'){
+        try{step();}catch(error){
+          console.error('Controlled post-render step failed',error);
+        }
+      }
+    });
+  }
 };
 
 /* ── Department controlled custody: batch/lot optional; zero quantity needs no expiry. ── */
@@ -9204,23 +9247,6 @@ async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
     optionalFailed:[]
   };
 
-  var storageMaps=Object.assign(
-    {},
-    (window.S&&typeof S.g==='function'
-      ?S.g('controlled_storage_maps_v1')
-      :null)||{}
-  );
-  var publicStorageUnits=[];
-  Object.keys(storageMaps).forEach(function(key){
-    if(!matches(key))return;
-    (storageMaps[key]&&storageMaps[key].units||[]).forEach(function(unit){
-      if(unit&&unit.id)publicStorageUnits.push({
-        dept:key,
-        unitId:unit.id
-      });
-    });
-    delete storageMaps[key];
-  });
 
   var deleted=(window.S&&typeof S.g==='function'
     ?S.g('deleted_departments')
@@ -9317,11 +9343,6 @@ async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
     function(){return S.s('request_hour_grids_v1',hourMaps);}
   );
 
-  await floorstockDeletionStep(
-    report,
-    'Remove controlled storage maps',
-    function(){return S.s('controlled_storage_maps_v1',storageMaps);}
-  );
 
   var accountabilityCatalog=(S.g('accountability_catalog_v1')||[])
     .map(function(item){
@@ -9396,16 +9417,7 @@ async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
         }
       });
     });
-    publicStorageUnits.forEach(function(record){
-      publicJobs.push({
-        name:'public controlled storage '+record.unitId,
-        run:function(){
-          return FB_DB.collection('public_controlled_expiry')
-            .doc('storage_'+record.dept+'_'+record.unitId)
-            .delete();
-        }
-      });
-    });
+
 
     for(var publicIndex=0;publicIndex<publicJobs.length;publicIndex++){
       try{
@@ -9459,7 +9471,7 @@ window.purgeOrphanDepartment=async function(id){
     'Permanently delete orphaned department records for "'+
     (record.name||record.id)+'"?\n\n'+
     'This removes schedules, limits, medicines, expiry, shelves, alerts, '+
-    'controlled custody, storage maps, and current accountability balances. '+
+    'controlled custody and current accountability balances. '+
     'Historical completed requests are retained for audit.'
   );
   if(!confirmed)return false;
@@ -11181,726 +11193,295 @@ window.r17AccSubmitUsage=async function(id){var get=function(kind){var x=documen
 window.r17AccRenderVerify=function(){var host=E('r17-acc-verify');if(!host)return;var from=(E('r17-acc-from')||{}).value||'',to=(E('r17-acc-to')||{}).value||'',dept=(E('r17-acc-filter-dept')||{}).value||'',status=(E('r17-acc-filter-status')||{}).value||'',rows=accUsage().filter(function(x){return(!from||x.date>=from)&&(!to||x.date<=to)&&(!dept||String(x.deptId)===String(dept))&&(!status||x.status===status)});host.innerHTML='<div class="tw"><table><thead><tr><th>Date</th><th>Department</th><th>Medicine</th><th>Patient file</th><th>Units</th><th>Dose</th><th>Doctor</th><th>Status</th><th>Decision</th></tr></thead><tbody>'+rows.map(function(u){var m=accCatalog().find(function(x){return x.id===u.medId})||{};return '<tr><td>'+esc(u.date)+'</td><td>'+esc(deptName(u.deptId))+'</td><td>'+esc(m.name||u.medName)+'</td><td>'+esc(u.patientFile)+'</td><td>'+n(u.units)+'</td><td>'+esc(u.dose||'—')+'</td><td>'+esc(u.doctor)+'</td><td>'+esc(accStatusLabel(u.status))+'</td><td><input id="r17-acc-note-'+u.id+'" placeholder="Rejection note required"><button class="btn bs bxs" onclick="r17AccDecision(\''+u.id+'\',true)">Verify</button> <button class="btn bd2c bxs" onclick="r17AccDecision(\''+u.id+'\',false)">Return</button></td></tr>'}).join('')+'</tbody></table></div>';if(!rows.length)host.innerHTML='<div class="alert-banner-y">No documentation found for the selected filter. Pharmacy may change the date range or department; no silent verification is created.</div>'};
 window.r17AccDecision=async function(id,verify){var rows=accUsage().map(function(x){return Object.assign({},x)}),u=rows.find(function(x){return x.id===id});if(!u)return;var note=(E('r17-acc-note-'+id)||{}).value||'';if(!verify&&!note.trim())return toast('A return/rejection note is required.','err');if(verify){var stocks=Object.assign({},accDeptStock()),key=u.deptId+'|'+u.medId;if(n(stocks[key])<n(u.units))return toast('Department documented more units than its recorded balance. Return it with a note.','err');stocks[key]=n(stocks[key])-n(u.units);await S.s('accountability_dept_stock_v1',stocks);u.status='verified';u.verifiedAt=now();u.verifiedBy=actor().name;u.pharmacyNote=note.trim()}else{u.status='returned';u.returnedAt=now();u.returnedBy=actor().name;u.pharmacyNote=note.trim()}await S.s('accountability_nursing_v1',rows);toast(verify?'Verified ✓':'Returned to nursing ✓','succ');r17AccRenderVerify()};
 
-/* ---------- Controlled cabinets and safes ---------- */
-var CONTROLLED_STORAGE_KEY='controlled_storage_maps_v1';
-var CONTROLLED_STORAGE_UI={
-  editingUnitId:'',
-  draftCounts:[7,5,4,9,2]
-};
+/* ---------- Controlled-pharmacy cabinets and safes ---------- */
+var CONTROLLED_STORAGE_KEY='controlled_pharmacy_storage_v1';
+var CONTROLLED_STORAGE_LEGACY_KEY='controlled_storage_maps_v1';
+var CONTROLLED_STORAGE_UI={editingUnitId:'',draftCounts:[7,5,4,9,2]};
+var CONTROLLED_STORAGE_LEGACY_REMOVED=false;
 
-function storageAll(){
-  var value=S.g(CONTROLLED_STORAGE_KEY);
-  return value&&typeof value==='object'?value:{};
-}
-
-function storageDept(id){
-  var all=storageAll();
-  var value=clone(all[id]||{mode:'map',units:[]});
+function storageState(){
+  var value=clone(S.g(CONTROLLED_STORAGE_KEY)||{mode:'map',units:[]});
   if(!value||typeof value!=='object')value={mode:'map',units:[]};
   if(!Array.isArray(value.units))value.units=[];
   if(value.mode!=='list')value.mode='map';
   return value;
 }
 
-function controlledMeds(dept){
-  var list=typeof ctlDeptList==='function'?(ctlDeptList(dept)||[]):[];
+async function removeLegacyDepartmentStorage(){
+  if(CONTROLLED_STORAGE_LEGACY_REMOVED)return;
+  CONTROLLED_STORAGE_LEGACY_REMOVED=true;
+  try{
+    if(S.g(CONTROLLED_STORAGE_LEGACY_KEY)!=null){
+      await S.rm(CONTROLLED_STORAGE_LEGACY_KEY);
+    }
+  }catch(error){
+    CONTROLLED_STORAGE_LEGACY_REMOVED=false;
+    console.warn('Legacy department storage cleanup failed',error);
+  }
+}
+
+function controlledMeds(){
   var catalog=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[];
-  return list.map(function(item){
-    var med=catalog.find(function(candidate){
-      return String(candidate.id)===String(item.medId);
-    })||{};
+  var pharmacy=typeof ctlPharmacy==='function'?(ctlPharmacy()||{}):{};
+  var byId={};
+  catalog.forEach(function(medicine){
+    if(medicine&&medicine.id)byId[String(medicine.id)]=medicine;
+  });
+  return Object.keys(pharmacy).map(function(id){
+    var stock=pharmacy[id]||{};
+    var medicine=byId[String(id)]||{};
     return {
-      id:String(item.medId||''),
-      name:med.name||item.name||item.medId,
-      batches:Array.isArray(item.batches)?item.batches:[],
-      qty:item.actualQty!=null?item.actualQty:item.qty
+      id:String(id),
+      name:medicine.name||stock.name||id,
+      classification:medicine.classification||stock.classification||'narcotic',
+      batches:Array.isArray(stock.batches)?stock.batches:[],
+      qty:stock.qty!=null?stock.qty:(stock.actualQty!=null?stock.actualQty:0)
     };
-  }).filter(function(item){return !!item.id;});
+  }).sort(function(a,b){return String(a.name).localeCompare(String(b.name));});
 }
 
 function storageEffectiveRole(){
-  return String(
-    (window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||
-    (window.CU&&CU.role)||
-    ''
-  );
+  return String((window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||(window.CU&&CU.role)||'');
 }
-
 function storageActualMaster(){
   try{
     if(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)return true;
     if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
     return !!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE);
-  }catch(error){
-    return false;
-  }
+  }catch(error){return false;}
 }
-
 function canStorage(){
   if(storageActualMaster())return true;
-  var permissions=window.CU&&CU.permissions;
-  if(permissions&&permissions.controlledStorage===true)return true;
+  if(window.CU&&CU.permissions&&CU.permissions.controlledStorage===true)return true;
   return storageEffectiveRole()==='controlled_pharmacy';
 }
-
 function rowLetter(index){
   var output='',number=index+1;
-  while(number>0){
-    number--;
-    output=String.fromCharCode(65+(number%26))+output;
-    number=Math.floor(number/26);
-  }
+  while(number>0){number--;output=String.fromCharCode(65+(number%26))+output;number=Math.floor(number/26);}
   return output;
 }
-
 function normalizedCellCount(value){
   value=Math.floor(Number(value));
   return isFinite(value)?Math.max(1,Math.min(50,value)):1;
 }
-
 function normalizeStorageCounts(values){
-  return (Array.isArray(values)?values:[])
-    .slice(0,26)
-    .map(normalizedCellCount);
+  return (Array.isArray(values)?values:[]).slice(0,26).map(normalizedCellCount);
 }
-
 function createStorageUnit(name,type,counts,existing){
   existing=existing||{};
   var previousByCode={};
-
   (existing.rows||[]).forEach(function(row){
-    (row.cells||[]).forEach(function(cell){
-      previousByCode[String(cell.code||'')]=cell.medId||'';
-    });
+    (row.cells||[]).forEach(function(cell){previousByCode[String(cell.code||'')]=cell.medId||'';});
   });
-
   return {
     id:existing.id||uid('storage'),
     name:String(name||'').trim(),
-    type:['cabinet','safe','refrigerator'].indexOf(type)>=0
-      ?type
-      :'cabinet',
-    createdAt:existing.createdAt||now(),
-    updatedAt:now(),
+    type:['cabinet','safe','refrigerator'].indexOf(type)>=0?type:'cabinet',
+    createdAt:existing.createdAt||now(),updatedAt:now(),
     rows:normalizeStorageCounts(counts).map(function(count,rowIndex){
       var label=rowLetter(rowIndex);
       return {
-        id:(existing.rows&&existing.rows[rowIndex]&&
-          existing.rows[rowIndex].id)||uid('row'),
+        id:(existing.rows&&existing.rows[rowIndex]&&existing.rows[rowIndex].id)||uid('row'),
         label:label,
         cells:Array.from({length:count},function(_,cellIndex){
           var code=label+(cellIndex+1);
           return {
-            id:(existing.rows&&existing.rows[rowIndex]&&
-              existing.rows[rowIndex].cells&&
-              existing.rows[rowIndex].cells[cellIndex]&&
-              existing.rows[rowIndex].cells[cellIndex].id)||uid('cell'),
-            code:code,
-            medId:previousByCode[code]||''
+            id:(existing.rows&&existing.rows[rowIndex]&&existing.rows[rowIndex].cells&&existing.rows[rowIndex].cells[cellIndex]&&existing.rows[rowIndex].cells[cellIndex].id)||uid('cell'),
+            code:code,medId:previousByCode[code]||''
           };
         })
       };
     })
   };
 }
-
 function storageBuilderError(message){
-  var box=E('controlled-storage-builder-error');
-  if(!box)return;
-  box.textContent=message||'';
-  box.style.display=message?'block':'none';
+  var box=E('controlled-storage-builder-error');if(!box)return;
+  box.textContent=message||'';box.style.display=message?'block':'none';
 }
-
 function storageReadCounts(){
-  return Array.from(
-    document.querySelectorAll(
-      '#controlled-storage-shelf-rows [data-storage-cell-count]'
-    )
-  ).map(function(input){
-    return normalizedCellCount(input.value);
-  });
+  return Array.from(document.querySelectorAll('#controlled-storage-shelf-rows [data-storage-cell-count]')).map(function(input){return normalizedCellCount(input.value);});
 }
-
 function storagePreviewHtml(counts){
   return normalizeStorageCounts(counts).map(function(count,index){
     var label=rowLetter(index);
-    var cells=Array.from({length:count},function(_,cellIndex){
-      return '<span class="r21-storage-code">'+
-        esc(label+(cellIndex+1))+
-      '</span>';
-    }).join('');
-    return '<div class="r21-storage-preview-row">'+
-      '<b>'+esc(label)+'</b>'+cells+
-    '</div>';
+    return '<div class="r21-storage-preview-row"><b>'+esc(label)+'</b>'+Array.from({length:count},function(_,cellIndex){return '<span class="r21-storage-code">'+esc(label+(cellIndex+1))+'</span>';}).join('')+'</div>';
   }).join('');
 }
-
 function renderStorageBuilder(counts){
-  counts=normalizeStorageCounts(
-    counts&&counts.length?counts:CONTROLLED_STORAGE_UI.draftCounts
-  );
+  counts=normalizeStorageCounts(counts&&counts.length?counts:CONTROLLED_STORAGE_UI.draftCounts);
   if(!counts.length)counts=[7,5,4,9,2];
   CONTROLLED_STORAGE_UI.draftCounts=counts.slice();
-
-  var countInput=E('controlled-storage-shelf-count');
-  if(countInput)countInput.value=String(counts.length);
-
+  var countInput=E('controlled-storage-shelf-count');if(countInput)countInput.value=String(counts.length);
   var rows=E('controlled-storage-shelf-rows');
-  if(rows){
-    rows.innerHTML=counts.map(function(count,index){
-      var label=rowLetter(index);
-      return '<div class="r21-storage-shelf-config">'+
-        '<div class="r21-storage-shelf-label">Shelf '+esc(label)+
-          '<br><small>الرف '+(index+1)+'</small></div>'+
-        '<div class="fg">'+
-          '<label>Cells on this shelf / عدد الخانات</label>'+
-          '<input type="number" min="1" max="50" value="'+count+
-            '" data-storage-cell-count="'+index+
-            '" oninput="controlledStorageCountsChanged()">'+
-        '</div>'+
-        '<div class="r21-storage-shelf-codes">'+
-          Array.from({length:count},function(_,cellIndex){
-            return '<span class="r21-storage-code">'+
-              esc(label+(cellIndex+1))+
-            '</span>';
-          }).join('')+
-        '</div>'+
-      '</div>';
-    }).join('');
-  }
-
-  var preview=E('controlled-storage-code-preview');
-  if(preview)preview.innerHTML=storagePreviewHtml(counts);
+  if(rows){rows.innerHTML=counts.map(function(count,index){
+    var label=rowLetter(index);
+    return '<div class="r21-storage-shelf-config"><div class="r21-storage-shelf-label">Shelf '+esc(label)+'<br><small>الرف '+(index+1)+'</small></div><div class="fg"><label>Cells on this shelf / عدد الخانات</label><input type="number" min="1" max="50" value="'+count+'" data-storage-cell-count="'+index+'" oninput="controlledStorageCountsChanged()"></div><div class="r21-storage-shelf-codes">'+Array.from({length:count},function(_,cellIndex){return '<span class="r21-storage-code">'+esc(label+(cellIndex+1))+'</span>';}).join('')+'</div></div>';
+  }).join('');}
+  var preview=E('controlled-storage-code-preview');if(preview)preview.innerHTML=storagePreviewHtml(counts);
 }
-
 window.controlledStorageCountsChanged=function(){
-  var counts=storageReadCounts();
-  CONTROLLED_STORAGE_UI.draftCounts=counts;
-  var preview=E('controlled-storage-code-preview');
-  if(preview)preview.innerHTML=storagePreviewHtml(counts);
+  var counts=storageReadCounts();CONTROLLED_STORAGE_UI.draftCounts=counts;
+  var preview=E('controlled-storage-code-preview');if(preview)preview.innerHTML=storagePreviewHtml(counts);
 };
-
 window.controlledStorageShelfCountChanged=function(){
-  var requested=Math.floor(Number(
-    (E('controlled-storage-shelf-count')||{}).value
-  ));
+  var requested=Math.floor(Number((E('controlled-storage-shelf-count')||{}).value));
   requested=isFinite(requested)?Math.max(1,Math.min(26,requested)):1;
-
-  var current=storageReadCounts();
-  var defaults=[7,5,4,9,2];
-
-  while(current.length<requested){
-    current.push(defaults[current.length]||1);
-  }
-  current=current.slice(0,requested);
-  renderStorageBuilder(current);
+  var current=storageReadCounts(),defaults=[7,5,4,9,2];
+  while(current.length<requested)current.push(defaults[current.length]||1);
+  renderStorageBuilder(current.slice(0,requested));
 };
-
 function resetStorageBuilder(){
-  CONTROLLED_STORAGE_UI.editingUnitId='';
-  CONTROLLED_STORAGE_UI.draftCounts=[7,5,4,9,2];
-
-  var edit=E('controlled-storage-edit-id');
-  var name=E('controlled-storage-name');
-  var type=E('controlled-storage-type');
-  var title=E('controlled-storage-builder-title');
-  var cancel=E('controlled-storage-cancel-edit');
-  var save=E('controlled-storage-save');
-
-  if(edit)edit.value='';
-  if(name)name.value='';
-  if(type)type.value='cabinet';
+  CONTROLLED_STORAGE_UI.editingUnitId='';CONTROLLED_STORAGE_UI.draftCounts=[7,5,4,9,2];
+  var edit=E('controlled-storage-edit-id'),name=E('controlled-storage-name'),type=E('controlled-storage-type'),title=E('controlled-storage-builder-title'),cancel=E('controlled-storage-cancel-edit'),save=E('controlled-storage-save');
+  if(edit)edit.value='';if(name)name.value='';if(type)type.value='cabinet';
   if(title)title.textContent='Create cabinet or safe / إنشاء دولاب أو خزنة';
-  if(cancel)cancel.style.display='none';
-  if(save)save.textContent='Save storage unit / حفظ الوحدة';
-
-  storageBuilderError('');
-  renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
+  if(cancel)cancel.style.display='none';if(save)save.textContent='Save storage unit / حفظ الوحدة';
+  storageBuilderError('');renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
 }
-
-window.controlledStorageCancelEdit=function(){
-  resetStorageBuilder();
-};
-
+window.controlledStorageCancelEdit=function(){resetStorageBuilder();};
 window.controlledStorageEditUnit=function(unitId){
-  var dept=(E('controlled-storage-dept')||{}).value;
-  var data=storageDept(dept);
-  var unit=data.units.find(function(item){
-    return String(item.id)===String(unitId);
-  });
+  var data=storageState();
+  var unit=data.units.find(function(item){return String(item.id)===String(unitId);});
   if(!unit)return;
-
   CONTROLLED_STORAGE_UI.editingUnitId=unit.id;
-  CONTROLLED_STORAGE_UI.draftCounts=(unit.rows||[]).map(function(row){
-    return (row.cells||[]).length||1;
-  });
-
-  E('controlled-storage-edit-id').value=unit.id;
-  E('controlled-storage-name').value=unit.name||'';
-  E('controlled-storage-type').value=unit.type||'cabinet';
-  E('controlled-storage-builder-title').textContent=
-    'Edit storage unit / تعديل الوحدة';
-  E('controlled-storage-cancel-edit').style.display='inline-flex';
-  E('controlled-storage-save').textContent=
-    'Save changes / حفظ التعديلات';
-
-  storageBuilderError('');
-  renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
-  E('controlled-storage-name').focus();
-  E('controlled-storage-name').scrollIntoView({
-    behavior:'smooth',
-    block:'center'
-  });
+  CONTROLLED_STORAGE_UI.draftCounts=(unit.rows||[]).map(function(row){return (row.cells||[]).length||1;});
+  E('controlled-storage-edit-id').value=unit.id;E('controlled-storage-name').value=unit.name||'';E('controlled-storage-type').value=unit.type||'cabinet';
+  E('controlled-storage-builder-title').textContent='Edit storage unit / تعديل الوحدة';
+  E('controlled-storage-cancel-edit').style.display='inline-flex';E('controlled-storage-save').textContent='Save changes / حفظ التعديلات';
+  storageBuilderError('');renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
+  E('controlled-storage-name').focus();E('controlled-storage-name').scrollIntoView({behavior:'smooth',block:'center'});
 };
-
 window.controlledStorageSaveUnit=async function(){
-  if(!canStorage()){
-    return toast('You are not authorized to manage controlled storage.','err');
-  }
-
-  var dept=(E('controlled-storage-dept')||{}).value;
+  if(!canStorage())return toast('You are not authorized to manage controlled-pharmacy storage.','err');
   var name=String((E('controlled-storage-name')||{}).value||'').trim();
   var type=String((E('controlled-storage-type')||{}).value||'cabinet');
-  var counts=storageReadCounts();
-  var editId=String((E('controlled-storage-edit-id')||{}).value||'');
-  var button=E('controlled-storage-save');
-
+  var counts=storageReadCounts();var editId=String((E('controlled-storage-edit-id')||{}).value||'');var button=E('controlled-storage-save');
   storageBuilderError('');
-
-  if(!dept){
-    storageBuilderError('Choose a department first.');
-    return;
-  }
-  if(!name){
-    storageBuilderError('Enter a cabinet, safe, or refrigerator name.');
-    return;
-  }
-  if(!counts.length){
-    storageBuilderError('Add at least one shelf.');
-    return;
-  }
-
-  var all=Object.assign({},storageAll());
-  var data=storageDept(dept);
-  var existing=editId?data.units.find(function(unit){
-    return String(unit.id)===editId;
-  }):null;
-
-  if(editId&&!existing){
-    storageBuilderError('The storage unit no longer exists. Refresh and try again.');
-    return;
-  }
-
+  if(!name){storageBuilderError('Enter a cabinet, safe, or refrigerator name.');return;}
+  if(!counts.length){storageBuilderError('Add at least one shelf.');return;}
+  var data=storageState();var existing=editId?data.units.find(function(unit){return String(unit.id)===editId;}):null;
+  if(editId&&!existing){storageBuilderError('The storage unit no longer exists. Refresh and try again.');return;}
   if(existing){
-    var keptCodes={};
-    counts.forEach(function(count,rowIndex){
-      var label=rowLetter(rowIndex);
-      for(var cellIndex=0;cellIndex<count;cellIndex++){
-        keptCodes[label+(cellIndex+1)]=true;
-      }
-    });
-
-    var removedAssignments=[];
-    (existing.rows||[]).forEach(function(row){
-      (row.cells||[]).forEach(function(cell){
-        if(cell.medId&&!keptCodes[cell.code]){
-          removedAssignments.push(cell.code);
-        }
-      });
-    });
-
-    if(removedAssignments.length){
-      storageBuilderError(
-        'Move medicines out of these cells before reducing the layout: '+
-        removedAssignments.join(', ')
-      );
-      return;
-    }
+    var keptCodes={};counts.forEach(function(count,rowIndex){var label=rowLetter(rowIndex);for(var cellIndex=0;cellIndex<count;cellIndex++)keptCodes[label+(cellIndex+1)]=true;});
+    var removed=[];(existing.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(cell.medId&&!keptCodes[cell.code])removed.push(cell.code);});});
+    if(removed.length){storageBuilderError('Move medicines out of these cells before reducing the layout: '+removed.join(', '));return;}
   }
-
-  var duplicate=data.units.find(function(unit){
-    return String(unit.id)!==editId&&
-      String(unit.name||'').trim().toLowerCase()===name.toLowerCase();
-  });
-  if(duplicate){
-    storageBuilderError(
-      'A storage unit with this name already exists in the department.'
-    );
-    return;
-  }
-
+  var duplicate=data.units.find(function(unit){return String(unit.id)!==editId&&String(unit.name||'').trim().toLowerCase()===name.toLowerCase();});
+  if(duplicate){storageBuilderError('A storage unit with this name already exists.');return;}
   var next=createStorageUnit(name,type,counts,existing);
-  if(existing){
-    data.units=data.units.map(function(unit){
-      return String(unit.id)===editId?next:unit;
-    });
-  }else{
-    data.units.push(next);
-  }
-
-  all[dept]=data;
+  data.units=existing?data.units.map(function(unit){return String(unit.id)===editId?next:unit;}):data.units.concat([next]);
   if(button)button.disabled=true;
-
   try{
-    await S.s(CONTROLLED_STORAGE_KEY,all);
-    var saved=storageDept(dept).units.find(function(unit){
-      return String(unit.id)===String(next.id);
-    });
+    await S.s(CONTROLLED_STORAGE_KEY,data);
+    var saved=storageState().units.find(function(unit){return String(unit.id)===String(next.id);});
     if(!saved)throw new Error('Storage unit read-back verification failed.');
-
-    resetStorageBuilder();
-    renderControlledStorage();
-    toast(
-      existing
-        ?'Storage unit updated and verified ✓'
-        :'Storage unit created and verified ✓',
-      'succ'
-    );
-  }catch(error){
-    console.error(error);
-    storageBuilderError(
-      String(error&&error.message||'Storage unit was not saved.')
-    );
-  }finally{
-    if(button)button.disabled=false;
-  }
+    resetStorageBuilder();renderControlledStorage();toast(existing?'Storage unit updated and verified ✓':'Storage unit created and verified ✓','succ');
+  }catch(error){console.error(error);storageBuilderError(String(error&&error.message||'Storage unit was not saved.'));}
+  finally{if(button)button.disabled=false;}
 };
-
 function storageMedicineOptions(medicines,selectedId){
   var html='<option value="">Empty / فارغة</option>';
-  medicines.forEach(function(medicine){
-    html+='<option value="'+esc(medicine.id)+'"'+
-      (String(medicine.id)===String(selectedId)?' selected':'')+
-      '>'+esc(medicine.name)+'</option>';
-  });
+  medicines.forEach(function(medicine){html+='<option value="'+esc(medicine.id)+'"'+(String(medicine.id)===String(selectedId)?' selected':'')+'>'+esc(medicine.name)+'</option>';});
   return html;
 }
-
 function storageAssignedMap(data){
-  var assigned={};
-  data.units.forEach(function(unit){
-    (unit.rows||[]).forEach(function(row){
-      (row.cells||[]).forEach(function(cell){
-        if(cell.medId){
-          assigned[String(cell.medId)]={
-            unitId:unit.id,
-            unitName:unit.name,
-            code:cell.code
-          };
-        }
-      });
-    });
-  });
-  return assigned;
+  var assigned={};data.units.forEach(function(unit){(unit.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(cell.medId)assigned[String(cell.medId)]={unitId:unit.id,unitName:unit.name,code:cell.code};});});});return assigned;
 }
-
 function storageBatchText(medicine){
-  var text=(medicine.batches||[]).map(function(batch){
-    var expiry=batch.expiry||batch.date||'—';
-    var lot=batch.lot||batch.batch||'';
-    return expiry+(lot?' · '+lot:'');
-  }).join(' | ');
+  var text=(medicine.batches||[]).map(function(batch){var expiry=batch.expiry||batch.date||'—',lot=batch.lot||batch.batch||'';return expiry+(lot?' · '+lot:'');}).join(' | ');
   return text||'No expiry dates';
 }
-
-window.renderControlledStorage=function(){
-  var page=E('pg-controlled-storage');
-  var notice=E('controlled-storage-auth-message');
-  var workspace=E('controlled-storage-workspace');
-  if(!page||!notice||!workspace)return;
-
+window.renderControlledStorage=async function(){
+  var panel=E('ctl-storage-view'),notice=E('controlled-storage-auth-message'),workspace=E('controlled-storage-workspace');
+  if(!panel||!notice||!workspace)return;
   if(!canStorage()){
-    notice.style.display='block';
-    notice.textContent=
-      'Not authorized. This page is available to the actual Master, the '+
-      'Controlled Medicines Pharmacy Officer, or a user with the '+
-      'controlledStorage permission.';
-    workspace.style.display='none';
-    return;
+    notice.style.display='block';notice.textContent='Not authorized. This tab is available to the actual Master, the Controlled Medicines Pharmacy Officer, or a user with the controlledStorage permission.';workspace.style.display='none';return;
   }
-
-  notice.style.display='none';
-  workspace.style.display='block';
-
-  var departments=depts();
-  var select=E('controlled-storage-dept');
-  var previous=select.value;
-
-  select.innerHTML=departments.map(function(department){
-    return '<option value="'+esc(department.id)+'">'+
-      esc(deptName(department.id))+
-    '</option>';
-  }).join('');
-
-  if(previous&&departments.some(function(department){
-    return String(department.id)===String(previous);
-  })){
-    select.value=previous;
-  }
-
-  var dept=select.value;
-  if(!dept){
-    E('controlled-storage-dept-summary').textContent='No departments available';
-    E('controlled-storage-root').innerHTML=
-      '<div class="r21-storage-empty">Create a department before building controlled storage.</div>';
-    return;
-  }
-
-  var data=storageDept(dept);
-  var mode=E('controlled-storage-mode');
-  mode.value=data.mode||'map';
-
-  var filter=E('controlled-storage-filter');
-  var oldFilter=filter.value;
-  filter.innerHTML=
-    '<option value="all">All custody medicines / كل أدوية العهدة</option>'+
-    '<option value="unassigned">Not assigned / غير مضافة لخانة</option>'+
-    data.units.map(function(unit){
-      return '<option value="unit:'+esc(unit.id)+'">'+
-        esc(unit.name)+
-      '</option>';
-    }).join('');
-
-  if(Array.from(filter.options).some(function(option){
-    return option.value===oldFilter;
-  })){
-    filter.value=oldFilter;
-  }
-
-  var medicines=controlledMeds(dept);
-  var assigned=storageAssignedMap(data);
-  var unitFilter=filter.value;
-  var units=data.units.filter(function(unit){
-    return unitFilter.indexOf('unit:')===0
-      ?String(unit.id)===unitFilter.slice(5)
-      :true;
-  });
-
-  E('controlled-storage-dept-summary').innerHTML=
-    '<span>'+esc(deptName(dept))+'</span>'+
-    '<span class="chip" style="margin-inline-start:auto">'+
-      data.units.length+' unit(s)'+
-    '</span>';
-
-  if(!E('controlled-storage-shelf-rows').children.length){
-    renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
-  }
-
-  var body='';
-
+  notice.style.display='none';workspace.style.display='block';
+  await removeLegacyDepartmentStorage();
+  var data=storageState();var mode=E('controlled-storage-mode');if(mode)mode.value=data.mode||'map';
+  var filter=E('controlled-storage-filter'),oldFilter=filter.value;
+  filter.innerHTML='<option value="all">All pharmacy-custody medicines / كل أدوية عهدة الصيدلية</option><option value="unassigned">Not assigned / غير مضافة لخانة</option>'+data.units.map(function(unit){return '<option value="unit:'+esc(unit.id)+'">'+esc(unit.name)+'</option>';}).join('');
+  if(Array.from(filter.options).some(function(option){return option.value===oldFilter;}))filter.value=oldFilter;
+  var medicines=controlledMeds(),assigned=storageAssignedMap(data),unitFilter=filter.value;
+  var units=data.units.filter(function(unit){return unitFilter.indexOf('unit:')===0?String(unit.id)===unitFilter.slice(5):true;});
+  var summary=E('controlled-storage-summary');if(summary)summary.innerHTML='<span>Controlled pharmacy custody / عهدة مسؤول الأدوية المقيدة</span><span class="chip" style="margin-inline-start:auto">'+medicines.length+' medicine(s)</span><span class="chip">'+data.units.length+' unit(s)</span>';
+  if(!E('controlled-storage-shelf-rows').children.length)renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
   if(unitFilter==='unassigned'){
-    var unassigned=medicines.filter(function(medicine){
-      return !assigned[String(medicine.id)];
-    });
-
-    body='<div class="card">'+
-      '<div class="ch"><span class="ct">Medicines not assigned to a cell / أدوية غير مضافة لخانة</span></div>'+
-      '<div class="cb"><div class="r21-storage-unassigned-list">'+
-        (unassigned.length
-          ?unassigned.map(function(medicine){
-            return '<span class="chip">'+esc(medicine.name)+'</span>';
-          }).join('')
-          :'<span class="fhint">Every custody medicine is assigned to a cell.</span>')+
-      '</div></div>'+
-    '</div>';
-
-    E('controlled-storage-root').innerHTML=body;
-    return;
+    var unassigned=medicines.filter(function(medicine){return !assigned[String(medicine.id)];});
+    E('controlled-storage-root').innerHTML='<div class="card"><div class="ch"><span class="ct">Pharmacy-custody medicines not assigned to a cell / أدوية عهدة الصيدلية غير المضافة لخانة</span></div><div class="cb"><div class="r21-storage-unassigned-list">'+(unassigned.length?unassigned.map(function(medicine){return '<span class="chip">'+esc(medicine.name)+'</span>';}).join(''):'<span class="fhint">Every pharmacy-custody medicine is assigned to a cell.</span>')+'</div></div></div>';return;
   }
-
-  if(!data.units.length){
-    E('controlled-storage-root').innerHTML=
-      '<div class="r21-storage-empty">'+
-        '<b>No cabinets or safes yet / لا توجد دواليب أو خزائن</b>'+
-        '<div style="margin-top:6px">Use the form above to define the first unit and its shelf-by-shelf cell structure.</div>'+
-      '</div>';
-    return;
-  }
-
-  body=units.map(function(unit){
-    var actionButtons=
-      '<div class="r21-storage-unit-actions">'+
-        '<button class="btn bg bxs" type="button" onclick="controlledStorageEditUnit(\''+unit.id+'\')">Edit layout</button>'+
-        '<button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'list\')">Print list</button>'+
-        '<button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'map\')">Print map</button>'+
-        '<button class="btn bd2c bxs" type="button" onclick="controlledStorageDeleteUnit(\''+unit.id+'\')">Delete</button>'+
-      '</div>';
-
-    var head='<div class="r17-unit-head">'+
-      '<div class="r21-storage-unit-meta">'+
-        '<b>'+esc(unit.name)+'</b>'+
-        '<span class="chip">'+esc(unit.type)+'</span>'+
-        '<span class="chip">'+(unit.rows||[]).length+' shelf/shelves</span>'+
-      '</div>'+
-      actionButtons+
-    '</div>';
-
+  if(!data.units.length){E('controlled-storage-root').innerHTML='<div class="r21-storage-empty"><b>No cabinets or safes yet / لا توجد دواليب أو خزائن</b><div style="margin-top:6px">Use the form above to define the first unit for the controlled-pharmacy custody.</div></div>';return;}
+  E('controlled-storage-root').innerHTML=units.map(function(unit){
+    var actions='<div class="r21-storage-unit-actions"><button class="btn bg bxs" type="button" onclick="controlledStorageEditUnit(\''+unit.id+'\')">Edit layout</button><button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'list\')">Print list</button><button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'map\')">Print map</button><button class="btn bd2c bxs" type="button" onclick="controlledStorageDeleteUnit(\''+unit.id+'\')">Delete</button></div>';
+    var head='<div class="r17-unit-head"><div class="r21-storage-unit-meta"><b>'+esc(unit.name)+'</b><span class="chip">'+esc(unit.type)+'</span><span class="chip">'+(unit.rows||[]).length+' shelf/shelves</span></div>'+actions+'</div>';
     if(data.mode==='list'){
-      var listRows=[];
-      (unit.rows||[]).forEach(function(row){
-        (row.cells||[]).forEach(function(cell){
-          var medicine=medicines.find(function(item){
-            return String(item.id)===String(cell.medId);
-          });
-          if(medicine){
-            listRows.push(
-              '<tr>'+
-                '<td><b>'+esc(cell.code)+'</b></td>'+
-                '<td>'+esc(medicine.name)+'</td>'+
-                '<td>'+n(medicine.qty)+'</td>'+
-                '<td>'+esc(storageBatchText(medicine))+'</td>'+
-              '</tr>'
-            );
-          }
-        });
-      });
-
-      return '<div class="r17-unit">'+head+
-        '<div class="tw"><table>'+
-          '<thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch/Lot (optional) &amp; Expiry</th></tr></thead>'+
-          '<tbody>'+
-            (listRows.length
-              ?listRows.join('')
-              :'<tr><td colspan="4">No medicines assigned to this unit.</td></tr>')+
-          '</tbody>'+
-        '</table></div>'+
-      '</div>';
+      var listRows=[];(unit.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});if(medicine)listRows.push('<tr><td><b>'+esc(cell.code)+'</b></td><td>'+esc(medicine.name)+'</td><td>'+n(medicine.qty)+'</td><td>'+esc(storageBatchText(medicine))+'</td></tr>');});});
+      return '<div class="r17-unit">'+head+'<div class="tw"><table><thead><tr><th>Cell</th><th>Medicine</th><th>Pharmacy qty</th><th>Batch/Lot (optional) &amp; Expiry</th></tr></thead><tbody>'+(listRows.length?listRows.join(''):'<tr><td colspan="4">No medicines assigned to this unit.</td></tr>')+'</tbody></table></div></div>';
     }
-
-    var optionsCache={};
-    function options(selected){
-      var key=String(selected||'');
-      if(!optionsCache[key]){
-        optionsCache[key]=storageMedicineOptions(medicines,key);
-      }
-      return optionsCache[key];
-    }
-
-    var map=(unit.rows||[]).map(function(row,rowIndex){
-      return '<div class="r17-storage-row" style="grid-template-columns:repeat('+
-        Math.max(1,(row.cells||[]).length)+
-        ',minmax(120px,1fr))">'+
-        (row.cells||[]).map(function(cell,cellIndex){
-          var medicine=medicines.find(function(item){
-            return String(item.id)===String(cell.medId);
-          });
-
-          return '<div class="r17-cell'+(medicine?' r21-storage-cell-assigned':'')+'">'+
-            '<div class="r17-cell-code">'+esc(cell.code)+'</div>'+
-            '<select onchange="controlledStorageAssign(\''+unit.id+'\','+
-              rowIndex+','+cellIndex+',this.value)">'+
-              options(cell.medId)+
-            '</select>'+
-            (medicine
-              ?'<div class="fhint" style="margin-top:5px">'+
-                'Qty '+n(medicine.qty)+'<br>'+
-                esc(storageBatchText(medicine))+
-              '</div>'
-              :'')+
-          '</div>';
-        }).join('')+
-      '</div>';
-    }).join('');
-
+    var optionsCache={};function options(selected){var key=String(selected||'');if(!optionsCache[key])optionsCache[key]=storageMedicineOptions(medicines,key);return optionsCache[key];}
+    var map=(unit.rows||[]).map(function(row,rowIndex){return '<div class="r17-storage-row" style="grid-template-columns:repeat('+Math.max(1,(row.cells||[]).length)+',minmax(120px,1fr))">'+(row.cells||[]).map(function(cell,cellIndex){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});var stale=cell.medId&&!medicine;return '<div class="r17-cell'+(medicine?' r21-storage-cell-assigned':'')+'"><div class="r17-cell-code">'+esc(cell.code)+'</div><select onchange="controlledStorageAssign(\''+unit.id+'\','+rowIndex+','+cellIndex+',this.value)">'+options(cell.medId)+'</select>'+(medicine?'<div class="fhint" style="margin-top:5px">Qty '+n(medicine.qty)+'<br>'+esc(storageBatchText(medicine))+'</div>':(stale?'<div class="r21-storage-inline-error" style="display:block;margin-top:5px">Medicine is no longer in pharmacy custody. Clear this cell.</div>':''))+'</div>';}).join('')+'</div>';}).join('');
     return '<div class="r17-unit">'+head+map+'</div>';
   }).join('');
-
-  E('controlled-storage-root').innerHTML=body;
 };
-
 window.controlledStorageModeChanged=async function(){
-  var dept=(E('controlled-storage-dept')||{}).value;
-  if(!dept)return;
-  var all=Object.assign({},storageAll());
-  var data=storageDept(dept);
-  data.mode=E('controlled-storage-mode').value==='list'?'list':'map';
-  all[dept]=data;
-  await S.s(CONTROLLED_STORAGE_KEY,all);
-  renderControlledStorage();
+  var data=storageState();data.mode=E('controlled-storage-mode').value==='list'?'list':'map';await S.s(CONTROLLED_STORAGE_KEY,data);renderControlledStorage();
 };
-
 window.controlledStorageAssign=async function(unitId,rowIndex,cellIndex,medId){
-  var dept=(E('controlled-storage-dept')||{}).value;
-  if(!dept)return;
-
-  var all=Object.assign({},storageAll());
-  var data=storageDept(dept);
-  var unit=data.units.find(function(item){
-    return String(item.id)===String(unitId);
-  });
+  var data=storageState();var unit=data.units.find(function(item){return String(item.id)===String(unitId);});
   if(!unit||!unit.rows[rowIndex]||!unit.rows[rowIndex].cells[cellIndex])return;
-
-  var movedFrom='';
-  data.units.forEach(function(candidateUnit){
-    (candidateUnit.rows||[]).forEach(function(row){
-      (row.cells||[]).forEach(function(cell){
-        if(medId&&String(cell.medId)===String(medId)){
-          movedFrom=candidateUnit.name+' '+cell.code;
-          cell.medId='';
-        }
-      });
-    });
-  });
-
+  var valid=controlledMeds().some(function(medicine){return String(medicine.id)===String(medId);});
+  if(medId&&!valid)return toast('This medicine is not in current controlled-pharmacy custody.','err');
+  var movedFrom='';data.units.forEach(function(candidate){(candidate.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(medId&&String(cell.medId)===String(medId)){movedFrom=candidate.name+' '+cell.code;cell.medId='';}});});});
   unit.rows[rowIndex].cells[cellIndex].medId=medId||'';
-  all[dept]=data;
-
-  try{
-    await S.s(CONTROLLED_STORAGE_KEY,all);
-    renderControlledStorage();
-    if(medId&&movedFrom){
-      toast('Medicine moved from '+movedFrom+' ✓','info');
-    }
-  }catch(error){
-    console.error(error);
-    toast('Cell assignment was not saved.','err');
-    renderControlledStorage();
-  }
+  try{await S.s(CONTROLLED_STORAGE_KEY,data);renderControlledStorage();if(medId&&movedFrom)toast('Medicine moved from '+movedFrom+' ✓','info');}
+  catch(error){console.error(error);toast('Cell assignment was not saved.','err');renderControlledStorage();}
 };
-
 window.controlledStorageDeleteUnit=async function(unitId){
-  var dept=(E('controlled-storage-dept')||{}).value;
-  if(!dept)return;
-
-  var data=storageDept(dept);
-  var unit=data.units.find(function(item){
-    return String(item.id)===String(unitId);
-  });
-  if(!unit)return;
-
-  var confirmed=await uiConfirm(
-    'Delete "'+unit.name+'"?\n\n'+
-    'Assigned medicines will return to the unassigned filter.'
-  );
-  if(!confirmed)return;
-
-  var all=Object.assign({},storageAll());
-  data.units=data.units.filter(function(item){
-    return String(item.id)!==String(unitId);
-  });
-  all[dept]=data;
-
-  try{
-    await S.s(CONTROLLED_STORAGE_KEY,all);
-    if(String(CONTROLLED_STORAGE_UI.editingUnitId)===String(unitId)){
-      resetStorageBuilder();
-    }
-    renderControlledStorage();
-    toast('Storage unit deleted ✓','info');
-  }catch(error){
-    console.error(error);
-    toast('Storage unit deletion was not saved.','err');
-  }
+  var data=storageState();var unit=data.units.find(function(item){return String(item.id)===String(unitId);});if(!unit)return;
+  if(!await uiConfirm('Delete "'+unit.name+'"?\n\nAssigned medicines will return to the unassigned filter.'))return;
+  data.units=data.units.filter(function(item){return String(item.id)!==String(unitId);});
+  try{await S.s(CONTROLLED_STORAGE_KEY,data);if(String(CONTROLLED_STORAGE_UI.editingUnitId)===String(unitId))resetStorageBuilder();renderControlledStorage();toast('Storage unit deleted ✓','info');}
+  catch(error){console.error(error);toast('Storage unit deletion was not saved.','err');}
 };
-
-function near30(batches){var today=new Date();today=new Date(today.getFullYear(),today.getMonth(),today.getDate());return (batches||[]).some(function(b){if(!b.expiry)return false;var d=new Date(String(b.expiry).slice(0,10)+'T00:00:00'),days=Math.round((d-today)/86400000);return days>=0&&days<=30})}
-async function publishStorage(dept,u,meds){if(!window.FB_DB)return;var rows=[];u.rows.forEach(function(r){r.cells.forEach(function(c){var m=meds.find(function(x){return x.id===c.medId});if(m)rows.push({cell:c.code,name:m.name,qty:n(m.qty),batches:m.batches||[]})})});await FB_DB.collection('public_controlled_expiry').doc('storage_'+dept+'_'+u.id).set({department:deptName(dept),unit:u.name,type:u.type,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),rows:rows},{merge:true})}
-window.controlledStoragePrint=async function(id,mode){var dept=E('r17-storage-dept').value,data=storageDept(dept),u=data.units.find(function(x){return x.id===id}),meds=controlledMeds(dept);if(!u)return;try{await publishStorage(dept,u,meds)}catch(e){if(typeof warnPublicSync==='function')warnPublicSync('Controlled storage QR',e)}var base=new URL(location.href);base.search='';base.hash='';var url=base.toString()+'?view=controlled-storage-public&dept='+encodeURIComponent(dept)+'&unit='+encodeURIComponent(id),qr='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+encodeURIComponent(url),date=new Date().toLocaleDateString('en-GB'),content='';if(mode==='list'){var rows=[];u.rows.forEach(function(r){r.cells.forEach(function(c){var m=meds.find(function(x){return x.id===c.medId});if(m)rows.push('<tr class="'+(near30(m.batches)?'near':'')+'"><td>'+esc(c.code)+'</td><td>'+esc(m.name)+'</td><td>'+n(m.qty)+'</td><td>'+esc((m.batches||[]).map(function(b){return (b.expiry||'—')+(b.lot?' · '+b.lot:'')}).join(' | ')||'—')+'</td></tr>')})});content='<table><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch (optional) & Expiry</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'}else content='<div class="map">'+u.rows.map(function(r){return '<div class="prow" style="grid-template-columns:repeat('+r.cells.length+',1fr)">'+r.cells.map(function(c){var m=meds.find(function(x){return x.id===c.medId});return '<div class="pcell '+(m&&near30(m.batches)?'near':'')+'"><b>'+esc(c.code)+'</b><span>'+esc(m?m.name:'Empty')+'</span><small>'+esc(m?(m.batches||[]).map(function(b){return b.expiry||'—'}).join(', '):'')+'</small></div>'}).join('')+'</div>'}).join('')+'</div>';var html='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial;margin:0;color:#000}.head{display:grid;grid-template-columns:1fr 25mm;gap:8mm;align-items:center;text-align:center}.head img{width:25mm}.legend{font-size:8px;margin:4px 0}.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #000;padding:4px}.near td,.pcell.near{background:#000!important;color:#fff!important}.map{display:grid;gap:5px}.prow{display:grid;gap:5px}.pcell{border:1px solid #000;min-height:90px;padding:5px;display:flex;flex-direction:column}.pcell span{font-weight:700;margin-top:8px}.pcell small{margin-top:auto}.cert{text-align:center;font-size:8px;margin-top:8px}</style></head><body><div class="head"><div><h2>'+esc(u.name)+' — '+esc(deptName(dept))+'</h2><div>Controlled storage '+esc(mode)+' / طباعة خريطة أو قائمة العهدة</div></div><img src="'+qr+'"></div><div class="legend"><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا · Print date: '+esc(date)+'</div>'+content+'<div class="cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';var w=window.open('','_blank');if(!w)return toast('Allow pop-ups.','err');w.document.write(html);w.document.close()};
-
-/* Public controlled-storage QR view. */
-async function publicStorageView(){var q=new URLSearchParams(location.search);if(q.get('view')!=='controlled-storage-public')return;var auth=E('auth'),app=E('app');if(auth)auth.style.display='none';if(app)app.style.display='none';var host=document.createElement('div');host.style.cssText='font-family:Arial;padding:20px;max-width:1100px;margin:auto';host.innerHTML='<h2>Loading controlled storage…</h2>';document.body.appendChild(host);try{initFirebase();var doc=await FB_DB.collection('public_controlled_expiry').doc('storage_'+q.get('dept')+'_'+q.get('unit')).get();if(!doc.exists)throw new Error('Public storage record not found');var d=doc.data(),rows=d.rows||[];host.innerHTML='<h1>'+esc(d.unit||'Controlled storage')+'</h1><h3>'+esc(d.department||'')+'</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch/Expiry</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td style="border:1px solid #444;padding:6px">'+esc(r.cell)+'</td><td style="border:1px solid #444;padding:6px">'+esc(r.name)+'</td><td style="border:1px solid #444;padding:6px">'+n(r.qty)+'</td><td style="border:1px solid #444;padding:6px">'+esc((r.batches||[]).map(function(b){return (b.expiry||'—')+(b.lot?' · '+b.lot:'')}).join(' | '))+'</td></tr>'}).join('')+'</tbody></table>'}catch(e){host.innerHTML='<div style="color:#b00">'+esc(e&&e.message||e)+'</div>'}}
+function near30(batches){
+  var today=new Date();today=new Date(today.getFullYear(),today.getMonth(),today.getDate());
+  return (batches||[]).some(function(batch){if(!batch.expiry)return false;var date=new Date(String(batch.expiry).slice(0,10)+'T00:00:00'),days=Math.round((date-today)/86400000);return days>=0&&days<=30;});
+}
+async function publishStorage(unit,medicines){
+  if(!window.FB_DB)return;
+  var rows=[];unit.rows.forEach(function(row){row.cells.forEach(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});if(medicine)rows.push({cell:cell.code,name:medicine.name,qty:n(medicine.qty),batches:medicine.batches||[]});});});
+  await FB_DB.collection('public_controlled_expiry').doc('storage_pharmacy_'+unit.id).set({scope:'controlled_pharmacy',department:'Controlled Pharmacy / صيدلية الأدوية المقيدة',unit:unit.name,type:unit.type,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),rows:rows},{merge:true});
+}
+window.controlledStoragePrint=async function(id,mode){
+  var data=storageState(),unit=data.units.find(function(item){return item.id===id;}),medicines=controlledMeds();if(!unit)return;
+  try{await publishStorage(unit,medicines);}catch(error){if(typeof warnPublicSync==='function')warnPublicSync('Controlled storage QR',error);}
+  var base=new URL(location.href);base.search='';base.hash='';
+  var url=base.toString()+'?view=controlled-storage-public&scope=pharmacy&unit='+encodeURIComponent(id);
+  var qr='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+encodeURIComponent(url),date=new Date().toLocaleDateString('en-GB'),content='';
+  if(mode==='list'){
+    var rows=[];unit.rows.forEach(function(row){row.cells.forEach(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});if(medicine)rows.push('<tr class="'+(near30(medicine.batches)?'near':'')+'"><td>'+esc(cell.code)+'</td><td>'+esc(medicine.name)+'</td><td>'+n(medicine.qty)+'</td><td>'+esc((medicine.batches||[]).map(function(batch){return (batch.expiry||'—')+(batch.lot?' · '+batch.lot:'');}).join(' | ')||'—')+'</td></tr>');});});
+    content='<table><thead><tr><th>Cell</th><th>Medicine</th><th>Pharmacy qty</th><th>Batch (optional) & Expiry</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+  }else{
+    content='<div class="map">'+unit.rows.map(function(row){return '<div class="prow" style="grid-template-columns:repeat('+row.cells.length+',1fr)">'+row.cells.map(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});return '<div class="pcell '+(medicine&&near30(medicine.batches)?'near':'')+'"><b>'+esc(cell.code)+'</b><span>'+esc(medicine?medicine.name:'Empty')+'</span><small>'+esc(medicine?(medicine.batches||[]).map(function(batch){return batch.expiry||'—';}).join(', '):'')+'</small></div>';}).join('')+'</div>';}).join('')+'</div>';
+  }
+  var printHtml='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial;margin:0;color:#000}.head{display:grid;grid-template-columns:1fr 25mm;gap:8mm;align-items:center;text-align:center}.head img{width:25mm}.legend{font-size:8px;margin:4px 0}.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #000;padding:4px}.near td,.pcell.near{background:#000!important;color:#fff!important}.map{display:grid;gap:5px}.prow{display:grid;gap:5px}.pcell{border:1px solid #000;min-height:90px;padding:5px;display:flex;flex-direction:column}.pcell span{font-weight:700;margin-top:8px}.pcell small{margin-top:auto}.cert{text-align:center;font-size:8px;margin-top:8px}</style></head><body><div class="head"><div><h2>'+esc(unit.name)+' — Controlled Pharmacy Custody</h2><div>Controlled-pharmacy storage '+esc(mode)+' / طباعة خريطة أو قائمة عهدة الصيدلية المقيدة</div></div><img src="'+qr+'"></div><div class="legend"><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا · Print date: '+esc(date)+'</div>'+content+'<div class="cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
+  var popup=window.open('','_blank');if(!popup)return toast('Allow pop-ups.','err');popup.document.write(printHtml);popup.document.close();
+};
+async function publicStorageView(){
+  var query=new URLSearchParams(location.search);if(query.get('view')!=='controlled-storage-public')return;
+  var auth=E('auth'),app=E('app');if(auth)auth.style.display='none';if(app)app.style.display='none';
+  var host=document.createElement('div');host.style.cssText='font-family:Arial;padding:20px;max-width:1100px;margin:auto';host.innerHTML='<h2>Loading controlled-pharmacy storage…</h2>';document.body.appendChild(host);
+  try{
+    initFirebase();
+    var doc=await FB_DB.collection('public_controlled_expiry').doc('storage_pharmacy_'+query.get('unit')).get();
+    if(!doc.exists)throw new Error('Public controlled-pharmacy storage record not found');
+    var data=doc.data(),rows=data.rows||[];
+    host.innerHTML='<h1>'+esc(data.unit||'Controlled pharmacy storage')+'</h1><h3>'+esc(data.department||'Controlled Pharmacy')+'</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch/Expiry</th></tr></thead><tbody>'+rows.map(function(row){return '<tr><td style="border:1px solid #444;padding:6px">'+esc(row.cell)+'</td><td style="border:1px solid #444;padding:6px">'+esc(row.name)+'</td><td style="border:1px solid #444;padding:6px">'+n(row.qty)+'</td><td style="border:1px solid #444;padding:6px">'+esc((row.batches||[]).map(function(batch){return (batch.expiry||'—')+(batch.lot?' · '+batch.lot:'');}).join(' | '))+'</td></tr>';}).join('')+'</tbody></table>';
+  }catch(error){host.innerHTML='<div style="color:#b00">'+esc(error&&error.message||error)+'</div>';}
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
-})();</script><script id="asdhealth-canonical-r6-21-20260726">
+})();</script><script id="asdhealth-canonical-r6-22-20260726">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
