@@ -8784,37 +8784,7 @@ document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(E('v16
 
 /* ── One controlled-stock page. Separate Shared Catalogue page is removed. ── */
 window.ctlOwnerSource=function(){return ctlCanDispense()?'pharmacy':''};
-function removeObsoleteControlledStorageUiC(){
-  [
-    'pg-controlled-storage',
-    'pg-controlled-storage-mapping',
-    'controlled-storage-mapping-page',
-    'nb-controlled-storage',
-    'nb-controlled-storage-mapping'
-  ].forEach(function(id){
-    var node=E(id);
-    if(node)node.remove();
-  });
-
-  document.querySelectorAll(
-    '#mnav [data-pg="pg-controlled-storage"],'+
-    '#mnav [data-pg="pg-controlled-storage-mapping"],'+
-    '[data-view="controlled-storage-mapping"]'
-  ).forEach(function(node){node.remove();});
-
-  document.querySelectorAll('#mnav button,#ctl-tabs button').forEach(function(node){
-    var text=String(node.textContent||'').toLowerCase().replace(/\s+/g,' ').trim();
-    if(
-      text==='controlled storage mapping'||
-      text==='controlled-storage mapping'
-    ){
-      node.remove();
-    }
-  });
-}
-
 window.ctlTabs=function(){
-  removeObsoleteControlledStorageUiC();
   var root=E('ctl-tabs');
   if(!root||!window.CU)return;
   var currentRole=roleC();
@@ -11708,7 +11678,7 @@ async function publicStorageView(){
   }catch(error){host.innerHTML='<div style="color:#b00">'+esc(error&&error.message||error)+'</div>';}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
-})();</script><script id="asdhealth-canonical-r6-27-20260727">
+})();</script><script id="asdhealth-canonical-r6-28-20260727">
 /* ASDHealth FloorStock — R5 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
