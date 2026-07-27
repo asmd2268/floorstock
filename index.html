@@ -735,7 +735,10 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 .r18-request-limit-warn{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:18px;font-size:12px;font-weight:700;background:#fef3c7;color:#92400e;border:1px solid #fde68a;margin:6px 0}.r18-request-limit-warn.blocked{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .r18-crash-correction-modal{width:min(1120px,97vw)!important;max-height:94vh;overflow:auto}.r18-cc-item{border:1px solid var(--bd);border-radius:10px;padding:10px;margin:10px 0;background:var(--s2)}.r18-cc-item-head{display:grid;grid-template-columns:2fr 1fr .7fr .7fr auto;gap:8px;align-items:end}.r18-cc-batches{margin-top:8px}.r18-cc-batch{display:grid;grid-template-columns:1fr .8fr 1fr auto;gap:8px;align-items:end;padding:7px;border-top:1px dashed var(--bd2)}.r18-cc-seal-readonly{font-family:var(--mono);font-weight:800}.r18-master-correction-btn{border-color:var(--yl)!important;color:var(--yll)!important}@media(max-width:760px){.r18-cc-item-head,.r18-cc-batch{grid-template-columns:1fr}.r18-crash-correction-modal{width:98vw!important}}
 </style>
-</head>
+<script id="asdhealth-canonical-r6-29-20260727"></script><style id="r629-print-policy">
+@media print{*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}
+.controlled-storage-med-search{font-size:11px;padding:5px;margin:0}
+</style></head>
 <body>
 <div id="auth">
 <div class="login-attribution">By Ali Abudahash</div>
@@ -973,7 +976,7 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 </div>
 <div style="padding:12px;border:1px solid var(--bd);border-radius:10px">
 <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-<div style="position:relative;min-width:48px;height:42px;border:3px solid #000;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;background:#666;color:#fff;box-shadow:inset 0 0 0 1px #fff">
+<div style="position:relative;min-width:48px;height:42px;border:3px solid #000;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;background:#444;color:#fff;box-shadow:inset 0 0 0 1px #fff">
 <span style="position:absolute;font-size:31px;opacity:.5">❄</span><span style="position:relative;text-shadow:0 0 2px #000">12</span>
 </div>
 <div style="font-size:15px;font-weight:900">REFRIGERATED</div>
@@ -1277,14 +1280,21 @@ Furosemide 40mg tab	5	20</pre>
 <div class="fl ic g8">
 <label style="margin:0;white-space:nowrap">Layout:</label>
 <select class="psel" id="dpopt-pages">
-<option value="fit">Fit on 1 page</option>
-<option disabled="" selected="" value="">Choose print layout...</option><option value="multi">Multiple pages (numbered)</option>
+<option selected value="fit">Fit on 1 page / صفحة واحدة</option>
+<option value="multi">Multiple pages / عدة صفحات</option>
+</select>
+</div>
+<div class="fl ic g8">
+<label style="margin:0;white-space:nowrap">Orientation:</label>
+<select class="psel" id="dpopt-orientation">
+<option selected value="landscape">Landscape / أفقي</option>
+<option value="portrait">Portrait / عمودي</option>
 </select>
 </div>
 <div class="fl ic g8">
 <label style="margin:0;white-space:nowrap">Expiry print:</label>
 <select class="psel" id="dpopt-expiry">
-<option disabled="" selected="" value="">Choose expiry print mode...</option><option value="date-barcode">Existing expiry dates + write-in line + barcode</option>
+<option selected value="date-barcode">Existing expiry dates + write-in line + barcode</option>
 <option value="barcode">Existing expiry dates + barcode</option>
 </select>
 </div>
@@ -4505,7 +4515,7 @@ async function doDeptPrint(){
       if(bi<0)bi=999;
       return ai-bi||String(a).localeCompare(String(b));
     }).forEach(function(cat){
-      rows+='<tr class="cat-row"><td colspan="6" style="background:#e8e8e8;font-weight:700;font-size:7pt;text-transform:uppercase;letter-spacing:.5px;padding:4px 6px;border:1px solid #ccc">'+cat+' / '+catAr(cat)+'</td></tr>';
+      rows+='<tr class="cat-row"><td colspan="6" style="background:#bcbcbc;font-weight:700;font-size:7pt;text-transform:uppercase;letter-spacing:.5px;padding:4px 6px;border:1px solid #ccc">'+cat+' / '+catAr(cat)+'</td></tr>';
       grp[cat].forEach(function(m){
         medNumber++;
         var bands=[],flags=[];
@@ -4555,9 +4565,12 @@ async function doDeptPrint(){
       });
     });
 
+    var orientation=(el('dpopt-orientation')&&el('dpopt-orientation').value)==='portrait'
+      ?'portrait':'landscape';
+    var pageSize='A4 '+orientation;
     var pageStyle=fitOne
-      ?'@page{size:A4 portrait;margin:8mm} body{zoom:0.72}'
-      :'@page{size:A4;margin:12mm 10mm 22mm 10mm}';
+      ?'@page{size:'+pageSize+';margin:6mm} html,body{width:100%;height:100%;overflow:hidden} body{zoom:'+(orientation==='portrait'?'0.64':'0.78')+'}'
+      :'@page{size:'+pageSize+';margin:8mm 8mm 18mm 8mm}';
     var footerNote=deptName+' — Floor Stock — '+today+
       ' — by: '+userName+' — Developed by Ali Abudahash';
 
@@ -4565,11 +4578,11 @@ async function doDeptPrint(){
     pw.document.write(
       '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+deptName+' Drug List</title><style>'
       +pageStyle
-      +'body{font-family:Arial,sans-serif;font-size:8.5pt;color:#000;margin:0}'
+      +'body{font-family:Arial,sans-serif;font-size:8.5pt;color:#000;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
       +'.page-title{font-size:13pt;font-weight:700;margin-bottom:2px}'
       +'.page-sub{font-size:8.5pt;color:#333;margin-bottom:10px}'
-      +'table{width:100%;border-collapse:collapse;font-size:8pt}'
-      +'th{background:#1f2328;color:#fff;padding:5px 6px;text-align:left;font-size:7.5pt}'
+      +'table{width:100%;border-collapse:collapse;font-size:8pt;table-layout:fixed}'
+      +'th{background:#303030;color:#fff;padding:5px 6px;text-align:left;font-size:7.5pt;border:1px solid #000}'
       +'th.c{text-align:center}'
       +'.cat-row td{page-break-after:avoid}'
       +'tr{page-break-inside:avoid}'
@@ -10308,7 +10321,7 @@ function cleanupDepartmentPrintUiF(){
 function readBatchesFinalF(){var h=E('v13x-stock-batches');if(!h)return [];return Array.from(h.querySelectorAll('.v13x-batch,.v13x-batch-row,.batch-editor-row')).map(function(r){var q=r.querySelector('.v13x-bqty,.v13x-bq,.be-qty,input[type="number"]'),d=r.querySelector('.v13x-bdate,.v13x-be,.be-exp,input[type="date"]'),l=r.querySelector('.v13x-blot,.v13x-bl,.be-lot,input[placeholder*="lot" i],input[placeholder*="batch" i]');return {qty:nF(q&&q.value),expiry:String((d&&d.value)||'').trim(),lot:String((l&&l.value)||'').trim()}}).filter(function(b){return b.qty||b.expiry||b.lot})}
 function validateBatchesFinalF(actual,batches){if(actual<0)return {error:'Actual quantity cannot be negative / الكمية الفعلية لا يمكن أن تكون سالبة'};if(actual===0)return {batches:[]};if(!batches.length)return {error:'At least one expiry date is required when quantity is positive. Batch/Lot is optional / تاريخ الانتهاء مطلوب للكمية الموجبة، ورقم التشغيلة اختياري'};if(batches.length===1&&batches[0].expiry&&!(batches[0].qty>0))batches[0].qty=actual;for(var i=0;i<batches.length;i++){if(!(batches[i].qty>0))return {error:'Every expiry row requires a quantity greater than zero / كل تاريخ يحتاج كمية أكبر من صفر'};if(!batches[i].expiry)return {error:'Expiry date is required for every entered quantity; Batch/Lot remains optional / التاريخ مطلوب لكل كمية ورقم التشغيلة اختياري'}}var total=batches.reduce(function(a,b){return a+nF(b.qty)},0);if(total!==actual)return {error:'Expiry quantities must equal the actual quantity. Total: '+total+' / Actual: '+actual};return {batches:batches}}
 window.v13XSaveStock=async function(){var status=E('v13x-stock-save-status');function state(m,c){if(status){status.textContent=m||'';status.className=c||''}}var id=(E('v13x-stock-id')||{}).value||'',scope=(E('v13x-stock-scope')||{}).value||'',qty=nF((E('v13x-stock-qty')||{}).value),required=nF((E('v13x-stock-required')||{}).value),check=validateBatchesFinalF(qty,readBatchesFinalF());if(check.error){state(check.error,'err');if(window.toast)toast(check.error,'err');return false}state('Saving… / جاري الحفظ','saving');try{if(scope==='pharmacy'){var ph=Object.assign({},ctlPharmacy()),px=Object.assign({},ph[id]||{});px.qty=qty;px.actualQty=qty;px.batches=check.batches;ph[id]=px;await ctlSetPharmacy(ph)}else{var dept=typeof ctlCurrentDept==='function'?ctlCurrentDept():'';if(!dept)throw new Error('Select a department first / اختر القسم أولاً');var list=(ctlDeptList(dept)||[]).slice(),ix=list.findIndex(function(x){return String(x.medId)===String(id)});if(ix<0)throw new Error('Medicine not found in department custody / العلاج غير موجود في عهدة القسم');list[ix]=Object.assign({},list[ix],{qty:qty,actualQty:qty,requiredQty:required,batches:check.batches});await ctlSetDeptList(dept,list);}state('Saved ✓ / تم الحفظ','succ');if(typeof v13XClose==='function')v13XClose('v13x-stock-modal');else if(typeof CM==='function')CM('v13x-stock-modal');if(typeof renderControlled==='function')renderControlled();return true}catch(e){console.error(e);state(String(e&&e.message||e),'err');if(window.toast)toast(String(e&&e.message||e),'err');return false}};
-function prepareStockModalF(){var modal=E('v13x-stock-modal');if(!modal)return;modal.querySelectorAll('.v13x-batch input,.v13x-batch-row input,.batch-editor-row input').forEach(function(x){x.required=false});var st=E('v13x-stock-save-status');if(!st){st=document.createElement('div');st.id='v13x-stock-save-status';var actions=modal.querySelector('.modal .fl.g8');if(actions)actions.parentNode.insertBefore(st,actions)}}
+function prepareStockModalF(){var modal=E('v13x-stock-modal');if(!modal)return;modal.querySelectorAll('.v13x-batch input,.v13x-batch-row input,.batch-editor-row input').forEach(function(x){x.required=false});var host=E('v13x-stock-batches'),note=E('v13aq-expiry-summary');if(!note&&host){note=document.createElement('div');note.id='v13aq-expiry-summary';note.className='alert-banner-y';host.parentNode.insertBefore(note,host)}if(note)note.innerHTML='<b>Lot/Batch is optional.</b> Expiry is required only when actual quantity is greater than zero.';var st=E('v13x-stock-save-status');if(!st){st=document.createElement('div');st.id='v13x-stock-save-status';var actions=modal.querySelector('.modal .fl.g8');if(actions)actions.parentNode.insertBefore(st,actions)}}
 window.ctlEditDeptMedicine=function(id){
   if(typeof ctlCanEditDept==='function'&&!ctlCanEditDept()){
     return toast('No permission to edit inpatient controlled custody.','err');
@@ -10318,7 +10331,6 @@ window.ctlEditDeptMedicine=function(id){
     return toast('The department medicine editor could not be opened.','err');
   }
   window.openControlledDepartmentStockEditor(id);
-  markOptionalC();
   prepareStockModalF();
   return true;
 };
@@ -11541,7 +11553,7 @@ function storageMedicineOptions(medicines,selectedId){
     return list.map(function(medicine){
       return '<option value="'+esc(medicine.id)+'"'+
         (String(medicine.id)===String(selectedId)?' selected':'')+
-        '>'+esc(medicine.name)+' — Qty '+n(medicine.qty)+'</option>';
+        '>'+esc(medicine.name)+'</option>';
     }).join('');
   }
 
@@ -11577,6 +11589,10 @@ window.renderControlledStorage=async function(){
   filter.innerHTML='<option value="all">All controlled & psychotropic medicines / كل الأدوية المخدرة والنفسية</option><option value="unassigned">Not assigned / غير مضافة لخانة</option>'+data.units.map(function(unit){return '<option value="unit:'+esc(unit.id)+'">'+esc(unit.name)+'</option>';}).join('');
   if(Array.from(filter.options).some(function(option){return option.value===oldFilter;}))filter.value=oldFilter;
   var medicines=controlledMeds(),assigned=storageAssignedMap(data),unitFilter=filter.value;
+  var oldList=E('controlled-storage-medicine-list');if(oldList)oldList.remove();
+  var medicineList=document.createElement('datalist');medicineList.id='controlled-storage-medicine-list';
+  medicineList.innerHTML=medicines.map(function(medicine){return '<option value="'+esc(medicine.name)+'">'+esc(medicine.classification==='psychotropic'?'Psychotropic':'Narcotic & restricted')+'</option>';}).join('');
+  document.body.appendChild(medicineList);
   var units=data.units.filter(function(unit){return unitFilter.indexOf('unit:')===0?String(unit.id)===unitFilter.slice(5):true;});
   var narcoticStorageCount=medicines.filter(function(medicine){
     return medicine.classification!=='psychotropic';
@@ -11613,16 +11629,29 @@ window.renderControlledStorage=async function(){
     var actions='<div class="r21-storage-unit-actions"><button class="btn bg bxs" type="button" onclick="controlledStorageEditUnit(\''+unit.id+'\')">Edit layout</button><button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'list\')">Print list</button><button class="btn bg bxs" type="button" onclick="controlledStoragePrint(\''+unit.id+'\',\'map\')">Print map</button><button class="btn bd2c bxs" type="button" onclick="controlledStorageDeleteUnit(\''+unit.id+'\')">Delete</button></div>';
     var head='<div class="r17-unit-head"><div class="r21-storage-unit-meta"><b>'+esc(unit.name)+'</b><span class="chip">'+esc(unit.type)+'</span><span class="chip">'+(unit.rows||[]).length+' shelf/shelves</span></div>'+actions+'</div>';
     if(data.mode==='list'){
-      var listRows=[];(unit.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});if(medicine)listRows.push('<tr><td><b>'+esc(cell.code)+'</b></td><td>'+esc(medicine.name)+'</td><td>'+n(medicine.qty)+'</td><td>'+esc(storageBatchText(medicine))+'</td></tr>');});});
-      return '<div class="r17-unit">'+head+'<div class="tw"><table><thead><tr><th>Cell</th><th>Medicine</th><th>Pharmacy qty</th><th>Batch/Lot (optional) &amp; Expiry</th></tr></thead><tbody>'+(listRows.length?listRows.join(''):'<tr><td colspan="4">No medicines assigned to this unit.</td></tr>')+'</tbody></table></div></div>';
+      var listRows=[];(unit.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});if(medicine)listRows.push('<tr><td><b>'+esc(cell.code)+'</b></td><td>'+esc(medicine.name)+'</td><td>'+esc(storageBatchText(medicine))+'</td></tr>');});});
+      return '<div class="r17-unit">'+head+'<div class="tw"><table><thead><tr><th>Cell</th><th>Medicine</th><th>Batch/Lot (optional) &amp; Expiry</th></tr></thead><tbody>'+(listRows.length?listRows.join(''):'<tr><td colspan="3">No medicines assigned to this unit.</td></tr>')+'</tbody></table></div></div>';
     }
     var optionsCache={};function options(selected){var key=String(selected||'');if(!optionsCache[key])optionsCache[key]=storageMedicineOptions(medicines,key);return optionsCache[key];}
-    var map=(unit.rows||[]).map(function(row,rowIndex){return '<div class="r17-storage-row" style="grid-template-columns:repeat('+Math.max(1,(row.cells||[]).length)+',minmax(120px,1fr))">'+(row.cells||[]).map(function(cell,cellIndex){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});var stale=cell.medId&&!medicine;return '<div class="r17-cell'+(medicine?' r21-storage-cell-assigned':'')+'"><div class="r17-cell-code">'+esc(cell.code)+'</div><select onchange="controlledStorageAssign(\''+unit.id+'\','+rowIndex+','+cellIndex+',this.value)">'+options(cell.medId)+'</select>'+(medicine?'<div class="fhint" style="margin-top:5px">Qty '+n(medicine.qty)+'<br>'+esc(storageBatchText(medicine))+'</div>':(stale?'<div class="r21-storage-inline-error" style="display:block;margin-top:5px">Medicine is no longer in pharmacy custody. Clear this cell.</div>':''))+'</div>';}).join('')+'</div>';}).join('');
+    var map=(unit.rows||[]).map(function(row,rowIndex){return '<div class="r17-storage-row" style="grid-template-columns:repeat('+Math.max(1,(row.cells||[]).length)+',minmax(120px,1fr))">'+(row.cells||[]).map(function(cell,cellIndex){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});var stale=cell.medId&&!medicine;return '<div class="r17-cell'+(medicine?' r21-storage-cell-assigned':'')+'"><div class="r17-cell-code">'+esc(cell.code)+'</div><input class="controlled-storage-med-search" list="controlled-storage-medicine-list" data-unit="'+esc(unit.id)+'" data-row="'+rowIndex+'" data-cell="'+cellIndex+'" value="'+(medicine?esc(medicine.name):'')+'" placeholder="Type medicine name / اكتب اسم العلاج" onchange="controlledStorageAssignByName(this)" oninput="controlledStorageValidateSearch(this)">'+(medicine?'<div class="fhint" style="margin-top:5px">'+esc(storageBatchText(medicine))+'</div>':(stale?'<div class="r21-storage-inline-error" style="display:block;margin-top:5px">Medicine is no longer in pharmacy custody. Clear this cell.</div>':''))+'</div>';}).join('')+'</div>';}).join('');
     return '<div class="r17-unit">'+head+map+'</div>';
   }).join('');
 };
 window.controlledStorageModeChanged=async function(){
   var data=storageState();data.mode=E('controlled-storage-mode').value==='list'?'list':'map';await S.s(CONTROLLED_STORAGE_KEY,data);renderControlledStorage();
+};
+window.controlledStorageValidateSearch=function(input){
+  input.setCustomValidity('');
+  var value=String(input.value||'').trim().toLowerCase();if(!value)return;
+  var match=controlledMeds().some(function(medicine){return String(medicine.name||'').trim().toLowerCase()===value;});
+  if(!match)input.setCustomValidity('Choose a medicine from the shared list / اختر علاجًا من القائمة المشتركة');
+};
+window.controlledStorageAssignByName=async function(input){
+  var value=String(input.value||'').trim();
+  var medicine=controlledMeds().find(function(item){return String(item.name||'').trim().toLowerCase()===value.toLowerCase();});
+  if(value&&!medicine){input.setCustomValidity('Choose a medicine from the shared list / اختر علاجًا من القائمة المشتركة');input.reportValidity();return false;}
+  input.setCustomValidity('');
+  return controlledStorageAssign(input.dataset.unit,Number(input.dataset.row),Number(input.dataset.cell),medicine?medicine.id:'');
 };
 window.controlledStorageAssign=async function(unitId,rowIndex,cellIndex,medId){
   var data=storageState();var unit=data.units.find(function(item){return String(item.id)===String(unitId);});
@@ -11647,7 +11676,7 @@ function near30(batches){
 }
 async function publishStorage(unit,medicines){
   if(!window.FB_DB)return;
-  var rows=[];unit.rows.forEach(function(row){row.cells.forEach(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});if(medicine)rows.push({cell:cell.code,name:medicine.name,qty:n(medicine.qty),batches:medicine.batches||[]});});});
+  var rows=[];unit.rows.forEach(function(row){row.cells.forEach(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});if(medicine)rows.push({cell:cell.code,name:medicine.name,batches:medicine.batches||[]});});});
   await FB_DB.collection('public_controlled_expiry').doc('storage_pharmacy_'+unit.id).set({scope:'controlled_pharmacy',department:'Controlled Pharmacy / صيدلية الأدوية المقيدة',unit:unit.name,type:unit.type,updatedAt:firebase.firestore.FieldValue.serverTimestamp(),rows:rows},{merge:true});
 }
 window.controlledStoragePrint=async function(id,mode){
@@ -11657,12 +11686,12 @@ window.controlledStoragePrint=async function(id,mode){
   var url=base.toString()+'?view=controlled-storage-public&scope=pharmacy&unit='+encodeURIComponent(id);
   var qr='https://api.qrserver.com/v1/create-qr-code/?size=400x400&data='+encodeURIComponent(url),date=new Date().toLocaleDateString('en-GB'),content='';
   if(mode==='list'){
-    var rows=[];unit.rows.forEach(function(row){row.cells.forEach(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});if(medicine)rows.push('<tr class="'+(near30(medicine.batches)?'near':'')+'"><td>'+esc(cell.code)+'</td><td>'+esc(medicine.name)+'</td><td>'+n(medicine.qty)+'</td><td>'+esc((medicine.batches||[]).map(function(batch){return (batch.expiry||'—')+(batch.lot?' · '+batch.lot:'');}).join(' | ')||'—')+'</td></tr>');});});
-    content='<table><thead><tr><th>Cell</th><th>Medicine</th><th>Pharmacy qty</th><th>Batch (optional) & Expiry</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+    var rows=[];unit.rows.forEach(function(row){row.cells.forEach(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});if(medicine)rows.push('<tr class="'+(near30(medicine.batches)?'near':'')+'"><td>'+esc(cell.code)+'</td><td>'+esc(medicine.name)+'</td><td>'+esc((medicine.batches||[]).map(function(batch){return (batch.expiry||'—')+(batch.lot?' · '+batch.lot:'');}).join(' | ')||'—')+'</td></tr>');});});
+    content='<table><thead><tr><th>Cell</th><th>Medicine</th><th>Batch (optional) & Expiry</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
   }else{
     content='<div class="map">'+unit.rows.map(function(row){return '<div class="prow" style="grid-template-columns:repeat('+row.cells.length+',1fr)">'+row.cells.map(function(cell){var medicine=medicines.find(function(item){return item.id===cell.medId;});return '<div class="pcell '+(medicine&&near30(medicine.batches)?'near':'')+'"><b>'+esc(cell.code)+'</b><span>'+esc(medicine?medicine.name:'Empty')+'</span><small>'+esc(medicine?(medicine.batches||[]).map(function(batch){return batch.expiry||'—';}).join(', '):'')+'</small></div>';}).join('')+'</div>';}).join('')+'</div>';
   }
-  var printHtml='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:7mm}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial;margin:0;color:#000}.head{display:grid;grid-template-columns:1fr 25mm;gap:8mm;align-items:center;text-align:center}.head img{width:25mm}.legend{font-size:8px;margin:4px 0}.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #000;padding:4px}.near td,.pcell.near{background:#000!important;color:#fff!important}.map{display:grid;gap:5px}.prow{display:grid;gap:5px}.pcell{border:1px solid #000;min-height:90px;padding:5px;display:flex;flex-direction:column}.pcell span{font-weight:700;margin-top:8px}.pcell small{margin-top:auto}.cert{text-align:center;font-size:8px;margin-top:8px}</style></head><body><div class="head"><div><h2>'+esc(unit.name)+' — Controlled Pharmacy Custody</h2><div>Controlled-pharmacy storage '+esc(mode)+' / طباعة خريطة أو قائمة عهدة الصيدلية المقيدة</div></div><img src="'+qr+'"></div><div class="legend"><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا · Print date: '+esc(date)+'</div>'+content+'<div class="cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
+  var printHtml='<!doctype html><html><head><meta charset="utf-8"><style>@page{size:A4 landscape;margin:5mm}html,body{width:100%;height:100%;overflow:hidden}body{zoom:.82}*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font-family:Arial;margin:0;color:#000}.head{display:grid;grid-template-columns:1fr 25mm;gap:8mm;align-items:center;text-align:center}.head img{width:25mm}.legend{font-size:8px;margin:4px 0}.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}table{width:100%;border-collapse:collapse;font-size:9px}th,td{border:1px solid #000;padding:4px}.near td,.pcell.near{background:#000!important;color:#fff!important}.map{display:grid;gap:5px}.prow{display:grid;gap:5px}.pcell{border:1px solid #000;min-height:90px;padding:5px;display:flex;flex-direction:column}.pcell span{font-weight:700;margin-top:8px}.pcell small{margin-top:auto}.cert{text-align:center;font-size:8px;margin-top:8px}</style></head><body><div class="head"><div><h2>'+esc(unit.name)+' — Controlled Pharmacy Custody</h2><div>Controlled-pharmacy storage '+esc(mode)+' / طباعة خريطة أو قائمة عهدة الصيدلية المقيدة</div></div><img src="'+qr+'"></div><div class="legend"><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا · Print date: '+esc(date)+'</div>'+content+'<div class="cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><script>window.onload=function(){setTimeout(function(){window.print()},300)}<\/script></body></html>';
   var popup=window.open('','_blank');if(!popup)return toast('Allow pop-ups.','err');popup.document.write(printHtml);popup.document.close();
 };
 async function publicStorageView(){
@@ -11674,7 +11703,7 @@ async function publicStorageView(){
     var doc=await FB_DB.collection('public_controlled_expiry').doc('storage_pharmacy_'+query.get('unit')).get();
     if(!doc.exists)throw new Error('Public controlled-pharmacy storage record not found');
     var data=doc.data(),rows=data.rows||[];
-    host.innerHTML='<h1>'+esc(data.unit||'Controlled pharmacy storage')+'</h1><h3>'+esc(data.department||'Controlled Pharmacy')+'</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Cell</th><th>Medicine</th><th>Qty</th><th>Batch/Expiry</th></tr></thead><tbody>'+rows.map(function(row){return '<tr><td style="border:1px solid #444;padding:6px">'+esc(row.cell)+'</td><td style="border:1px solid #444;padding:6px">'+esc(row.name)+'</td><td style="border:1px solid #444;padding:6px">'+n(row.qty)+'</td><td style="border:1px solid #444;padding:6px">'+esc((row.batches||[]).map(function(batch){return (batch.expiry||'—')+(batch.lot?' · '+batch.lot:'');}).join(' | '))+'</td></tr>';}).join('')+'</tbody></table>';
+    host.innerHTML='<h1>'+esc(data.unit||'Controlled pharmacy storage')+'</h1><h3>'+esc(data.department||'Controlled Pharmacy')+'</h3><table style="width:100%;border-collapse:collapse"><thead><tr><th>Cell</th><th>Medicine</th><th>Batch/Expiry</th></tr></thead><tbody>'+rows.map(function(row){return '<tr><td style="border:1px solid #444;padding:6px">'+esc(row.cell)+'</td><td style="border:1px solid #444;padding:6px">'+esc(row.name)+'</td><td style="border:1px solid #444;padding:6px">'+esc((row.batches||[]).map(function(batch){return (batch.expiry||'—')+(batch.lot?' · '+batch.lot:'');}).join(' | '))+'</td></tr>';}).join('')+'</tbody></table>';
   }catch(error){host.innerHTML='<div style="color:#b00">'+esc(error&&error.message||error)+'</div>';}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
@@ -11866,7 +11895,7 @@ function fsR5OrdersHtml(orders){
 var rows=${safeJson};
 var SCALE=3;
 var PAGE={
-  landscape:{name:'landscape',w:1122.52,h:793.70,mmW:297,mmH:210,minCols:4,maxCols:9},
+  landscape:{name:'landscape',w:1122.52,h:793.70,mmW:297,mmH:210,minCols:1,maxCols:99},
   portrait:{name:'portrait',w:793.70,h:1122.52,mmW:210,mmH:297,minCols:3,maxCols:7}
 };
 var FONT_FAMILY='Arial, Tahoma, sans-serif';
@@ -11874,7 +11903,7 @@ var MARGIN=10;
 var HEADER_H=21;
 var HEADER_GAP=3;
 var COLUMN_GAP=3.2;
-var MIN_FONT=6.0;
+var MIN_FONT=4.2;
 var MAX_FONT=13.5;
 var MIN_PAD=.65;
 var MAX_PAD=5.2;
@@ -11982,37 +12011,15 @@ function buildMetrics(page,columns,font,rowPad){
     return deptH+catH+body+transitions;
   }
 
-  var n=rows.length,inf=1e15;
-  if(!n||columns>n)return null;
-  var dp=[],prev=[];
-  for(var c=0;c<=columns;c++){
-    dp[c]=new Array(n+1).fill(inf);
-    prev[c]=new Array(n+1).fill(-1);
+  var segments=[];
+  var start=0;
+  while(start<rows.length){
+    var orderId=rows[start].orderId,end=start+1;
+    while(end<rows.length&&rows[end].orderId===orderId)end++;
+    segments.push({start:start,end:end,height:sliceHeight(start,end)});
+    start=end;
   }
-  dp[0][0]=0;
-
-  for(var c=1;c<=columns;c++){
-    for(var end=c;end<=n;end++){
-      var best=inf,bestStart=-1;
-      for(var start=c-1;start<end;start++){
-        if(dp[c-1][start]>=inf)continue;
-        var height=sliceHeight(start,end);
-        var cost=Math.max(dp[c-1][start],height);
-        if(cost<best-.001){best=cost;bestStart=start;}
-      }
-      dp[c][end]=best;prev[c][end]=bestStart;
-    }
-  }
-
-  if(dp[columns][n]>=inf)return null;
-  var segments=[],cursor=n;
-  for(var cc=columns;cc>0;cc--){
-    var startAt=prev[cc][cursor];
-    if(startAt<0)return null;
-    segments.unshift({start:startAt,end:cursor,height:sliceHeight(startAt,cursor)});
-    cursor=startAt;
-  }
-  if(cursor!==0)return null;
+  if(columns!==segments.length)return null;
 
   var maxHeight=Math.max.apply(null,segments.map(function(segment){return segment.height;}));
   var minHeight=Math.min.apply(null,segments.map(function(segment){return segment.height;}));
@@ -12047,33 +12054,13 @@ function bestFor(page,columns){
 }
 function chooseLayout(){
   var page=PAGE.landscape;
-  var candidates=[];
-
-  for(var columns=page.minCols;
-      columns<=Math.min(page.maxCols,rows.length);
-      columns++){
-    var candidate=bestFor(page,columns);
-    if(!candidate)continue;
-
-    candidate.score=
-      candidate.font*100+
-      candidate.fill*8+
-      candidate.balance*1.5-
-      columns*.015;
-
-    candidates.push(candidate);
-  }
-
-  candidates.sort(function(a,b){
-    if(Math.abs(b.score-a.score)>.001)return b.score-a.score;
-    if(Math.abs(b.fill-a.fill)>.001)return b.fill-a.fill;
-    return a.columns-b.columns;
-  });
-
-  return candidates[0]||null;
+  var orderIds=[];
+  rows.forEach(function(row){if(orderIds.indexOf(row.orderId)<0)orderIds.push(row.orderId);});
+  return bestFor(page,Math.max(1,orderIds.length));
 }
+
 function fillTone(ctx,row,x,y,w,h){
-  ctx.fillStyle=row.tone==='gray'?'#d2d2d2':'#ffffff';
+  ctx.fillStyle=row.tone==='gray'?'#b8b8b8':'#ffffff';
   ctx.fillRect(x,y,w,h);
 }
 function drawDept(ctx,row,x,y,w,h,font){
@@ -12173,7 +12160,7 @@ function render(layout){
   ctx.fillStyle='#000';setFont(ctx,10.2,800);ctx.textAlign='left';ctx.textBaseline='middle';
   ctx.fillText('Floor Stock Dispensing Orders',MARGIN,MARGIN+HEADER_H/2);
   setFont(ctx,7.8,700);ctx.textAlign='right';
-  ctx.fillText('One page · auto-selected '+layout.page.name,layout.page.w-MARGIN,MARGIN+HEADER_H/2);
+  ctx.fillText('Fit to one page · one department per column · '+layout.page.name,layout.page.w-MARGIN,MARGIN+HEADER_H/2);
   ctx.strokeStyle='#000';ctx.lineWidth=.9;ctx.beginPath();
   ctx.moveTo(MARGIN,MARGIN+HEADER_H);ctx.lineTo(layout.page.w-MARGIN,MARGIN+HEADER_H);ctx.stroke();
 
@@ -12312,7 +12299,7 @@ async function start(){
 
   var layout=chooseLayout();
   if(!layout){
-    showError('No readable A4 landscape one-page layout could be created.');
+    showError('No readable one-page layout could be created with one department per column.');
     return;
   }
 
