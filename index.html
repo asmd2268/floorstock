@@ -4,6 +4,7 @@
 <head>
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<meta content="R6.33" name="asdhealth-build"/>
 <title>ASDHealth</title>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-favicon" rel="icon" type="image/svg+xml"/>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-shortcut-icon" rel="shortcut icon" type="image/svg+xml"/>
@@ -1177,6 +1178,7 @@ Furosemide 40mg tab	5	20</pre>
     <div class="stitle">Pharmacy Controlled Cabinets &amp; Safes / دواليب وخزائن عهدة الصيدلية المقيدة</div>
     <div class="ssub">This map organizes medicines held in the controlled-pharmacy officer's central custody. It is not linked to inpatient-department custody.</div>
   </div>
+  <button class="btn bp" id="controlled-storage-create-btn" type="button" onclick="controlledStorageOpenCreate()">+ Create cabinet or safe / إنشاء دولاب أو خزنة</button>
 </div>
 <div id="controlled-storage-auth-message" class="alert-banner" style="display:none"></div>
 <div id="controlled-storage-workspace">
@@ -1206,53 +1208,57 @@ Furosemide 40mg tab	5	20</pre>
     </div>
   </div>
 
-  <div class="card r21-storage-builder">
-    <div class="ch">
-      <div>
-        <span class="ct" id="controlled-storage-builder-title">Create cabinet or safe / إنشاء دولاب أو خزنة</span>
-        <div class="fhint">Define every shelf separately. Cell codes are created automatically: A1, A2… B1, B2…</div>
-      </div>
-    </div>
-    <div class="cb">
-      <input type="hidden" id="controlled-storage-edit-id">
-      <div class="r21-storage-builder-main">
-        <div class="fg">
-          <label>Unit name / اسم الوحدة</label>
-          <input id="controlled-storage-name" type="text" placeholder="Example: Narcotic Cabinet A">
-        </div>
-        <div class="fg">
-          <label>Unit type / النوع</label>
-          <select id="controlled-storage-type">
-            <option value="cabinet">Cabinet / دولاب</option>
-            <option value="safe">Safe / خزنة</option>
-            <option value="refrigerator">Refrigerator / ثلاجة</option>
-          </select>
-        </div>
-        <div class="fg">
-          <label>Number of shelves / عدد الأرفف</label>
-          <input id="controlled-storage-shelf-count" type="number" min="1" max="26" value="5" oninput="controlledStorageShelfCountChanged()">
-        </div>
-      </div>
-      <div class="r21-storage-shelf-editor">
-        <div class="r21-storage-shelf-head">
-          <b>Shelf structure / تكوين الأرفف</b>
-          <span>Each shelf may have a different number of cells.</span>
-        </div>
-        <div id="controlled-storage-shelf-rows"></div>
-      </div>
-      <div class="r21-storage-preview-wrap">
-        <b>Cell-code preview / معاينة رموز الخانات</b>
-        <div id="controlled-storage-code-preview" class="r21-storage-code-preview"></div>
-      </div>
-      <div id="controlled-storage-builder-error" class="r21-storage-inline-error" style="display:none"></div>
-      <div class="fl" style="gap:8px;justify-content:flex-end;flex-wrap:wrap">
-        <button class="btn bg" type="button" id="controlled-storage-cancel-edit" onclick="controlledStorageCancelEdit()" style="display:none">Cancel edit / إلغاء التعديل</button>
-        <button class="btn bp" type="button" id="controlled-storage-save" onclick="controlledStorageSaveUnit()">Save storage unit / حفظ الوحدة</button>
-      </div>
-    </div>
-  </div>
   <div id="controlled-storage-root"></div>
 </div>
+</div>
+</div>
+<div class="modal-bg" id="mcontrolled-storage-unit">
+<div class="modal" style="width:min(980px,97vw);max-height:94vh">
+  <div class="mh">
+    <div>
+      <div class="mt" id="controlled-storage-builder-title">Create cabinet or safe / إنشاء دولاب أو خزنة</div>
+      <div class="fhint">Define every shelf separately. Cell codes are created automatically: A1, A2… B1, B2…</div>
+    </div>
+    <button class="xbtn" type="button" onclick="controlledStorageCloseUnitModal()">✕</button>
+  </div>
+  <div class="r21-storage-builder">
+    <input type="hidden" id="controlled-storage-edit-id">
+    <div class="r21-storage-builder-main">
+      <div class="fg">
+        <label>Unit name / اسم الوحدة</label>
+        <input id="controlled-storage-name" type="text" placeholder="Example: Narcotic Cabinet A">
+      </div>
+      <div class="fg">
+        <label>Unit type / النوع</label>
+        <select id="controlled-storage-type">
+          <option value="cabinet">Cabinet / دولاب</option>
+          <option value="safe">Safe / خزنة</option>
+          <option value="refrigerator">Refrigerator / ثلاجة</option>
+        </select>
+      </div>
+      <div class="fg">
+        <label>Number of shelves / عدد الأرفف</label>
+        <input id="controlled-storage-shelf-count" type="number" min="1" max="26" value="5" oninput="controlledStorageShelfCountChanged()">
+      </div>
+    </div>
+    <div class="r21-storage-shelf-editor">
+      <div class="r21-storage-shelf-head">
+        <b>Shelf structure / تكوين الأرفف</b>
+        <span>Each shelf may have a different number of cells.</span>
+      </div>
+      <div id="controlled-storage-shelf-rows"></div>
+    </div>
+    <div class="r21-storage-preview-wrap">
+      <b>Cell-code preview / معاينة رموز الخانات</b>
+      <div id="controlled-storage-code-preview" class="r21-storage-code-preview"></div>
+    </div>
+    <div id="controlled-storage-builder-error" class="r21-storage-inline-error" style="display:none"></div>
+    <div class="fl" style="gap:8px;justify-content:flex-end;flex-wrap:wrap">
+      <button class="btn bg" type="button" id="controlled-storage-cancel-edit" onclick="controlledStorageCancelEdit()" style="display:none">Cancel edit / إلغاء التعديل</button>
+      <button class="btn bg" type="button" onclick="controlledStorageCloseUnitModal()">Close / إغلاق</button>
+      <button class="btn bp" type="button" id="controlled-storage-save" onclick="controlledStorageSaveUnit()">Save storage unit / حفظ الوحدة</button>
+    </div>
+  </div>
 </div>
 </div>
 <div class="pg" id="pg-ctl-analytics">
@@ -11469,7 +11475,16 @@ function resetStorageBuilder(){
   if(cancel)cancel.style.display='none';if(save)save.textContent='Save storage unit / حفظ الوحدة';
   storageBuilderError('');renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
 }
-window.controlledStorageCancelEdit=function(){resetStorageBuilder();};
+window.controlledStorageOpenCreate=function(){
+  resetStorageBuilder();
+  OM('mcontrolled-storage-unit');
+  setTimeout(function(){var input=E('controlled-storage-name');if(input)input.focus();},40);
+};
+window.controlledStorageCloseUnitModal=function(){
+  CM('mcontrolled-storage-unit');
+  resetStorageBuilder();
+};
+window.controlledStorageCancelEdit=function(){controlledStorageCloseUnitModal();};
 window.controlledStorageEditUnit=function(unitId){
   var data=storageState();
   var unit=data.units.find(function(item){return String(item.id)===String(unitId);});
@@ -11480,7 +11495,8 @@ window.controlledStorageEditUnit=function(unitId){
   E('controlled-storage-builder-title').textContent='Edit storage unit / تعديل الوحدة';
   E('controlled-storage-cancel-edit').style.display='inline-flex';E('controlled-storage-save').textContent='Save changes / حفظ التعديلات';
   storageBuilderError('');renderStorageBuilder(CONTROLLED_STORAGE_UI.draftCounts);
-  E('controlled-storage-name').focus();E('controlled-storage-name').scrollIntoView({behavior:'smooth',block:'center'});
+  OM('mcontrolled-storage-unit');
+  setTimeout(function(){var input=E('controlled-storage-name');if(input)input.focus();},40);
 };
 window.controlledStorageSaveUnit=async function(){
   if(!(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage()))return toast('You are not authorized to manage controlled-pharmacy storage.','err');
@@ -11506,7 +11522,7 @@ window.controlledStorageSaveUnit=async function(){
     await S.s(CONTROLLED_STORAGE_KEY,data);
     var saved=storageState().units.find(function(unit){return String(unit.id)===String(next.id);});
     if(!saved)throw new Error('Storage unit read-back verification failed.');
-    resetStorageBuilder();renderControlledStorage();toast(existing?'Storage unit updated and verified ✓':'Storage unit created and verified ✓','succ');
+    CM('mcontrolled-storage-unit');resetStorageBuilder();renderControlledStorage();toast(existing?'Storage unit updated and verified ✓':'Storage unit created and verified ✓','succ');
   }catch(error){console.error(error);storageBuilderError(String(error&&error.message||'Storage unit was not saved.'));}
   finally{if(button)button.disabled=false;}
 };
@@ -11542,10 +11558,11 @@ function storageBatchText(medicine){
 window.renderControlledStorage=async function(){
   var panel=E('ctl-storage-view'),notice=E('controlled-storage-auth-message'),workspace=E('controlled-storage-workspace');
   if(!panel||!notice||!workspace)return;
+  var createButton=E('controlled-storage-create-btn');
   if(!(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage())){
-    notice.style.display='block';notice.textContent='Not authorized. This tab is available to the actual Master, the Controlled Medicines Pharmacy Officer, or a user with the controlledStorage permission.';workspace.style.display='none';return;
+    notice.style.display='block';notice.textContent='Not authorized. This tab is available to the actual Master, the Controlled Medicines Pharmacy Officer, or a user with the controlledStorage permission.';workspace.style.display='none';if(createButton)createButton.style.display='none';return;
   }
-  notice.style.display='none';workspace.style.display='block';
+  notice.style.display='none';workspace.style.display='block';if(createButton)createButton.style.display='inline-flex';
   var data=storageState();var mode=E('controlled-storage-mode');if(mode)mode.value=data.mode||'map';
   var filter=E('controlled-storage-filter'),oldFilter=filter.value;
   filter.innerHTML='<option value="all">All controlled & psychotropic medicines / كل الأدوية المخدرة والنفسية</option><option value="unassigned">Not assigned / غير مضافة لخانة</option>'+data.units.map(function(unit){return '<option value="unit:'+esc(unit.id)+'">'+esc(unit.name)+'</option>';}).join('');
@@ -11738,11 +11755,9 @@ window.controlledStoragePrint=async function(id,mode){
           if(!medicine)return;
           listRows.push(
             '<tr class="'+(near30(medicine.batches)?'near':'')+'">'+
-            '<td class="cell-code">'+esc(cell.code)+'</td>'+
             '<td class="code-col">'+esc(medicine.moh||'—')+'</td>'+
             '<td class="code-col">'+esc(medicine.nupco||'—')+'</td>'+
             '<td class="medicine-col">'+esc(medicine.name)+'</td>'+
-            '<td class="batch-col">'+batchLines(medicine)+'</td>'+
             '<td class="expiry-col">'+expiryLines(medicine)+'</td>'+
             '</tr>'
           );
@@ -11751,21 +11766,19 @@ window.controlledStoragePrint=async function(id,mode){
       content=
         '<table class="storage-list">'+
         '<thead><tr>'+
-        '<th>Cell / الخانة</th>'+
         '<th>MOH</th>'+
         '<th>NUPCO</th>'+
         '<th>Medicine / العلاج</th>'+
-        '<th>Batch/Lot / التشغيلة</th>'+
         '<th>Expiry date / تاريخ الانتهاء</th>'+
         '</tr></thead>'+
         '<tbody>'+
         (listRows.length
           ?listRows.join('')
-          :'<tr><td colspan="6" class="empty">No medicines assigned.</td></tr>')+
+          :'<tr><td colspan="4" class="empty">No medicines assigned.</td></tr>')+
         '</tbody></table>';
     }else{
       content=
-        '<div class="map">'+
+        '<div class="map" style="grid-template-rows:repeat('+Math.max(1,(unit.rows||[]).length)+',minmax(0,1fr))">'+
         (unit.rows||[]).map(function(row){
           return '<div class="prow" style="grid-template-columns:repeat('+
             Math.max(1,(row.cells||[]).length)+',1fr)">'+
@@ -11794,29 +11807,32 @@ window.controlledStoragePrint=async function(id,mode){
       '<!doctype html><html><head><meta charset="utf-8">'+
       '<title>'+esc(unit.name)+' — Controlled storage '+esc(mode)+'</title>'+
       '<style>'+
-      '@page{size:A4 landscape;margin:5mm}'+
-      'html,body{width:100%;height:100%;overflow:hidden}'+
+      '@page{size:A4 portrait;margin:4mm}'+
+      'html,body{width:100%;margin:0}'+
       '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
-      'body{font-family:Arial,Tahoma,sans-serif;margin:0;color:#000;zoom:.82}'+
-      '.head{display:grid;grid-template-columns:1fr 31mm;gap:7mm;align-items:center;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:5px}'+
-      '.title{text-align:center}.title h2{font-size:17px;margin:0 0 3px}.title div{font-size:10px}'+
-      '.qrbox{text-align:center;border:1px solid #000;padding:2px}.qrbox img{display:block;width:27mm;height:27mm;margin:auto}.qrbox b{display:block;font-size:7px;margin-top:2px}'+
-      '.sync{font-size:7px;text-align:center;padding:2px 4px;margin:3px 0;border:1px solid #777;background:#eee}'+
+      'body{font-family:Arial,Tahoma,sans-serif;color:#000}'+
+      'body.print-map{height:289mm;overflow:hidden;display:flex;flex-direction:column}'+
+      'body.print-list{min-height:100%;overflow:visible}'+
+      '.head{display:grid;grid-template-columns:1fr 25mm;gap:4mm;align-items:center;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:3px;flex:0 0 auto}'+
+      '.title{text-align:center}.title h2{font-size:16px;margin:0 0 2px}.title div{font-size:9px}'+
+      '.qrbox{text-align:center;border:1px solid #000;padding:1px}.qrbox img{display:block;width:22mm;height:22mm;margin:auto}.qrbox b{display:block;font-size:6.5px;margin-top:1px}'+
+      '.sync{font-size:6.5px;text-align:center;padding:2px 4px;margin:2px 0;border:1px solid #777;background:#eee;flex:0 0 auto}'+
       '.sync.ok{background:#d9ead3}.sync.warn{background:#f4cccc}'+
-      '.legend{font-size:8px;margin:4px 0 6px;display:flex;justify-content:space-between;gap:8px}'+
+      '.legend{font-size:7.5px;margin:3px 0 4px;display:flex;justify-content:space-between;gap:8px;flex:0 0 auto}'+
       '.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}'+
-      'table{width:100%;border-collapse:collapse;font-size:8.5px;table-layout:fixed}'+
-      'th,td{border:1px solid #000;padding:3px 4px;vertical-align:top;overflow-wrap:anywhere}'+
+      'table{width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed}'+
+      'thead{display:table-header-group}'+
+      'th,td{border:1px solid #000;padding:4px 5px;vertical-align:top;overflow-wrap:anywhere}'+
       'th{background:#444;color:#fff;text-align:center;font-weight:700}'+
-      '.cell-code{width:6%;text-align:center;font-weight:700}.code-col{width:13%;text-align:center}.medicine-col{width:27%;font-weight:700}.batch-col{width:18%}.expiry-col{width:23%;font-weight:700}'+
-      '.batch-line,.expiry-line{padding:1px 0;border-bottom:1px dotted #777}.batch-line:last-child,.expiry-line:last-child{border-bottom:0}'+
+      '.code-col{width:17%;text-align:center}.medicine-col{width:39%;font-weight:800;font-size:10px}.expiry-col{width:27%;font-weight:700}'+
+      '.expiry-line{padding:2px 0;border-bottom:1px dotted #777}.expiry-line:last-child{border-bottom:0}'+
       '.near td,.pcell.near{background:#000!important;color:#fff!important}'+
       '.empty{text-align:center;padding:20px}'+
-      '.map{display:grid;gap:4px}.prow{display:grid;gap:4px}.pcell{border:1px solid #000;min-height:76px;padding:4px;display:flex;flex-direction:column;overflow:hidden}'+
-      '.map-code{font-size:10px}.pcell span{font-weight:700;margin-top:5px;font-size:9px}.pcell small{font-size:7px;line-height:1.25}.map-codes{margin-top:4px}.map-expiry{margin-top:auto;padding-top:3px}'+
-      '.cert{text-align:center;font-size:7.5px;margin-top:6px;border-top:1px solid #000;padding-top:4px}'+
-      '.public-url{text-align:center;font-size:6.5px;margin-top:2px;overflow-wrap:anywhere}'+
-      '</style></head><body>'+
+      '.map{display:grid;gap:3px;flex:1 1 auto;min-height:0;width:100%}.prow{display:grid;gap:3px;min-height:0}.pcell{border:1.2px solid #000;min-height:0;height:100%;padding:5px;display:flex;flex-direction:column;justify-content:flex-start;overflow:hidden}'+
+      '.map-code{font-size:11px;line-height:1}.pcell span{font-weight:900;margin-top:5px;font-size:14px;line-height:1.08;overflow-wrap:anywhere}.pcell small{font-size:7.5px;line-height:1.2}.map-codes{margin-top:5px}.map-expiry{margin-top:auto;padding-top:3px}'+
+      '.cert{text-align:center;font-size:7px;margin-top:4px;border-top:1px solid #000;padding-top:3px;flex:0 0 auto}'+
+      '.public-url{text-align:center;font-size:6px;margin-top:1px;overflow-wrap:anywhere;flex:0 0 auto}'+
+      '</style></head><body class="print-'+mode+'">'+
       '<div class="head">'+
       '<div class="title">'+
       '<h2>'+esc(unit.name)+' — Controlled Pharmacy Custody</h2>'+
@@ -12175,7 +12191,7 @@ var MARGIN=10;
 var HEADER_H=21;
 var HEADER_GAP=3;
 var COLUMN_GAP=3.2;
-var MIN_FONT=4.2;
+var MIN_FONT=3.2;
 var MAX_FONT=13.5;
 var MIN_PAD=.65;
 var MAX_PAD=5.2;
@@ -12247,16 +12263,16 @@ function buildMetrics(page,columns,font,rowPad){
   var contentTop=MARGIN+HEADER_H+HEADER_GAP;
   var contentHeight=page.h-contentTop-MARGIN;
   var columnWidth=(page.w-MARGIN*2-COLUMN_GAP*(columns-1))/columns;
-  var quantityWidth=clamp(font*2.35,24,33);
+  var quantityWidth=clamp(font*2.35,14,33);
   var innerGap=2.2;
   var nameWidth=columnWidth-quantityWidth-innerGap-4;
-  if(nameWidth<30)return null;
+  if(nameWidth<9)return null;
 
   setFont(measureCtx,font,700);
   var lineHeight=font*1.07;
-  var minimumRow=Math.max(font*1.72,quantityWidth*.72);
-  var deptH=Math.max(14,font*1.55+2.2);
-  var catH=Math.max(10,font*1.24+2.0);
+  var minimumRow=Math.max(font*1.58,quantityWidth*.60);
+  var deptH=Math.max(8,font*1.45+1.5);
+  var catH=Math.max(6,font*1.15+1.2);
   var rowHeights=[],lineSets=[];
 
   for(var i=0;i<rows.length;i++){
@@ -12324,11 +12340,35 @@ function bestFor(page,columns){
   }
   return padded;
 }
+function forceOnePage(page,columns){
+  var metric=buildMetrics(page,columns,MIN_FONT,0);
+  if(!metric)return null;
+  if(metric.fits){metric.forced=false;return metric;}
+  var scale=Math.max(.001,Math.min(1,(metric.contentHeight-.8)/metric.maxHeight));
+  metric.forced=true;
+  metric.verticalScale=scale;
+  metric.font*=scale;
+  metric.lineHeight*=scale;
+  metric.deptH*=scale;
+  metric.catH*=scale;
+  metric.rowPad*=scale;
+  metric.rowHeights=metric.rowHeights.map(function(height){return height*scale;});
+  metric.segments=metric.segments.map(function(segment){
+    return {start:segment.start,end:segment.end,height:segment.height*scale};
+  });
+  metric.maxHeight*=scale;
+  metric.minHeight*=scale;
+  metric.fill=metric.maxHeight/metric.contentHeight;
+  metric.balance=metric.maxHeight?metric.minHeight/metric.maxHeight:1;
+  metric.fits=true;
+  return metric;
+}
 function chooseLayout(){
   var page=PAGE.landscape;
   var orderIds=[];
   rows.forEach(function(row){if(orderIds.indexOf(row.orderId)<0)orderIds.push(row.orderId);});
-  return bestFor(page,Math.max(1,orderIds.length));
+  var columns=Math.max(1,orderIds.length);
+  return bestFor(page,columns)||forceOnePage(page,columns);
 }
 
 function fillTone(ctx,row,x,y,w,h){
@@ -12365,9 +12405,9 @@ function drawMedicine(ctx,row,metric,index,x,y,w,h,records){
   var qtyW=metric.quantityWidth;
   var gap=2.2;
   var nameX=x+1.4,nameY=y+metric.rowPad*.35;
-  var nameW=w-qtyW-gap-2.8,nameH=h-metric.rowPad*.7;
-  var qtyX=x+w-qtyW,qtyY=y+(h-Math.min(qtyW*.76,h-1))/2;
-  var qtyH=Math.min(qtyW*.76,h-1);
+  var nameW=w-qtyW-gap-2.8,nameH=Math.max(.6,h-metric.rowPad*.7);
+  var qtyH=Math.max(.6,Math.min(qtyW*.76,h-.1));
+  var qtyX=x+w-qtyW,qtyY=y+(h-qtyH)/2;
   var dark=row.high&&row.tone!=='gray';
   var light=row.high&&row.tone==='gray';
 
@@ -12571,7 +12611,7 @@ async function start(){
 
   var layout=chooseLayout();
   if(!layout){
-    showError('No readable one-page layout could be created with one department per column.');
+    showError('A printable one-page layout could not be created. Reduce the number of selected departments and try again.');
     return;
   }
 
@@ -12598,6 +12638,8 @@ async function start(){
     rowPad:layout.rowPad,
     fill:layout.fill,
     balance:layout.balance,
+    forced:!!layout.forced,
+    verticalScale:layout.verticalScale||1,
     count:rendered.records.length,
     page:{w:layout.page.w,h:layout.page.h},
     records:rendered.records,
