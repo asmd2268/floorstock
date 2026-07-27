@@ -14530,5 +14530,94 @@ new MutationObserver(function(){decorate()}).observe(document.documentElement,{c
 window.addEventListener('load',function(){decorate();if(master())window.syncAllCrashCartPrintNames(true).catch(console.warn)});
 })();
 </script>
+
+<script id="r636-crash-cart-canonical-generics-and-editor-repair">
+(function(){
+'use strict';
+var MIGRATION_KEY='migration_crash_cart_canonical_generics_r636';
+var PRIMARY=[
+ 'Adrenaline (Epinephrine)','Amiodarone','Atropine','Calcium Chloride 10%','Calcium Gluconate 10%','Dextrose 50%','Dobutamine','Dopamine','Lidocaine 2%','Magnesium Sulfate','Naloxone','Norepinephrine 1:1,000','Sodium Bicarbonate 8.4%'
+];
+var NURSERY=[
+ 'Adenosine','Adrenaline (Epinephrine)','Amiodarone','Atropine','Calcium Chloride 10%','Calcium Gluconate 10%','Lidocaine 2%','Magnesium Sulfate','Procainamide','Sodium Bicarbonate','Naloxone'
+];
+function clone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
+function key(v){return String(v||'').toLowerCase().replace(/norepinephrine/g,'norepinephrine').replace(/epinephrine/g,'adrenaline').replace(/[^a-z0-9]+/g,'')}
+function has(v,s){return key(v).indexOf(key(s))>=0}
+function canonicalFor(item,list){
+ var text=[item&&item.name,item&&item.genericName,item&&item.strength,item&&item.concentration].join(' '),k=key(text);
+ if(k.indexOf('adenosine')>=0)return 'Adenosine';
+ if(k.indexOf('adrenaline')>=0||k.indexOf('epinephrine')>=0)return 'Adrenaline (Epinephrine)';
+ if(k.indexOf('amiodarone')>=0)return 'Amiodarone';
+ if(k.indexOf('atropine')>=0)return 'Atropine';
+ if(k.indexOf('calciumchloride')>=0)return 'Calcium Chloride 10%';
+ if(k.indexOf('calciumgluconate')>=0)return 'Calcium Gluconate 10%';
+ if(k.indexOf('dextrose')>=0)return 'Dextrose 50%';
+ if(k.indexOf('dobutamine')>=0)return 'Dobutamine';
+ if(k.indexOf('dopamine')>=0)return 'Dopamine';
+ if(k.indexOf('lidocaine')>=0||k.indexOf('lignocaine')>=0)return 'Lidocaine 2%';
+ if(k.indexOf('magnesiumsulfate')>=0||k.indexOf('magnesiumsulphate')>=0)return 'Magnesium Sulfate';
+ if(k.indexOf('naloxone')>=0)return 'Naloxone';
+ if(k.indexOf('norepinephrine')>=0||k.indexOf('noradrenaline')>=0)return 'Norepinephrine 1:1,000';
+ if(k.indexOf('procainamide')>=0)return 'Procainamide';
+ if(k.indexOf('sodiumbicarbonate')>=0)return list===PRIMARY?'Sodium Bicarbonate 8.4%':'Sodium Bicarbonate';
+ return '';
+}
+function isNurseryCart(cart){
+ var label=[cart&&cart.name,cart&&cart.deptName,cart&&cart.location].join(' ');
+ if(/nursery|nicu|neonat|حضانة|حديثي الولادة/i.test(label))return true;
+ return (cart.items||[]).some(function(it){var c=canonicalFor(it,NURSERY);return c==='Adenosine'||c==='Procainamide'});
+}
+function isPrimaryCart(cart){
+ var first=(cart.items||[])[0]||{},c=canonicalFor(first,PRIMARY);
+ return c==='Adrenaline (Epinephrine)';
+}
+function normalizeConcentration(name,item){
+ if(name==='Adrenaline (Epinephrine)')return String(item.concentration||item.strength||'').trim();
+ if(name==='Calcium Chloride 10%'||name==='Calcium Gluconate 10%'||name==='Dextrose 50%'||name==='Lidocaine 2%'||name==='Sodium Bicarbonate 8.4%'||name==='Norepinephrine 1:1,000')return '';
+ return String(item.concentration||item.strength||'').trim();
+}
+function mergeBatches(item){
+ var map={},out=[];(item.batches||[]).forEach(function(b){var expiry=String(b.expiry||'').slice(0,10),lot=String(b.lot||b.batch||'').trim(),mk=expiry+'|'+lot,qty=Number(b.qty)||0;if(!expiry||qty<=0)return;if(!map[mk]){map[mk]={batchId:b.batchId||b.id||('ccb_'+Math.random().toString(36).slice(2)),expiry:expiry,lot:lot,qty:0};out.push(map[mk])}map[mk].qty+=qty});return out;
+}
+function repairItem(item,list){
+ var name=canonicalFor(item,list);if(!name||list.indexOf(name)<0)return false;
+ var changed=item.name!==name||item.genericName!==name;
+ item.name=name;item.genericName=name;
+ var conc=normalizeConcentration(name,item);if(item.concentration!==conc||item.strength!==conc)changed=true;
+ item.concentration=conc;item.strength=conc;
+ var merged=mergeBatches(item),present=Math.max(0,Number(item.present==null?item.qty:item.present)||0),total=merged.reduce(function(s,b){return s+b.qty},0);
+ if(total>present&&total>0){var left=present;merged.forEach(function(b){var take=Math.min(b.qty,left);b.qty=take;left-=take});merged=merged.filter(function(b){return b.qty>0});changed=true}
+ item.batches=merged;
+ return changed;
+}
+async function updateDepartmentLists(carts){
+ if(typeof getMeds!=='function'||!window.S||typeof S.s!=='function')return 0;
+ var changed=0,ids={};carts.forEach(function(c){ids[String(c.deptId||'')]=isNurseryCart(c)?NURSERY:PRIMARY});
+ for(var deptId in ids){if(!deptId)continue;var meds=clone(getMeds(deptId)||[]),list=ids[deptId],dirty=false;meds.forEach(function(m){var name=canonicalFor(m,list);if(name&&list.indexOf(name)>=0&&(m.name!==name||m.genericName!==name)){m.name=name;m.genericName=name;dirty=true;changed++}});if(dirty)await S.s('meds_'+deptId,meds)}
+ return changed;
+}
+window.r636CanonicalizeCrashCartGenerics=async function(showToast){
+ if(typeof crashCarts!=='function'||typeof setCrashCarts!=='function')return false;
+ var carts=clone(crashCarts()||[]),changed=0,cartCount=0;
+ carts.forEach(function(cart){var list=isNurseryCart(cart)?NURSERY:(isPrimaryCart(cart)?PRIMARY:null);if(!list)return;var dirty=false;(cart.items||[]).forEach(function(item){if(repairItem(item,list)){dirty=true;changed++}});if(dirty){cart.updatedAt=new Date().toISOString();cartCount++}});
+ if(changed)await setCrashCarts(carts);
+ var medChanges=await updateDepartmentLists(carts);
+ if(window.S&&typeof S.s==='function')await S.s(MIGRATION_KEY,{version:1,completed:true,completedAt:new Date().toISOString(),cartItemsChanged:changed,departmentMedicinesChanged:medChanges});
+ if(typeof window.syncAllCrashCartPrintNames==='function')try{await window.syncAllCrashCartPrintNames(true)}catch(e){}
+ if(typeof renderCrashCarts==='function')renderCrashCarts();
+ if(showToast&&typeof toast==='function')toast('Canonical Generic Names updated in '+cartCount+' Crash Cart(s) and linked lists ✓','succ');
+ return true;
+};
+/* Remove obsolete name-map cache so print always reads the repaired database values. */
+async function clearOldNameCache(){try{if(window.S&&typeof S.s==='function')await S.s('crash_cart_medication_names_v1',{})}catch(e){console.warn(e)}}
+var oldPrint=window.crashPrint;
+if(typeof oldPrint==='function')window.crashPrint=async function(){await window.r636CanonicalizeCrashCartGenerics(false);return oldPrint.apply(this,arguments)};
+/* Repair the legacy content editor rows before they are validated. Duplicate expiry rows are merged and excess stale quantities are capped to Available. */
+document.addEventListener('click',function(ev){var save=ev.target&&ev.target.closest&&ev.target.closest('#ccfe-save');if(!save)return;var root=document.getElementById('ccfe-rows');if(!root)return;root.querySelectorAll('.ccfe-item').forEach(function(row){var available=Number((row.querySelector('.ccfe-item-available')||{}).value)||0,map={},rows=[];row.querySelectorAll('.ccfe-batch').forEach(function(b){var exp=(b.querySelector('.ccfe-exp')||{}).value||'',lot=((b.querySelector('.ccfe-lot')||{}).value||'').trim(),qty=Number((b.querySelector('.ccfe-bqty')||{}).value)||0,k=exp+'|'+lot;if(!exp||qty<=0)return;if(!map[k]){map[k]={row:b,qty:0};rows.push(map[k])}map[k].qty+=qty;if(map[k].row!==b)b.remove()});var left=available;rows.forEach(function(x){var q=Math.min(x.qty,left);x.row.querySelector('.ccfe-bqty').value=String(q);left-=q;if(q<=0)x.row.remove()})});},true);
+function init(){clearOldNameCache();window.r636CanonicalizeCrashCartGenerics(false).catch(function(e){console.error('R6.37 generic migration failed',e)})}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init,{once:true});else setTimeout(init,0);
+})();
+</script>
 </body>
 </html>
