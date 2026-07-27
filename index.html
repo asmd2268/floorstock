@@ -14616,5 +14616,102 @@ function run(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',run,{once:true});else setTimeout(run,0);
 })();
 </script>
+
+<style id="r639-crash-cart-editor-fix-style">
+#cc-final-editor .ccfe-item-name{font-weight:700}
+#cc-final-editor .ccfe-save-status{font-size:11px;color:var(--tx2);margin-inline-end:8px}
+</style>
+<script id="r639-crash-cart-editor-fix">
+(function(){
+'use strict';
+var MIGRATION_KEY='migration_crash_cart_generic_only_r639';
+function E(id){return document.getElementById(id)}
+function n(v){v=Number(v);return Number.isFinite(v)?v:0}
+function iso(){return new Date().toISOString()}
+function actor(){return window.fsActor?window.fsActor():{name:String((window.CU&&CU.name)||(window.CU&&CU.email)||'Unknown'),user:String((window.CU&&CU.email)||'Unknown')}}
+function effectiveRole(){return window.fsEffectiveRole?String(window.fsEffectiveRole()||''):String((window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role)||(window.CU&&CU.role)||'')}
+function isMaster(){return !!((window.CU&&CU.master)||(window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.master)||effectiveRole()==='master')}
+function canEdit(){var r=effectiveRole();return isMaster()||['pharmacy','pharmacy_director','director','inpatient_supervisor','inpatient_pharmacy_supervisor'].indexOf(r)>=0||((typeof window.canConfigureCrashCart==='function')&&window.canConfigureCrashCart())}
+function compact(v){return String(v||'').toLowerCase().replace(/[^a-z0-9]+/g,'')}
+function hasOneToThousand(name,conc){return /(^|\D)1\s*[:/]\s*1\s*[, ]?000(\D|$)/i.test(String(name||'')+' '+String(conc||''))}
+function canonicalGeneric(name,conc){
+ var raw=String(name||'').trim(), k=compact(raw+' '+String(conc||''));
+ if((k.indexOf('adrenaline')>=0||k.indexOf('epinephrine')>=0)&&hasOneToThousand(raw,conc))return 'Noradrenaline';
+ if(k.indexOf('norepinephrine')>=0||k.indexOf('noradrenaline')>=0||k.indexOf('noradranaline')>=0)return 'Noradrenaline';
+ var rules=[
+  ['adenosine','Adenosine'],['adrenaline','Adrenaline (Epinephrine)'],['epinephrine','Adrenaline (Epinephrine)'],
+  ['amiodarone','Amiodarone'],['atropine','Atropine'],['calciumchloride','Calcium Chloride'],
+  ['calciumgluconate','Calcium Gluconate'],['dextrose','Dextrose'],['dobutamine','Dobutamine'],
+  ['dopamine','Dopamine'],['lidocaine','Lidocaine'],['magnesiumsulfate','Magnesium Sulfate'],
+  ['naloxone','Naloxone'],['procainamide','Procainamide'],['sodiumbicarbonate','Sodium Bicarbonate']
+ ];
+ for(var i=0;i<rules.length;i++)if(k.indexOf(rules[i][0])>=0)return rules[i][1];
+ return raw.replace(/\b(?:ampou?le|vial|injection|solution|tablet|tab)\b/ig,'').replace(/\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|%)(?:\s*\/\s*\d*(?:\.\d+)?\s*(?:mg|mcg|g|ml))?\b/ig,'').replace(/\b\d+\s*[:/]\s*\d[\d, ]*\b/g,'').replace(/\s{2,}/g,' ').trim()||raw;
+}
+function canonicalConcentration(name,conc){
+ if(canonicalGeneric(name,conc)==='Noradrenaline'&&hasOneToThousand(name,conc))return '1:1,000';
+ return String(conc||'').trim();
+}
+window.fsCrashCartGenericOnly=canonicalGeneric;
+window.fsCrashCartCanonicalConcentration=canonicalConcentration;
+
+async function migrate(force){
+ if(!window.S||typeof S.g!=='function'||typeof S.s!=='function')return {items:0,carts:0};
+ if(!force&&S.g(MIGRATION_KEY))return S.g(MIGRATION_KEY)||{items:0,carts:0};
+ var carts=typeof window.crashCarts==='function'?(window.crashCarts()||[]):[];
+ var changedItems=0, changedCarts=0;
+ var next=JSON.parse(JSON.stringify(carts));
+ next.forEach(function(c){var cc=0;(c.items||[]).forEach(function(it){
+   var oldName=String(it.name||it.genericName||''), oldConc=String(it.concentration||it.strength||'');
+   var gn=canonicalGeneric(oldName,oldConc), co=canonicalConcentration(oldName,oldConc);
+   if(it.name!==gn||it.genericName!==gn||String(it.concentration||'')!==co||String(it.strength||'')!==co){
+     it.name=gn;it.genericName=gn;it.concentration=co;it.strength=co;it.updatedAt=iso();cc++;changedItems++;
+   }
+  });if(cc)changedCarts++});
+ if(changedItems){if(typeof window.setCrashCarts==='function')await window.setCrashCarts(next);else await S.s('crash_carts',next)}
+ var report={items:changedItems,carts:changedCarts,completedAt:iso()};await S.s(MIGRATION_KEY,report);
+ window.R639_CRASH_MIGRATION_REPORT=report;
+ if(force&&typeof window.toast==='function')toast('Updated '+changedItems+' medication record(s) in '+changedCarts+' Crash Cart(s).','succ');
+ return report;
+}
+window.r639MigrateCrashCartNames=function(){return migrate(true)};
+
+function cleanEditorRows(root){
+ (root||document).querySelectorAll('#cc-final-editor .ccfe-item').forEach(function(row){
+   var name=row.querySelector('.ccfe-item-name'), conc=row.querySelector('.ccfe-item-conc');if(!name)return;
+   var old=name.value, c=conc?conc.value:'';name.value=canonicalGeneric(old,c);if(conc)conc.value=canonicalConcentration(old,c);
+ });
+}
+
+async function saveEditorAuthoritative(ev){
+ var btn=ev.target&&ev.target.closest?ev.target.closest('#ccfe-save'):null;if(!btn)return;
+ ev.preventDefault();ev.stopPropagation();if(ev.stopImmediatePropagation)ev.stopImmediatePropagation();
+ var err=E('ccfe-error');function fail(msg){if(err)err.textContent=msg;if(typeof window.toast==='function')toast(msg,'err');btn.disabled=false;btn.textContent='Save contents / حفظ المحتويات';return false}
+ if(!canEdit())return fail('You do not have permission to edit Crash Cart contents.');
+ var idEl=E('ccfe-cart-id'), rowsHost=E('ccfe-rows');if(!idEl||!rowsHost)return fail('Crash Cart editor is incomplete. Close it and open it again.');
+ var carts=typeof window.crashCarts==='function'?(window.crashCarts()||[]):[], cart=carts.find(function(c){return String(c.id)===String(idEl.value)});if(!cart)return fail('Crash Cart was not found.');
+ cleanEditorRows(document);
+ var items=[], seen={};var rows=Array.from(rowsHost.querySelectorAll('.ccfe-item'));
+ for(var i=0;i<rows.length;i++){
+   var row=rows[i], nameEl=row.querySelector('.ccfe-item-name'), concEl=row.querySelector('.ccfe-item-conc');
+   var rawName=nameEl?nameEl.value:'', rawConc=concEl?concEl.value:'', generic=canonicalGeneric(rawName,rawConc), concentration=canonicalConcentration(rawName,rawConc);
+   var req=n((row.querySelector('.ccfe-item-required')||{}).value), av=n((row.querySelector('.ccfe-item-available')||{}).value), status=(row.querySelector('.ccfe-item-status')||{}).value||'available';
+   if(!generic)return fail('Medication name is required in row '+(i+1)+'.');var key=(generic+'|'+concentration).toLowerCase();if(seen[key])return fail('Duplicate medication in row '+(i+1)+'.');seen[key]=1;
+   if(req<0||av<0)return fail('Quantities cannot be negative in row '+(i+1)+'.');if(status==='out')av=0;else if(status==='available')av=req;else if(!(av>0&&av<req))return fail('Partially available quantity must be above 0 and below required in row '+(i+1)+'.');if(av>req)return fail('Available quantity cannot exceed required quantity in row '+(i+1)+'.');
+   var batches=[];Array.from(row.querySelectorAll('.ccfe-batch')).forEach(function(b){var expiry=(b.querySelector('.ccfe-exp')||{}).value||'',qty=n((b.querySelector('.ccfe-bqty')||{}).value),lot=String((b.querySelector('.ccfe-lot')||{}).value||'').trim();if(expiry||qty||lot)batches.push({expiry:expiry,qty:qty,lot:lot})});
+   if(av===0)batches=[];else{if(!batches.length)return fail('At least one expiry date is required for every available medication in row '+(i+1)+'.');for(var j=0;j<batches.length;j++)if(!batches[j].expiry||!(batches[j].qty>0))return fail('Every expiry row requires a date and quantity greater than zero in medication row '+(i+1)+'.');var total=batches.reduce(function(s,b){return s+n(b.qty)},0);if(Math.abs(total-av)>0.000001)return fail('Expiry quantities ('+total+') must equal available quantity ('+av+') in row '+(i+1)+'.')}
+   items.push({id:row.dataset.id||('cci_'+Date.now().toString(36)+'_'+i),name:generic,genericName:generic,strength:concentration,concentration:concentration,qty:req,present:av,batches:batches,stockStatus:av<=0?'out_of_stock':(av<req?'partial':'available'),stockUpdatedAt:iso(),stockUpdatedBy:actor().name});
+ }
+ btn.disabled=true;btn.textContent='Saving... / جاري الحفظ';if(err)err.textContent='';
+ try{cart.items=items;cart.updatedAt=iso();cart.updatedBy=actor().name;cart.updatedByUser=actor().user;if(typeof window.setCrashCarts==='function')await window.setCrashCarts(carts);else await S.s('crash_carts',carts);if(typeof window.auditAction==='function')auditAction('crash_cart_contents_update',{cartId:cart.id,itemCount:items.length,updatedBy:actor().user,authorizedRole:effectiveRole()});var modal=E('cc-final-editor');if(modal)modal.remove();if(typeof window.renderCrashCarts==='function')renderCrashCarts();if(typeof window.toast==='function')toast('Crash Cart contents saved ✓','succ');}
+ catch(ex){return fail(String((ex&&ex.message)||ex))}
+}
+document.addEventListener('click',saveEditorAuthoritative,true);
+var mo=new MutationObserver(function(list){list.forEach(function(x){Array.from(x.addedNodes||[]).forEach(function(node){if(node.nodeType===1&&(node.id==='cc-final-editor'||(node.querySelector&&node.querySelector('#cc-final-editor'))))setTimeout(function(){cleanEditorRows(document)},0)})})});
+mo.observe(document.documentElement,{childList:true,subtree:true});
+function boot(){migrate(false).catch(function(e){console.error('R6.39 Crash Cart migration failed',e)});cleanEditorRows(document)}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else setTimeout(boot,0);
+})();
+</script>
 </body>
 </html>
