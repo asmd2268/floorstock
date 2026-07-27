@@ -14713,5 +14713,80 @@ function boot(){migrate(false).catch(function(e){console.error('R6.39 Crash Cart
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else setTimeout(boot,0);
 })();
 </script>
+
+<style id="r640-crash-cart-canonical-editor-style">
+#cc-final-editor .ccfe-item-name{font-weight:700!important}
+</style>
+<script id="r640-crash-cart-canonical-editor">
+(function(){
+'use strict';
+var MIGRATION_KEY='migration_crash_cart_generic_only_r640_v2';
+function E(id){return document.getElementById(id)}
+function txt(v){return String(v==null?'':v).trim()}
+function compact(v){return txt(v).toLowerCase().replace(/[^a-z0-9]+/g,'')}
+function isOneToThousand(name,conc){
+ var x=(txt(name)+' '+txt(conc)).toLowerCase().replace(/,/g,'');
+ return /(^|\D)1\s*[:/]\s*1000(\D|$)/.test(x)||/\b1\s*mg\s*\/\s*(?:1\s*)?ml\b/.test(x)||compact(x).indexOf('1mg1ml')>=0;
+}
+var GENERICS=[
+ ['adenosine','Adenosine'],['amiodarone','Amiodarone'],['atropine','Atropine'],
+ ['calciumchloride','Calcium Chloride'],['calciumgluconate','Calcium Gluconate'],
+ ['dextrose','Dextrose'],['dobutamine','Dobutamine'],['dopamine','Dopamine'],
+ ['lidocaine','Lidocaine'],['magnesiumsulfate','Magnesium Sulfate'],
+ ['naloxone','Naloxone'],['procainamide','Procainamide'],['sodiumbicarbonate','Sodium Bicarbonate']
+];
+function genericOnly(name,conc){
+ var raw=txt(name), k=compact(raw+' '+txt(conc));
+ if((k.indexOf('adrenaline')>=0||k.indexOf('epinephrine')>=0)&&isOneToThousand(raw,conc))return 'Nor adrenaline';
+ if(k.indexOf('norepinephrine')>=0||k.indexOf('noradrenaline')>=0||k.indexOf('noradranaline')>=0)return 'Nor adrenaline';
+ if(k.indexOf('adrenaline')>=0||k.indexOf('epinephrine')>=0)return 'Adrenaline (Epinephrine)';
+ for(var i=0;i<GENERICS.length;i++)if(k.indexOf(GENERICS[i][0])>=0)return GENERICS[i][1];
+ return raw.replace(/\b(?:ampou?le|vial|injection|solution|tablet|tab)\b/ig,'')
+   .replace(/\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|ml|%)(?:\s*\/\s*\d*(?:\.\d+)?\s*(?:mg|mcg|g|ml))?\b/ig,'')
+   .replace(/\b\d+\s*[:/]\s*\d[\d, ]*\b/g,'').replace(/\s{2,}/g,' ').trim()||raw;
+}
+function canonicalConc(name,conc){
+ return genericOnly(name,conc)==='Nor adrenaline'&&isOneToThousand(name,conc)?'1:1,000':txt(conc);
+}
+window.fsCrashCartGenericOnly=genericOnly;
+window.fsCrashCartCanonicalConcentration=canonicalConc;
+function normalizeItem(it){
+ var oldName=txt(it.name||it.genericName), oldConc=txt(it.concentration||it.strength);
+ var gn=genericOnly(oldName,oldConc), co=canonicalConc(oldName,oldConc), changed=false;
+ if(it.name!==gn){it.name=gn;changed=true}
+ if(it.genericName!==gn){it.genericName=gn;changed=true}
+ if(txt(it.concentration)!==co){it.concentration=co;changed=true}
+ if(txt(it.strength)!==co){it.strength=co;changed=true}
+ return changed;
+}
+async function migrate(force){
+ if(!window.S||typeof S.g!=='function'||typeof S.s!=='function')return {items:0,carts:0};
+ if(!force&&S.g(MIGRATION_KEY))return S.g(MIGRATION_KEY);
+ var carts=typeof window.crashCarts==='function'?(window.crashCarts()||[]):[];
+ var next=JSON.parse(JSON.stringify(carts)),items=0,cartCount=0;
+ next.forEach(function(c){var changed=0;(c.items||[]).forEach(function(it){if(normalizeItem(it)){changed++;items++}});if(changed)cartCount++});
+ if(items){if(typeof window.setCrashCarts==='function')await window.setCrashCarts(next);else await S.s('crash_carts',next)}
+ var report={items:items,carts:cartCount,completedAt:new Date().toISOString()};
+ await S.s(MIGRATION_KEY,report);window.R640_CRASH_MIGRATION_REPORT=report;
+ if(force&&typeof window.toast==='function')toast('Changed '+items+' medication record(s) in '+cartCount+' Crash Cart(s).','succ');
+ return report;
+}
+window.r640MigrateCrashCartNames=function(){return migrate(true)};
+function cleanRow(row){
+ var name=row.querySelector('.ccfe-item-name'),conc=row.querySelector('.ccfe-item-conc');if(!name)return;
+ var old=name.value,c=conc?conc.value:'';name.value=genericOnly(old,c);if(conc)conc.value=canonicalConc(old,c);
+}
+function cleanEditor(root){(root||document).querySelectorAll('#cc-final-editor .ccfe-item').forEach(cleanRow)}
+// Run after every editor render and after any UI code repopulates medication values.
+var scheduled=false;function scheduleClean(){if(scheduled)return;scheduled=true;setTimeout(function(){scheduled=false;cleanEditor(document)},0)}
+new MutationObserver(scheduleClean).observe(document.documentElement,{childList:true,subtree:true,attributes:true,attributeFilter:['value']});
+document.addEventListener('focusin',function(e){if(e.target&&e.target.matches&&e.target.matches('#cc-final-editor .ccfe-item-name,#cc-final-editor .ccfe-item-conc'))cleanRow(e.target.closest('.ccfe-item'))},true);
+document.addEventListener('change',function(e){if(e.target&&e.target.closest&&e.target.closest('#cc-final-editor .ccfe-item'))cleanRow(e.target.closest('.ccfe-item'))},true);
+// Capture save first, normalize visible rows, then let R6.39 authoritative save persist them.
+document.addEventListener('click',function(e){var b=e.target&&e.target.closest&&e.target.closest('#ccfe-save');if(!b)return;cleanEditor(document)},true);
+function boot(){migrate(false).then(function(r){window.R640_CRASH_MIGRATION_REPORT=r}).catch(function(e){console.error('R6.40 migration failed',e)});scheduleClean()}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else setTimeout(boot,0);
+})();
+</script>
 </body>
 </html>
