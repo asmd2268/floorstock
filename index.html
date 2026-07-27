@@ -11691,35 +11691,7 @@ window.controlledStoragePrint=async function(id,mode){
     return false;
   }
 
-  popup.document.open();
-  popup.document.write(
-    '<!doctype html><html><head><meta charset="utf-8">'+
-    '<title>Preparing controlled storage print</title></head>'+
-    '<body style="font-family:Arial,Tahoma,sans-serif;padding:24px">'+
-    '<h2>Preparing '+esc(unit.name)+'…</h2>'+
-    '<p>Publishing the live expiry view and preparing the printable '+mode+
-    '. / جاري تجهيز الطباعة ورابط متابعة الصلاحية…</p>'+
-    '</body></html>'
-  );
-  popup.document.close();
-
   try{
-    try{
-      var published=await publishStorage(unit,medicines);
-      if(!published&&typeof warnPublicSync==='function'){
-        warnPublicSync(
-          'Controlled storage QR',
-          new Error('Firebase is unavailable.')
-        );
-      }
-    }catch(syncError){
-      if(typeof warnPublicSync==='function'){
-        warnPublicSync('Controlled storage QR',syncError);
-      }else{
-        console.error('Controlled storage QR publication failed',syncError);
-      }
-    }
-
     var base=new URL(location.href);
     base.search='';
     base.hash='';
@@ -11829,6 +11801,8 @@ window.controlledStoragePrint=async function(id,mode){
       '.head{display:grid;grid-template-columns:1fr 31mm;gap:7mm;align-items:center;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:5px}'+
       '.title{text-align:center}.title h2{font-size:17px;margin:0 0 3px}.title div{font-size:10px}'+
       '.qrbox{text-align:center;border:1px solid #000;padding:2px}.qrbox img{display:block;width:27mm;height:27mm;margin:auto}.qrbox b{display:block;font-size:7px;margin-top:2px}'+
+      '.sync{font-size:7px;text-align:center;padding:2px 4px;margin:3px 0;border:1px solid #777;background:#eee}'+
+      '.sync.ok{background:#d9ead3}.sync.warn{background:#f4cccc}'+
       '.legend{font-size:8px;margin:4px 0 6px;display:flex;justify-content:space-between;gap:8px}'+
       '.sw{display:inline-block;width:10px;height:8px;background:#000;margin-right:4px}'+
       'table{width:100%;border-collapse:collapse;font-size:8.5px;table-layout:fixed}'+
@@ -11854,6 +11828,10 @@ window.controlledStoragePrint=async function(id,mode){
       '<img id="controlled-expiry-qr" src="'+qr+'" alt="Live expiry QR">'+
       '<b>Live expiry / متابعة الصلاحية</b>'+
       '</div></div>'+
+      '<div id="controlled-sync-status" class="sync">'+
+      'QR expiry data is syncing in the background. Printing is ready. / '+
+      'تجري مزامنة بيانات الصلاحية في الخلفية والطباعة جاهزة.'+
+      '</div>'+
       '<div class="legend">'+
       '<span><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا</span>'+
       '<span>Print date / تاريخ الطباعة: '+esc(date)+'</span>'+
@@ -11875,6 +11853,72 @@ window.controlledStoragePrint=async function(id,mode){
     popup.document.open();
     popup.document.write(printHtml);
     popup.document.close();
+
+    /*
+      Public QR publication is deliberately detached from printing.
+      A slow, denied, offline, or permanently pending Firestore write must never
+      leave the print window on a preparation screen.
+    */
+    var syncFinished=false;
+    var syncTimer=setTimeout(function(){
+      if(syncFinished)return;
+      try{
+        if(popup.closed)return;
+        var node=popup.document.getElementById('controlled-sync-status');
+        if(node){
+          node.className='sync warn';
+          node.textContent=
+            'QR expiry sync is taking longer than expected. The printed list is still valid. / '+
+            'تأخرت مزامنة رابط الصلاحية، ويمكن طباعة القائمة بشكل طبيعي.';
+        }
+      }catch(ignore){}
+    },8000);
+
+    Promise.resolve()
+      .then(function(){
+        return publishStorage(unit,medicines);
+      })
+      .then(function(published){
+        syncFinished=true;
+        clearTimeout(syncTimer);
+        try{
+          if(popup.closed)return;
+          var node=popup.document.getElementById('controlled-sync-status');
+          if(node){
+            node.className=published?'sync ok':'sync warn';
+            node.textContent=published
+              ?'Live expiry QR data synchronized. / تمت مزامنة بيانات QR للصلاحية.'
+              :'Printing is ready, but QR expiry data could not be synchronized. / الطباعة جاهزة، وتعذرت مزامنة بيانات QR.';
+          }
+        }catch(ignore){}
+        if(!published&&typeof warnPublicSync==='function'){
+          warnPublicSync(
+            'Controlled storage QR',
+            new Error('Firebase is unavailable.')
+          );
+        }
+      })
+      .catch(function(syncError){
+        syncFinished=true;
+        clearTimeout(syncTimer);
+        try{
+          if(!popup.closed){
+            var node=popup.document.getElementById('controlled-sync-status');
+            if(node){
+              node.className='sync warn';
+              node.textContent=
+                'Printing is ready, but QR expiry data could not be synchronized. / '+
+                'الطباعة جاهزة، وتعذرت مزامنة بيانات QR.';
+            }
+          }
+        }catch(ignore){}
+        if(typeof warnPublicSync==='function'){
+          warnPublicSync('Controlled storage QR',syncError);
+        }else{
+          console.error('Controlled storage QR publication failed',syncError);
+        }
+      });
+
     return true;
   }catch(error){
     console.error('Controlled storage print failed',error);
@@ -11935,8 +11979,8 @@ async function publicStorageView(){
   }catch(error){host.innerHTML='<div style="color:#b00">'+esc(error&&error.message||error)+'</div>';}
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
-})();</script><script id="asdhealth-canonical-r6-31-20260727">
-/* ASDHealth FloorStock — R6.31 canonical rules.
+})();</script><script id="asdhealth-canonical-r6-32-20260727">
+/* ASDHealth FloorStock — R6.32 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
 function fsR5E(id){return document.getElementById(id)}
