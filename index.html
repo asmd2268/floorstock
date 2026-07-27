@@ -748,7 +748,7 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 @media(max-width:560px){.acc2-stats,.acc2-form-grid,.acc2-filter-grid{grid-template-columns:1fr}.acc2-regimen-item{grid-template-columns:auto 1fr}.acc2-regimen-item .acc2-regimen-qty{grid-column:1/-1}.crash-response-modal{width:99vw!important;padding:12px 8px!important}}
 @media print{#pg-med-accountability .acc2-tabs,#pg-med-accountability button,#pg-med-accountability input,#pg-med-accountability select,#pg-med-accountability textarea{display:none!important}}
 </style>
-<meta name="asdh-build" content="R6.46"/>
+<meta name="asdh-build" content="R6.47"/>
 </head>
 <body>
 <div id="auth">
@@ -3885,16 +3885,7 @@ window.receiveFulfilledRequest=function(id){var req=(typeof gr==='function'?gr()
   function installLocalBrowserPrintShim(base){window.BrowserPrint={getLocalDevices:function(ok,fail,type){fetch(base+'/available').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(data){var list=Array.isArray(data)?data:(data.printer||data.printers||data.devices||[]);list=list.map(function(d){d.deviceType=d.deviceType||d.type||'printer';d.send=function(payload,success,error){fetch(base+'/write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d,data:payload})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}).then(function(){if(success)success()}).catch(function(e){if(error)error(e)})};return d});if(type)list=list.filter(function(d){return d.deviceType===type||type==='printer'});ok(list)}).catch(function(e){if(fail)fail(e)})}};return true}
   function tryLoadBrowserPrint(cb){if(window.BrowserPrint)return cb(true);var urls=['http://localhost:9100/BrowserPrint-3.1.250.min.js','https://localhost:9101/BrowserPrint-3.1.250.min.js'];var i=0;function probeShim(){fetch('http://localhost:9100/available').then(function(r){if(!r.ok)throw new Error();installLocalBrowserPrintShim('http://localhost:9100');cb(true)}).catch(function(){fetch('https://localhost:9101/available').then(function(r){if(!r.ok)throw new Error();installLocalBrowserPrintShim('https://localhost:9101');cb(true)}).catch(function(){cb(false)})})}function next(){if(window.BrowserPrint)return cb(true);if(i>=urls.length)return probeShim();var sc=document.createElement('script');sc.src=urls[i++];sc.onload=function(){if(window.BrowserPrint)cb(true);else next()};sc.onerror=next;document.head.appendChild(sc)}next()}
   window.zebraRefreshPrinters=function(){if(!allowed())return;status('Detecting…','byl');message('Searching for Zebra printers connected to this device…');tryLoadBrowserPrint(function(ok){if(!ok){status('Browser Print unavailable','brd');message('Zebra Browser Print is not available. Install/run Zebra Browser Print, then use Detect printers again. Browser print and ZPL download remain available.','err');return}BrowserPrint.getLocalDevices(function(devs){zprinters=(devs||[]).filter(function(d){return !d.deviceType||d.deviceType==='printer'});var sel=E('zebra-printer'),saved=localStorage.getItem(ZPR_KEY)||'';sel.innerHTML='';if(!zprinters.length){sel.innerHTML='<option value="">No Zebra printers detected</option>';status('No printer','brd');message('No Zebra printer was detected. Check USB/network connection and Zebra Browser Print.','err');return}zprinters.forEach(function(d,i){var o=document.createElement('option');o.value=String(i);o.textContent=d.name||d.uid||('Zebra printer '+(i+1));sel.appendChild(o)});var idx=zprinters.findIndex(function(d){return (d.uid||d.name)===saved});sel.value=String(idx>=0?idx:0);zebraDevice=zprinters[Number(sel.value)];status(zprinters.length+' printer'+(zprinters.length>1?'s':''),'bgn');message('Detected '+zprinters.length+' Zebra printer(s). Select the printer to use.','ok');sel.onchange=function(){zebraDevice=zprinters[Number(sel.value)]||null;if(zebraDevice)localStorage.setItem(ZPR_KEY,zebraDevice.uid||zebraDevice.name||'')}} ,function(e){status('Detection failed','brd');message('Printer detection failed: '+(e&&e.message?e.message:e),'err')},'printer')})};
-  function browserPrint(){var w=safeNum(E('zebra-width').value,50),h=safeNum(E('zebra-height').value,25),copies=Math.min(500,Math.max(1,Math.floor(safeNum(E('zebra-copies').value,1)))),name=clean(E('zebra-name').value),strength=clean(E('zebra-strength').value),hasExp=E('zebra-template').value==='name_strength_expiry',expiry=E('zebra-expiry').value,footer=clean(E('zebra-footer').value),win=window.open('','_blank');if(!win)return message('Allow pop-ups to print labels.','err');var labels='';for(var i=0;i<copies;i++)labels+='<section class="label"><div class="name">'+name+'</div><div class="strength">'+strength+'</div>'+(hasExp?'<div class="expiry">EXP '+expiry+'</div>':'')+(footer?'<div class="footer">'+footer+'</div>':'')+'</section>';win.document.write('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:'+w+'mm '+h+'mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,sans-serif}.label{width:'+w+'mm;height:'+h+'mm;page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5mm;overflow:hidden}.name{font-size:'+Math.max(12,Math.min(34,h*1.05))+'pt;font-weight:800;line-height:1}.strength{font-size:'+Math.max(10,Math.min(24,h*.65))+'pt;font-weight:700;line-height:1.05;margin-top:1mm}.expiry{font-size:'+Math.max(9,Math.min(20,h*.52))+'pt;font-weight:800;margin-top:1mm}.footer{font-size:'+Math.max(7,Math.min(13,h*.30))+'pt;font-weight:600;margin-top:1mm}</style></head><body>'+labels+'<script>onload=function(){print()}<\/script>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>');win.document.close()}
+  function browserPrint(){var w=safeNum(E('zebra-width').value,50),h=safeNum(E('zebra-height').value,25),copies=Math.min(500,Math.max(1,Math.floor(safeNum(E('zebra-copies').value,1)))),name=clean(E('zebra-name').value),strength=clean(E('zebra-strength').value),hasExp=E('zebra-template').value==='name_strength_expiry',expiry=E('zebra-expiry').value,footer=clean(E('zebra-footer').value),win=window.open('','_blank');if(!win)return message('Allow pop-ups to print labels.','err');var labels='';for(var i=0;i<copies;i++)labels+='<section class="label"><div class="name">'+name+'</div><div class="strength">'+strength+'</div>'+(hasExp?'<div class="expiry">EXP '+expiry+'</div>':'')+(footer?'<div class="footer">'+footer+'</div>':'')+'</section>';win.document.write('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:'+w+'mm '+h+'mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,sans-serif}.label{width:'+w+'mm;height:'+h+'mm;page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5mm;overflow:hidden}.name{font-size:'+Math.max(12,Math.min(34,h*1.05))+'pt;font-weight:800;line-height:1}.strength{font-size:'+Math.max(10,Math.min(24,h*.65))+'pt;font-weight:700;line-height:1.05;margin-top:1mm}.expiry{font-size:'+Math.max(9,Math.min(20,h*.52))+'pt;font-weight:800;margin-top:1mm}.footer{font-size:'+Math.max(7,Math.min(13,h*.30))+'pt;font-weight:600;margin-top:1mm}</style></head><body>'+labels+'<script>onload=function(){print()}<\/script></body></html>');win.document.close()}
   window.zebraDownloadZPL=function(test){var z=buildZPL(!!test),blob=new Blob([z],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ASDHealth_Zebra_Label_v1_2.zpl';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);message('ZPL file downloaded.','ok')};
   function sendZPL(test){var z=buildZPL(!!test);if(!zebraDevice){var sel=E('zebra-printer');zebraDevice=zprinters[Number(sel&&sel.value)]||null}if(!zebraDevice)return message('No Zebra printer selected. Click Detect printers first.','err');localStorage.setItem(ZPR_KEY,zebraDevice.uid||zebraDevice.name||'');zebraDevice.send(z,function(){message('Labels sent successfully to '+(zebraDevice.name||'Zebra printer')+'.','ok');if(typeof toast==='function')toast('Zebra labels sent successfully','succ')},function(e){message('Zebra print failed: '+(e&&e.message?e.message:e),'err')})}
   window.zebraPrintLabels=function(){if(!allowed())return;if(!clean(E('zebra-name').value))return message('Select or enter a medicine name.','err');if(E('zebra-template').value==='name_strength_expiry'&&!E('zebra-expiry').value)return message('Enter the expiry date.','err');var mode=E('zebra-mode').value;if(mode==='browser')return browserPrint();if(mode==='download')return zebraDownloadZPL(false);sendZPL(false)};
@@ -4500,16 +4491,7 @@ async function doDeptPrint(){
     '<title>Preparing department drug list</title></head>'+
     '<body style="font-family:Arial,Tahoma,sans-serif;padding:24px">'+
     'Preparing department drug list… / جاري تجهيز قائمة أدوية القسم…'+
-    '
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>'
+    '</body></html>'
   );
   pw.document.close();
 
@@ -4659,16 +4641,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
       +'#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}'
       +'}";document.head.appendChild(s);}'
       +'setTimeout(function(){window.print();window.close();},600);'
-      +'<\/script>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>'
+      +'<\/script></body></html>'
     );
     pw.document.close();
     return true;
@@ -4680,16 +4653,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         '<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">'+
         '<h2>Print preparation failed / تعذر تجهيز الطباعة</h2>'+
         '<p>'+esc(error&&error.message||error)+'</p>'+
-        '
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>'
+        '</body></html>'
       );
       pw.document.close();
     }catch(ignore){}
@@ -4845,16 +4809,7 @@ function printShelfList(){
     +'<img src="'+qrUrl+'" width="76" height="76">'
     +'</div>'
     +'<script>setTimeout(function(){window.print();window.close();},600);<\/script>'
-    +'
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>');
+    +'</body></html>');
   pw.document.close();
   return true;
 }
@@ -6883,29 +6838,11 @@ body.role-department #ctl-log{pointer-events:none}
         '.electronic-cert{margin-top:10px;padding:6px;border:1px solid #333;text-align:center;font-size:9px;font-weight:bold;page-break-inside:avoid;break-inside:avoid}'+
         '.by{font-size:8px;text-align:center;margin-top:8px;page-break-inside:avoid;break-inside:avoid}.handover{margin:8px 0;padding:7px;border:1px solid #444;page-break-inside:avoid;break-inside:avoid}.ltr{direction:ltr!important}'+
         '@media print{html,body,.print-page{height:auto!important;max-height:none!important;overflow:visible!important}table{page-break-inside:auto!important;break-inside:auto!important}thead{display:table-header-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}}'+
-        '</style></head><body><div class="print-page">'+officialPrintHeaderHTML()+body+'<div class="electronic-cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><div class="by">By Ali Abudahash</div></div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,250)},{once:true});setTimeout(go,1800)})();<\/script>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>');
+        '</style></head><body><div class="print-page">'+officialPrintHeaderHTML()+body+'<div class="electronic-cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><div class="by">By Ali Abudahash</div></div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,250)},{once:true});setTimeout(go,1800)})();<\/script></body></html>');
       w.document.close();
       return w
     }catch(err){
-      try{w.document.open();w.document.write('<!doctype html><html><body style="font-family:Arial;padding:24px"><h2>Print failed / تعذر تجهيز الطباعة</h2><pre>'+String(err&&err.message||err).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})+'</pre>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>');w.document.close()}catch(e){}
+      try{w.document.open();w.document.write('<!doctype html><html><body style="font-family:Arial;padding:24px"><h2>Print failed / تعذر تجهيز الطباعة</h2><pre>'+String(err&&err.message||err).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c]})+'</pre></body></html>');w.document.close()}catch(e){}
       throw err
     }
   };
@@ -7972,16 +7909,7 @@ function removeUI(){var a=E('v13as-crash-tabs'),b=E('v13as-opening-log');if(a)a.
 function fillDepartments(){var s=E('v13as-log-dept');if(!s)return;var cur=s.value||'all',html='<option value="all">All Departments / جميع الأقسام</option>'+departments().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name||d.id)+'</option>'}).join('');if(s.innerHTML!==html)s.innerHTML=html;s.value=Array.from(s.options).some(function(o){return o.value===cur})?cur:'all'}
 function switchView(view){var list=E('crash-list'),filters=E('v13-crash-filters'),alerts=E('crash-open-alerts'),add=E('crash-add-btn'),log=E('v13as-opening-log');document.querySelectorAll('#v13as-crash-tabs .v13as-tab').forEach(function(b){b.classList.toggle('active',b.dataset.view===view)});var showLog=view==='log';if(list)list.style.display=showLog?'none':'';if(filters)filters.style.display=showLog?'none':'';if(alerts)alerts.style.display=showLog?'none':'';if(add&&add.parentElement)add.parentElement.style.display=showLog?'none':'';if(log)log.classList.toggle('on',showLog);if(showLog)renderLog()}
 function renderLog(){if(!allowed())return;fillDepartments();var rows=visibleReports(),body=E('v13as-log-body'),count=E('v13as-log-count');if(count)count.textContent=rows.length+' record(s)';if(!body)return;if(!rows.length){body.innerHTML='<tr><td colspan="6"><div class="v13as-empty">No opening records match the selected filters.<br>لا توجد سجلات فتح مطابقة للفلاتر.</div></td></tr>';return}body.innerHTML=rows.map(function(r){return '<tr><td>'+esc(fmtDate(r.openedAt))+'</td><td><b>'+esc(deptName(r.deptId))+'</b></td><td>'+esc(cartName(r.cartId))+'</td><td>'+esc(r.reason||'—')+'</td><td>'+esc(r.oldSeal||'—')+'</td><td>'+esc(r.newSeal||'—')+'</td></tr>'}).join('')}
-function printLog(){var rows=visibleReports();if(!rows.length)return window.toast&&toast('No opening records match the selected filters.','err');var dep=(E('v13as-log-dept')||{}).value||'all',month=(E('v13as-log-month')||{}).value||'';var titleDep=dep==='all'?'All Departments / جميع الأقسام':deptName(dep);var html='<!doctype html><html><head><meta charset="utf-8"><title>Crash Cart Opening Log</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}html,body{height:auto!important;max-height:none!important;overflow:visible!important}body{font-family:Arial,sans-serif;margin:0;color:#111}.page{width:100%;height:auto!important;max-height:none!important;overflow:visible!important;transform:none!important}.head{text-align:center;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}.head h1{font-size:18px;margin:0 0 4px}.meta{font-size:10px;color:#444}.summary{display:flex;gap:8px;justify-content:center;margin:7px 0;font-size:10px;page-break-inside:avoid;break-inside:avoid}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px;page-break-inside:auto;break-inside:auto}thead{display:table-header-group}tbody{display:table-row-group}tr{page-break-inside:avoid!important;break-inside:avoid!important}th,td{border:1px solid #444;padding:4px;vertical-align:top;word-break:break-word}th{background:#eee}.foot{margin-top:6px;text-align:center;font-size:8px;color:#555;page-break-inside:avoid;break-inside:avoid}@media print{html,body,.page{height:auto!important;max-height:none!important;overflow:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}}</style></head><body><div class="page" id="p"><div class="head"><h1>Crash Cart Opening Log / سجل فتح عربات الطوارئ</h1><div class="meta">Department: '+esc(titleDep)+' &nbsp; | &nbsp; Month: '+esc(month||'All months / جميع الأشهر')+'</div></div><div class="summary">Total records: '+rows.length+'</div><table><thead><tr><th>Date opened<br>تاريخ الفتح</th><th>Department<br>القسم</th><th>Crash Cart<br>العربة</th><th>Reason<br>السبب</th><th>Opened seal<br>القفل المفتوح</th><th>New seal<br>القفل الجديد</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td>'+esc(fmtDate(r.openedAt))+'</td><td>'+esc(deptName(r.deptId))+'</td><td>'+esc(cartName(r.cartId))+'</td><td>'+esc(r.reason||'—')+'</td><td>'+esc(r.oldSeal||'—')+'</td><td>'+esc(r.newSeal||'—')+'</td></tr>'}).join('')+'</tbody></table><div class="foot">Printed '+esc(fmtDate(new Date().toISOString()))+'</div></div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,200)},{once:true});setTimeout(go,1600)})();<\/script>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>';var w=window.open('','_blank');if(!w)return window.toast&&toast('Allow pop-ups to print the log.','err');w.document.open();w.document.write(html);w.document.close()}
+function printLog(){var rows=visibleReports();if(!rows.length)return window.toast&&toast('No opening records match the selected filters.','err');var dep=(E('v13as-log-dept')||{}).value||'all',month=(E('v13as-log-month')||{}).value||'';var titleDep=dep==='all'?'All Departments / جميع الأقسام':deptName(dep);var html='<!doctype html><html><head><meta charset="utf-8"><title>Crash Cart Opening Log</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}html,body{height:auto!important;max-height:none!important;overflow:visible!important}body{font-family:Arial,sans-serif;margin:0;color:#111}.page{width:100%;height:auto!important;max-height:none!important;overflow:visible!important;transform:none!important}.head{text-align:center;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}.head h1{font-size:18px;margin:0 0 4px}.meta{font-size:10px;color:#444}.summary{display:flex;gap:8px;justify-content:center;margin:7px 0;font-size:10px;page-break-inside:avoid;break-inside:avoid}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px;page-break-inside:auto;break-inside:auto}thead{display:table-header-group}tbody{display:table-row-group}tr{page-break-inside:avoid!important;break-inside:avoid!important}th,td{border:1px solid #444;padding:4px;vertical-align:top;word-break:break-word}th{background:#eee}.foot{margin-top:6px;text-align:center;font-size:8px;color:#555;page-break-inside:avoid;break-inside:avoid}@media print{html,body,.page{height:auto!important;max-height:none!important;overflow:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}}</style></head><body><div class="page" id="p"><div class="head"><h1>Crash Cart Opening Log / سجل فتح عربات الطوارئ</h1><div class="meta">Department: '+esc(titleDep)+' &nbsp; | &nbsp; Month: '+esc(month||'All months / جميع الأشهر')+'</div></div><div class="summary">Total records: '+rows.length+'</div><table><thead><tr><th>Date opened<br>تاريخ الفتح</th><th>Department<br>القسم</th><th>Crash Cart<br>العربة</th><th>Reason<br>السبب</th><th>Opened seal<br>القفل المفتوح</th><th>New seal<br>القفل الجديد</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td>'+esc(fmtDate(r.openedAt))+'</td><td>'+esc(deptName(r.deptId))+'</td><td>'+esc(cartName(r.cartId))+'</td><td>'+esc(r.reason||'—')+'</td><td>'+esc(r.oldSeal||'—')+'</td><td>'+esc(r.newSeal||'—')+'</td></tr>'}).join('')+'</tbody></table><div class="foot">Printed '+esc(fmtDate(new Date().toISOString()))+'</div></div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,200)},{once:true});setTimeout(go,1600)})();<\/script></body></html>';var w=window.open('','_blank');if(!w)return window.toast&&toast('Allow pop-ups to print the log.','err');w.document.open();w.document.write(html);w.document.close()}
 window.refreshCrashOpeningLogUi=ensureUI;
 })();
 </script>
@@ -10741,7 +10669,7 @@ function canEdit(){return typeof canConfigureCrashCart==='function'&&canConfigur
 function actor(){return window.fsActor?window.fsActor():{name:'Unknown',user:'Unknown',id:''}}
 function now(){return typeof nowISO==='function'?nowISO():new Date().toISOString()}
 function rules(){var x={};try{x=(window.S&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){}var u=Math.max(1,num(x.urgentDays||7)),n=Math.max(u+1,num(x.nearDays||30));return {urgentDays:u,nearDays:n}}
-function normalizedMedication(name,concentration){var m=canonicalMedication(name,concentration);return {name:m.generic,concentration:m.concentration}};return {name:n,concentration:c}}
+function normalizedMedication(name,concentration){var m=canonicalMedication(name,concentration);return {name:m.generic,concentration:m.concentration}}
 function id(){return 'cci_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6)}
 function closeEditor(){var m=E('cc-final-editor');if(m)m.remove()}
 function batchHtml(b){b=b||{};return '<div class="ccfe-batch"><input class="ccfe-exp" type="date" value="'+esc(b.expiry||'')+'"><input class="ccfe-bqty" type="number" min="0" step="any" value="'+esc(b.qty==null?'':b.qty)+'" placeholder="Qty"><input class="ccfe-lot" value="'+esc(b.lot||'')+'" placeholder="Lot / Batch"><button class="btn bd2c bxs ccfe-remove-batch" type="button">×</button></div>'}
@@ -10794,16 +10722,7 @@ window.crashPrint=function(id){
   function q(v){var x=Number(v);return isFinite(x)?x:0}
   var rows=(c.items||[]).map(function(it,i){var m=canonicalMedication(it),b=(it.batches||[]).filter(function(x){return x&&x.expiry}).map(function(x){return e(fmtDateFinal(x.expiry))+' → '+e(x.qty==null?'—':x.qty)+(x.lot?' · '+e(x.lot):'')}).join('<br>')||'—';return '<tr><td>'+(i+1)+'</td><td><b>'+e(m.generic)+'</b></td><td>'+e(m.concentration||'—')+'</td><td>'+q(it.qty)+'</td><td>'+q(it.present==null?it.qty:it.present)+'</td><td>'+b+'</td></tr>'}).join('');
   if(!rows)rows='<tr><td colspan="6" style="text-align:center;padding:20px">No Crash Cart medications found.</td></tr>';
-  var dn=deptName(c.deptId),h='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+e(c.name||'Crash Cart')+'</title><style>@page{size:A4 portrait;margin:7mm}*{box-sizing:border-box}html,body{background:#fff!important;color:#111!important;min-height:100%;margin:0}body{font-family:Arial,Tahoma,sans-serif;padding:0}h1,h2{text-align:center;margin:0 0 3mm}h1{font-size:18pt}h2{font-size:11pt;font-weight:normal}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}th,td{border:1px solid #333;padding:2mm;vertical-align:top;overflow-wrap:anywhere}th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group}tr{break-inside:avoid}.toolbar{display:flex;justify-content:center;margin:12px 0}.toolbar button{font:600 14px Arial;padding:9px 18px}@media print{.toolbar{display:none}}</style></head><body><div class="toolbar"><button onclick="window.print()">Print / طباعة</button></div><h1>'+e(c.name||'Crash Cart')+'</h1><h2>'+e(dn)+'</h2><table><thead><tr><th>#</th><th>Generic Name</th><th>Strength</th><th>Required</th><th>Available</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.addEventListener("load",function(){window.focus();setTimeout(function(){window.print()},700)},{once:true});<\/script>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>';
+  var dn=deptName(c.deptId),h='<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+e(c.name||'Crash Cart')+'</title><style>@page{size:A4 portrait;margin:7mm}*{box-sizing:border-box}html,body{background:#fff!important;color:#111!important;min-height:100%;margin:0}body{font-family:Arial,Tahoma,sans-serif;padding:0}h1,h2{text-align:center;margin:0 0 3mm}h1{font-size:18pt}h2{font-size:11pt;font-weight:normal}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9pt}th,td{border:1px solid #333;padding:2mm;vertical-align:top;overflow-wrap:anywhere}th{background:#eee!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group}tr{break-inside:avoid}.toolbar{display:flex;justify-content:center;margin:12px 0}.toolbar button{font:600 14px Arial;padding:9px 18px}@media print{.toolbar{display:none}}</style></head><body><div class="toolbar"><button onclick="window.print()">Print / طباعة</button></div><h1>'+e(c.name||'Crash Cart')+'</h1><h2>'+e(dn)+'</h2><table><thead><tr><th>#</th><th>Generic Name</th><th>Strength</th><th>Required</th><th>Available</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table><script>window.addEventListener("load",function(){window.focus();setTimeout(function(){window.print()},700)},{once:true});<\/script></body></html>';
   try{w.document.open();w.document.write(h);w.document.close()}catch(err){console.error(err);w.close();if(typeof toast==='function')toast('Print preview could not be created.','err');return false}
   try{Promise.resolve(publishPublic([c])).catch(function(err){console.warn('Crash Cart public sync deferred',err)})}catch(err){}
   return true
@@ -11899,16 +11818,7 @@ window.controlledStoragePrint=async function(id,mode){
       'var image=document.getElementById("controlled-expiry-qr");'+
       'if(image&&!image.complete){image.onload=run;image.onerror=run;setTimeout(run,2500)}else{run()}'+
       '})();<\/script>'+
-      '
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>';
+      '</body></html>';
 
     popup.document.open();
     popup.document.write(printHtml);
@@ -11989,16 +11899,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
         '<body style="font-family:Arial,Tahoma,sans-serif;padding:24px">'+
         '<h2>Print preparation failed / تعذر تجهيز الطباعة</h2>'+
         '<p>'+esc(error&&error.message||error)+'</p>'+
-        '
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>'
+        '</body></html>'
       );
       popup.document.close();
     }catch(ignore){}
@@ -12741,16 +12642,7 @@ window.addEventListener('load',function(){
     '<title>Print Orders — Preparing Landscape PDF</title>'+
     '<style>html,body{margin:0;width:100%;height:100%;background:#fff;font-family:Arial,Tahoma,sans-serif}#status{display:flex;align-items:center;justify-content:center;min-height:100%;padding:24px;color:#111;text-align:center}</style>'+
     '</head><body><canvas id="page-canvas" hidden></canvas><div id="status">Preparing the final A4 landscape PDF…</div>'+
-    '<script>'+runtime+'<\/script>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>';
+    '<script>'+runtime+'<\/script></body></html>';
 }
 window.doPrint=function(){
   if(typeof window.canManageRequests==='function'&&typeof window.isPharmacyDirector==='function'&&!(window.canManageRequests()||window.isPharmacyDirector()))return fsR5Toast('No print permission / لا توجد صلاحية للطباعة','err');
@@ -13537,16 +13429,7 @@ window.addEventListener('load',start,{once:true});
     '<title>'+fsR5Esc(name)+' — My controlled list</title>'+
     '<style>'+css+'</style></head><body>'+
     '<main class="sheet">'+layoutHtml('landscape')+layoutHtml('portrait')+'</main>'+
-    '<script>'+runtime+'<\/script>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>';
+    '<script>'+runtime+'<\/script></body></html>';
 }
 window.printDepartmentCustodyExact=async function(dept,options){
   options=options||{};
@@ -13554,31 +13437,13 @@ window.printDepartmentCustodyExact=async function(dept,options){
   var popup=options.printWindow||window.open('about:blank','_blank');
   if(!popup){fsR5Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');return false;}
   popup.document.open();
-  popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">Preparing My controlled list… / جاري تجهيز عهدتي…
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>');
+  popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">Preparing My controlled list… / جاري تجهيز عهدتي…</body></html>');
   popup.document.close();
   try{
     var result=await fsLoginTimeout(fsR5ControlledRows(dept),18000,'Controlled custody print data timed out.');
     if(!result.rows||!result.rows.length){
       popup.document.open();
-      popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px"><h2>No controlled medicines were found for this department.</h2><h2>لم يتم العثور على أدوية مخدرة أو مقيدة لهذا القسم.</h2><p>Checked department identifiers: '+fsR5Esc((result.candidates||[dept]).join(', '))+'</p>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>');
+      popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px"><h2>No controlled medicines were found for this department.</h2><h2>لم يتم العثور على أدوية مخدرة أو مقيدة لهذا القسم.</h2><p>Checked department identifiers: '+fsR5Esc((result.candidates||[dept]).join(', '))+'</p></body></html>');
       popup.document.close();
       fsR5Toast('My controlled list is empty / قائمة عهدتي فارغة','err');
       return false;
@@ -13595,16 +13460,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
   }catch(error){
     console.error('Controlled list print failed',error);
     popup.document.open();
-    popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px"><h2>Unable to prepare My controlled list</h2><h2>تعذر تجهيز عهدتي</h2><pre style="white-space:pre-wrap">'+fsR5Esc(error&&error.message||error)+'</pre>
-<script id="r646-crash-cart-authoritative-boot">
-(function(){
-'use strict';
-var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
-})();
-</script>
-</body></html>');
+    popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px"><h2>Unable to prepare My controlled list</h2><h2>تعذر تجهيز عهدتي</h2><pre style="white-space:pre-wrap">'+fsR5Esc(error&&error.message||error)+'</pre></body></html>');
     popup.document.close();
     fsR5Toast('Unable to prepare My controlled list / تعذر تجهيز عهدتي','err');
     return false;
@@ -14531,12 +14387,26 @@ window.addEventListener('load',function(){decorate()});
 #cc-final-editor .ccfe-item-name{font-weight:700!important}
 </style>
 
-<script id="r646-crash-cart-authoritative-boot">
+
+
+<script id="r647-crash-cart-authoritative-boot">
 (function(){
 'use strict';
 var attempts=0,done=false;
-async function run(){if(done)return;attempts++;try{if(typeof window.fsReconcileCrashCartData==='function'&&typeof crashCarts==='function'&&(crashCarts()||[]).length){done=true;await window.fsReconcileCrashCartData();return}}catch(e){console.error('Crash Cart reconciliation failed',e)}if(attempts<12)setTimeout(run,500)}
-if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});else setTimeout(run,300);
+async function run(){
+  if(done)return;
+  attempts++;
+  try{
+    if(typeof window.fsReconcileCrashCartData==='function'&&typeof window.crashCarts==='function'&&(window.crashCarts()||[]).length){
+      done=true;
+      await window.fsReconcileCrashCartData();
+      return;
+    }
+  }catch(error){console.error('Crash Cart reconciliation failed',error)}
+  if(attempts<12)setTimeout(run,500);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(run,300)},{once:true});
+else setTimeout(run,300);
 })();
 </script>
 </body>
