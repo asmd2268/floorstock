@@ -14691,6 +14691,118 @@ window.setMeds=setMeds=async function(deptId,next){
 })();
 </script>
 
+<script id="r656-inventory-exact-department-restore">
+(function(){
+'use strict';
+var running=false;
+var previousRepair=window.repairLatestInventoryMergeCollateral;
+function copy(v){return JSON.parse(JSON.stringify(v==null?null:v))}
+function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
+function allowed(){var r=String((window.CU&&CU.role)||'');return !!(window.CU&&(CU.master===true||r==='master'||r==='pharmacy'||r==='inpatient_supervisor'))}
+function request(x){return new Promise(function(resolve,reject){x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error||new Error('IndexedDB request failed'))}})}
+async function backups(){
+  if(!window.indexedDB)return [];
+  var db=await new Promise(function(resolve,reject){var x=indexedDB.open('ASDHealthLocalBackups',1);x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error)}});
+  try{var tx=db.transaction('daily','readonly');return (await request(tx.objectStore('daily').getAll())||[]).sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))})}
+  finally{db.close()}
+}
+function state(rec){
+  var out={},docs=rec&&rec.payload&&rec.payload.collections&&rec.payload.collections.floorstock_state||[];
+  docs.forEach(function(d){out[d.id]=d&&d.data&&Object.prototype.hasOwnProperty.call(d.data,'value')?d.data.value:d.data});
+  return out
+}
+function mergeExactDuplicates(rows){
+  var out=[],byName={},idMap={},removed=0;
+  (rows||[]).forEach(function(original){
+    var m=copy(original),k=norm(m.name);
+    if(!k){out.push(m);return}
+    if(!byName[k]){byName[k]=m;out.push(m);return}
+    var keep=byName[k],dropId=String(m.id||m.medId||''),keepId=String(keep.id||keep.medId||'');
+    if(dropId)idMap[dropId]=keepId;
+    ['min','max','monthly'].forEach(function(field){var a=Number(keep[field]),b=Number(m[field]);if(isFinite(b)&&(!isFinite(a)||b>a))keep[field]=b});
+    ['high_alert','hazard','lasa','refrigerated'].forEach(function(field){keep[field]=!!(keep[field]||m[field])});
+    if(!keep.category&&m.category)keep.category=m.category;
+    removed++
+  });
+  return {rows:out,idMap:idMap,removed:removed}
+}
+function repairExpiry(rows,idMap,meds){
+  var medName={};(meds||[]).forEach(function(m){medName[String(m.id||m.medId||'')]=m.name});
+  var seen={};
+  return (rows||[]).map(function(original){
+    var e=copy(original),old=String(e.medId||e.medicationId||''),next=idMap[old]||old;
+    if(next!==old){e.medId=next;if(e.medicationId)e.medicationId=next}
+    if(medName[next])e.medName=medName[next];
+    return e
+  }).filter(function(e){
+    var key=[String(e.medId||e.medicationId||''),String(e.date||e.expiry||e.expiryDate||''),String(e.batch||e.lot||e.batchNo||''),String(e.qty||e.quantity||'')].join('|');
+    if(seen[key])return false;seen[key]=1;return true
+  })
+}
+async function exactRestore(){
+  if(running||!allowed()||!window.S||!S.ready||typeof getMeds!=='function'||typeof setMeds!=='function')return {status:'unavailable'};
+  if(S.g('inventory_r656_authoritative_done'))return {status:'already-restored'};
+  var history=copy(S.g('manual_medicine_merge_history_v1')||[]).filter(function(h){return h&&Array.isArray(h.names)&&h.names.length>1});
+  if(!history.length)return {status:'no-merge-history'};
+  var firstMerge=Math.min.apply(null,history.map(function(h){var t=Date.parse(h.createdAt||'');return isFinite(t)?t:Date.now()}));
+  var all=await backups(),source=all.find(function(b){return Date.parse(b.createdAt)<firstMerge});
+  if(!source)return {status:'no-pre-merge-backup'};
+  var snapshot=state(source),depts=typeof gd==='function'?(gd()||[]):[],safety={id:'r656_'+Date.now().toString(36),at:new Date().toISOString(),sourceBackupAt:source.createdAt,departments:{},expiry:{}},changed=0,removedDuplicates=0;
+  running=true;
+  try{
+    for(var di=0;di<depts.length;di++){
+      var deptId=String(depts[di].id),before=copy(snapshot['meds_'+deptId]||[]);
+      if(!before.length)continue;
+      var affected=history.some(function(h){
+        var selected=new Set(h.names.map(norm)),found={};
+        before.forEach(function(m){if(selected.has(norm(m.name)))found[norm(m.name)]=1});
+        return Object.keys(found).length>1
+      });
+      if(!affected)continue;
+      safety.departments[deptId]=copy(getMeds(deptId)||[]);
+      safety.expiry[deptId]=typeof getExpiry==='function'?copy(getExpiry(deptId)||[]):[];
+      var clean=mergeExactDuplicates(before),expiry=repairExpiry(copy(snapshot['expiry_'+deptId]||[]),clean.idMap,clean.rows);
+      await setMeds(deptId,clean.rows);
+      if(typeof setExpiry==='function')await setExpiry(deptId,expiry);
+      removedDuplicates+=clean.removed;changed++
+    }
+    /* Clean exact duplicate records left by R6.55 in any other department. */
+    for(var ci=0;ci<depts.length;ci++){
+      var cleanDept=String(depts[ci].id);
+      if(safety.departments[cleanDept])continue;
+      var current=copy(getMeds(cleanDept)||[]),dedup=mergeExactDuplicates(current);
+      if(!dedup.removed)continue;
+      safety.departments[cleanDept]=current;
+      var currentExpiry=typeof getExpiry==='function'?copy(getExpiry(cleanDept)||[]):[];
+      safety.expiry[cleanDept]=currentExpiry;
+      await setMeds(cleanDept,dedup.rows);
+      if(typeof setExpiry==='function')await setExpiry(cleanDept,repairExpiry(currentExpiry,dedup.idMap,dedup.rows));
+      removedDuplicates+=dedup.removed;changed++
+    }
+    if(!changed)return {status:'no-affected-departments'};
+    var saved=copy(S.g('inventory_r656_restore_backups_v1')||[]);saved.unshift(safety);await S.s('inventory_r656_restore_backups_v1',saved.slice(0,5));
+    await S.s('inventory_r656_authoritative_done',{at:new Date().toISOString(),sourceBackupAt:source.createdAt,departments:changed,duplicatesRemoved:removedDuplicates,backupId:safety.id});
+    history.forEach(function(h){h.r656RestoredAt=new Date().toISOString();h.r656SourceBackupAt=source.createdAt});
+    await S.s('manual_medicine_merge_history_v1',history);
+    if(typeof auditAction==='function')auditAction('inventory_exact_department_restore',{sourceBackupAt:source.createdAt,departments:changed,duplicatesRemoved:removedDuplicates,backupId:safety.id});
+    if(typeof renderInv==='function')renderInv();
+    return {status:'restored',departments:changed,duplicatesRemoved:removedDuplicates,sourceBackupAt:source.createdAt}
+  }finally{running=false}
+}
+window.repairLatestInventoryMergeCollateral=async function(){
+  var result;
+  try{result=await exactRestore()}catch(error){console.error('R6.56 exact inventory restore failed',error);result={status:'failed',error:String(error&&error.message||error)}}
+  if(result.status==='no-merge-history'&&typeof previousRepair==='function')return previousRepair();
+  if(result.status==='restored'){
+    if(typeof toast==='function')toast('Inventory restored exactly; '+result.duplicatesRemoved+' duplicate record(s) removed ✓','succ')
+  }else if(result.status==='no-pre-merge-backup'){
+    if(typeof toast==='function')toast('No local backup exists from before the name merge. Restore a database backup made before the merge.','err')
+  }else if(result.status==='failed'&&typeof toast==='function')toast('Exact inventory restoration failed: '+result.error,'err');
+  return result
+};
+})();
+</script>
+
 <script id="r647-crash-cart-authoritative-boot">
 (function(){
 'use strict';
