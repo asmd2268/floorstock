@@ -1,4 +1,5 @@
 7bd33f6a71b74068f627930a6e17c51535f22766af26216d1d1bb28d38a99aac  ./.firebaserc
+587368ce0bae0bae83a68b626ac30d89234d160c78b2458040a106d91f9d1c60  ./.github/workflows/firestore-rules-tests.yml
 0f81a68366fdbcd1a9b59e9ca889703bbe745600184ede5ae4b55271f1665dc4  ./.gitignore
 b29eb691085eb41ab744ab1a2c3447137308b1a363fd5fea640e959eb53be955  ./MIGRATION_DELETE_LIST.txt
 9d5b029edc733d4883ab613b7ceeaa0100b39aa47ab62dbcfddad62deab7db99  ./README_AR.md
