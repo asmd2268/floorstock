@@ -35,8 +35,14 @@ function initFirebase(){
 if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   try{
     FB_APPCHECK=firebase.appCheck();
+
+    FB_APPCHECK.activate(
+      '6LfYImotAAAAACo50nBNoL7EIb14ipF9NQYzrJfr',
+      true
+    );
+
     window.FB_APPCHECK=FB_APPCHECK;
-    console.info('Firebase App Check SDK available (not activated).');
+    console.info('Firebase App Check activated.');
   }catch(appCheckError){
     console.warn('Firebase App Check unavailable:',appCheckError);
   }
