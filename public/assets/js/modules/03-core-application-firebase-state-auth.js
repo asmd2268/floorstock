@@ -3,7 +3,11 @@ import { publishLegacy } from '../core/legacy-registry.js';
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
 globalThis.FIREBASE_CONFIG = {apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
-FB_APP=window.FB_APP||null;FB_AUTH=window.FB_AUTH||null;FB_DB=window.FB_DB||null;FB_FUNCTIONS=window.FB_FUNCTIONS||null;FB_APPCHECK=window.FB_APPCHECK||null;
+var FB_APP=window.FB_APP||null;
+var FB_AUTH=window.FB_AUTH||null;
+var FB_DB=window.FB_DB||null;
+var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
+var FB_APPCHECK=window.FB_APPCHECK||null;
 // Global Firebase handles for injected modules and Safari/WebKit compatibility
 window.FB_APP=null;
 window.FB_AUTH=null;
