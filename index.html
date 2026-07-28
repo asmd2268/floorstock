@@ -14600,6 +14600,97 @@ window.repairLatestInventoryMergeCollateral=async function(){
 })();
 </script>
 
+<script id="r655-inventory-local-backup-recovery">
+(function(){
+'use strict';
+var previousRepair=window.repairLatestInventoryMergeCollateral;
+function copy(v){return JSON.parse(JSON.stringify(v==null?null:v))}
+function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
+function allowed(){var r=String((window.CU&&CU.role)||'');return !!(window.CU&&(CU.master===true||r==='master'||r==='pharmacy'||r==='inpatient_supervisor'))}
+function req(x){return new Promise(function(resolve,reject){x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error||new Error('Local backup read failed'))}})}
+async function localBackups(){
+  if(!window.indexedDB)return [];
+  var db=await new Promise(function(resolve,reject){var x=indexedDB.open('ASDHealthLocalBackups',1);x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error)}});
+  try{var tx=db.transaction('daily','readonly');return (await req(tx.objectStore('daily').getAll())||[]).sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))})}
+  finally{db.close()}
+}
+function stateFromBackup(rec){
+  var docs=rec&&rec.payload&&rec.payload.collections&&rec.payload.collections.floorstock_state||[],out={};
+  docs.forEach(function(d){out[d.id]=d&&d.data&&Object.prototype.hasOwnProperty.call(d.data,'value')?d.data.value:d.data});
+  return out
+}
+async function recoverManualMergesFromLocalBackup(){
+  if(!allowed()||!window.S||!S.ready||typeof getMeds!=='function'||typeof setMeds!=='function')return {status:'unavailable'};
+  var histories=copy(S.g('manual_medicine_merge_history_v1')||[]).filter(function(h){return h&&!h.r655RecoveredAt&&Array.isArray(h.names)&&h.names.length>1});
+  if(!histories.length)return {status:'no-manual-merge-history'};
+  var backups=await localBackups();
+  if(!backups.length)return {status:'no-local-backup'};
+  var changed=0,records=0,restoreBackup={id:'r655_restore_'+Date.now().toString(36),at:new Date().toISOString(),departments:{},expiry:{}};
+  for(var hi=histories.length-1;hi>=0;hi--){
+    var h=histories[hi],historyChangedBefore=changed,mergeTime=Date.parse(h.createdAt||''),source=backups.find(function(b){return !mergeTime||Date.parse(b.createdAt)<mergeTime});
+    if(!source)continue;
+    var snapshot=stateFromBackup(source),selected=new Set(h.names.map(norm)),canonical=norm(h.canonical);
+    var depts=typeof gd==='function'?(gd()||[]):[];
+    for(var di=0;di<depts.length;di++){
+      var deptId=depts[di].id,before=copy(snapshot['meds_'+deptId]||[]);
+      var originals=before.filter(function(m){return selected.has(norm(m&&m.name))});
+      if(!originals.length)continue;
+      var current=copy(getMeds(deptId)||[]),targetIds=new Set(originals.map(function(m){return String(m.id||m.medId||'')}));
+      var touches=current.some(function(m){return targetIds.has(String(m.id||m.medId||''))&&norm(m.name)===canonical});
+      if(!touches)continue;
+      if(!restoreBackup.departments[deptId])restoreBackup.departments[deptId]=current;
+      var next=current.filter(function(m){return !targetIds.has(String(m.id||m.medId||''))}).concat(originals);
+      await setMeds(deptId,next);
+      if(typeof getExpiry==='function'&&typeof setExpiry==='function'){
+        var expCurrent=copy(getExpiry(deptId)||[]),expBefore=copy(snapshot['expiry_'+deptId]||[]);
+        if(!restoreBackup.expiry[deptId])restoreBackup.expiry[deptId]=expCurrent;
+        var restoredExpiry=expBefore.filter(function(e){return targetIds.has(String(e.medId||e.medicationId||''))}),restoredExpiryIds=new Set(restoredExpiry.map(function(e){return String(e.id||'')}));
+        var expNext=expCurrent.filter(function(e){return !targetIds.has(String(e.medId||e.medicationId||''))&&!restoredExpiryIds.has(String(e.id||''))}).concat(restoredExpiry);
+        await setExpiry(deptId,expNext)
+      }
+      changed++;records+=originals.length
+    }
+    if(changed>historyChangedBefore){h.r655RecoveredAt=new Date().toISOString();h.r655SourceBackupAt=source.createdAt}
+  }
+  if(!changed)return {status:'no-matching-pre-merge-snapshot'};
+  var safety=copy(S.g('inventory_local_recovery_backups_v1')||[]);safety.unshift(restoreBackup);await S.s('inventory_local_recovery_backups_v1',safety.slice(0,10));
+  await S.s('manual_medicine_merge_history_v1',histories.concat((S.g('manual_medicine_merge_history_v1')||[]).filter(function(x){return !histories.some(function(h){return h.id===x.id})})));
+  if(typeof renderInv==='function')renderInv();
+  if(typeof auditAction==='function')auditAction('inventory_names_recovered_from_local_backup',{departments:changed,records:records,backupId:restoreBackup.id});
+  return {status:'restored-from-local-backup',departments:changed,records:records}
+}
+window.repairLatestInventoryMergeCollateral=async function(){
+  var first=typeof previousRepair==='function'?await previousRepair():{status:'nothing-to-repair'};
+  if(first&&first.status==='restored')return first;
+  var second;
+  try{second=await recoverManualMergesFromLocalBackup()}catch(error){console.error('Local inventory recovery failed',error);second={status:'failed',error:String(error&&error.message||error)}}
+  if(second.status==='restored-from-local-backup'){
+    if(typeof toast==='function')toast('Original inventory names recovered from the Master local backup ✓','succ')
+  }else if(['no-local-backup','no-matching-pre-merge-snapshot'].indexOf(second.status)>=0){
+    if(typeof toast==='function')toast('The name merge has no recoverable pre-change snapshot on this device. Use a database backup from before the merge.','err')
+  }
+  return second.status==='no-manual-merge-history'?first:second
+};
+
+/* Every destructive inventory write now saves an exact pre-change snapshot. */
+var rawSetMeds=window.setMeds||setMeds,snapshotBusy=false;
+window.setMeds=setMeds=async function(deptId,next){
+  var before=typeof getMeds==='function'?copy(getMeds(deptId)||[]):[],after=Array.isArray(next)?next:[];
+  var beforeById={};before.forEach(function(m){beforeById[String(m.id||m.medId||'')]=m});
+  var destructive=after.length<before.length||after.some(function(m){var old=beforeById[String(m.id||m.medId||'')];return old&&norm(old.name)!==norm(m.name)});
+  if(destructive&&!snapshotBusy&&window.S&&S.ready){
+    snapshotBusy=true;
+    try{
+      var list=copy(S.g('inventory_mutation_snapshots_v2')||[]);
+      list.unshift({id:'ims_'+Date.now().toString(36),at:new Date().toISOString(),deptId:String(deptId),actor:(window.CU&&(CU.username||CU.email))||'',meds:before,expiry:typeof getExpiry==='function'?copy(getExpiry(deptId)||[]):[]});
+      await S.s('inventory_mutation_snapshots_v2',list.slice(0,50))
+    }finally{snapshotBusy=false}
+  }
+  return rawSetMeds(deptId,next)
+};
+})();
+</script>
+
 <script id="r647-crash-cart-authoritative-boot">
 (function(){
 'use strict';
