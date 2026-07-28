@@ -1,0 +1,16 @@
+Delete these obsolete root files after confirming the R6.65 branch works:
+
+- pharmacy-orders.html
+- Narcotic for floor stocks.xlsx
+- narcotic-master-stock.xlsx
+- narcotic.xlsx
+- old deployment/readme files that no longer match R6.65
+
+Keep:
+- functions/
+- public/
+- index.html (dual-deployment entry point)
+- firebase.json
+- firestore.rules
+- firestore.indexes.json
+- .firebaserc

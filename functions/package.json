@@ -2,7 +2,9 @@
   "name": "floorstock-functions",
   "private": true,
   "main": "index.js",
-  "engines": {"node": "20"},
+  "engines": {
+    "node": "20"
+  },
   "scripts": {
     "lint": "node --check index.js",
     "deploy": "firebase deploy --only functions"

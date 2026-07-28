@@ -1,0 +1,711 @@
+{
+  "build": "R6.65 ES Modules Protected",
+  "source": "ASDHealth_FloorStock_R6_64_SECURITY_COMPLETE_MASTER_SEAL_20260728.html",
+  "architecture": "Native ES modules with ordered imports, explicit provider exports, a constrained legacy registry, and external DOM event bindings.",
+  "cssBundles": [
+    {
+      "file": "assets/css/modules/01-styles-01-06.css",
+      "styles": [
+        {
+          "index": 1,
+          "id": ""
+        },
+        {
+          "index": 2,
+          "id": ""
+        },
+        {
+          "index": 3,
+          "id": "ctl-pdf-receipt-style"
+        },
+        {
+          "index": 4,
+          "id": "expiry-top-filter-style"
+        },
+        {
+          "index": 5,
+          "id": "horizontal-classification-colors-v12"
+        },
+        {
+          "index": 6,
+          "id": "v16-clean-optimized-style"
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/02-styles-07-12.css",
+      "styles": [
+        {
+          "index": 7,
+          "id": "request-grid-department-options-r610"
+        },
+        {
+          "index": 8,
+          "id": "controlled-department-batch-expiry-r612"
+        },
+        {
+          "index": 9,
+          "id": "request-grid-orphan-cleanup-r614"
+        },
+        {
+          "index": 10,
+          "id": "r617-integrated-operations-style"
+        },
+        {
+          "index": 11,
+          "id": "r618-clean-operations-style"
+        },
+        {
+          "index": 12,
+          "id": "r629-print-policy"
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/03-styles-13-18.css",
+      "styles": [
+        {
+          "index": 13,
+          "id": "r634-crash-accountability-redesign"
+        },
+        {
+          "index": 14,
+          "id": "v13-final-ui-repair-style"
+        },
+        {
+          "index": 15,
+          "id": "v13-complete-clean-fix-style"
+        },
+        {
+          "index": 16,
+          "id": ""
+        },
+        {
+          "index": 17,
+          "id": ""
+        },
+        {
+          "index": 18,
+          "id": ""
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/04-styles-19-24.css",
+      "styles": [
+        {
+          "index": 19,
+          "id": "print-attribution-style"
+        },
+        {
+          "index": 20,
+          "id": ""
+        },
+        {
+          "index": 21,
+          "id": ""
+        },
+        {
+          "index": 22,
+          "id": ""
+        },
+        {
+          "index": 23,
+          "id": ""
+        },
+        {
+          "index": 24,
+          "id": ""
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/05-styles-25-30.css",
+      "styles": [
+        {
+          "index": 25,
+          "id": ""
+        },
+        {
+          "index": 26,
+          "id": "system-health-style"
+        },
+        {
+          "index": 27,
+          "id": ""
+        },
+        {
+          "index": 28,
+          "id": "wh-bulk-rx-dx-style"
+        },
+        {
+          "index": 29,
+          "id": ""
+        },
+        {
+          "index": 30,
+          "id": "inventory-name-merge-style"
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/06-styles-31-36.css",
+      "styles": [
+        {
+          "index": 31,
+          "id": "pharmacy-announcements-style"
+        },
+        {
+          "index": 32,
+          "id": "announcements-selection-persist-fix-style"
+        },
+        {
+          "index": 33,
+          "id": "v13-final-controlled-print-style"
+        },
+        {
+          "index": 34,
+          "id": "v13-post-i-consolidated-style"
+        },
+        {
+          "index": 35,
+          "id": "v13-w-supervisor-inventory-style"
+        },
+        {
+          "index": 36,
+          "id": "v13-x-controlled-request-fix-style"
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/07-styles-37-42.css",
+      "styles": [
+        {
+          "index": 37,
+          "id": "al-clean-authoritative-style"
+        },
+        {
+          "index": 38,
+          "id": "v13-ap-controlled-bulk-replacement-style"
+        },
+        {
+          "index": 39,
+          "id": "v13-as-crash-opening-log-style"
+        },
+        {
+          "index": 40,
+          "id": "v14nrse-style"
+        },
+        {
+          "index": 41,
+          "id": "v14dp-style"
+        },
+        {
+          "index": 42,
+          "id": "v16-fixes-style"
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/08-styles-43-48.css",
+      "styles": [
+        {
+          "index": 43,
+          "id": "v16-user-operations-style"
+        },
+        {
+          "index": 44,
+          "id": "final-role-routing-system-health-style"
+        },
+        {
+          "index": 45,
+          "id": "v16-inventory-status-merge-clean-style"
+        },
+        {
+          "index": 46,
+          "id": "weekly-request-grid-clean-style"
+        },
+        {
+          "index": 47,
+          "id": "similar-medicines-workbench-v2-style"
+        },
+        {
+          "index": 48,
+          "id": "ccx-inventory-redesign-style"
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/09-styles-49-54.css",
+      "styles": [
+        {
+          "index": 49,
+          "id": "asdh-final-department-controlled-fix-style"
+        },
+        {
+          "index": 50,
+          "id": "asdh-authoritative-final-fixes-style"
+        },
+        {
+          "index": 51,
+          "id": "asdh-final-request-completion-style"
+        },
+        {
+          "index": 52,
+          "id": "asdh-audit-authoritative-new-request-style"
+        },
+        {
+          "index": 53,
+          "id": "r635-master-destructive-actions"
+        },
+        {
+          "index": 54,
+          "id": "r639-crash-cart-editor-fix-style"
+        }
+      ]
+    },
+    {
+      "file": "assets/css/modules/10-styles-55-59.css",
+      "styles": [
+        {
+          "index": 55,
+          "id": "r640-crash-cart-canonical-editor-style"
+        },
+        {
+          "index": 56,
+          "id": "r641-crash-cart-authoritative-catalog-style"
+        },
+        {
+          "index": 57,
+          "id": "r661-inventory-safety-style"
+        },
+        {
+          "index": 58,
+          "id": "r662-accountability-draft-style"
+        },
+        {
+          "index": 59,
+          "id": "r664-security-complete-style"
+        }
+      ]
+    }
+  ],
+  "javascriptModules": [
+    {
+      "documentIndex": 4,
+      "inlineOrder": 1,
+      "id": "firebase-global-bootstrap",
+      "file": "assets/js/modules/01-firebase-global-bootstrap.js",
+      "bytes": 224
+    },
+    {
+      "documentIndex": 5,
+      "inlineOrder": 2,
+      "id": "r664-early-production-console-policy",
+      "file": "assets/js/modules/02-r664-early-production-console-policy.js",
+      "bytes": 607
+    },
+    {
+      "documentIndex": 6,
+      "inlineOrder": 3,
+      "id": "",
+      "file": "assets/js/modules/03-core-application-firebase-state-auth.js",
+      "bytes": 110689
+    },
+    {
+      "documentIndex": 7,
+      "inlineOrder": 4,
+      "id": "v13-complete-clean-fix-script",
+      "file": "assets/js/modules/04-v13-complete-clean-fix-script.js",
+      "bytes": 1441
+    },
+    {
+      "documentIndex": 8,
+      "inlineOrder": 5,
+      "id": "",
+      "file": "assets/js/modules/05-controlled-ui-compatibility-fixes.js",
+      "bytes": 8678
+    },
+    {
+      "documentIndex": 9,
+      "inlineOrder": 6,
+      "id": "",
+      "file": "assets/js/modules/06-zebra-label-printing.js",
+      "bytes": 14757
+    },
+    {
+      "documentIndex": 10,
+      "inlineOrder": 7,
+      "id": "",
+      "file": "assets/js/modules/07-expiry-requests-and-primary-features.js",
+      "bytes": 144271
+    },
+    {
+      "documentIndex": 11,
+      "inlineOrder": 8,
+      "id": "",
+      "file": "assets/js/modules/08-controlled-shared-list-filters.js",
+      "bytes": 181
+    },
+    {
+      "documentIndex": 12,
+      "inlineOrder": 9,
+      "id": "",
+      "file": "assets/js/modules/09-warehouse-batch-editor.js",
+      "bytes": 3722
+    },
+    {
+      "documentIndex": 13,
+      "inlineOrder": 10,
+      "id": "",
+      "file": "assets/js/modules/10-warehouse-receiving-workflow.js",
+      "bytes": 4945
+    },
+    {
+      "documentIndex": 14,
+      "inlineOrder": 11,
+      "id": "",
+      "file": "assets/js/modules/11-master-backup-restore-access.js",
+      "bytes": 6241
+    },
+    {
+      "documentIndex": 15,
+      "inlineOrder": 12,
+      "id": "",
+      "file": "assets/js/modules/12-local-daily-backups-system-health.js",
+      "bytes": 7689
+    },
+    {
+      "documentIndex": 16,
+      "inlineOrder": 13,
+      "id": "",
+      "file": "assets/js/modules/13-pilot-controlled-public-expiry-fixes.js",
+      "bytes": 1916
+    },
+    {
+      "documentIndex": 17,
+      "inlineOrder": 14,
+      "id": "",
+      "file": "assets/js/modules/14-controlled-print-layout-and-tools.js",
+      "bytes": 27165
+    },
+    {
+      "documentIndex": 18,
+      "inlineOrder": 15,
+      "id": "",
+      "file": "assets/js/modules/15-controlled-print-pages.js",
+      "bytes": 4197
+    },
+    {
+      "documentIndex": 19,
+      "inlineOrder": 16,
+      "id": "",
+      "file": "assets/js/modules/16-expiry-dashboard-extension.js",
+      "bytes": 8142
+    },
+    {
+      "documentIndex": 20,
+      "inlineOrder": 17,
+      "id": "system-health-script",
+      "file": "assets/js/modules/17-system-health-script.js",
+      "bytes": 2598
+    },
+    {
+      "documentIndex": 21,
+      "inlineOrder": 18,
+      "id": "wh-bulk-rx-dx-script",
+      "file": "assets/js/modules/18-wh-bulk-rx-dx-script.js",
+      "bytes": 7163
+    },
+    {
+      "documentIndex": 22,
+      "inlineOrder": 19,
+      "id": "",
+      "file": "assets/js/modules/19-test-data-cleanup-guard.js",
+      "bytes": 4276
+    },
+    {
+      "documentIndex": 23,
+      "inlineOrder": 20,
+      "id": "psychotropic-shared-list-v12",
+      "file": "assets/js/modules/20-psychotropic-shared-list-v12.js",
+      "bytes": 9395
+    },
+    {
+      "documentIndex": 24,
+      "inlineOrder": 21,
+      "id": "r664-psychotropic-pharmacy-stock-import-20260728",
+      "file": "assets/js/modules/21-r664-psychotropic-pharmacy-stock-import-20260728.js",
+      "bytes": 17846
+    },
+    {
+      "documentIndex": 25,
+      "inlineOrder": 22,
+      "id": "pharmacy-narcotic-stock-and-independent-list-mode-v12",
+      "file": "assets/js/modules/22-pharmacy-narcotic-stock-and-independent-list-mode-v12.js",
+      "bytes": 2699
+    },
+    {
+      "documentIndex": 26,
+      "inlineOrder": 23,
+      "id": "category-management-final-v12",
+      "file": "assets/js/modules/23-category-management-final-v12.js",
+      "bytes": 7970
+    },
+    {
+      "documentIndex": 27,
+      "inlineOrder": 24,
+      "id": "inventory-name-merge-feature",
+      "file": "assets/js/modules/24-inventory-name-merge-feature.js",
+      "bytes": 1617
+    },
+    {
+      "documentIndex": 28,
+      "inlineOrder": 25,
+      "id": "pharmacy-announcements-feature",
+      "file": "assets/js/modules/25-pharmacy-announcements-feature.js",
+      "bytes": 10298
+    },
+    {
+      "documentIndex": 29,
+      "inlineOrder": 26,
+      "id": "",
+      "file": "assets/js/modules/26-department-rename-repair.js",
+      "bytes": 2103
+    },
+    {
+      "documentIndex": 30,
+      "inlineOrder": 27,
+      "id": "announcements-selection-persist-fix",
+      "file": "assets/js/modules/27-announcements-selection-persist-fix.js",
+      "bytes": 3027
+    },
+    {
+      "documentIndex": 31,
+      "inlineOrder": 28,
+      "id": "v13-final-controlled-bulk-print-fix",
+      "file": "assets/js/modules/28-v13-final-controlled-bulk-print-fix.js",
+      "bytes": 10967
+    },
+    {
+      "documentIndex": 32,
+      "inlineOrder": 29,
+      "id": "v13-classification-tools",
+      "file": "assets/js/modules/29-v13-classification-tools.js",
+      "bytes": 4175
+    },
+    {
+      "documentIndex": 33,
+      "inlineOrder": 30,
+      "id": "v13-w-supervisor-inventory-main",
+      "file": "assets/js/modules/30-v13-w-supervisor-inventory-main.js",
+      "bytes": 10883
+    },
+    {
+      "documentIndex": 34,
+      "inlineOrder": 31,
+      "id": "v13-x-controlled-request-fix",
+      "file": "assets/js/modules/31-v13-x-controlled-request-fix.js",
+      "bytes": 11191
+    },
+    {
+      "documentIndex": 35,
+      "inlineOrder": 32,
+      "id": "aa-final-controlled-stability-script",
+      "file": "assets/js/modules/32-aa-final-controlled-stability-script.js",
+      "bytes": 3137
+    },
+    {
+      "documentIndex": 36,
+      "inlineOrder": 33,
+      "id": "v13-ap-custodian-bulk-replacement-fix",
+      "file": "assets/js/modules/33-v13-ap-custodian-bulk-replacement-fix.js",
+      "bytes": 1041
+    },
+    {
+      "documentIndex": 37,
+      "inlineOrder": 34,
+      "id": "v13-as-crash-opening-log",
+      "file": "assets/js/modules/34-v13-as-crash-opening-log.js",
+      "bytes": 8912
+    },
+    {
+      "documentIndex": 38,
+      "inlineOrder": 35,
+      "id": "v14nrse-main",
+      "file": "assets/js/modules/35-v14nrse-main.js",
+      "bytes": 15984
+    },
+    {
+      "documentIndex": 39,
+      "inlineOrder": 36,
+      "id": "v14dp-main",
+      "file": "assets/js/modules/36-v14dp-main.js",
+      "bytes": 5324
+    },
+    {
+      "documentIndex": 40,
+      "inlineOrder": 37,
+      "id": "v16-radical-fixes",
+      "file": "assets/js/modules/37-v16-radical-fixes.js",
+      "bytes": 8437
+    },
+    {
+      "documentIndex": 41,
+      "inlineOrder": 38,
+      "id": "v16-user-operations-main",
+      "file": "assets/js/modules/38-v16-user-operations-main.js",
+      "bytes": 23317
+    },
+    {
+      "documentIndex": 42,
+      "inlineOrder": 39,
+      "id": "final-role-routing-system-health",
+      "file": "assets/js/modules/39-final-role-routing-system-health.js",
+      "bytes": 4988
+    },
+    {
+      "documentIndex": 43,
+      "inlineOrder": 40,
+      "id": "v16-clean-optimized-script",
+      "file": "assets/js/modules/40-v16-clean-optimized-script.js",
+      "bytes": 28878
+    },
+    {
+      "documentIndex": 44,
+      "inlineOrder": 41,
+      "id": "v16-inventory-status-merge-clean-script",
+      "file": "assets/js/modules/41-v16-inventory-status-merge-clean-script.js",
+      "bytes": 17942
+    },
+    {
+      "documentIndex": 45,
+      "inlineOrder": 42,
+      "id": "weekly-request-grid-bulk-classification-clean-script",
+      "file": "assets/js/modules/42-weekly-request-grid-bulk-classification-clean-script.js",
+      "bytes": 34146
+    },
+    {
+      "documentIndex": 46,
+      "inlineOrder": 43,
+      "id": "similar-medicines-workbench-v2-script",
+      "file": "assets/js/modules/43-similar-medicines-workbench-v2-script.js",
+      "bytes": 28480
+    },
+    {
+      "documentIndex": 47,
+      "inlineOrder": 44,
+      "id": "ccx-inventory-redesign-script",
+      "file": "assets/js/modules/44-ccx-inventory-redesign-script.js",
+      "bytes": 22436
+    },
+    {
+      "documentIndex": 48,
+      "inlineOrder": 45,
+      "id": "asdh-final-department-controlled-fix-script",
+      "file": "assets/js/modules/45-asdh-final-department-controlled-fix-script.js",
+      "bytes": 16078
+    },
+    {
+      "documentIndex": 49,
+      "inlineOrder": 46,
+      "id": "r664-private-crash-cart-source-only",
+      "file": "assets/js/modules/46-r664-private-crash-cart-source-only.js",
+      "bytes": 373
+    },
+    {
+      "documentIndex": 50,
+      "inlineOrder": 47,
+      "id": "asdh-authoritative-final-fixes-script",
+      "file": "assets/js/modules/47-asdh-authoritative-final-fixes-script.js",
+      "bytes": 7657
+    },
+    {
+      "documentIndex": 51,
+      "inlineOrder": 48,
+      "id": "asdh-final-request-completion-script",
+      "file": "assets/js/modules/48-asdh-final-request-completion-script.js",
+      "bytes": 30420
+    },
+    {
+      "documentIndex": 52,
+      "inlineOrder": 49,
+      "id": "asdh-final-persistence-actions-20260725",
+      "file": "assets/js/modules/49-asdh-final-persistence-actions-20260725.js",
+      "bytes": 22706
+    },
+    {
+      "documentIndex": 53,
+      "inlineOrder": 50,
+      "id": "r617-integrated-operations",
+      "file": "assets/js/modules/50-r617-integrated-operations.js",
+      "bytes": 102221
+    },
+    {
+      "documentIndex": 54,
+      "inlineOrder": 51,
+      "id": "asdhealth-canonical-r6-32-20260727",
+      "file": "assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js",
+      "bytes": 121363
+    },
+    {
+      "documentIndex": 55,
+      "inlineOrder": 52,
+      "id": "r635-master-backup-delete-and-crash-print-sync",
+      "file": "assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js",
+      "bytes": 8209
+    },
+    {
+      "documentIndex": 56,
+      "inlineOrder": 53,
+      "id": "r661-authoritative-inventory-safety",
+      "file": "assets/js/modules/53-r661-authoritative-inventory-safety.js",
+      "bytes": 16393
+    },
+    {
+      "documentIndex": 57,
+      "inlineOrder": 54,
+      "id": "r662-accountability-draft-protection",
+      "file": "assets/js/modules/54-r662-accountability-draft-protection.js",
+      "bytes": 2390
+    },
+    {
+      "documentIndex": 58,
+      "inlineOrder": 55,
+      "id": "r647-crash-cart-authoritative-boot",
+      "file": "assets/js/modules/55-r647-crash-cart-authoritative-boot.js",
+      "bytes": 605
+    },
+    {
+      "documentIndex": 59,
+      "inlineOrder": 56,
+      "id": "r664-security-idle-timeout",
+      "file": "assets/js/modules/56-r664-security-idle-timeout.js",
+      "bytes": 2247
+    },
+    {
+      "documentIndex": 60,
+      "inlineOrder": 57,
+      "id": "r664-production-console-policy",
+      "file": "assets/js/modules/57-r664-production-console-policy.js",
+      "bytes": 167
+    },
+    {
+      "documentIndex": 61,
+      "inlineOrder": 58,
+      "id": "r664-public-privacy-rewrite",
+      "file": "assets/js/modules/58-r664-public-privacy-rewrite.js",
+      "bytes": 1940
+    },
+    {
+      "documentIndex": 62,
+      "inlineOrder": 59,
+      "id": "r664-security-complete-runtime",
+      "file": "assets/js/modules/59-r664-security-complete-runtime.js",
+      "bytes": 17628
+    }
+  ],
+  "firebaseProject": "floorstock-6ac2d",
+  "entrypoint": "assets/js/main.js",
+  "staticEventBindings": 214
+}

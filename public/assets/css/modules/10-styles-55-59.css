@@ -1,0 +1,28 @@
+/* ASDHealth R6.65 Modular — ordered CSS bundle 10. */
+
+/* ===== 55: r640-crash-cart-canonical-editor-style ===== */
+#cc-final-editor .ccfe-item-name{font-weight:700!important}
+
+
+/* ===== 56: r641-crash-cart-authoritative-catalog-style ===== */
+#cc-final-editor .ccfe-item-name{font-weight:700!important}
+
+
+/* ===== 57: r661-inventory-safety-style ===== */
+#r661-inventory-safety{display:none!important}
+#r661-inventory-safety.is-error{border-color:#f85149}
+#r661-inventory-safety button{border:1px solid #8b949e;border-radius:6px;background:#21262d;color:#fff;padding:5px 8px;font-weight:700;cursor:pointer}
+#r661-inventory-safety .r661-text{flex:1;min-width:0}
+.r661-merge-disabled{opacity:.48!important;pointer-events:none!important}
+
+
+/* ===== 58: r662-accountability-draft-style ===== */
+#r662-accountability-draft{display:none;margin:0 0 10px;padding:8px 10px;border:1px solid #d29922;border-radius:8px;background:rgba(210,153,34,.12);color:var(--tx);font-size:11px;font-weight:700}
+#r662-accountability-draft.on{display:block}
+
+
+/* ===== 59: r664-security-complete-style ===== */
+#r664-seal-correction-modal .modal{width:min(620px,96vw)}
+#r664-seal-current{font-family:var(--mono);font-weight:800}
+.r664-security-note{padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:11px;color:var(--tx2);margin-bottom:12px}
+#r664-cloud-backup-card .r664-cloud-status{font-size:12px;color:var(--tx2);margin-top:8px;white-space:pre-wrap}

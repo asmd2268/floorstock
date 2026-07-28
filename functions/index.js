@@ -9,7 +9,16 @@ initializeApp();
 const db = getFirestore();
 const auth = getAuth();
 
-const ALLOWED_ROLES = new Set(['pharmacy', 'department', 'custodian', 'warehouse', 'controlled_pharmacy']);
+// Keep this list synchronized with the role selector and login validation in R6.65.
+const ALLOWED_ROLES = new Set([
+  'pharmacy',
+  'pharmacy_staff',
+  'inpatient_supervisor',
+  'department',
+  'custodian',
+  'warehouse',
+  'controlled_pharmacy'
+]);
 
 function cleanEmail(value) {
   return String(value || '').trim().toLowerCase();
@@ -53,7 +62,7 @@ async function countActiveMasters(excludeUid = null) {
     .where('role', '==', 'pharmacy')
     .where('master', '==', true)
     .get();
-  return snap.docs.filter((d) => d.id !== excludeUid && d.data().active !== false).length;
+  return snap.docs.filter((doc) => doc.id !== excludeUid && doc.data().active !== false).length;
 }
 
 exports.createManagedUser = onCall({ region: 'us-central1' }, async (request) => {
@@ -93,12 +102,19 @@ exports.createManagedUser = onCall({ region: 'us-central1' }, async (request) =>
       createdBy: caller.uid
     };
     await db.collection('users').doc(userRecord.uid).set(profile);
-    await audit('user.create', caller, userRecord.uid, { email, role: requestedRole, deptId, master: grantMaster });
+    await audit('user.create', caller, userRecord.uid, {
+      email,
+      role: requestedRole,
+      deptId,
+      master: grantMaster
+    });
     return { user: { ...profile, createdAt: null } };
   } catch (error) {
     if (userRecord) await auth.deleteUser(userRecord.uid).catch(() => {});
-    if (error.code === 'auth/email-already-exists') throw new HttpsError('already-exists', 'This email already exists.');
-    console.error(error);
+    if (error.code === 'auth/email-already-exists') {
+      throw new HttpsError('already-exists', 'This email already exists.');
+    }
+    console.error('createManagedUser failed', error);
     throw new HttpsError('internal', 'Could not create the user.');
   }
 });
@@ -122,7 +138,11 @@ exports.deleteManagedUser = onCall({ region: 'us-central1' }, async (request) =>
     if (error.code !== 'auth/user-not-found') throw error;
   });
   await targetRef.delete();
-  await audit('user.delete', caller, uid, { email: target.email || null, role: target.role || null, master: target.master === true });
+  await audit('user.delete', caller, uid, {
+    email: target.email || null,
+    role: target.role || null,
+    master: target.master === true
+  });
   return { ok: true };
 });
 
@@ -132,13 +152,17 @@ exports.setMasterAccess = onCall({ region: 'us-central1' }, async (request) => {
   const uid = String((request.data || {}).uid || '');
   const master = (request.data || {}).master === true;
   if (!uid) throw new HttpsError('invalid-argument', 'User ID is required.');
-  if (uid === caller.uid && !master) throw new HttpsError('failed-precondition', 'You cannot remove your own Master access.');
+  if (uid === caller.uid && !master) {
+    throw new HttpsError('failed-precondition', 'You cannot remove your own Master access.');
+  }
 
   const ref = db.collection('users').doc(uid);
   const snap = await ref.get();
   if (!snap.exists) throw new HttpsError('not-found', 'User profile not found.');
   const target = snap.data();
-  if (target.role !== 'pharmacy') throw new HttpsError('failed-precondition', 'Master access can only be assigned to a pharmacy user.');
+  if (target.role !== 'pharmacy') {
+    throw new HttpsError('failed-precondition', 'Master access can only be assigned to a pharmacy user.');
+  }
   if (!master && target.master === true && await countActiveMasters(uid) < 1) {
     throw new HttpsError('failed-precondition', 'You cannot remove the last active Master.');
   }

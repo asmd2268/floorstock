@@ -1,80 +1,175 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    function signedIn() { return request.auth != null; }
-
-    function profile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function signedIn() {
+      return request.auth != null;
     }
 
-    function active() { return signedIn() && profile().active != false; }
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
 
-    function isPharmacy()         { return active() && profile().role == 'pharmacy'; }
-    function isMaster()           { return isPharmacy() && profile().master == true; }
-    function isControlledOfficer(){ return active() && profile().role == 'controlled_pharmacy'; }
-    function isWarehouseOfficer() { return active() && profile().role == 'warehouse'; }
+    function hasProfile() {
+      return signedIn() && exists(userPath());
+    }
+
+    function profile() {
+      return get(userPath()).data;
+    }
+
+    function activeUser() {
+      return hasProfile() && profile().active == true;
+    }
+
+    function role() {
+      return activeUser() ? profile().role : '';
+    }
+
+    function masterUser() {
+      return activeUser() && profile().master == true;
+    }
+
+    function pharmacyDirector() {
+      return activeUser() && role() in ['pharmacy', 'pharmacy_director'];
+    }
+
+    function inpatientSupervisor() {
+      return activeUser() && role() == 'inpatient_supervisor';
+    }
+
+    function pharmacyStaff() {
+      return activeUser() && role() == 'pharmacy_staff';
+    }
+
+    function controlledOfficer() {
+      return activeUser() && role() == 'controlled_pharmacy';
+    }
+
+    function warehouseOfficer() {
+      return activeUser() && role() == 'warehouse';
+    }
+
+    function departmentUser() {
+      return activeUser() && role() == 'department';
+    }
+
+    function departmentId() {
+      return profile().deptId != null
+        ? profile().deptId
+        : profile().departmentId;
+    }
+
+    function validStateShape() {
+      return request.resource.data.keys().hasOnly(['value', 'updatedAt'])
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function canWriteState(docId) {
+      return masterUser()
+        || pharmacyDirector()
+        || (
+          inpatientSupervisor()
+          && docId.matches('^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2|request_.*|pharmacy_.*|audit_log|theme)$')
+        )
+        || (
+          pharmacyStaff()
+          && docId.matches('^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$')
+        )
+        || (
+          controlledOfficer()
+          && docId.matches('^(controlled_.*|accountability_.*|audit_log|theme)$')
+        )
+        || (
+          warehouseOfficer()
+          && docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|audit_log|theme)$')
+        )
+        || (
+          departmentUser()
+          && (
+            docId in ['requests', 'dept_notes', 'notes', 'crash_cart_reports', 'accountability_usage_v2', 'accountability_receipts_v2', 'audit_log', 'theme']
+            || docId == 'meds_' + departmentId()
+            || docId == 'expiry_' + departmentId()
+            || docId == 'shelves_' + departmentId()
+            || docId == 'controlled_dept_list_' + departmentId()
+            || docId == 'controlled_dept_shelves_' + departmentId()
+            || docId == 'controlled_settings_' + departmentId()
+          )
+        );
+    }
 
     match /users/{uid} {
-      allow read: if active();
+      allow get: if signedIn() && (
+        request.auth.uid == uid
+        || masterUser()
+        || pharmacyDirector()
+      );
+      allow list: if masterUser() || pharmacyDirector();
       allow create, update, delete: if false;
     }
 
+    // R6.64 loads this collection as one authenticated state snapshot.
+    // Reads therefore remain available to active profiles; writes are role/key restricted.
+    match /floorstock_state/{docId} {
+      allow read: if activeUser();
+      allow create, update: if activeUser()
+        && canWriteState(docId)
+        && validStateShape();
+      allow delete: if masterUser() || pharmacyDirector();
+    }
+
+    match /public_expiry/{docId} {
+      allow get: if true;
+      allow list: if masterUser();
+      allow create, update: if activeUser() && (
+        masterUser()
+        || pharmacyDirector()
+        || inpatientSupervisor()
+        || (departmentUser() && docId == departmentId())
+      );
+      allow delete: if masterUser() || pharmacyDirector();
+    }
+
+    match /public_controlled_expiry/{docId} {
+      allow get: if true;
+      allow list: if masterUser();
+      allow create, update: if activeUser() && (
+        masterUser()
+        || pharmacyDirector()
+        || inpatientSupervisor()
+        || controlledOfficer()
+        || warehouseOfficer()
+        || (departmentUser() && docId == departmentId())
+      );
+      allow delete: if masterUser() || pharmacyDirector();
+    }
+
+    match /public_crash_carts/{docId} {
+      allow read: if false;
+      allow create, update, delete: if masterUser();
+    }
+
+    match /floorstock_backups/{uid}/snapshots/{snapshotId} {
+      allow read, create, update, delete: if masterUser()
+        && request.auth.uid == uid;
+
+      match /chunks/{chunkId} {
+        allow read, create, update, delete: if masterUser()
+          && request.auth.uid == uid;
+      }
+    }
+
     match /audit_logs/{logId} {
-      allow read: if isMaster();
+      allow read: if masterUser() || pharmacyDirector();
       allow write: if false;
     }
 
-    match /floorstock_state/{docId} {
-      allow read: if active();
-
-      allow write: if
-        // ── Pharmacy manager: full access to everything ──────────────────
-        isPharmacy() ||
-
-        // ── Warehouse officer ────────────────────────────────────────────
-        (isWarehouseOfficer() && (
-          docId == 'controlled_catalog'              ||
-          docId == 'controlled_warehouse'            ||
-          docId == 'controlled_moves'                ||
-          docId == 'controlled_alert_days'           ||
-          docId == 'controlled_master_stock_seed_v4'
-        )) ||
-
-        // ── Controlled-pharmacy officer ──────────────────────────────────
-        (isControlledOfficer() && (
-          docId == 'controlled_catalog'              ||
-          docId == 'controlled_pharmacy_stock'       ||
-          docId.matches('controlled_dept_list_.*')   ||
-          docId.matches('controlled_settings_.*')    ||
-          docId == 'controlled_alert_days'           ||
-          docId == 'controlled_moves'                ||
-          docId == 'controlled_department_seed_v2'   ||
-          docId == 'controlled_master_stock_seed_v4'
-        )) ||
-
-        // ── Regular department / custodian users ─────────────────────────
-        (!docId.matches('controlled_.*') &&
-          active() &&
-          profile().role != 'controlled_pharmacy' &&
-          profile().role != 'warehouse');
-    }
-
-    match /public_expiry/{deptId} {
-      allow read: if true;
-      allow write: if active() &&
-        profile().role != 'controlled_pharmacy' &&
-        profile().role != 'warehouse';
-    }
-
-    match /public_controlled_expiry/{deptId} {
-      allow read: if true;
-      allow write: if isPharmacy() || isControlledOfficer();
+    match /system/{docId} {
+      allow read, write: if false;
     }
 
     match /{document=**} {
-      allow read: if active();
-      allow write: if false;
+      allow read, write: if false;
     }
   }
 }

@@ -1,0 +1,62 @@
+/* ASDHealth R6.65 Modular — ordered CSS bundle 5. */
+
+/* ===== 25: inline-style-25 ===== */
+.public-live-page{max-width:1100px;margin:0 auto;padding:16px;background:#fff;color:#111;min-height:100vh;font-family:Arial,Tahoma,sans-serif}
+  .public-live-page .live-head{position:sticky;top:0;z-index:5;background:#fff;border-bottom:2px solid #111;padding:10px 0;margin-bottom:12px}
+  .public-live-page h1,.public-live-page h2{margin:4px 0;text-align:center}
+  .public-live-page .live-meta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;font-size:14px;margin-top:8px}
+  .public-live-page .live-pill{border:1px solid #111;border-radius:999px;padding:5px 10px;background:#fff;color:#111}
+  .public-live-page .live-ok{color:#087f23;font-weight:700}
+  .public-live-page .table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .public-live-page table{width:100%;border-collapse:collapse;direction:ltr;min-width:760px}
+  .public-live-page th,.public-live-page td{border:1px solid #222;padding:8px;text-align:left;vertical-align:top;color:#111;background:#fff}
+  .public-live-page th{background:#e9eef5;font-weight:700}
+  .public-live-page .status-out{font-weight:700;color:#b00020}
+  .public-live-page .status-low{font-weight:700;color:#8a5700}
+  .public-live-page .status-ok{font-weight:700;color:#087f23}
+  img[src*="api.qrserver.com"]{background:#fff!important;border:3px solid #000!important;padding:10px!important;image-rendering:pixelated;filter:contrast(1.35)!important;opacity:1!important}
+  @media(max-width:700px){.public-live-page{padding:10px}.public-live-page h1{font-size:22px}.public-live-page h2{font-size:17px}.public-live-page th,.public-live-page td{padding:7px;font-size:13px}}
+  @media print{img[src*="api.qrserver.com"]{filter:contrast(1.5)!important;opacity:1!important;background:#fff!important;border:2px solid #000!important;padding:4px!important}}
+
+
+/* ===== 26: system-health-style ===== */
+#pg-system-health .health-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:14px}
+#pg-system-health .health-card{background:var(--s);border:1px solid var(--bd);border-radius:12px;padding:16px}
+#pg-system-health .health-label{font-size:11px;color:var(--tx2);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px}
+#pg-system-health .health-value{font-size:20px;font-weight:700;word-break:break-word}
+#pg-system-health .health-ok{color:var(--gnl)}
+#pg-system-health .health-warn{color:var(--yll)}
+#pg-system-health .health-bad{color:var(--rdl)}
+#pg-system-health .health-report{background:var(--s2);border:1px solid var(--bd);border-radius:8px;padding:12px;white-space:pre-wrap;font-family:var(--mono);font-size:12px;line-height:1.7;min-height:130px}
+@media(max-width:900px){#pg-system-health .health-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){#pg-system-health .health-grid{grid-template-columns:1fr}}
+
+
+/* ===== 27: inline-style-27 ===== */
+/* Fulfill quantity may exceed requested and departmental Max. */
+#ftbl input[data-med]{max-width:100%!important}
+
+
+/* ===== 28: wh-bulk-rx-dx-style ===== */
+.wh-bulk-table{width:100%;border-collapse:collapse;table-layout:fixed}
+.wh-bulk-table th,.wh-bulk-table td{border:1px solid var(--bd);padding:6px;vertical-align:middle}
+.wh-bulk-table th{font-size:10px;background:var(--s3);text-transform:none;letter-spacing:0}
+.wh-bulk-table input{margin:0;padding:7px 8px;font-size:12px}
+.wh-bulk-table .code{width:22%}.wh-bulk-table .match{width:29%}.wh-bulk-table .qty{width:12%}.wh-bulk-table .exp{width:17%}.wh-bulk-table .lot{width:15%}.wh-bulk-table .act{width:5%}
+.wh-match-ok{color:var(--gnl);font-weight:700}.wh-match-bad{color:var(--rdl);font-weight:700}.wh-match-pending{color:var(--tx2)}
+.wh-bulk-toolbar{display:flex;gap:8px;justify-content:space-between;align-items:center;flex-wrap:wrap;margin:10px 0}
+.wh-bulk-scroll{max-height:55vh;overflow:auto;border:1px solid var(--bd);border-radius:8px}
+@media(max-width:850px){.wh-bulk-table{min-width:900px}.wh-bulk-scroll{overflow:auto}}
+
+
+/* ===== 29: inline-style-29 ===== */
+.master-test-clean-btn{border-color:#7c3aed!important;color:#7c3aed!important}
+
+
+/* ===== 30: inventory-name-merge-style ===== */
+.all-inv-mergebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:9px 10px;margin-bottom:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}
+.all-inv-name-check{width:16px!important;height:16px!important;margin:0!important}
+.all-inv-table th:first-child,.all-inv-table td:first-child{width:34px;text-align:center}
+.merge-canonical-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:8px;background:var(--s2)}
+.merge-canonical-option{display:flex;align-items:center;gap:8px;padding:7px 8px;border:1px solid var(--bd);border-radius:7px;cursor:pointer}
+.merge-canonical-option:has(input:checked){border-color:var(--ac);background:rgba(31,111,235,.10)}

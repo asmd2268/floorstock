@@ -1,0 +1,14 @@
+{
+  "sourceBytes": 1195575,
+  "indexBytes": 94810,
+  "jsModuleCount": 59,
+  "cssBundleCount": 10,
+  "inlineScriptCount": 0,
+  "inlineStyleTagCount": 0,
+  "duplicateIds": [],
+  "architecture": "es-modules-v2",
+  "moduleGraphFiles": 63,
+  "staticEventBindings": 214,
+  "inlineEventHandlers": 0,
+  "verification": "PASS: ES-module graph, import paths, DOM bindings, JavaScript, Functions, roles, permissions, and security markers verified."
+}
