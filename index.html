@@ -14867,6 +14867,89 @@ window.repairLatestInventoryMergeCollateral=async function(){
 })();
 </script>
 
+<script id="r658-inventory-size-safe-recovery">
+(function(){
+'use strict';
+var running=false;
+function copy(v){return JSON.parse(JSON.stringify(v==null?null:v))}
+function allowed(){var r=String((window.CU&&CU.role)||'');return !!(window.CU&&(CU.master===true||r==='master'||r==='pharmacy'||r==='inpatient_supervisor'))}
+function request(x){return new Promise(function(resolve,reject){x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error||new Error('Local backup request failed'))}})}
+/*
+  Bypass the R6.55 wrapper that attempted to place many complete inventories
+  inside one Firestore document. That exceeded Firestore's document-size limit.
+*/
+window.setMeds=setMeds=function(deptId,rows){
+  var normalized=typeof fsR17NormalizeMeds==='function'?fsR17NormalizeMeds(rows).rows:(Array.isArray(rows)?rows:[]);
+  return S.s('meds_'+deptId,normalized)
+};
+/* These migrations are now explicit maintenance operations, never login jobs. */
+window.fsR17MigrateMedicationIdentity=async function(){return {status:'disabled-automatic-migration'}};
+window.repairImportedDepartmentAliases=async function(){return {status:'disabled-automatic-alias-merge'}};
+
+async function localBackups(){
+  if(!window.indexedDB)return [];
+  var db=await new Promise(function(resolve,reject){var x=indexedDB.open('ASDHealthLocalBackups',1);x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error)}});
+  try{
+    if(!db.objectStoreNames.contains('daily'))return [];
+    var tx=db.transaction('daily','readonly');
+    return (await request(tx.objectStore('daily').getAll())||[])
+  }finally{db.close()}
+}
+function backupState(rec){
+  var out={},docs=rec&&rec.payload&&rec.payload.collections&&rec.payload.collections.floorstock_state||[];
+  docs.forEach(function(d){out[d.id]=d&&d.data&&Object.prototype.hasOwnProperty.call(d.data,'value')?d.data.value:d.data});
+  return out
+}
+function candidate(rec,deptIds){
+  var snapshot=backupState(rec),coverage=0,total=0;
+  deptIds.forEach(function(id){var rows=snapshot['meds_'+id];if(Array.isArray(rows)){coverage++;total+=rows.length}});
+  return {rec:rec,state:snapshot,coverage:coverage,total:total}
+}
+async function recover(){
+  if(running||!allowed()||!window.S||!S.ready||typeof getMeds!=='function')return {status:'unavailable'};
+  if(S.g('inventory_r658_size_safe_done'))return {status:'already-restored'};
+  var depts=typeof gd==='function'?(gd()||[]):[],deptIds=depts.map(function(d){return String(d.id)}),all=(await localBackups()).map(function(b){return candidate(b,deptIds)}).filter(function(x){return x.coverage>0&&x.total>0});
+  if(!all.length)return {status:'no-local-inventory-backup'};
+  var maxCoverage=Math.max.apply(null,all.map(function(x){return x.coverage}));
+  var viable=all.filter(function(x){return x.coverage===maxCoverage});
+  viable.sort(function(a,b){return a.total-b.total||String(a.rec.createdAt).localeCompare(String(b.rec.createdAt))});
+  var source=viable[0],beforeTotal=deptIds.reduce(function(sum,id){return sum+(getMeds(id)||[]).length},0),restored=0,afterTotal=0;
+  running=true;
+  try{
+    /* Remove the oversized failed backup documents before writing inventories. */
+    for(var ri=0;ri<4;ri++){
+      var obsolete=['inventory_mutation_snapshots_v2','inventory_r657_restore_backups_v1','inventory_r656_restore_backups_v1','inventory_local_recovery_backups_v1'][ri];
+      try{if(S.g(obsolete)!=null)await S.rm(obsolete)}catch(e){console.warn('Obsolete inventory recovery data could not be removed',obsolete,e)}
+    }
+    for(var i=0;i<deptIds.length;i++){
+      var deptId=deptIds[i],meds=source.state['meds_'+deptId];
+      if(!Array.isArray(meds))continue;
+      await setMeds(deptId,copy(meds));
+      var expiry=source.state['expiry_'+deptId];
+      if(typeof setExpiry==='function'&&Array.isArray(expiry))await setExpiry(deptId,copy(expiry));
+      restored++
+    }
+    afterTotal=deptIds.reduce(function(sum,id){return sum+(getMeds(id)||[]).length},0);
+    var result={at:new Date().toISOString(),sourceBackupAt:source.rec.createdAt,sourceTotal:source.total,coverage:source.coverage,departments:restored,beforeTotal:beforeTotal,afterTotal:afterTotal};
+    await S.s('inventory_r658_size_safe_done',result);
+    if(typeof auditAction==='function')auditAction('inventory_size_safe_recovery',result);
+    if(typeof renderInv==='function')renderInv();
+    return Object.assign({status:'restored'},result)
+  }finally{running=false}
+}
+window.repairLatestInventoryMergeCollateral=async function(){
+  var result;
+  try{result=await recover()}catch(error){console.error('R6.58 inventory recovery failed',error);result={status:'failed',error:String(error&&error.message||error)}}
+  if(result.status==='restored'){
+    if(typeof toast==='function')toast('Inventory recovered safely: '+result.beforeTotal+' → '+result.afterTotal+' records ✓','succ')
+  }else if(result.status==='no-local-inventory-backup'){
+    if(typeof toast==='function')toast('No complete local inventory backup is available on this browser.','err')
+  }else if(result.status==='failed'&&typeof toast==='function')toast('Inventory recovery failed: '+result.error,'err');
+  return result
+};
+})();
+</script>
+
 <script id="r647-crash-cart-authoritative-boot">
 (function(){
 'use strict';
