@@ -3,9 +3,10 @@
 <html dir="ltr" lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net http://localhost:9100 https://localhost:9101; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.qrserver.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net http://localhost:9100 https://localhost:9101; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net http://localhost:9100 https://localhost:9101; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.qrserver.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://*.cloudfunctions.net https://*.run.app http://localhost:9100 https://localhost:9101; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <meta content="R6.64" name="asdhealth-build"/>
+<meta content="R6.64-functions-crash-controlled-fix-20260728" name="asdhealth-patch"/>
 <title>ASDHealth</title>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-favicon" rel="icon" type="image/svg+xml"/>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-shortcut-icon" rel="shortcut icon" type="image/svg+xml"/>
@@ -7153,10 +7154,15 @@ initial();window.addEventListener('online',initial);window.addEventListener('off
   var _psySeedDone=false,_psySeedBusy=false;
 
   function psyNorm(v){return String(v==null?'':v).trim().toLowerCase();}
+  function psySeedCodeUnique(field,value){
+    value=psyNorm(value);if(!value)return false;
+    return PSYCHOTROPIC_SHARED_SEED.filter(function(row){return psyNorm(row[field])===value}).length===1;
+  }
   function psySame(a,b){
-    if(psyNorm(a.moh)&&psyNorm(b.moh)&&psyNorm(a.moh)===psyNorm(b.moh))return true;
-    if(psyNorm(a.nupco)&&psyNorm(b.nupco)&&psyNorm(a.nupco)===psyNorm(b.nupco)&&psyNorm(a.name)===psyNorm(b.name))return true;
-    return psyNorm(a.name)===psyNorm(b.name)&&psyNorm(a.nupco)===psyNorm(b.nupco);
+    if(psyNorm(a.name)&&psyNorm(a.name)===psyNorm(b.name))return true;
+    if(psySeedCodeUnique('moh',b.moh)&&psyNorm(a.moh)===psyNorm(b.moh))return true;
+    if(psySeedCodeUnique('nupco',b.nupco)&&psyNorm(a.nupco)===psyNorm(b.nupco))return true;
+    return false;
   }
   async function ensurePsychotropicSharedList(){
     if(_psySeedDone||_psySeedBusy||typeof ctlCatalog!=='function'||typeof ctlSetCatalog!=='function')return false;
@@ -7166,7 +7172,10 @@ initial();window.addEventListener('online',initial);window.addEventListener('off
       PSYCHOTROPIC_SHARED_SEED.forEach(function(src){
         var i=cat.findIndex(function(x){return psySame(x,src)});
         if(i<0){
-          cat.push(Object.assign({},src,{id:(typeof ctlKey==='function'?ctlKey(src.moh,src.nupco,src.name):('psy_'+src.nupco+'_'+src.name.replace(/\W+/g,'_')))+'_psy'}));
+          var baseId=(typeof ctlKey==='function'?ctlKey(src.moh,src.nupco,src.name):('psy_'+src.nupco+'_'+src.name.replace(/\W+/g,'_')))+'_psy';
+          var uniqueId=baseId,slug=src.name.toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,36),suffix=1;
+          while(cat.some(function(x){return String(x.id)===String(uniqueId)})){uniqueId=baseId+'_'+(slug||'item')+'_'+suffix;suffix++}
+          cat.push(Object.assign({},src,{id:uniqueId}));
           changed=true;
         }else{
           var old=cat[i],next=Object.assign({},old,{
@@ -7193,6 +7202,129 @@ initial();window.addEventListener('online',initial);window.addEventListener('off
   window.ensurePsychotropicSharedList=ensurePsychotropicSharedList;
 })();
 </script>
+
+<script id="r664-psychotropic-pharmacy-stock-import-20260728">
+(function(){
+  'use strict';
+  var IMPORT_KEY='psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only';
+  var SOURCE_FILE='متوفر الادوية النفسية.xlsx';
+  var DATA=[{"name":"AGOMELATINE 25MG","sourceName":"AGOMELATINE 25MG","matchMoh":"545051836","matchNupco":"5114169900100","moh":"545051836","nupco":"5114169900100","qty":1000,"batches":[{"qty":1000,"expiry":"2026-12-31","lot":""}]},{"name":"AMITRIPTYLINE 25MG","sourceName":"AMITRIPTYLINE 25MG","matchMoh":"545031410","matchNupco":"5114160100100","moh":"545031410","nupco":"5114160100100","qty":1000,"batches":[{"qty":1000,"expiry":"2027-04-30","lot":""}]},{"name":"AMITRIPTYLINE 10MG","sourceName":"AMITRIPTYLINE 10MG","matchMoh":"545031400","matchNupco":"5114160100200","moh":"545031400","nupco":"5114160100200","qty":1000,"batches":[{"qty":1000,"expiry":"2027-04-30","lot":""}]},{"name":"ARIPIPRAZOLE 10MG","sourceName":"ARIPIPRAZOLE 10MG","matchMoh":"545031589","matchNupco":"5114163400200","moh":"545031589","nupco":"5114163400200","qty":1000,"batches":[{"qty":1000,"expiry":"2027-02-28","lot":""}]},{"name":"ARIPIPRAZOLE 15MG","sourceName":"ARIPIPRAZOLE 15MG","matchMoh":"545031382","matchNupco":"5114163400100","moh":"545031382","nupco":"5114163400100","qty":1000,"batches":[{"qty":1000,"expiry":"2027-11-30","lot":""}]},{"name":"ATOMOXETINE 10MG","sourceName":"ATOMOXETINE10MG","matchMoh":"545021061","matchNupco":"5112176600000","moh":"545021061","nupco":"5112176600000","qty":1000,"batches":[{"qty":1000,"expiry":"2027-12-31","lot":""}]},{"name":"BENZTROPINE 2MG","sourceName":"BENZTROPINE 2MG","matchMoh":"545071925","matchNupco":"5115160200000","moh":"545071925","nupco":"5115160200000","qty":1000,"batches":[{"qty":1000,"expiry":"2028-11-30","lot":""}]},{"name":"BUPROPION 150MG","sourceName":"BUPROPION 150MG","matchMoh":"545031402","matchNupco":"5129340200000","moh":"545031402","nupco":"5129340200000","qty":1000,"batches":[{"qty":1000,"expiry":"2027-08-31","lot":""}]},{"name":"CHLORPROMAZINE 25MG","sourceName":"CHLORPROMAZINE 25mg","matchMoh":"545031500","matchNupco":"5114179800200","moh":"545031500","nupco":"5114179800200","qty":0,"batches":[]},{"name":"CHLORPROMAZINE 50MG INJ","sourceName":"CHLORPROMAZINE 50mg INJ","matchMoh":"545034510","matchNupco":"5114179800000","moh":"545034510","nupco":"5114179800000","qty":0,"batches":[]},{"name":"CITALOPRAM 20MG","sourceName":"CITALOPRAM 20MG","matchMoh":"545031631","matchNupco":"5129200400000","moh":"545031631","nupco":"5129200400000","qty":0,"batches":[]},{"name":"CLOMIPRAMINE 10 MG","sourceName":"CLOMIPRAMINE 10 MG","matchMoh":"545031430","matchNupco":"5114161600200","moh":"545031430","nupco":"5114161600200","qty":0,"batches":[]},{"name":"CLOMIPRAMINE 25MG","sourceName":"CLOMIPRAMINE 25MG","matchMoh":"545031435","matchNupco":"5114161600000","moh":"545031435","nupco":"5114161600000","qty":2000,"batches":[{"qty":1000,"expiry":"2027-03-31","lot":""},{"qty":1000,"expiry":"2027-06-30","lot":""}]},{"name":"CLOZAPINE 100MG","sourceName":"CLOZAPINE 100MG","matchMoh":"545031539","matchNupco":"5114171500100","moh":"545031539","nupco":"5114171500100","qty":0,"batches":[]},{"name":"CLOZAPINE 25 MG","sourceName":"CLOZAPINE 25 MG","matchMoh":"545031538","matchNupco":"5114171500200","moh":"545031538","nupco":"5114171500200","qty":1000,"batches":[{"qty":1000,"expiry":"2027-05-31","lot":""}]},{"name":"DANTROLINE 25MG INJ","sourceName":"DANTROLINE 25MG INJ","matchMoh":"545064880","matchNupco":"5115190300000","moh":"545064880","nupco":"5115190300000","qty":60,"batches":[{"qty":60,"expiry":"2028-04-30","lot":""}]},{"name":"DULOXETINE 60MG","sourceName":"DULOXETINE 60MG","matchMoh":"545051830","matchNupco":"5114153900000","moh":"545051830","nupco":"5114153900000","qty":1000,"batches":[{"qty":1000,"expiry":"2027-02-28","lot":""}]},{"name":"ESCITALOPRAM 10MG","sourceName":"ESCITALOPRAM 10MG","matchMoh":"545031632","matchNupco":"5114163300000","moh":"545034640","nupco":"5114179900500","qty":1000,"batches":[{"qty":1000,"expiry":"2027-06-30","lot":""}]},{"name":"FLUPENTHIXOL 25MG INJ","sourceName":"FLUPENTHIXOL 20MG INJ","matchMoh":"545034639","matchNupco":"5114161800100","moh":"545034639","nupco":"5114161800100","qty":0,"batches":[]},{"name":"FLUVOXAMINE 100MG","sourceName":"FLUVOXAMINE 100MG","matchMoh":"545031642","matchNupco":"5114160700100","moh":"545031642","nupco":"5114160700100","qty":1000,"batches":[{"qty":1000,"expiry":"2027-05-31","lot":""}]},{"name":"FLUVOXAMINE 50MG","sourceName":"FLUVOXAMINE 50MG","matchMoh":"545031636","matchNupco":"5114160700000","moh":"545031636","nupco":"5114160700000","qty":1000,"batches":[{"qty":1000,"expiry":"2027-06-30","lot":""}]},{"name":"FLUOXETINE 20MG","sourceName":"FLUXETINE 20MG","matchMoh":"545034638","matchNupco":"5114161800000","moh":"545034638","nupco":"5114161800000","qty":1000,"batches":[{"qty":1000,"expiry":"2028-09-30","lot":""}]},{"name":"FLUOXETINE 20MG/5ML LIQUID","sourceName":"FLUXETINE 20MG/5 ML LIQUID","matchMoh":"545034639","matchNupco":"5114161800100","moh":"545034639","nupco":"5114161800100","qty":12,"batches":[{"qty":12,"expiry":"2026-09-30","lot":""}]},{"name":"HALOPERIDOL 5MG INJ","sourceName":"HALOORIDOLE 5MG INJ","matchMoh":"545034615","matchNupco":"5114170200600","moh":"545034615","nupco":"5114170200600","qty":0,"batches":[]},{"name":"HALOPERIDOL 1.5MG","sourceName":"HALOPRIDOLE 1.5MG","matchMoh":"545031600","matchNupco":"5114170200700","moh":"545031600","nupco":"5114170200700","qty":1000,"batches":[{"qty":1000,"expiry":"2029-12-31","lot":""}]},{"name":"HALOPERIDOL 50MG INJ","sourceName":"HALOPRIDOLE 50MG INJ","matchMoh":"545034618","matchNupco":"5114170200000","moh":"545034618","nupco":"5114170200000","qty":0,"batches":[]},{"name":"HALOPERIDOL 5MG TAB","sourceName":"HALOPRIDOLE 5MG TAB","matchMoh":"545031605","matchNupco":"5114170200100","moh":"545031605","nupco":"5114170200100","qty":0,"batches":[]},{"name":"IMIPRAMINE 10 MG","sourceName":"IMIPRAMINE 10 MG","matchMoh":"545031450","matchNupco":"5114162100000","moh":"545031450","nupco":"5114162100000","qty":0,"batches":[]},{"name":"IMIPRAMINE 25MG","sourceName":"IMIPRAMINE 25MG","matchMoh":"545031455","matchNupco":"5114162100100","moh":"545031455","nupco":"5114162100100","qty":0,"batches":[]},{"name":"MAPROTILINE 25MG","sourceName":"MAPROTILINE  25MG","matchMoh":"545031470","matchNupco":"5114162300000","moh":"545031470","nupco":"5114162300000","qty":0,"batches":[]},{"name":"MEMANTINE 10MG","sourceName":"MEMANTINE 10MG","matchMoh":"545071926","matchNupco":"5114154100000","moh":"545071926","nupco":"5114154100000","qty":300,"batches":[{"qty":300,"expiry":"2027-12-31","lot":""}]},{"name":"MIRTAZAPINE 30MG","sourceName":"MIRTAZAPINE 30MG","matchMoh":"545031635","matchNupco":"5114160400000","moh":"545031635","nupco":"5114160400000","qty":1000,"batches":[{"qty":1000,"expiry":"2027-10-31","lot":""}]},{"name":"OLANZAPINE 10MG TAB","sourceName":"OLANZAPINE 10MG TAB","matchMoh":"545031379","matchNupco":"5114170300500","moh":"545031379","nupco":"5114170300500","qty":0,"batches":[]},{"name":"OLANZAPINE 5MG DIS","sourceName":"OLANZAPINE 5mg DIS","matchMoh":"545031372","matchNupco":"5114170300000","moh":"545031372","nupco":"5114170300000","qty":0,"batches":[]},{"name":"OLANZAPINE 5MG TAB","sourceName":"OLANZAPINE 5MG TAB","matchMoh":"545031378","matchNupco":"5114170300600","moh":"545031378","nupco":"5114170300600","qty":60,"batches":[{"qty":60,"expiry":"2027-04-30","lot":""}]},{"name":"PALIPERIDONE 3MG","sourceName":"PALIPERIDONE 3MG","matchMoh":"545031542","matchNupco":"5133200300400","moh":"545031542","nupco":"5133200300400","qty":0,"batches":[]},{"name":"PALIPERIDONE 100MG INJ","sourceName":"PALPRIDONE 100MG INJ","matchMoh":"545031546","matchNupco":"5133200300000","moh":"545031546","nupco":"5133200300000","qty":200,"batches":[{"qty":200,"expiry":"2027-08-31","lot":""}]},{"name":"PALIPERIDONE 150MG INJ","sourceName":"PALPRIDONE 150MG INJ","matchMoh":"545031543","matchNupco":"5133200300100","moh":"545031543","nupco":"5133200300100","qty":200,"batches":[{"qty":200,"expiry":"2027-05-31","lot":""}]},{"name":"QUETIAPINE 100MG","sourceName":"QUTEAPINE 100MG","matchMoh":"545031353","matchNupco":"5114172200100","moh":"545031353","nupco":"5114172200100","qty":1000,"batches":[{"qty":1000,"expiry":"2028-11-30","lot":""}]},{"name":"QUETIAPINE 200MG","sourceName":"QUTEAPINE 200MG","matchMoh":"545031354","matchNupco":"5114172200200","moh":"545031354","nupco":"5114172200200","qty":1000,"batches":[{"qty":1000,"expiry":"2027-09-30","lot":""}]},{"name":"QUETIAPINE 300MG","sourceName":"QUTEAPINE 300MG","matchMoh":"545031356","matchNupco":"5114172200300","moh":"545031356","nupco":"5114172200300","qty":0,"batches":[]},{"name":"RISPERIDONE 25 MG INJ","sourceName":"RISPERIDONE 25 MG inj","matchMoh":"545031527","matchNupco":"5114170400200","moh":"545031527","nupco":"5114170400200","qty":0,"batches":[]},{"name":"RISPERIDONE 2MG TAB","sourceName":"RISPERIDONE 2MG TAB","matchMoh":"545031536","matchNupco":"5114170400100","moh":"545031536","nupco":"5114170400100","qty":1000,"batches":[{"qty":1000,"expiry":"2027-12-31","lot":""}]},{"name":"RISPERIDONE 37.5 MG INJ","sourceName":"RISPERIDONE 37.5 MG inj","matchMoh":"545031529","matchNupco":"5114170400300","moh":"545031529","nupco":"5114170400300","qty":0,"batches":[]},{"name":"RISPERIDONE 4MG TAB","sourceName":"RISPERIDONE 4MG TAB","matchMoh":"545031534","matchNupco":"5114170400400","moh":"545031534","nupco":"5114170400400","qty":1000,"batches":[{"qty":1000,"expiry":"2028-05-31","lot":""}]},{"name":"RISPERIDONE 50 MG INJ","sourceName":"RISPERIDONE 50 MG inj","matchMoh":"545031525","matchNupco":"5114170400600","moh":"545031525","nupco":"5114170400600","qty":5,"batches":[{"qty":5,"expiry":"2027-02-28","lot":""}]},{"name":"RISPERIDONE 1MG SYRUP","sourceName":"RISPREDONE 1MG SYP","matchMoh":"545032550","matchNupco":"5114170400500","moh":"545032550","nupco":"5114170400500","qty":1000,"batches":[{"qty":1000,"expiry":"2027-02-28","lot":""}]},{"name":"SULPRIDE 200MG","sourceName":"SULPRIDE 200MG","matchMoh":"545031385","matchNupco":"5133210300000","moh":"545031385","nupco":"5133210300000","qty":1000,"batches":[{"qty":1000,"expiry":"2027-06-30","lot":""}]},{"name":"SULPRIDE 50MG","sourceName":"SULPRIDE 50MG","matchMoh":"545031531","matchNupco":"5133210300100","moh":"545031531","nupco":"5133210300100","qty":1000,"batches":[{"qty":1000,"expiry":"2027-11-30","lot":""}]},{"name":"TRIFLUPHENAZINE 1MG","sourceName":"TRIFLUPHENAZINE 1MG","matchMoh":"545031580","matchNupco":"5114179900300","moh":"545031580","nupco":"5114179900300","qty":0,"batches":[]},{"name":"TRIFLUPHENAZINE 5MG","sourceName":"TRIFLUPHENAZINE 5MG","matchMoh":"545031590","matchNupco":"5114179900100","moh":"545031590","nupco":"5114179900100","qty":0,"batches":[]},{"name":"VENLAFAXINE 150MG","sourceName":"VENLAFAXINE 150MG","matchMoh":"545031358","matchNupco":"5114163600100","moh":"545031358","nupco":"5114163600100","qty":2000,"batches":[{"qty":1000,"expiry":"2027-03-31","lot":""},{"qty":1000,"expiry":"2027-07-31","lot":""}]},{"name":"VENLAFAXINE 75 MG","sourceName":"VENLAFAXINE 75 MG","matchMoh":"545031641","matchNupco":"5114163600200","moh":"545031641","nupco":"5114163600200","qty":0,"batches":[]},{"name":"RIVASTIGMINE PATCHES 4.6MG/24H","sourceName":"RIVASTIGMINE PATCHES 4.6MG/24H","matchMoh":"","matchNupco":"5115151500000","moh":"","nupco":"5115151500000","qty":0,"batches":[]},{"name":"RIVASTIGMINE PATCHES 9.5MG/24H","sourceName":"RIVASTIGMINE PATCHES 9.5MG/24H","matchMoh":"","matchNupco":"5115151500100","moh":"","nupco":"5115151500100","qty":200,"batches":[{"qty":200,"expiry":"2026-08-31","lot":""}]},{"name":"ATOMOXETINE 25MG","sourceName":"Atomoxetine 25mg","matchMoh":"","matchNupco":"5112176600200","moh":"","nupco":"5112176600200","qty":1000,"batches":[{"qty":1000,"expiry":"2027-08-31","lot":""}]},{"name":"DULOXETINE 30MG","sourceName":"DULOXETINE 30MG","matchMoh":"","matchNupco":"5114153900100","moh":"","nupco":"5114153900100","qty":0,"batches":[]},{"name":"AMANTADINE 100MG TAB","sourceName":"AMANTADINE 100MG TAB","matchMoh":"","matchNupco":"5110230200000","moh":"","nupco":"5110230200000","qty":1000,"batches":[{"qty":1000,"expiry":"2027-12-31","lot":""}]},{"name":"DONEPEZIL 10MG TABLET","sourceName":"DONEPEZIL 10MG TABLET","matchMoh":"","matchNupco":"5114153800100","moh":"","nupco":"5114153800100","qty":1000,"batches":[{"qty":1000,"expiry":"2027-06-30","lot":""}]}];
+
+  function norm(v){
+    return String(v==null?'':v).trim().toLowerCase()
+      .replace(/\s+/g,' ')
+      .replace(/[^a-z0-9\u0600-\u06ff]+/g,'');
+  }
+  function code(v){return String(v==null?'':v).replace(/[^0-9]/g,'')}
+  function canApply(){
+    var u=window.CU||{},r=String(u.role||'');
+    return !!(u.master===true||r==='pharmacy'||r==='controlled_pharmacy');
+  }
+  function sourceCodeIsUnique(field,value){
+    value=code(value);if(!value)return false;
+    return DATA.filter(function(row){return code(row[field])===value}).length===1;
+  }
+  function findMedicine(catalog,src){
+    var byName=catalog.find(function(m){return norm(m.name)===norm(src.name)});
+    if(byName)return byName;
+    var oldMoh=code(src.matchMoh),oldNupco=code(src.matchNupco);
+    return catalog.find(function(m){
+      return (oldMoh&&sourceCodeIsUnique('matchMoh',oldMoh)&&code(m.moh||m.mohCode)===oldMoh)||
+             (oldNupco&&sourceCodeIsUnique('matchNupco',oldNupco)&&code(m.nupco||m.nupcoCode)===oldNupco);
+    })||null;
+  }
+  async function applyPsychotropicPharmacyStockR664(){
+    if(!window.S||!S.ready||!canApply())return false;
+    if(S.g(IMPORT_KEY))return false;
+
+    var catalog=typeof window.ctlCatalog==='function'
+      ?(ctlCatalog()||[]).map(function(m){return Object.assign({},m)})
+      :[];
+    var pharmacy=typeof window.ctlPharmacy==='function'
+      ?Object.assign({},ctlPharmacy()||{})
+      :{};
+    var stamp=typeof window.nowISO==='function'?nowISO():new Date().toISOString();
+    var created=0,updated=0,totalQty=0;
+    var originalNonPsychStockKeys=Object.keys(pharmacy).filter(function(id){
+      var med=catalog.find(function(item){return String(item&&item.id||'')===String(id)});
+      return !med||String(med.classification||'').toLowerCase()!=='psychotropic';
+    });
+
+    DATA.forEach(function(src,index){
+      var med=findMedicine(catalog,src);
+      /* Never convert or overwrite an existing narcotic/restricted catalogue item.
+         If a code/name collision exists, create a separate psychotropic record. */
+      if(med&&String(med.classification||'').toLowerCase()&&String(med.classification||'').toLowerCase()!=='psychotropic')med=null;
+      if(!med){
+        var baseId=(typeof window.ctlKey==='function'
+          ?ctlKey(src.matchMoh||src.moh,src.matchNupco||src.nupco,src.name)
+          :'psy_r664')+'_r664_'+String(index+1);
+        var id=baseId,idSuffix=1;
+        while(catalog.some(function(item){return String(item&&item.id||'')===String(id)})){id=baseId+'_'+idSuffix;idSuffix++;}
+        med={id:id,name:src.name,moh:src.moh||'',nupco:src.nupco||'',classification:'psychotropic',min:0,max:0};
+        catalog.push(med);created++;
+      }else{
+        if(src.moh)med.moh=src.moh;
+        if(src.nupco)med.nupco=src.nupco;
+        med.classification='psychotropic';
+        updated++;
+      }
+
+      var stock=Object.assign({},pharmacy[med.id]||{});
+      var qty=Number(src.qty)||0;
+      stock.name=med.name||src.name;
+      stock.moh=src.moh||med.moh||'';
+      stock.nupco=src.nupco||med.nupco||'';
+      stock.classification='psychotropic';
+      stock.qty=qty;
+      stock.actualQty=qty;
+      stock.batches=qty>0?(src.batches||[]).map(function(b,i){
+        return {
+          id:'r664psy_'+String(index+1)+'_'+String(i+1),
+          batchId:'r664psy_'+String(index+1)+'_'+String(i+1),
+          qty:Number(b.qty)||0,
+          expiry:String(b.expiry||'').slice(0,10),
+          lot:String(b.lot||'')
+        };
+      }):[];
+      stock.updatedAt=stamp;
+      stock.updatedBy=(window.CU&&(CU.email||CU.username||CU.id||CU.uid))||'R6.64 import';
+      stock.source='R6.64 psychotropic pharmacy balance import';
+      stock.sourceFile=SOURCE_FILE;
+      stock.sourceName=src.sourceName||src.name;
+      pharmacy[med.id]=stock;
+      totalQty+=qty;
+    });
+    /* No deletion or filtering is performed. Existing narcotic/restricted stock keys are preserved. */
+    var missingProtected=originalNonPsychStockKeys.filter(function(id){return !Object.prototype.hasOwnProperty.call(pharmacy,id)});
+    if(missingProtected.length)throw new Error('Safety stop: non-psychotropic pharmacy stock would be removed');
+
+    /* Direct state writes avoid department-custody setters and do not modify any controlled_dept_list_* document. */
+    await S.s('controlled_catalog',catalog);
+    await S.s('controlled_pharmacy_stock',pharmacy);
+    await S.s(IMPORT_KEY,{
+      applied:true,appliedAt:stamp,sourceFile:SOURCE_FILE,
+      rows:DATA.length,totalQty:totalQty,createdCatalogRows:created,updatedCatalogRows:updated,
+      departmentCustodyTouched:false,nonPsychotropicStockPreserved:true
+    });
+    if(typeof window.auditAction==='function'){
+      try{await Promise.resolve(auditAction('controlled_pharmacy_psychotropic_balance_import',{
+        sourceFile:SOURCE_FILE,rows:DATA.length,totalQty:totalQty,
+        createdCatalogRows:created,updatedCatalogRows:updated,
+        departmentCustodyTouched:false,nonPsychotropicStockPreserved:true
+      }))}catch(e){console.warn('Psychotropic import audit warning',e)}
+    }
+    if(typeof window.renderControlled==='function'){
+      var active=document.querySelector('.pg.on');
+      if(active&&active.id==='pg-controlled')window.renderControlled();
+    }
+    if(typeof window.toast==='function')toast('Psychotropic pharmacy balance updated from the approved file ✓','succ');
+    return true;
+  }
+  window.applyPsychotropicPharmacyStockR664=applyPsychotropicPharmacyStockR664;
+})();
+</script>
+
 <script id="pharmacy-narcotic-stock-and-independent-list-mode-v12">
 (function(){
   'use strict';
@@ -8993,7 +9125,16 @@ window.ctlConfirmDispense=async function(){
 };
 
 
-function repairControlledSharedC(){if(!window.CU||!window.S||!S.ready)return Promise.resolve(false);var repairs=[];if(typeof window.ensureNarcoticSharedList==='function')repairs.push(Promise.resolve(window.ensureNarcoticSharedList()));if(typeof window.ensurePsychotropicSharedList==='function')repairs.push(Promise.resolve(window.ensurePsychotropicSharedList()));return Promise.all(repairs).then(function(results){var changed=results.some(Boolean),active=document.querySelector('.pg.on');if(changed&&active&&active.id==='pg-controlled'&&typeof window.renderControlled==='function')window.renderControlled();return changed}).catch(function(e){console.warn('Controlled shared catalogue repair failed',e);return false})}
+function repairControlledSharedC(){
+  if(!window.CU||!window.S||!S.ready)return Promise.resolve(false);
+  var results=[];
+  return Promise.resolve()
+    .then(function(){return typeof window.ensureNarcoticSharedList==='function'?window.ensureNarcoticSharedList():false})
+    .then(function(v){results.push(!!v);return typeof window.ensurePsychotropicSharedList==='function'?window.ensurePsychotropicSharedList():false})
+    .then(function(v){results.push(!!v);return typeof window.applyPsychotropicPharmacyStockR664==='function'?window.applyPsychotropicPharmacyStockR664():false})
+    .then(function(v){results.push(!!v);var changed=results.some(Boolean),active=document.querySelector('.pg.on');if(changed&&active&&active.id==='pg-controlled'&&typeof window.renderControlled==='function')window.renderControlled();return changed})
+    .catch(function(e){console.warn('Controlled shared catalogue repair failed',e);return false});
+}
 function bootC(){cleanupInvModalsC();if(window.CU&&window.S&&S.ready)repairControlledSharedC()}
 window.prepareControlledStartup=bootC;
 
@@ -11136,7 +11277,7 @@ function findCartItem(cart,key){return (cart.items||[]).find(function(it){return
 function usedSeals(carts,reports){var set={};(carts||[]).forEach(function(c){if(c.seal)set[String(c.seal).trim().toLowerCase()]=1});(reports||[]).forEach(function(r){[r.oldSeal,r.newSeal].forEach(function(s){if(s)set[String(s).trim().toLowerCase()]=1})});return set}
 function removeFromItem(item,date,qty){var available=n(item.present==null?item.qty:item.present),batches=(item.batches||[]).map(function(b){return Object.assign({},b)}),wanted=qty;if(date){var matching=batches.filter(function(b){return String(b.expiry||'').slice(0,10)===date}),total=matching.reduce(function(s,b){return s+n(b.qty)},0);if(wanted<=0)wanted=total;if(wanted>total+1e-9)throw new Error('Selected expiry has insufficient quantity.');var left=wanted;batches.forEach(function(b){if(left<=0||String(b.expiry||'').slice(0,10)!==date)return;var take=Math.min(left,n(b.qty));b.qty=n(b.qty)-take;left-=take});batches=batches.filter(function(b){return n(b.qty)>0||b.expiry||b.lot})}else{if(wanted<=0)wanted=available;if(wanted>available+1e-9)throw new Error('Cart has insufficient available quantity.')}item.present=Math.max(0,available-wanted);item.stockStatus=item.present<=0?'out_of_stock':(item.present<n(item.qty)?'partial':'available');item.batches=batches;return wanted}
 function addReplacement(item,rep,expiry){var q=n(rep.qty),standard=n(item.qty),current=n(item.present==null?item.qty:item.present),next=current+q;if(next>standard+1e-9)throw new Error((item.name||'Medicine')+': replacement would exceed the approved Crash Cart standard quantity '+standard+'.');item.present=next;item.stockStatus=next<=0?'out_of_stock':next<standard?'partial':'available';item.batches=Array.isArray(item.batches)?item.batches:[];if(q>0&&!expiry)throw new Error((item.name||'Medicine')+': every replacement quantity requires an expiry date.');if(expiry||rep.lot){item.batches.push({batchId:uid('ccb'),expiry:expiry||'',qty:q,lot:rep.lot||''})}}
-function buildCrashBulkResult(carts,reports,plan){var nextCarts=clone(carts),nextReports=clone(reports),sealSet=usedSeals(carts,reports),newSeals={};plan.cartPlans.forEach(function(cp){var seal=String(cp.newSeal||'').trim(),sk=seal.toLowerCase();if(!seal)throw new Error('A unique new seal is required for every cart.');if(newSeals[sk]||sealSet[sk])throw new Error('Seal "'+seal+'" is already used. Every new seal must be unique.');newSeals[sk]=1});plan.cartPlans.forEach(function(cp){var cart=nextCarts.find(function(c){return String(c.id)===String(cp.cartId)});if(!cart)throw new Error('Cart not found.');if(nextReports.some(function(r){return String(r.cartId)===String(cart.id)&&r.status==='open'}))throw new Error((cart.name||'Cart')+' already has an open report. Close it first.');var source=findCartItem(cart,plan.sourceKey);if(!source)throw new Error('Source medicine not found in '+(cart.name||'cart'));var removed=removeFromItem(source,plan.sourceExpiry,n(cp.removeQty));(plan.replacements||[]).forEach(function(rep){var per=(cp.replacements||{})[rep.id];if(!per||per.include===false)return;var expiry=per.expiryOverride||rep.expiry||'';var target=(cart.items||[]).find(function(it){return norm(it.name)===norm(rep.name)&&norm(it.concentration||it.strength)===norm(rep.concentration||'')});if(!target){target={id:uid('cci'),medId:rep.medId||'',name:rep.name,genericName:rep.name,concentration:rep.concentration||'',strength:rep.concentration||'',qty:0,present:0,batches:[]};cart.items.push(target)}addReplacement(target,rep,expiry)});var oldSeal=cart.seal||'';cart.seal=cp.newSeal;cart.updatedAt=now();cart.updatedBy=actor().name;cart.lastClosedAt=cart.updatedAt;cart.lastClosedByName=actor().name;cart.lastClosedByUser=actor().user;nextReports.push({id:uid('ccbulk'),cartId:cart.id,deptId:cart.deptId,status:'closed',reason:'Bulk opening and replacement',oldSeal:oldSeal,newSeal:cp.newSeal,sourceMedicine:plan.sourceKey,sourceExpiry:plan.sourceExpiry,removedQty:removed,replacements:(plan.replacements||[]).filter(function(rep){var per=(cp.replacements||{})[rep.id];return per&&per.include!==false}).map(function(rep){var per=cp.replacements[rep.id]||{};return {name:rep.name,concentration:rep.concentration,qty:n(rep.qty),expiry:per.expiryOverride||rep.expiry||'',lot:rep.lot||''}}),pharmacyNote:plan.note||'',openedAt:now(),closedAt:now(),openedBy:actor().name,closedBy:actor().name,bulk:true})});return {carts:nextCarts,reports:nextReports}}
+function buildCrashBulkResult(carts,reports,plan){var nextCarts=clone(carts),nextReports=clone(reports),sealSet=usedSeals(carts,reports),newSeals={};plan.cartPlans.forEach(function(cp){var seal=String(cp.newSeal||'').trim(),sk=seal.toLowerCase();if(!seal)throw new Error('A unique new seal is required for every cart.');if(newSeals[sk]||sealSet[sk])throw new Error('Seal "'+seal+'" is already used. Every new seal must be unique.');newSeals[sk]=1});plan.cartPlans.forEach(function(cp){var cart=nextCarts.find(function(c){return String(c.id)===String(cp.cartId)});if(!cart)throw new Error('Cart not found.');if(nextReports.some(function(r){return String(r.cartId)===String(cart.id)&&r.status==='open'}))throw new Error((cart.name||'Cart')+' already has an open report. Close it first.');var source=findCartItem(cart,plan.sourceKey);if(!source)throw new Error('Source medicine not found in '+(cart.name||'cart'));var removed=removeFromItem(source,plan.sourceExpiry,n(cp.removeQty));(plan.replacements||[]).forEach(function(rep){var per=(cp.replacements||{})[rep.id];if(!per||per.include===false)return;var expiry=per.expiryOverride||rep.expiry||'';var target=(cart.items||[]).find(function(it){return norm(it.name)===norm(rep.name)&&norm(it.concentration||it.strength)===norm(rep.concentration||'')});if(!target){target={id:uid('cci'),medId:rep.medId||'',name:rep.name,genericName:rep.name,concentration:rep.concentration||'',strength:rep.concentration||'',qty:0,present:0,batches:[]};cart.items.push(target)}addReplacement(target,rep,expiry)});var oldSeal=cart.seal||'';cart.seal=cp.newSeal;cart.updatedAt=now();cart.updatedBy=actor().name;cart.lastClosedAt=cart.updatedAt;cart.lastClosedByName=actor().name;cart.lastClosedByUser=actor().user;nextReports.push({id:uid('ccbulk'),cartId:cart.id,deptId:cart.deptId,status:'closed',type:'pharmacy_bulk_open_replace',operation:'open',openingLog:true,bulkOpen:true,pharmacyInitiated:true,reason:'Bulk opening and replacement / فتح واستبدال جماعي',oldSeal:oldSeal,newSeal:cp.newSeal,sourceMedicine:plan.sourceKey,sourceExpiry:plan.sourceExpiry,removedQty:removed,replacements:(plan.replacements||[]).filter(function(rep){var per=(cp.replacements||{})[rep.id];return per&&per.include!==false}).map(function(rep){var per=cp.replacements[rep.id]||{};return {name:rep.name,concentration:rep.concentration,qty:n(rep.qty),expiry:per.expiryOverride||rep.expiry||'',lot:rep.lot||''}}),pharmacyNote:plan.note||'',openedAt:now(),closedAt:now(),openedBy:actor().name,closedBy:actor().name,bulk:true})});return {carts:nextCarts,reports:nextReports}}
 window.R17Core=Object.assign(window.R17Core||{},{buildCrashBulkResult:buildCrashBulkResult,removeFromItem:removeFromItem});
 window.renderCrashOperations=function(){
   var page=E('pg-crash-ops');if(!page)return;
@@ -11309,7 +11450,7 @@ window.r17CrashSelectAllMatches=function(on){document.querySelectorAll('.r17-cr-
 window.r17CrashAddReplacement=function(){var id=uid('rep'),host=E('r17-cr-replacements');host.insertAdjacentHTML('beforeend','<div class="r17-replacement" data-rep="'+id+'"><div class="r17-grid4"><div class="fg"><label>Medicine</label><input class="r17-rep-name" list="r17-cr-med-names" placeholder="Medicine name"></div><div class="fg"><label>Concentration</label><input class="r17-rep-conc"></div><div class="fg"><label>Qty per selected cart</label><input class="r17-rep-qty" type="number" min="0" step="any" value="1" oninput="r17CrashRenderMatrix()"></div><div class="fg"><label>Unified replacement expiry</label><input class="r17-rep-exp" type="date" onchange="r17CrashRenderMatrix()"></div></div><div class="fl jb ic"><div class="fg" style="flex:1;margin:0"><label>Lot / Batch (optional)</label><input class="r17-rep-lot" placeholder="Optional"></div><button class="btn bd2c bsm" onclick="this.closest(\'.r17-replacement\').remove();r17CrashRenderMatrix()">Remove</button></div></div>');if(!E('r17-cr-med-names')){var dl=document.createElement('datalist');dl.id='r17-cr-med-names';var names={};depts().forEach(function(d){getMeds(d.id).forEach(function(m){names[m.name]=1})});dl.innerHTML=Object.keys(names).sort().map(function(x){return '<option value="'+esc(x)+'">'}).join('');document.body.appendChild(dl)}r17CrashRenderMatrix()};
 function replacementRows(){return Array.from(document.querySelectorAll('#r17-cr-replacements .r17-replacement')).map(function(r){return {id:r.dataset.rep,name:r.querySelector('.r17-rep-name').value.trim(),concentration:r.querySelector('.r17-rep-conc').value.trim(),qty:n(r.querySelector('.r17-rep-qty').value),expiry:r.querySelector('.r17-rep-exp').value,lot:r.querySelector('.r17-rep-lot').value.trim()}})}
 window.r17CrashRenderMatrix=function(){var ids=Array.from(document.querySelectorAll('.r17-cr-cart-check:checked')).map(function(x){return x.value}),reps=replacementRows(),host=E('r17-cr-cart-matrix');if(!ids.length){host.innerHTML='';return}host.innerHTML=ids.map(function(id){var c=cartList().find(function(x){return String(x.id)===String(id)});return '<div class="r17-cart-matrix" data-plan-cart="'+esc(id)+'"><b>'+esc(c&&c.name||id)+' — '+esc(deptName(c&&c.deptId))+'</b><div class="r17-grid4" style="margin-top:7px"><div class="fg"><label>Remove quantity</label><input class="r17-plan-remove" type="number" min="0" step="any" value="'+esc(E('r17-cr-source-qty').value||0)+'"></div><div class="fg"><label>New unique seal</label><input class="r17-plan-seal" placeholder="Required and unique"></div></div><div class="r17-cart-matrix-grid">'+reps.map(function(rep){return '<label class="r17-check"><input class="r17-plan-include" data-rep="'+rep.id+'" type="checkbox" checked><span><b>'+esc(rep.name||'Replacement line')+'</b><div class="fhint">Unified expiry: '+esc(rep.expiry||'not set')+'</div><input class="r17-plan-exp" data-rep="'+rep.id+'" type="date" placeholder="Exception date"><div class="fhint">Leave blank to use unified date; set only for an exception cart.</div></span></label>'}).join('')+'</div></div>'}).join('')};
-window.r17CrashExecuteBulk=async function(){if(!canCrashAdmin())return;var sourceKey=E('r17-cr-source-med').value;if(!sourceKey)return toast('Choose a source medicine.','err');var reps=replacementRows();if(!reps.length||reps.some(function(r){return !r.name||!(r.qty>0)||!r.expiry}))return toast('Every replacement medicine needs a name, quantity and unified expiry. Lot/Batch stays optional.','err');var plans=Array.from(document.querySelectorAll('[data-plan-cart]')).map(function(box){var map={};reps.forEach(function(rep){var include=box.querySelector('.r17-plan-include[data-rep="'+rep.id+'"]'),exp=box.querySelector('.r17-plan-exp[data-rep="'+rep.id+'"]');map[rep.id]={include:!!(include&&include.checked),expiryOverride:exp&&exp.value||''}});return {cartId:box.dataset.planCart,removeQty:n(box.querySelector('.r17-plan-remove').value),newSeal:box.querySelector('.r17-plan-seal').value.trim(),replacements:map}});if(!plans.length)return toast('Select one or more matching carts.','err');var originalCarts=clone(cartList()),originalReports=clone(reportList());try{var result=buildCrashBulkResult(originalCarts,originalReports,{sourceKey:sourceKey,sourceExpiry:E('r17-cr-source-expiry').value,replacements:reps,cartPlans:plans,note:E('r17-cr-note').value.trim()});await setCrashCarts(result.carts);try{await setCrashReports(result.reports)}catch(reportError){await setCrashCarts(originalCarts);throw reportError}if(typeof auditAction==='function')auditAction('crash_cart_bulk_open_replace_close',{cartIds:plans.map(function(x){return x.cartId}),sourceKey:sourceKey,sourceExpiry:E('r17-cr-source-expiry').value,replacementCount:reps.length,uniqueSeals:plans.map(function(x){return x.newSeal})});toast('Bulk replacement completed; every cart received a different unique seal ✓','succ');renderCrashOperations()}catch(e){console.error(e);toast(String(e&&e.message||e),'err')}};
+window.r17CrashExecuteBulk=async function(){if(!canCrashAdmin())return;var sourceKey=E('r17-cr-source-med').value;if(!sourceKey)return toast('Choose a source medicine.','err');var reps=replacementRows();if(!reps.length||reps.some(function(r){return !r.name||!(r.qty>0)||!r.expiry}))return toast('Every replacement medicine needs a name, quantity and unified expiry. Lot/Batch stays optional.','err');var plans=Array.from(document.querySelectorAll('[data-plan-cart]')).map(function(box){var map={};reps.forEach(function(rep){var include=box.querySelector('.r17-plan-include[data-rep="'+rep.id+'"]'),exp=box.querySelector('.r17-plan-exp[data-rep="'+rep.id+'"]');map[rep.id]={include:!!(include&&include.checked),expiryOverride:exp&&exp.value||''}});return {cartId:box.dataset.planCart,removeQty:n(box.querySelector('.r17-plan-remove').value),newSeal:box.querySelector('.r17-plan-seal').value.trim(),replacements:map}});if(!plans.length)return toast('Select one or more matching carts.','err');var originalCarts=clone(cartList()),originalReports=clone(reportList());try{var result=buildCrashBulkResult(originalCarts,originalReports,{sourceKey:sourceKey,sourceExpiry:E('r17-cr-source-expiry').value,replacements:reps,cartPlans:plans,note:E('r17-cr-note').value.trim()});await setCrashCarts(result.carts);try{await setCrashReports(result.reports)}catch(reportError){await setCrashCarts(originalCarts);throw reportError}if(typeof auditAction==='function'){var addedReports=result.reports.slice(originalReports.length);await Promise.all(addedReports.map(function(r){return Promise.resolve(auditAction('crash_cart_open_report',{reportId:r.id,cartId:r.cartId,deptId:r.deptId,oldSeal:r.oldSeal,newSeal:r.newSeal,reason:r.reason,bulk:true,openedAt:r.openedAt})).catch(function(err){console.warn('Bulk opening audit warning',err)})}));await Promise.resolve(auditAction('crash_cart_bulk_open_replace_close',{cartIds:plans.map(function(x){return x.cartId}),sourceKey:sourceKey,sourceExpiry:E('r17-cr-source-expiry').value,replacementCount:reps.length,uniqueSeals:plans.map(function(x){return x.newSeal}),openingLogRecords:addedReports.length})).catch(function(err){console.warn('Bulk completion audit warning',err)})}toast('Bulk replacement completed; every cart received a different unique seal ✓','succ');renderCrashOperations()}catch(e){console.error(e);toast(String(e&&e.message||e),'err')}};
 
 /* ---------- Medication accountability: independent department custody v2 ---------- */
 var ACC2_ASSIGNMENTS_KEY='accountability_assignments_v2';
@@ -13978,7 +14119,7 @@ function fsR6CrashReviewData(){
     });
   });
   return Object.keys(map).map(function(k){
-    if(!FS_R6_CRASH_WORKFLOW.review[k])FS_R6_CRASH_WORKFLOW.review[k]={confirmed:false,newSeal:''};
+    if(!FS_R6_CRASH_WORKFLOW.review[k])FS_R6_CRASH_WORKFLOW.review[k]={confirmed:true,newSeal:''};
     map[k].review=FS_R6_CRASH_WORKFLOW.review[k];return map[k];
   });
 }
@@ -13991,8 +14132,8 @@ function fsR6CrashRenderReview(){
       var dates=(line.allocations||[]).map(function(a){return fsR6Esc(a.expiry||'No date')+' × '+fsR6N(a.qty)+(a.lot?' · '+fsR6Esc(a.lot):'')}).join(' + ');
       return '<div class="fsr6-review-line"><b>'+fsR6Esc(line.name)+(line.strength?' · '+fsR6Esc(line.strength):'')+'</b><br>Remove: '+line.removeQty+' from '+fsR6Esc(line.oldDate)+' → Replace: '+dates+'</div>';
     }).join('');
-    return '<section class="fsr6-review-card '+(review.confirmed&&review.newSeal?'ready':'pending')+'" data-cart="'+fsR6Esc(entry.cartId)+'"><div class="fsr6-review-head">'+
-      '<label class="fsr6-confirm-label"><input class="fsr6-review-confirm" type="checkbox" '+(review.confirmed?'checked':'')+'>Reviewed / تمت المراجعة</label>'+
+    return '<section class="fsr6-review-card '+(review.newSeal?'ready':'pending')+'" data-cart="'+fsR6Esc(entry.cartId)+'"><div class="fsr6-review-head">'+
+      '<span class="chip">Seal review / مراجعة القفل</span>'+
       '<div><b>'+fsR6Esc(cart.name||cart.number||entry.cartId)+'</b><div class="fhint">'+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(cart.deptId):cart.deptId)+' · '+entry.lines.length+' medicine plan(s)<br>Current seal: <b>'+fsR6Esc(cart.seal||'—')+'</b></div></div>'+
       '<div class="fsr6-review-seal"><label>New unique seal / القفل الجديد الفريد</label><input class="fsr6-seal-input" value="'+fsR6Esc(review.newSeal||'')+'" data-old="'+fsR6Esc(cart.seal||'')+'" placeholder="Required and never used"></div></div><div class="fsr6-review-lines">'+lines+'</div></section>';
   }).join('');
@@ -14041,16 +14182,40 @@ function fsR6CrashUsedSeals(){
 }
 function fsR6CrashValidateReview(showMessage){
   if(!FS_R6_CRASH_WORKFLOW)return false;
-  var seen={},used=fsR6CrashUsedSeals(),ok=true,first='';
+  var seen={},used=fsR6CrashUsedSeals(),ok=true,first='',firstCard=null;
   fsR6CrashReviewData().forEach(function(entry){
-    var review=entry.review||{},seal=String(review.newSeal||'').trim(),key=seal.toLowerCase(),old=String(entry.cart&&entry.cart.seal||'').trim().toLowerCase();
-    var badSeal=!seal||key===old||seen[key]||used[key],badConfirm=!review.confirmed;
+    var review=entry.review||{},seal=String(review.newSeal||'').trim(),key=seal.toLowerCase(),old=String(entry.cart&&entry.cart.seal||'').trim().toLowerCase(),reason='';
+    if(!seal)reason='enter a new seal';
+    else if(key===old)reason='the new seal must be different from the current seal';
+    else if(seen[key])reason='this seal is duplicated within the selected carts';
+    else if(used[key])reason='this seal is already used in a cart or an earlier opening record';
     if(key)seen[key]=true;
+    var badSeal=!!reason;
+    review.confirmed=!badSeal;
     var card=document.querySelector('#fsr6-review-host [data-cart="'+CSS.escape(String(entry.cartId))+'"]');
-    if(card){var input=card.querySelector('.fsr6-seal-input'),confirm=card.querySelector('.fsr6-review-confirm');if(input)input.classList.toggle('fsr6-invalid',!!badSeal);if(confirm)confirm.classList.toggle('fsr6-invalid',!!badConfirm);card.classList.toggle('ready',!badSeal&&!badConfirm);card.classList.toggle('pending',badSeal||badConfirm)}
-    if(badSeal||badConfirm){ok=false;if(!first)first=badConfirm?'Review and confirm every cart.':'Every cart requires a new seal that is unique, different, and never used.'}
+    if(card){
+      var input=card.querySelector('.fsr6-seal-input');
+      if(input)input.classList.toggle('fsr6-invalid',badSeal);
+      card.classList.toggle('ready',!badSeal);
+      card.classList.toggle('pending',badSeal);
+    }
+    if(badSeal){
+      ok=false;
+      if(!first){
+        var cartName=(entry.cart&&(entry.cart.name||entry.cart.number))||entry.cartId;
+        first='Cart "'+cartName+'": '+reason+'. / العربة "'+cartName+'": أدخل رقم قفل جديداً وفريداً وغير مستخدم.';
+        firstCard=card;
+      }
+    }
   });
-  if(showMessage&&!ok)fsR6CrashStatus(first,'err');
+  FS_R6_CRASH_WORKFLOW.reviewError=first;
+  if(showMessage&&!ok){
+    fsR6CrashStatus(first,'err');
+    if(firstCard){
+      try{firstCard.scrollIntoView({behavior:'smooth',block:'center'})}catch(e){firstCard.scrollIntoView()}
+      var firstInput=firstCard.querySelector('.fsr6-seal-input');if(firstInput)firstInput.focus();
+    }
+  }
   return ok;
 }
 function fsR6CrashCompileWorkflow(){
@@ -14071,9 +14236,9 @@ function fsR6CrashCompileWorkflow(){
     });
   });
   if(!enabledPlans)errors.push('Include at least one medicine plan.');
-  var carts=Object.keys(cartMap).map(function(cartId){var review=FS_R6_CRASH_WORKFLOW.review[cartId]||{};cartMap[cartId].newSeal=String(review.newSeal||'').trim();cartMap[cartId].confirmed=!!review.confirmed;return cartMap[cartId]});
+  var carts=Object.keys(cartMap).map(function(cartId){var review=FS_R6_CRASH_WORKFLOW.review[cartId]||{};cartMap[cartId].newSeal=String(review.newSeal||'').trim();cartMap[cartId].confirmed=true;return cartMap[cartId]});
   if(!carts.length)errors.push('Select at least one cart.');
-  if(!fsR6CrashValidateReview(false))errors.push('Review every cart and enter a valid unique seal.');
+  if(!fsR6CrashValidateReview(false))errors.push(FS_R6_CRASH_WORKFLOW.reviewError||'Enter a new unique seal for every selected cart.');
   return {ok:errors.length===0,errors:errors,carts:carts,note:String(FS_R6_CRASH_WORKFLOW.note||'').trim()};
 }
 function fsR6CrashNormalizeAllocations(allocations){
@@ -14098,7 +14263,7 @@ function fsR6ApplyExactReplacementAllocations(item,oldDate,removeQty,allocations
   return {itemId:item.id||'',name:fsR6CrashItemName(item),strength:item.strength||item.concentration||'',oldExpiry:oldDate,oldBatches:old,removedQty:removeQty,allocations:normalized};
 }
 function fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled){
-  var carts=fsR6CrashClone(originalCarts),reports=fsR6CrashClone(originalReports),actor=fsR6Actor(),stamp=fsR6Now(),bulkId='ccsmart_'+Date.now().toString(36),verification=[];
+  var carts=fsR6CrashClone(originalCarts),reports=fsR6CrashClone(originalReports),actor=fsR6Actor(),stamp=fsR6Now(),bulkId='ccsmart_'+Date.now().toString(36),verification=[],createdReports=[];
   compiled.carts.forEach(function(cartPlan,index){
     var cart=carts.find(function(c){return String(c.id)===String(cartPlan.cartId)});if(!cart)throw new Error('Crash Cart not found: '+cartPlan.cartId);
     if(reports.some(function(r){return String(r.cartId)===String(cart.id)&&r.status==='open'}))throw new Error((cart.name||'Crash Cart')+' has an open report. Close it first.');
@@ -14110,9 +14275,9 @@ function fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled){
       verification.push({cartId:cart.id,itemId:item.id,reportId:reportId,allocations:detail.allocations});
     });
     cart.seal=cartPlan.newSeal;cart.updatedAt=stamp;cart.updatedBy=actor.name;cart.lastOpenedAt=stamp;cart.lastOpenedByName=actor.name;cart.lastOpenedByUser=actor.user;cart.lastOpenedByRole=actor.role;cart.lastOpenReason='Smart cross-cart expiry replacement initiated by pharmacy';cart.lastClosedAt=stamp;cart.lastClosedByName=actor.name;cart.lastClosedByUser=actor.user;
-    reports.push({id:reportId,cartId:cart.id,deptId:cart.deptId,status:'closed',type:'pharmacy_smart_cross_cart_replacement',pharmacyInitiated:true,bulkActionId:bulkId,reason:'Smart cross-cart expiry replacement / استبدال ذكي بين عربات الكراش كارت',openedAt:stamp,openedBy:actor.name,openedByName:actor.name,openedByUser:actor.user,openedById:actor.id,openedByRole:actor.role,closedAt:stamp,closedBy:actor.name,closedByName:actor.name,closedByUser:actor.user,closedById:actor.id,oldSeal:oldSeal,newSeal:cartPlan.newSeal,replacements:replacements,pharmacyNote:compiled.note,lastEditedAt:stamp,lastEditedByName:actor.name,lastEditedByUser:actor.user});
+    var openingReport={id:reportId,cartId:cart.id,deptId:cart.deptId,status:'closed',type:'pharmacy_smart_cross_cart_replacement',operation:'open',openingLog:true,bulkOpen:true,pharmacyInitiated:true,bulkActionId:bulkId,reason:'Bulk opening and smart replacement / فتح جماعي واستبدال ذكي',openedAt:stamp,openedBy:actor.name,openedByName:actor.name,openedByUser:actor.user,openedById:actor.id,openedByRole:actor.role,closedAt:stamp,closedBy:actor.name,closedByName:actor.name,closedByUser:actor.user,closedById:actor.id,oldSeal:oldSeal,newSeal:cartPlan.newSeal,replacements:replacements,pharmacyNote:compiled.note,lastEditedAt:stamp,lastEditedByName:actor.name,lastEditedByUser:actor.user};reports.push(openingReport);createdReports.push(openingReport);
   });
-  return {carts:carts,reports:reports,bulkId:bulkId,verification:verification};
+  return {carts:carts,reports:reports,bulkId:bulkId,verification:verification,createdReports:createdReports};
 }
 function fsR6CrashVerifyPersisted(result,compiled){
   var carts=fsR6CrashCarts(),reports=typeof window.crashReports==='function'?(window.crashReports()||[]):[];
@@ -14135,7 +14300,7 @@ window.openCrashCartSmartBulkReplacement=function(){
   var seeds=templates.map(function(t){return '<span class="chip">'+fsR6Esc(t.name)+(t.strength?' · '+fsR6Esc(t.strength):'')+' · '+fsR6Esc(t.oldDate)+'</span>'}).join(' ');
   var html='<div class="modal-bg on" id="fsr6-crash-modal" role="dialog" aria-modal="true"><div class="modal fsr6-dialog">'+
     '<div class="fsr6-head"><div><div class="mt">Smart cross-cart replacement / الاستبدال الذكي بين العربات</div><div class="fhint">Each medicine, strength and old expiry has an independent plan. Dates never spill into another medicine plan.</div></div><button class="xbtn" id="fsr6-close" type="button">×</button></div>'+
-    '<div class="fsr6-body"><div class="fsr6-seeds">'+seeds+'</div><div class="fsr6-workflow-note"><b>Workflow:</b> configure replacement dates under each medicine; select carts and any cart-specific exceptions; then review each cart below and only confirm its unique seal.</div><div id="fsr6-plan-host"></div><div class="fsr6-review-title">Final cart review / المراجعة النهائية للعربات</div><div class="fhint" style="margin-bottom:8px">Read-only medicine summary. Check each cart visually, confirm it, and enter its unique new seal.</div><div id="fsr6-review-host"></div></div>'+
+    '<div class="fsr6-body"><div class="fsr6-seeds">'+seeds+'</div><div class="fsr6-workflow-note"><b>Workflow:</b> configure replacement dates under each medicine; select carts and any cart-specific exceptions; then enter one new unique seal for each cart below. A valid seal completes the review automatically.</div><div id="fsr6-plan-host"></div><div class="fsr6-review-title">Final cart review / المراجعة النهائية للعربات</div><div class="fhint" style="margin-bottom:8px">Read-only medicine summary. Enter a new unique seal for every cart; the window closes automatically only after the save and read-back verification succeed.</div><div id="fsr6-review-host"></div></div>'+
     '<div class="fsr6-footer"><div><label>Pharmacy note / ملاحظة الصيدلية</label><textarea id="fsr6-note" placeholder="Optional note"></textarea></div><div class="fsr6-actions"><span class="fsr6-status" id="fsr6-status"></span><button class="btn bg" id="fsr6-cancel" type="button">Cancel</button><button class="btn bs" id="fsr6-save" type="button">Validate and save / تحقق وحفظ</button></div></div></div></div>';
   document.body.insertAdjacentHTML('beforeend',html);fsR6EnsureStyles();fsR6CrashRenderWorkflow();
   fsR6E('fsr6-close').onclick=fsR6CrashCloseModal;fsR6E('fsr6-cancel').onclick=fsR6CrashCloseModal;fsR6E('fsr6-save').onclick=window.saveCrashCartSmartBulkReplacement;
@@ -14143,8 +14308,7 @@ window.openCrashCartSmartBulkReplacement=function(){
   fsR6E('fsr6-plan-host').addEventListener('click',function(ev){var b=ev.target.closest('[data-action]');if(b)fsR6CrashHandlePlanAction(b)});
   fsR6E('fsr6-plan-host').addEventListener('change',function(ev){if(ev.target.matches('input,select'))fsR6CrashHandlePlanInput(ev.target)});
   fsR6E('fsr6-plan-host').addEventListener('input',function(ev){if(ev.target.matches('.fsr6-remove-qty,.fsr6-alloc-qty,.fsr6-alloc-lot'))fsR6CrashHandlePlanInput(ev.target)});
-  fsR6E('fsr6-review-host').addEventListener('input',function(ev){var card=ev.target.closest('[data-cart]');if(!card||!FS_R6_CRASH_WORKFLOW)return;var review=FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]||(FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]={confirmed:false,newSeal:''});if(ev.target.classList.contains('fsr6-seal-input'))review.newSeal=ev.target.value;fsR6CrashValidateReview(false)});
-  fsR6E('fsr6-review-host').addEventListener('change',function(ev){var card=ev.target.closest('[data-cart]');if(!card||!FS_R6_CRASH_WORKFLOW)return;var review=FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]||(FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]={confirmed:false,newSeal:''});if(ev.target.classList.contains('fsr6-review-confirm'))review.confirmed=ev.target.checked;fsR6CrashValidateReview(false)});
+  fsR6E('fsr6-review-host').addEventListener('input',function(ev){var card=ev.target.closest('[data-cart]');if(!card||!FS_R6_CRASH_WORKFLOW)return;var review=FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]||(FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]={confirmed:true,newSeal:''});if(ev.target.classList.contains('fsr6-seal-input'))review.newSeal=ev.target.value;fsR6CrashValidateReview(false)});
   fsR6E('fsr6-crash-modal').onclick=function(ev){if(ev.target===this)fsR6CrashCloseModal()};
 };
 window.saveCrashCartSmartBulkReplacement=async function(){
@@ -14157,7 +14321,8 @@ window.saveCrashCartSmartBulkReplacement=async function(){
     if(typeof window.setCrashCarts==='function'){await window.setCrashCarts(result.carts);cartsSaved=true}
     if(typeof window.setCrashReports==='function'){await window.setCrashReports(result.reports);reportsSaved=true}
     if(!fsR6CrashVerifyPersisted(result,compiled))throw new Error('Read-back verification failed. No completion was accepted.');
-    await fsR6Audit('crash_cart_smart_bulk_complete',{bulkActionId:result.bulkId,carts:compiled.carts.length,medicinePlans:(FS_R6_CRASH_WORKFLOW.plans||[]).filter(function(x){return x.enabled}).length,sourceSelection:FS_R6_CRASH_SELECTED.size,uniqueSeals:compiled.carts.map(function(x){return x.newSeal})});
+    await Promise.all((result.createdReports||[]).map(function(r){return fsR6Audit('crash_cart_open_report',{reportId:r.id,cartId:r.cartId,deptId:r.deptId,oldSeal:r.oldSeal,newSeal:r.newSeal,reason:r.reason,bulk:true,bulkActionId:result.bulkId,openedAt:r.openedAt})}));
+    await fsR6Audit('crash_cart_smart_bulk_complete',{bulkActionId:result.bulkId,carts:compiled.carts.length,medicinePlans:(FS_R6_CRASH_WORKFLOW.plans||[]).filter(function(x){return x.enabled}).length,sourceSelection:FS_R6_CRASH_SELECTED.size,uniqueSeals:compiled.carts.map(function(x){return x.newSeal}),openingLogRecords:(result.createdReports||[]).length});
     FS_R6_CRASH_SELECTED.clear();fsR6CrashCloseModal();if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();fsR6Toast(compiled.carts.length+' Crash Cart(s) replaced, reviewed and resealed ✓ · '+result.bulkId,'succ');
   }catch(e){
     console.error(e);
