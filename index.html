@@ -3,8 +3,9 @@
 <html dir="ltr" lang="en">
 <head>
 <meta charset="utf-8"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net http://localhost:9100 https://localhost:9101; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.qrserver.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net http://localhost:9100 https://localhost:9101; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<meta content="R6.34" name="asdhealth-build"/>
+<meta content="R6.64" name="asdhealth-build"/>
 <title>ASDHealth</title>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-favicon" rel="icon" type="image/svg+xml"/>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-shortcut-icon" rel="shortcut icon" type="image/svg+xml"/>
@@ -2548,7 +2549,8 @@ function fsR17MedId(){return 'med_'+Date.now().toString(36)+'_'+Math.random().to
 function fsR17NormalizeMed(m,index){m=Object.assign({},m||{});m.id=String(m.id||m.medId||fsR17MedId());m.medId=m.id;m.name=String(m.name||m.currentName||'').trim();m.currentName=m.name;m.aliases=fsR17UniqueNames(m.aliases||m.previousNames||[]).filter(function(x){return fsR17MedNorm(x)!==fsR17MedNorm(m.name)});var order=Number(m.sortOrder);m.sortOrder=isFinite(order)?order:(index+1)*100;if(!m.createdAt)m.createdAt=m.created||fsR17Now();return m}
 function fsR17NormalizeMeds(arr){var ids={},changed=false;var out=(Array.isArray(arr)?arr:[]).map(function(m,i){var before=JSON.stringify(m||{}),n=fsR17NormalizeMed(m,i);while(ids[n.id])n.id=n.medId=fsR17MedId();ids[n.id]=1;if(JSON.stringify(n)!==before)changed=true;return n});return {rows:out,changed:changed}}
 function getMeds(deptId){var raw=S.g('meds_'+deptId)||[],n=fsR17NormalizeMeds(raw);if(n.changed&&!FS_R17_MED_MIGRATION_PENDING[deptId]){FS_R17_MED_MIGRATION_PENDING[deptId]=1;setTimeout(function(){S.s('meds_'+deptId,n.rows).catch(function(e){console.warn('Medication identity migration failed',deptId,e)}).finally(function(){delete FS_R17_MED_MIGRATION_PENDING[deptId]})},0)}return n.rows}
-function setMeds(deptId,arr){return S.s('meds_'+deptId,fsR17NormalizeMeds(arr).rows)}
+/* Fail closed until the authoritative R6.64 inventory safety gateway is installed. */
+function setMeds(){return Promise.reject(new Error('Inventory safety gateway is not initialized.'))}
 function pushMed(deptId,v){var arr=getMeds(deptId).slice(),max=arr.reduce(function(a,m){return Math.max(a,Number(m.sortOrder)||0)},0);v=fsR17NormalizeMed(Object.assign({},v||{},{id:(v&&v.id)||fsR17MedId(),sortOrder:(v&&isFinite(Number(v.sortOrder)))?Number(v.sortOrder):max+100,createdAt:(v&&v.createdAt)||fsR17Now()}),arr.length);arr.push(v);return setMeds(deptId,arr).then(function(){return v})}
 function updMed(deptId,id,d){var arr=getMeds(deptId).slice(),i=arr.findIndex(function(x){return String(x.id)===String(id)});if(i<0)return Promise.resolve(false);var old=arr[i],next=Object.assign({},old,d||{},{id:old.id,medId:old.id,sortOrder:old.sortOrder,updatedAt:fsR17Now()});if(d&&d.name&&fsR17MedNorm(d.name)!==fsR17MedNorm(old.name))next.aliases=fsR17UniqueNames((old.aliases||[]).concat([old.name]));arr[i]=fsR17NormalizeMed(next,i);return setMeds(deptId,arr).then(function(){return true})}
 function delMed(deptId,id){return setMeds(deptId,getMeds(deptId).filter(function(x){return String(x.id)!==String(id)}))}
@@ -3850,6 +3852,7 @@ window.receiveFulfilledRequest=function(id){var req=(typeof gr==='function'?gr()
   var zdb=[],zprinters=[],zebraDevice=null;
   function E(id){return document.getElementById(id)}
   function clean(v){return String(v==null?'':v).trim()}
+  function htmlSafe(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function safeNum(v,d){v=Number(v);return isFinite(v)&&v>0?v:d}
   function allowed(){return !!(window.CU&&(CU.role==='pharmacy'||CU.master===true))}
   function message(t,kind){var x=E('zebra-message');if(x){x.textContent=t||'';x.style.color=kind==='err'?'var(--rdl)':kind==='ok'?'var(--gnl)':'var(--tx2)'}}
@@ -3888,7 +3891,7 @@ window.receiveFulfilledRequest=function(id){var req=(typeof gr==='function'?gr()
   function installLocalBrowserPrintShim(base){window.BrowserPrint={getLocalDevices:function(ok,fail,type){fetch(base+'/available').then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(data){var list=Array.isArray(data)?data:(data.printer||data.printers||data.devices||[]);list=list.map(function(d){d.deviceType=d.deviceType||d.type||'printer';d.send=function(payload,success,error){fetch(base+'/write',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({device:d,data:payload})}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.text()}).then(function(){if(success)success()}).catch(function(e){if(error)error(e)})};return d});if(type)list=list.filter(function(d){return d.deviceType===type||type==='printer'});ok(list)}).catch(function(e){if(fail)fail(e)})}};return true}
   function tryLoadBrowserPrint(cb){if(window.BrowserPrint)return cb(true);var urls=['http://localhost:9100/BrowserPrint-3.1.250.min.js','https://localhost:9101/BrowserPrint-3.1.250.min.js'];var i=0;function probeShim(){fetch('http://localhost:9100/available').then(function(r){if(!r.ok)throw new Error();installLocalBrowserPrintShim('http://localhost:9100');cb(true)}).catch(function(){fetch('https://localhost:9101/available').then(function(r){if(!r.ok)throw new Error();installLocalBrowserPrintShim('https://localhost:9101');cb(true)}).catch(function(){cb(false)})})}function next(){if(window.BrowserPrint)return cb(true);if(i>=urls.length)return probeShim();var sc=document.createElement('script');sc.src=urls[i++];sc.onload=function(){if(window.BrowserPrint)cb(true);else next()};sc.onerror=next;document.head.appendChild(sc)}next()}
   window.zebraRefreshPrinters=function(){if(!allowed())return;status('Detecting…','byl');message('Searching for Zebra printers connected to this device…');tryLoadBrowserPrint(function(ok){if(!ok){status('Browser Print unavailable','brd');message('Zebra Browser Print is not available. Install/run Zebra Browser Print, then use Detect printers again. Browser print and ZPL download remain available.','err');return}BrowserPrint.getLocalDevices(function(devs){zprinters=(devs||[]).filter(function(d){return !d.deviceType||d.deviceType==='printer'});var sel=E('zebra-printer'),saved=localStorage.getItem(ZPR_KEY)||'';sel.innerHTML='';if(!zprinters.length){sel.innerHTML='<option value="">No Zebra printers detected</option>';status('No printer','brd');message('No Zebra printer was detected. Check USB/network connection and Zebra Browser Print.','err');return}zprinters.forEach(function(d,i){var o=document.createElement('option');o.value=String(i);o.textContent=d.name||d.uid||('Zebra printer '+(i+1));sel.appendChild(o)});var idx=zprinters.findIndex(function(d){return (d.uid||d.name)===saved});sel.value=String(idx>=0?idx:0);zebraDevice=zprinters[Number(sel.value)];status(zprinters.length+' printer'+(zprinters.length>1?'s':''),'bgn');message('Detected '+zprinters.length+' Zebra printer(s). Select the printer to use.','ok');sel.onchange=function(){zebraDevice=zprinters[Number(sel.value)]||null;if(zebraDevice)localStorage.setItem(ZPR_KEY,zebraDevice.uid||zebraDevice.name||'')}} ,function(e){status('Detection failed','brd');message('Printer detection failed: '+(e&&e.message?e.message:e),'err')},'printer')})};
-  function browserPrint(){var w=safeNum(E('zebra-width').value,50),h=safeNum(E('zebra-height').value,25),copies=Math.min(500,Math.max(1,Math.floor(safeNum(E('zebra-copies').value,1)))),name=clean(E('zebra-name').value),strength=clean(E('zebra-strength').value),hasExp=E('zebra-template').value==='name_strength_expiry',expiry=E('zebra-expiry').value,footer=clean(E('zebra-footer').value),win=window.open('','_blank');if(!win)return message('Allow pop-ups to print labels.','err');var labels='';for(var i=0;i<copies;i++)labels+='<section class="label"><div class="name">'+name+'</div><div class="strength">'+strength+'</div>'+(hasExp?'<div class="expiry">EXP '+expiry+'</div>':'')+(footer?'<div class="footer">'+footer+'</div>':'')+'</section>';win.document.write('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:'+w+'mm '+h+'mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,sans-serif}.label{width:'+w+'mm;height:'+h+'mm;page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5mm;overflow:hidden}.name{font-size:'+Math.max(12,Math.min(34,h*1.05))+'pt;font-weight:800;line-height:1}.strength{font-size:'+Math.max(10,Math.min(24,h*.65))+'pt;font-weight:700;line-height:1.05;margin-top:1mm}.expiry{font-size:'+Math.max(9,Math.min(20,h*.52))+'pt;font-weight:800;margin-top:1mm}.footer{font-size:'+Math.max(7,Math.min(13,h*.30))+'pt;font-weight:600;margin-top:1mm}</style></head><body>'+labels+'<script>onload=function(){print()}<\/script></body></html>');win.document.close()}
+  function browserPrint(){var w=safeNum(E('zebra-width').value,50),h=safeNum(E('zebra-height').value,25),copies=Math.min(500,Math.max(1,Math.floor(safeNum(E('zebra-copies').value,1)))),name=htmlSafe(clean(E('zebra-name').value)),strength=htmlSafe(clean(E('zebra-strength').value)),hasExp=E('zebra-template').value==='name_strength_expiry',expiry=htmlSafe(E('zebra-expiry').value),footer=htmlSafe(clean(E('zebra-footer').value)),win=window.open('','_blank');if(!win)return message('Allow pop-ups to print labels.','err');var labels='';for(var i=0;i<copies;i++)labels+='<section class="label"><div class="name">'+name+'</div><div class="strength">'+strength+'</div>'+(hasExp?'<div class="expiry">EXP '+expiry+'</div>':'')+(footer?'<div class="footer">'+footer+'</div>':'')+'</section>';win.document.write('<!doctype html><html><head><meta charset="utf-8"><style>@page{size:'+w+'mm '+h+'mm;margin:0}*{box-sizing:border-box}html,body{margin:0;padding:0;font-family:Arial,sans-serif}.label{width:'+w+'mm;height:'+h+'mm;page-break-after:always;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1.5mm;overflow:hidden}.name{font-size:'+Math.max(12,Math.min(34,h*1.05))+'pt;font-weight:800;line-height:1}.strength{font-size:'+Math.max(10,Math.min(24,h*.65))+'pt;font-weight:700;line-height:1.05;margin-top:1mm}.expiry{font-size:'+Math.max(9,Math.min(20,h*.52))+'pt;font-weight:800;margin-top:1mm}.footer{font-size:'+Math.max(7,Math.min(13,h*.30))+'pt;font-weight:600;margin-top:1mm}</style></head><body>'+labels+'<script>onload=function(){print()}<\/script></body></html>');win.document.close()}
   window.zebraDownloadZPL=function(test){var z=buildZPL(!!test),blob=new Blob([z],{type:'text/plain'}),a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ASDHealth_Zebra_Label_v1_2.zpl';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},1000);message('ZPL file downloaded.','ok')};
   function sendZPL(test){var z=buildZPL(!!test);if(!zebraDevice){var sel=E('zebra-printer');zebraDevice=zprinters[Number(sel&&sel.value)]||null}if(!zebraDevice)return message('No Zebra printer selected. Click Detect printers first.','err');localStorage.setItem(ZPR_KEY,zebraDevice.uid||zebraDevice.name||'');zebraDevice.send(z,function(){message('Labels sent successfully to '+(zebraDevice.name||'Zebra printer')+'.','ok');if(typeof toast==='function')toast('Zebra labels sent successfully','succ')},function(e){message('Zebra print failed: '+(e&&e.message?e.message:e),'err')})}
   window.zebraPrintLabels=function(){if(!allowed())return;if(!clean(E('zebra-name').value))return message('Select or enter a medicine name.','err');if(E('zebra-template').value==='name_strength_expiry'&&!E('zebra-expiry').value)return message('Enter the expiry date.','err');var mode=E('zebra-mode').value;if(mode==='browser')return browserPrint();if(mode==='download')return zebraDownloadZPL(false);sendZPL(false)};
@@ -4865,6 +4868,9 @@ var NOTE_TYPE_LABELS={
 var NOTE_STATUS_LABELS={
   open:'open',urgent:'urgent',resolved:'resolved'
 };
+function noteEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function noteStatus(v){return ['open','urgent','resolved'].indexOf(String(v))>=0?String(v):'open'}
+function noteType(v){return Object.prototype.hasOwnProperty.call(NOTE_TYPE_LABELS,String(v))?String(v):'other'}
 
 // ── DEPT: Submit note ────────────────────────────────────
 function renderDeptNotes(){
@@ -4877,19 +4883,19 @@ function renderDeptNotes(){
     return;
   }
   list.innerHTML=notes.map(function(n){
-    var typeLabel=NOTE_TYPE_LABELS[n.type]||n.type;
-    var statusCls=n.status==='resolved'?'note-resolved':n.status==='urgent'?'note-urgent':'note-open';
-    var statusBadgeCls='note-badge-'+(n.status||'open');
+    var safeType=noteType(n.type),safeStatus=noteStatus(n.status),typeLabel=NOTE_TYPE_LABELS[safeType]||safeType;
+    var statusCls=safeStatus==='resolved'?'note-resolved':safeStatus==='urgent'?'note-urgent':'note-open';
+    var statusBadgeCls='note-badge-'+safeStatus;
     return '<div class="note-card '+statusCls+'">'
       +'<div class="fl jb ic" style="flex-wrap:wrap;gap:6px">'
-        +'<div style="font-weight:600">'+n.medName+(n.medName?' — ':'')+typeLabel+'</div>'
-        +'<span class="badge '+statusBadgeCls+'">'+(n.status||'open')+'</span>'
+        +'<div style="font-weight:600">'+noteEsc(n.medName)+(n.medName?' — ':'')+noteEsc(typeLabel)+'</div>'
+        +'<span class="badge '+statusBadgeCls+'">'+noteEsc(safeStatus)+'</span>'
       +'</div>'
-      +'<div style="margin-top:6px;color:var(--tx)">'+n.body+'</div>'
-      +(n.reply?'<div style="margin-top:8px;padding:8px 10px;background:rgba(46,160,67,.08);border-left:2px solid var(--gn);border-radius:4px;font-size:12px"><b>Pharmacy reply:</b> '+n.reply+'</div>':'')
+      +'<div style="margin-top:6px;color:var(--tx)">'+noteEsc(n.body)+'</div>'
+      +(n.reply?'<div style="margin-top:8px;padding:8px 10px;background:rgba(46,160,67,.08);border-left:2px solid var(--gn);border-radius:4px;font-size:12px"><b>Pharmacy reply:</b> '+noteEsc(n.reply)+'</div>':'')
       +'<div class="note-meta">'
-        +'<span>'+fmtDate(n.created)+'</span>'
-        +'<span class="note-tag ntag-'+n.type+'">'+typeLabel+'</span>'
+        +'<span>'+noteEsc(fmtDate(n.created))+'</span>'
+        +'<span class="note-tag ntag-'+safeType+'">'+noteEsc(typeLabel)+'</span>'
         +(n.priority==='urgent'?'<span class="badge brd">&#x1F6A8; Urgent</span>':'')
       +'</div>'
       +'</div>';
@@ -4902,7 +4908,7 @@ function renderPharmNotes(){
   // Populate dept filter
   var dsel=el('notes-filter-dept');
   if(dsel&&dsel.options.length<=1){
-    gd().forEach(function(d){dsel.innerHTML+='<option value="'+d.id+'">'+d.name+'</option>';});
+    gd().forEach(function(d){dsel.innerHTML+='<option value="'+noteEsc(d.id)+'">'+noteEsc(d.name)+'</option>';});
   }
   var deptF=(el('notes-filter-dept')||{value:''}).value||'';
   var typeF=(el('notes-filter-type')||{value:''}).value||'';
@@ -4925,28 +4931,28 @@ function renderPharmNotes(){
     return;
   }
   list.innerHTML=notes.map(function(n){
-    var typeLabel=NOTE_TYPE_LABELS[n.type]||n.type;
-    var statusCls=n.status==='resolved'?'note-resolved':n.status==='urgent'?'note-urgent':'note-open';
-    var statusBadgeCls='note-badge-'+(n.status||'open');
+    var safeType=noteType(n.type),safeStatus=noteStatus(n.status),typeLabel=NOTE_TYPE_LABELS[safeType]||safeType,safeId=noteEsc(n.id);
+    var statusCls=safeStatus==='resolved'?'note-resolved':safeStatus==='urgent'?'note-urgent':'note-open';
+    var statusBadgeCls='note-badge-'+safeStatus;
     return '<div class="note-card '+statusCls+'" style="margin-bottom:10px">'
       +'<div class="fl jb ic" style="flex-wrap:wrap;gap:8px">'
         +'<div>'
-          +'<span style="font-weight:700">'+n.deptName+'</span>'
-          +(n.medName?'<span style="color:var(--tx2);font-size:12px"> &mdash; '+n.medName+'</span>':'')
+          +'<span style="font-weight:700">'+noteEsc(n.deptName)+'</span>'
+          +(n.medName?'<span style="color:var(--tx2);font-size:12px"> &mdash; '+noteEsc(n.medName)+'</span>':'')
         +'</div>'
         +'<div class="fl ic g8">'
-          +'<span class="badge '+statusBadgeCls+'">'+(n.status||'open')+'</span>'
+          +'<span class="badge '+statusBadgeCls+'">'+noteEsc(safeStatus)+'</span>'
           +(n.priority==='urgent'?'<span class="badge brd">&#x1F6A8; Urgent</span>':'')
-          +'<button class="btn bp bxs" data-nid="'+n.id+'" onclick="openNoteReply(this.getAttribute(&#x27;data-nid&#x27;))">&#x270F; Reply</button>'
-          +(n.status!=='resolved'?'<button class="btn bs bxs" data-nid="'+n.id+'" onclick="quickResolve(this.getAttribute(&#x27;data-nid&#x27;))">&#x2713; Resolve</button>':'')
+          +'<button class="btn bp bxs" data-nid="'+safeId+'" onclick="openNoteReply(this.getAttribute(&#x27;data-nid&#x27;))">&#x270F; Reply</button>'
+          +(safeStatus!=='resolved'?'<button class="btn bs bxs" data-nid="'+safeId+'" onclick="quickResolve(this.getAttribute(&#x27;data-nid&#x27;))">&#x2713; Resolve</button>':'')
         +'</div>'
       +'</div>'
-      +'<div style="margin-top:8px;color:var(--tx)">'+(n.body.length>200?n.body.slice(0,200)+'...':n.body)+'</div>'
-      +(n.reply?'<div style="margin-top:8px;padding:8px 10px;background:rgba(46,160,67,.08);border-left:2px solid var(--gn);border-radius:4px;font-size:12px"><b>Reply:</b> '+n.reply+'</div>':'')
+      +'<div style="margin-top:8px;color:var(--tx)">'+noteEsc(String(n.body||'').length>200?String(n.body||'').slice(0,200)+'...':n.body)+'</div>'
+      +(n.reply?'<div style="margin-top:8px;padding:8px 10px;background:rgba(46,160,67,.08);border-left:2px solid var(--gn);border-radius:4px;font-size:12px"><b>Reply:</b> '+noteEsc(n.reply)+'</div>':'')
       +'<div class="note-meta">'
-        +'<span>'+fmtDate(n.created)+'</span>'
-        +'<span style="font-family:var(--mono);font-size:10px">'+n.username+'</span>'
-        +'<span class="note-tag ntag-'+n.type+'">'+typeLabel+'</span>'
+        +'<span>'+noteEsc(fmtDate(n.created))+'</span>'
+        +'<span style="font-family:var(--mono);font-size:10px">'+noteEsc(n.username)+'</span>'
+        +'<span class="note-tag ntag-'+safeType+'">'+noteEsc(typeLabel)+'</span>'
       +'</div>'
       +'</div>';
   }).join('');
@@ -4955,9 +4961,10 @@ function renderPharmNotes(){
 function openNoteReply(id){
   var note=getNotes().find(function(n){return n.id===id});
   if(!note)return;
-  el('mnote-content').innerHTML='<div style="font-weight:600;margin-bottom:4px">'+note.deptName+(note.medName?' — <span style="color:var(--tx2)">'+note.medName+'</span>':'')+' <span class="badge note-badge-'+note.status+'">'+note.status+'</span></div>'
-    +'<div>'+note.body+'</div>'
-    +(note.reply?'<div style="margin-top:6px;font-size:11px;color:var(--tx2)">Previous reply: '+note.reply+'</div>':'');
+  var safeStatus=noteStatus(note.status);
+  el('mnote-content').innerHTML='<div style="font-weight:600;margin-bottom:4px">'+noteEsc(note.deptName)+(note.medName?' — <span style="color:var(--tx2)">'+noteEsc(note.medName)+'</span>':'')+' <span class="badge note-badge-'+safeStatus+'">'+noteEsc(safeStatus)+'</span></div>'
+    +'<div>'+noteEsc(note.body)+'</div>'
+    +(note.reply?'<div style="margin-top:6px;font-size:11px;color:var(--tx2)">Previous reply: '+noteEsc(note.reply)+'</div>':'');
   el('note-reply-txt').value=note.reply||'';
   el('note-reply-status').value=note.status||'open';
   el('note-reply-id').value=id;
@@ -6405,7 +6412,8 @@ function ctlWarehouseQtyForFilter(w){return ctlNum((w||{}).system)+ctlNum((w||{}
 <script>
 /* Final warehouse access guard + master-only Firestore backup/restore. */
 (function(){
-  var BACKUP_COLLECTIONS=['floorstock_state','users','public_expiry','public_controlled_expiry'];
+  /* User profiles contain PII and are intentionally excluded from downloadable JSON backups. */
+  var BACKUP_COLLECTIONS=['floorstock_state','public_expiry','public_controlled_expiry'];
   var pendingBackup=null;
 
   function isMasterBackupLocal(){
@@ -6487,7 +6495,8 @@ function encodeValue(v){
 /* ASDHealth pilot protection: free daily IndexedDB backups + System Health. */
 (function(){
   var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365;
-  var AH_COLLECTIONS=['floorstock_state','users','public_expiry','public_controlled_expiry'];
+  /* Automatic/local operational backups intentionally exclude the users collection (PII). */
+  var AH_COLLECTIONS=['floorstock_state','public_expiry','public_controlled_expiry'];
   function masterOnly(){
     try{
       if(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)return true;
@@ -10587,6 +10596,8 @@ async function repairDepartmentLinksZ(){
 var previewStartSavedZ=null;
 window.preparePreviewStart=function(){
   var saved=previewStartSavedZ=previewRead();
+  var validPreviewRoles=['department','pharmacy','pharmacy_director','inpatient_supervisor','controlled_pharmacy','warehouse','pharmacy_staff'];
+  if(saved&&validPreviewRoles.indexOf(String(saved.role||''))<0){previewClear();previewStartSavedZ=null;saved=null}
   if(saved&&window.CU&&CU.master===true){
     var actual=Object.assign({},CU),d=saved.deptId?deptZ(saved.deptId):null;
     window.MASTER_ACTUAL=actual;
@@ -10978,7 +10989,29 @@ window.saveAllLimits=async function(){var lims=Object.assign({},getMonthlyLimits
 window.saveBulkLimits=async function(){var lims=Object.assign({},getMonthlyLimits()||{});document.querySelectorAll('.blim-inp').forEach(function(inp){var v=inp.value.trim();if(v&&+v>0)lims[inp.dataset.dept]=+v;else delete lims[inp.dataset.dept]});try{await setMonthlyLimits(lims);CM('mbulk-limits');renderSchedule();toast('All limits saved permanently ✓','succ')}catch(e){toast('Limits were not saved.','err')}};
 
 /* Departments are committed as one awaited operation set. */
-window.addDept=async function(){var n=el('ndname').value.trim();if(!n)return toast('Enter department name','err');var base=n.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,20)||'dept',id=base,c=2;while((gd()||[]).some(function(d){return d.id===id})){id=base+'_'+c++}var copy=(el('ndcopy')||{value:'empty'}).value||'empty',meds=[];if(copy==='default')meds=(window.MEDS||[]).map(function(m){return {id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:m.n,category:m.c,min:m.mn,max:m.mx,monthly:null,high_alert:!!m.ha,hazard:!!m.hz,lasa:!!m.ls,created:typeof nowISO==='function'?nowISO():new Date().toISOString()}});else if(copy!=='empty')meds=(getMeds(copy)||[]).map(function(m){return Object.assign({},m,{id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)})});try{await Promise.all([S.push('departments',{id:id,name:n,created:typeof nowISO==='function'?nowISO():new Date().toISOString()}),setMeds(id,meds)]);el('ndname').value='';renderUsers();fillDS();populateInvDeptSel();if(typeof window.renderRequestHourGridUI==='function')window.renderRequestHourGridUI();toast('"'+n+'" added and saved with '+meds.length+' medication(s) ✓','succ')}catch(e){console.error(e);toast('Department was not fully saved.','err')}};
+window.addDept=async function(){
+  var n=el('ndname').value.trim();if(!n)return toast('Enter department name','err');
+  var base=n.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'').slice(0,20)||'dept',id=base,c=2;
+  while((gd()||[]).some(function(d){return d.id===id})){id=base+'_'+c++}
+  var copyMode=(el('ndcopy')||{value:'empty'}).value||'empty',meds=[];
+  if(copyMode==='default')meds=(window.MEDS||[]).map(function(m){return {id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),name:m.n,category:m.c,min:m.mn,max:m.mx,monthly:null,high_alert:!!m.ha,hazard:!!m.hz,lasa:!!m.ls,created:typeof nowISO==='function'?nowISO():new Date().toISOString()}});
+  else if(copyMode!=='empty')meds=(getMeds(copyMode)||[]).map(function(m){return Object.assign({},m,{id:'m_'+Date.now()+'_'+Math.random().toString(36).slice(2,7)})});
+  var department={id:id,name:n,created:typeof nowISO==='function'?nowISO():new Date().toISOString()},created=false;
+  try{
+    await S.push('departments',department);created=true;
+    if(meds.length&&typeof window.inventorySafetyApprovedBulk==='function')await window.inventorySafetyApprovedBulk('create_department_inventory',function(){return setMeds(id,meds)});
+    else await setMeds(id,meds);
+    el('ndname').value='';renderUsers();fillDS();populateInvDeptSel();if(typeof window.renderRequestHourGridUI==='function')window.renderRequestHourGridUI();
+    toast('"'+n+'" added and saved with '+meds.length+' medication(s) ✓','succ')
+  }catch(error){
+    console.error(error);
+    if(created){
+      try{await S.s('departments',(S.g('departments')||[]).filter(function(d){return String(d.id)!==String(id)}))}catch(rollbackError){console.error('Department rollback failed',rollbackError)}
+      try{if(S.g('meds_'+id)!=null)await S.rm('meds_'+id)}catch(cleanupError){console.error('New department inventory cleanup failed',cleanupError)}
+    }
+    toast('Department creation was rolled back; no partial department was kept.','err')
+  }
+};
 window.delDept=async function(id){
   var dept=(gd()||[]).find(function(item){
     return String(item.id)===String(id);
@@ -14439,6 +14472,12 @@ window.masterDeleteCrashCart=async function(id){try{return await hardDeleteCrash
 async function hardDeleteDepartment(id){
   if(!master())return toast('Master permission required / الصلاحية للماستر فقط','err');
   var dept=(typeof gd==='function'?gd():[]).find(function(d){return String(d.id)===String(id)});if(!dept)return toast('Department not found','err');
+  var linkedUsers=(typeof gu==='function'?(gu()||[]):[]).filter(function(user){return [user&&user.deptId,user&&user.departmentId,user&&user.department].some(function(value){return String(value||'')===String(id)})});
+  if(linkedUsers.length){
+    toast('Reassign or delete '+linkedUsers.length+' linked user account(s) before deleting this department.','err');
+    if(typeof showPg==='function')showPg('pg-users');
+    return false
+  }
   var token;try{token=await mandatoryBackup('department',id)}catch(e){if(String(e.message)!=='Deletion cancelled')toast(String(e.message||e),'err');return false}
   if(!(await typedConfirm(dept.name||id)))return false;
   try{
@@ -14451,7 +14490,6 @@ async function hardDeleteDepartment(id){
     for(var i=0;i<carts.length;i++)await removePublicCart(carts[i].id);
     await S.s('requests',(S.g('requests')||[]).filter(function(x){return String(x.deptId||x.departmentId||x.dept)!==String(id)}));
     await S.s('request_analytics_archive',(S.g('request_analytics_archive')||[]).filter(function(x){return String(x.deptId||x.departmentId||x.dept)!==String(id)}));
-    await S.s('users',(S.g('users')||[]).filter(function(x){return String(x.deptId||x.departmentId||x.department)!==String(id)}));
     if(typeof window.floorstockPurgeDepartmentState==='function')await window.floorstockPurgeDepartmentState(id,[id,dept.name,dept.code].filter(Boolean),true);
     else await S.s('departments',(S.g('departments')||[]).filter(function(d){return String(d.id)!==String(id)}));
     if(typeof auditAction==='function')await auditAction('master_hard_delete_department',{departmentId:id,departmentName:dept.name||'',deletedCrashCarts:carts.map(function(c){return c.id}),backupId:token.id,backupAt:token.createdAt});
@@ -14468,8 +14506,11 @@ function decorate(){
   document.querySelectorAll('[id^="ccx-cart-"]').forEach(function(card){var id=card.id.replace('ccx-cart-',''),bar=card.querySelector('.ccx-toolbar-actions');if(!bar||bar.querySelector('.r635-delete-cart'))return;var b=document.createElement('button');b.type='button';b.className='btn bd2c bsm master-delete-only r635-delete-cart';b.textContent='🗑 Delete cart';b.onclick=function(){window.masterDeleteCrashCart(id)};bar.appendChild(b)});
 }
 var oldRender=window.renderCrashCarts;if(typeof oldRender==='function')window.renderCrashCarts=function(){var r=oldRender.apply(this,arguments);setTimeout(decorate,0);return r};
-new MutationObserver(function(){decorate()}).observe(document.documentElement,{childList:true,subtree:true});
-window.addEventListener('load',function(){decorate()});
+function observeDeletionHosts(){
+  ['pg-crashcart','pg-users'].forEach(function(id){var host=document.getElementById(id);if(host)new MutationObserver(function(mutations){if(mutations.some(function(m){return m.addedNodes&&m.addedNodes.length}))decorate()}).observe(host,{childList:true,subtree:true})});
+  decorate()
+}
+window.addEventListener('load',observeDeletionHosts);
 })();
 </script>
 
@@ -14503,7 +14544,7 @@ window.addEventListener('load',function(){decorate()});
 <script id="r661-authoritative-inventory-safety">
 (function(){
 'use strict';
-var VERSION='R6.63',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
+var VERSION='R6.64',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
 function clone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
 function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
 function actor(){return (window.CU&&(CU.username||CU.email))||'Unknown'}
@@ -14522,7 +14563,7 @@ function setSafety(message,error){
   var text=bar.querySelector('.r661-text');if(text)text.textContent=message;
   bar.classList.toggle('is-error',!!error)
 }
-function validate(rows){
+function validateInventoryRows(rows){
   if(!Array.isArray(rows))throw new Error('Inventory write rejected: medication list must be an array.');
   var ids={},names={};
   rows.forEach(function(m,index){
@@ -14552,7 +14593,7 @@ window.getMeds=getMeds=function(deptId){return clone(medsRaw(deptId))};
 window.setMeds=setMeds=async function(deptId,rows){
   deptId=String(deptId||'');if(!deptId)throw new Error('Inventory write rejected: department is required.');
   if(saving[deptId])throw new Error('Another inventory save is already running for '+deptName(deptId)+'.');
-  var before=clone(medsRaw(deptId)),next=normalizeExplicit(rows);validate(next);
+  var before=clone(medsRaw(deptId)),next=normalizeExplicit(rows);validateInventoryRows(next);
   var delta=Math.abs(next.length-before.length),limit=Math.max(1,Math.ceil(Math.max(before.length,1)*0.05));
   if(delta>limit&&bulkDepth<=0)throw new Error('Safety block: this operation changes '+delta+' records in '+deptName(deptId)+' (limit '+limit+'). Use an approved exact bulk operation.');
   saving[deptId]=true;
@@ -14560,7 +14601,7 @@ window.setMeds=setMeds=async function(deptId,rows){
     var reason=bulkDepth>0?'approved_exact_bulk_change':'explicit_inventory_change',snap=await snapshot(deptId,before,reason);
     await S.s('meds_'+deptId,next);
     var integrity={at:now(),deptId:deptId,count:next.length,hash:hash(next),actor:actor(),snapshotId:snap&&snap.id||''};
-    await S.s('inventory_integrity_'+deptId,integrity);
+    try{await S.s('inventory_integrity_'+deptId,integrity)}catch(metadataError){console.warn('Inventory data was saved, but integrity metadata could not be updated.',metadataError);if(typeof toast==='function')toast('Inventory saved; protection metadata will retry on the next change.','info')}
     if(typeof auditAction==='function')auditAction('inventory_write_committed',{deptId:deptId,department:deptName(deptId),beforeCount:before.length,afterCount:next.length,beforeHash:hash(before),afterHash:integrity.hash,snapshotId:integrity.snapshotId,reason:reason});
     setSafety(VERSION+' protected · '+totalAndHash().count+' medications · last save: '+deptName(deptId),false);
     return true
@@ -14651,7 +14692,7 @@ window.repairImportedDepartmentAliases=async function(){return {status:'disabled
 window.fsR17MigrateMedicationIdentity=async function(){return {status:'disabled-on-login'}};
 window.repairLatestInventoryMergeCollateral=async function(){return {status:'removed-in-r661'}};
 function disableUnsafeMergeButtons(){
-  document.querySelectorAll('.sim-manual-merge-btn,.sim-merge-btn').forEach(function(b){b.disabled=true;b.classList.add('r661-merge-disabled');b.title='Disabled by R6.61 inventory safety. Use exact selected-name merge with preview.'})
+  document.querySelectorAll('.sim-manual-merge-btn,.sim-merge-btn').forEach(function(b){b.disabled=true;b.classList.add('r661-merge-disabled');b.title='Disabled by R6.64 inventory safety. Use exact selected-name merge with preview.'})
 }
 function showSafety(){
   if(!window.CU)return;
@@ -14669,8 +14710,11 @@ if(typeof previousStart==='function')window.startApp=function(){
   startFingerprint=totalAndHash();var result=previousStart.apply(this,arguments);
   setTimeout(showSafety,500);setTimeout(verifyStartup,2600);return result
 };
-new MutationObserver(disableUnsafeMergeButtons).observe(document.documentElement,{childList:true,subtree:true});
-document.title='ASDHealth FloorStock R6.63 Protected';
+new MutationObserver(function(mutations){
+  var relevant=mutations.some(function(m){return Array.from(m.addedNodes||[]).some(function(node){return node.nodeType===1&&(node.matches&&node.matches('.sim-manual-merge-btn,.sim-merge-btn,#similar-medicines-modal-v2')||node.querySelector&&node.querySelector('.sim-manual-merge-btn,.sim-merge-btn'))})});
+  if(relevant)disableUnsafeMergeButtons()
+}).observe(document.body,{childList:true,subtree:true});
+document.title='ASDHealth FloorStock R6.64 Protected';
 })();
 </script>
 
