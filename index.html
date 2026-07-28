@@ -3,10 +3,8 @@
 <html dir="ltr" lang="en">
 <head>
 <meta charset="utf-8"/>
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net http://localhost:9100 https://localhost:9101; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.qrserver.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://*.cloudfunctions.net https://*.run.app http://localhost:9100 https://localhost:9101; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://api.qrserver.com; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://*.cloudfunctions.net https://*.run.app; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<meta content="R6.64" name="asdhealth-build"/>
-<meta content="R6.64-functions-crash-controlled-fix-20260728" name="asdhealth-patch"/>
 <title>ASDHealth</title>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-favicon" rel="icon" type="image/svg+xml"/>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-shortcut-icon" rel="shortcut icon" type="image/svg+xml"/>
@@ -23,6 +21,17 @@ var FB_APP=window.FB_APP||null;
 var FB_AUTH=window.FB_AUTH||null;
 var FB_DB=window.FB_DB||null;
 var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
+</script>
+<script id="r664-early-production-console-policy">
+(function(){
+  'use strict';
+  if(!window.console)return;
+  var nativeError=typeof console.error==='function'?console.error.bind(console):function(){};
+  var nativeWarn=typeof console.warn==='function'?console.warn.bind(console):function(){};
+  ['log','info','debug','trace'].forEach(function(method){try{console[method]=function(){}}catch(ignore){}});
+  try{console.warn=function(){nativeWarn('[ASDHealth] A recoverable warning occurred.');}}catch(ignore){}
+  try{console.error=function(){nativeError('[ASDHealth] An operation failed. Review the in-app message or Firebase logs.');}}catch(ignore){}
+})();
 </script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
 <style>
@@ -750,7 +759,6 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 @media(max-width:560px){.acc2-stats,.acc2-form-grid,.acc2-filter-grid{grid-template-columns:1fr}.acc2-regimen-item{grid-template-columns:auto 1fr}.acc2-regimen-item .acc2-regimen-qty{grid-column:1/-1}.crash-response-modal{width:99vw!important;padding:12px 8px!important}}
 @media print{#pg-med-accountability .acc2-tabs,#pg-med-accountability button,#pg-med-accountability input,#pg-med-accountability select,#pg-med-accountability textarea{display:none!important}}
 </style>
-<meta name="asdh-build" content="R6.48"/>
 </head>
 <body>
 <div id="auth">
@@ -1849,7 +1857,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 <div id="logo-drop" onclick="el('logo-file-inp').click()" ondragleave="this.style.borderColor='var(--bd)'" ondragover="event.preventDefault();this.style.borderColor='var(--ac)'" ondrop="handleLogoDrop(event)" style="border:2px dashed var(--bd);border-radius:10px;padding:16px;text-align:center;cursor:pointer;margin-bottom:14px">
 <div style="font-size:22px;margin-bottom:4px">📷</div><div style="font-size:13px;color:var(--tx2)">Click or drag image</div>
-<input accept="image/*" id="logo-file-inp" onchange="handleLogoFile(this.files[0])" style="display:none" type="file"/>
+<input accept="image/png,image/jpeg" id="logo-file-inp" onchange="handleLogoFile(this.files[0])" style="display:none" type="file"/>
 </div>
 </div>
 <div dir="rtl">
@@ -2513,8 +2521,6 @@ async function syncPublicExpiry(deptId,rows){
     var medicine=medicineById[String(row.medId||'')]||{};
     return {
       medication:medicine.name||row.medication||row.name||'',
-      medId:String(row.medId||''),
-      batch:String(row.batch||row.lot||''),
       date:String(row.date||row.expiry||''),
       qty:row.qty==null?'':Number(row.qty)
     };
@@ -2915,7 +2921,7 @@ function uiConfirm(message,options){options=options||{};return uiDialog(Object.a
 
 function toast(msg,type){
   var t=document.getElementById('toast');
-  t.innerHTML=msg;t.className='on t'+type;
+  t.textContent=String(msg==null?'':msg);t.className='on t'+type;
   clearTimeout(window._tt);
   window._tt=setTimeout(function(){t.className=''},3200);
 }
@@ -2950,6 +2956,31 @@ function esc(value){
 
 /* R6.38 canonical shared helpers — one source of truth for permissions, names, audit actors and medicine matching. */
 window.fsEsc=function(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+window.fsPrepareImageDataUrl=async function(file,options){
+  options=options||{};
+  var maxInputBytes=Number(options.maxInputBytes)||5*1024*1024;
+  var maxOutputBytes=Number(options.maxOutputBytes)||500*1024;
+  var maxDimension=Number(options.maxDimension)||1000;
+  if(!file)throw new Error('Choose an image first.');
+  if(['image/png','image/jpeg'].indexOf(String(file.type||'').toLowerCase())<0)throw new Error('Only PNG and JPEG images are allowed.');
+  if(Number(file.size||0)>maxInputBytes)throw new Error('The selected image is too large. Maximum source size is 5 MB.');
+  function read(){return new Promise(function(resolve,reject){var r=new FileReader();r.onload=function(){resolve(String(r.result||''))};r.onerror=function(){reject(new Error('The image could not be read.'))};r.readAsDataURL(file)})}
+  function load(src){return new Promise(function(resolve,reject){var img=new Image();img.onload=function(){resolve(img)};img.onerror=function(){reject(new Error('The selected file is not a readable image.'))};img.src=src})}
+  function bytes(data){var comma=data.indexOf(',');return Math.ceil(Math.max(0,data.length-comma-1)*3/4)}
+  var source=await read(),image=await load(source),scale=Math.min(1,maxDimension/Math.max(image.naturalWidth||1,image.naturalHeight||1));
+  var width=Math.max(1,Math.round((image.naturalWidth||1)*scale)),height=Math.max(1,Math.round((image.naturalHeight||1)*scale));
+  var mime=String(file.type).toLowerCase(),quality=.9;
+  for(var attempt=0;attempt<8;attempt++){
+    var canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;
+    var context=canvas.getContext('2d',{alpha:mime==='image/png'});if(!context)throw new Error('Image processing is not supported by this browser.');
+    context.drawImage(image,0,0,width,height);
+    var output=canvas.toDataURL(mime,mime==='image/jpeg'?quality:undefined);
+    if(bytes(output)<=maxOutputBytes)return output;
+    if(mime==='image/jpeg')quality=Math.max(.55,quality-.08);
+    width=Math.max(1,Math.round(width*.82));height=Math.max(1,Math.round(height*.82));
+  }
+  throw new Error('The processed logo is still larger than 500 KB. Choose a smaller image.');
+};
 window.fsEffectiveUser=function(){return (window.MASTER_EFFECTIVE&&Object.assign({},window.CU||{},window.MASTER_EFFECTIVE))||(window.CU||{})};
 window.fsEffectiveRole=function(){var u=window.fsEffectiveUser();return String(u.role||'')};
 window.fsActualUser=function(){return (window.MASTER_ACTUAL||window.CU||{})};
@@ -3016,7 +3047,7 @@ function selRole(r){
 }
 function fillDS(){
   var sel=el('dsel');if(!sel)return;
-  sel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  sel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
 }
 function fsLoginTimeout(promise,ms,message){
   var timer=null;
@@ -3261,7 +3292,7 @@ function getInvDept(){
 function populateInvDeptSel(){
   var sel=el('inv-dept-sel');if(!sel)return;
   var cur=sel.value;
-  sel.innerHTML='<option value="">Select Dept...</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
+  sel.innerHTML='<option value="">Select Dept...</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   if(cur&&gd().some(function(d){return d.id===cur}))sel.value=cur;else sel.value='';
 }
 
@@ -3355,17 +3386,17 @@ function renderInv(){
     medCats.forEach(function(c){if(allCats.indexOf(c)<0)allCats.push(c)});
     allCats=sortDeptInventoryCategories(deptId,allCats);
     var cur=csel.value;
-    csel.innerHTML='<option value="">All Categories</option>'+allCats.map(function(c){return '<option value="'+c+'"'+(c===cur?' selected':'')+'>'+c+'</option>'}).join('');
+    csel.innerHTML='<option value="">All Categories</option>'+allCats.map(function(c){return '<option value="'+esc(c)+'"'+(c===cur?' selected':'')+'>'+esc(c)+'</option>'}).join('');
   }
   // populate bulk cat selector
   var bcs=el('bulk-cat-sel');
   if(bcs){
     var bc=sortDeptInventoryCategories(deptId,getCategories().concat(ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i})).filter(function(v,i,a){return a.indexOf(v)===i}));
-    bcs.innerHTML='<option value="">Change category to...</option>'+bc.map(function(c){return '<option value="'+c+'">'+c+'</option>'}).join('');
+    bcs.innerHTML='<option value="">Change category to...</option>'+bc.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>'}).join('');
   }
   // Drug modal dept sel
   var ddsel=el('ddept-sel');
-  if(ddsel){ddsel.disabled=true;ddsel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'"'+(d.id===deptId?' selected':'')+'>'+d.name+'</option>'}).join('');}
+  if(ddsel){ddsel.disabled=true;ddsel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'"'+(d.id===deptId?' selected':'')+'>'+esc(d.name)+'</option>'}).join('');}
 
   if(!deptId){
     var ds=gd();
@@ -3438,7 +3469,7 @@ function openAddDrug(){
   el('dmin').value='1';el('dmax').value='10';el('dmly').value='';
   el('cha2').checked=false;el('chaz').checked=false;el('chls').checked=false;if(el('chcool'))el('chcool').checked=false;
   var ddsel=el('ddept-sel');
-  if(ddsel){ddsel.disabled=false;ddsel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');}
+  if(ddsel){ddsel.disabled=false;ddsel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');}
   OM('mdrug');
 }
 function openEditDrug(id,deptId){
@@ -3449,7 +3480,7 @@ function openEditDrug(id,deptId){
   el('dmin').value=m.min;el('dmax').value=m.max;el('dmly').value=m.monthly||'';
   el('cha2').checked=!!m.high_alert;el('chaz').checked=!!m.hazard;el('chls').checked=!!m.lasa;if(el('chcool'))el('chcool').checked=!!m.refrigerated;
   var ddsel=el('ddept-sel');
-  if(ddsel){ddsel.innerHTML=gd().map(function(d){return '<option value="'+d.id+'"'+(d.id===deptId?' selected':'')+'>'+d.name+'</option>'}).join('');}
+  if(ddsel){ddsel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'"'+(d.id===deptId?' selected':'')+'>'+esc(d.name)+'</option>'}).join('');}
   OM('mdrug');
 }
 async function delDrug(id,deptId){
@@ -3912,7 +3943,7 @@ function renderShelfAlertSettings(){
 function openAddExpiry(){
   el('mexpiry-title').textContent='Add Expiry / إضافة تاريخ صلاحية';
   var ms=getMeds(CU.deptId);
-  el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+m.id+'">'+m.name+'</option>'}).join('');
+  el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'}).join('');
   el('exp-batch-inp').value='';
   el('exp-date-inp').value='';
   el('exp-edit-id').value='';
@@ -3921,7 +3952,7 @@ function openAddExpiry(){
 function openEditExpiry(btn){
   el('mexpiry-title').textContent='Edit Expiry / تعديل تاريخ الصلاحية';
   var ms=getMeds(CU.deptId);
-  el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+m.id+'"'+(m.id===btn.dataset.mid?' selected':'')+'>'+m.name+'</option>'}).join('');
+  el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+esc(m.id)+'"'+(m.id===btn.dataset.mid?' selected':'')+'>'+esc(m.name)+'</option>'}).join('');
   el('exp-batch-inp').value=btn.dataset.batch||'';
   el('exp-date-inp').value=btn.dataset.date||'';
   el('exp-edit-id').value=btn.dataset.bid||'';
@@ -3958,8 +3989,8 @@ function renderUsers(){
         +'<div style="display:flex;gap:6px;flex-shrink:0"><button class="btn bg bxs" data-id="'+d.id+'" data-name="'+esc(d.name)+'" onclick="renameDept(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-name&#x27;))">&#x270F; Rename</button><button class="btn bp bxs" onclick="showPg(&#x27;pg-inv&#x27;);document.getElementById(&#x27;inv-dept-sel&#x27;).value=&#x27;'+d.id+'&#x27;;renderInv()">&#x1F4CB; View Meds</button><button class="btn bd2c bxs" data-id="'+d.id+'" onclick="delDept(this.getAttribute(&#x27;data-id&#x27;))">&#x1F5D1; Delete</button></div></div>';
     }).join(''):'<div style="text-align:center;padding:24px;color:var(--tx2)">No departments yet — add one above</div>';
   var ndcopy=el('ndcopy');
-  if(ndcopy){var curVal=ndcopy.value;ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option><option value="default">Default list (all medications)</option><optgroup label="Copy from existing dept:">'+ds.map(function(d){return '<option value="'+d.id+'">Copy from: '+esc(d.name)+' ('+getMeds(d.id).length+' meds)</option>'}).join('')+'</optgroup>';if(curVal)ndcopy.value=curVal;}
-  el('nudept').innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
+  if(ndcopy){var curVal=ndcopy.value;ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option><option value="default">Default list (all medications)</option><optgroup label="Copy from existing dept:">'+ds.map(function(d){return '<option value="'+esc(d.id)+'">Copy from: '+esc(d.name)+' ('+getMeds(d.id).length+' meds)</option>'}).join('')+'</optgroup>';if(curVal)ndcopy.value=curVal;}
+  el('nudept').innerHTML=ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
 }
 function updateUserRoleFields(){
   var role=el('nurole').value;
@@ -3989,7 +4020,7 @@ function openAddUser(){
     var departments=gd();
     if(deptSelect){
       deptSelect.innerHTML=departments.length
-        ? departments.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>';}).join('')
+        ? departments.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>';}).join('')
         : '<option value="">No departments available — add a department first</option>';
       deptSelect.disabled=!departments.length;
     }
@@ -4035,7 +4066,7 @@ function renderAn(){
   var p=el('aperiod').value;
   el('crange').style.display=p==='custom'?'flex':'none';
   var dsel=el('adept');
-  if(dsel.options.length<=1)gd().forEach(function(d){dsel.innerHTML+='<option value="'+d.id+'">'+d.name+'</option>'});
+  if(dsel.options.length<=1)gd().forEach(function(d){dsel.innerHTML+='<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'});
   var df=dsel.value,now=new Date(),from;
   if(p==='month')from=new Date(now.getFullYear(),now.getMonth(),1);
   else if(p==='quarter')from=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1);
@@ -4104,7 +4135,7 @@ function resetPrintPageState(){PPP=0;document.querySelectorAll('.ppp-btn').forEa
 // ── IMPORT ───────────────────────────────────────────────
 function renderImport(){
   var dsel=el('imp-dept');
-  if(dsel){dsel.innerHTML='<option value="">Select target department...</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');dsel.value=''}
+  if(dsel){dsel.innerHTML='<option value="">Select target department...</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');dsel.value=''}
   if(typeof window.restoreImportDraft==='function'&&window.restoreImportDraft())return;
   IROWS=[];
   el('imp-ptitle').textContent='Preview';
@@ -4392,14 +4423,14 @@ function renderImportPreview(hasHeader,headerIdx,skipped,warnMsg){
   var CATS=['Injections','Inhalers','Suppositories','Tablets','Syrups','Topical','Ointments & Drops','Solutions'];
   var tableRows=IROWS.map(function(r){
     var dup=existNames.indexOf(r.name.toLowerCase())>-1;
-    var catOpts=CATS.map(function(c){return '<option value="'+c+'"'+(r.category===c?' selected':'')+'>'+c+'</option>'}).join('');
+    var catOpts=CATS.map(function(c){return '<option value="'+esc(c)+'"'+(r.category===c?' selected':'')+'>'+esc(c)+'</option>'}).join('');
     var rowBg=r._del?'background:rgba(218,54,51,.06);text-decoration:line-through;opacity:.55':
               r._incomplete?'background:rgba(210,153,34,.12)':
               r.high_alert?'background:rgba(218,54,51,.07)':
               r.hazard?'background:rgba(210,153,34,.06)':'';
     return '<tr id="irow-'+r._i+'" style="'+rowBg+'">'
       +'<td style="padding:4px 8px"><input type="checkbox" class="imp-del-chk" data-idx="'+r._i+'"'+(r._del?'':' checked')+' onchange="impToggleRow(this)"></td>'
-      +'<td style="padding:3px 4px;min-width:200px"><input class="imp-edit-input" data-idx="'+r._i+'" data-f="name" value="'+r.name.replace(/"/g,'&quot;')+'" oninput="impEdit(this)" style="min-width:180px"></td>'
+      +'<td style="padding:3px 4px;min-width:200px"><input class="imp-edit-input" data-idx="'+r._i+'" data-f="name" value="'+esc(r.name)+'" oninput="impEdit(this)" style="min-width:180px"></td>'
       +'<td style="padding:3px 4px"><select class="imp-edit-input" data-idx="'+r._i+'" data-f="category" onchange="impEdit(this)" style="font-size:11px;padding:3px 4px;min-width:90px">'+catOpts+'</select></td>'
       +'<td style="padding:3px 4px"><input class="imp-edit-input" type="number" data-idx="'+r._i+'" data-f="min" value="'+r.min+'" oninput="impEdit(this)" style="width:50px;text-align:center"></td>'
       +'<td style="padding:3px 4px"><input class="imp-edit-input" type="number" data-idx="'+r._i+'" data-f="max" value="'+r.max+'" oninput="impEdit(this)" style="width:50px;text-align:center"></td>'
@@ -4699,7 +4730,7 @@ function renderShelves(){
   // Populate print shelf selector
   var pSel=el('print-shelf-sel');
   if(pSel){pSel.innerHTML='<option value="all">All Shelves / &#x643;&#x644; &#x627;&#x644;&#x623;&#x631;&#x641;&#x641;</option>'
-    +shelves.map(function(s){return '<option value="'+s.id+'">'+s.name+'</option>'}).join('');}
+    +shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');}
   var assigned=ms.filter(function(m){return !!m.shelfId}).length;
   if(el('shelves-summary'))el('shelves-summary').innerHTML='<div class="sc" style="padding:12px"><div class="sl">Medications</div><div class="sv" style="font-size:22px">'+ms.length+'</div></div>'+'<div class="sc" style="padding:12px"><div class="sl">Assigned</div><div class="sv" style="font-size:22px">'+assigned+'</div></div>'+'<div class="sc" style="padding:12px"><div class="sl">Unassigned</div><div class="sv" style="font-size:22px">'+(ms.length-assigned)+'</div></div>';
   if(typeof renderShelfMedicationDatabase==='function')renderShelfMedicationDatabase();
@@ -5119,7 +5150,7 @@ function formatParsedFields(parsed, prefix){
 function getMedSelectOptions(defaultId){
   if(!CU) return '';
   return getMeds(CU.deptId).map(function(m){
-    return '<option value="'+m.id+'"'+(m.id===defaultId?' selected':'')+'>'+m.name+'</option>';
+    return '<option value="'+esc(m.id)+'"'+(m.id===defaultId?' selected':'')+'>'+esc(m.name)+'</option>';
   }).join('');
 }
 
@@ -5150,7 +5181,7 @@ async function startScanner(){
     var cams=devices.filter(function(d){return d.kind==='videoinput'});
     var sel=el('scan-cam-sel');
     if(sel){
-      sel.innerHTML=cams.map(function(c,i){return '<option value="'+c.deviceId+'">'+(c.label||'Camera '+(i+1))+'</option>'}).join('');
+      sel.innerHTML=cams.map(function(c,i){return '<option value="'+esc(c.deviceId)+'">'+esc(c.label||'Camera '+(i+1))+'</option>'}).join('');
     }
     var constraints={video:{facingMode:'environment',width:{ideal:1280},height:{ideal:720}}};
     if(cams.length>0 && sel && sel.value){
@@ -5272,7 +5303,7 @@ function applyTypedResult(){
   el('exp-med-sel').value=medId;
   el('exp-batch-inp').value=_parsedType.lot||'';
   el('exp-date-inp').value=_parsedType.expiry||'';
-  toast('Data filled &#x2713;','succ');
+  toast('Data filled ✓','succ');
 }
 
 // ── Open expiry modal via scan shortcut ───────────────────
@@ -5293,13 +5324,13 @@ function setCategories(arr){return S.s('custom_categories',arr)}
 async function refreshCatSelectors(){
   // Update all open category dropdowns
   var cats=getCategories();
-  var opts=cats.map(function(c){return '<option>'+c+'</option>'}).join('');
+  var opts=cats.map(function(c){return '<option>'+esc(c)+'</option>'}).join('');
   ['dcat','imp-cat'].forEach(function(id){
     var sel=el(id);
     if(!sel)return;
     var cur=sel.value;
     if(id==='imp-cat'){
-      sel.innerHTML='<option value="auto">Auto-detect</option>'+cats.map(function(c){return '<option>'+c+'</option>'}).join('');
+      sel.innerHTML='<option value="auto">Auto-detect</option>'+cats.map(function(c){return '<option>'+esc(c)+'</option>'}).join('');
     } else {
       sel.innerHTML=opts;
     }
@@ -5387,7 +5418,7 @@ function openLogoSettings(){
   OM('mlogo');
 }
 function handleLogoDrop(e){e.preventDefault();var f=e.dataTransfer.files[0];if(f)handleLogoFile(f)}
-function handleLogoFile(file){if(!file)return;var reader=new FileReader();reader.onload=function(e){var img=el('logo-preview-img');img.src=e.target.result;img.style.display='';el('logo-preview-none').style.display='none';img.dataset.pending=e.target.result};reader.readAsDataURL(file)}
+async function handleLogoFile(file){if(!file)return;try{var data=await window.fsPrepareImageDataUrl(file),img=el('logo-preview-img');img.src=data;img.style.display='';el('logo-preview-none').style.display='none';img.dataset.pending=data}catch(error){var input=el('logo-file-inp');if(input)input.value='';toast(String(error&&error.message||error),'err')}}
 async function saveLogo(){
   if(!CU||CU.master!==true)return toast('Master only','err');
   var img=el('logo-preview-img'),logoData=img.dataset.pending||img.getAttribute('src')||'';
@@ -5452,7 +5483,7 @@ function officialPrintHeaderHTML(){
 // ── CATEGORY SELECTOR OPTIONS ────────────────────────────
 function getCatOptions(selected){
   var cats=getCategories();
-  return cats.map(function(c){return '<option value="'+c+'"'+(c===selected?' selected':'')+'>'+c+'</option>'}).join('');
+  return cats.map(function(c){return '<option value="'+esc(c)+'"'+(c===selected?' selected':'')+'>'+esc(c)+'</option>'}).join('');
 }
 
 // ════════════════════════════════════════════════════════
@@ -5494,7 +5525,7 @@ function getMonthlyLimit(deptId){
 // ── RENDER schedule page ──────────────────────────────────
 function renderSchedule(){
   // Populate dept dropdowns in modals
-  var deptOpts='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  var deptOpts='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   ['rwin-dept','dslot-dept'].forEach(function(id){var s=el(id);if(s)s.innerHTML=deptOpts;});
 
   // Request windows
@@ -5564,7 +5595,7 @@ function editReqWindow(i){
   el('mreqwin-title').textContent='Edit Window';
   el('rwin-label').value=w.label||'';el('rwin-from').value=w.from||'';el('rwin-to').value=w.to||'';
   el('rwin-edit-id').value=i;el('rwin-active').checked=w.active!==false;
-  el('rwin-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  el('rwin-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   el('rwin-dept').value=w.dept||'all';
   el('rwin-days').querySelectorAll('input').forEach(function(c){c.checked=(w.days||[]).indexOf(+c.value)>-1});
   OM('mreq-window');
@@ -5574,7 +5605,7 @@ function addDispSlot(){
   el('mdisp-title').textContent='Add Dispense Slot';
   el('dslot-label').value='';el('dslot-time').value='10:00';el('dslot-notes').value='';
   el('dslot-edit-id').value='';
-  el('dslot-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  el('dslot-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   el('dslot-dept').value='all';
   el('dslot-days').querySelectorAll('input').forEach(function(c){c.checked=[0,1,2,3,4].indexOf(+c.value)>-1});
   OM('mdisp-slot');
@@ -5584,7 +5615,7 @@ function editDispSlot(i){
   el('mdisp-title').textContent='Edit Dispense Slot';
   el('dslot-label').value=s.label||'';el('dslot-time').value=s.time||'';el('dslot-notes').value=s.notes||'';
   el('dslot-edit-id').value=i;
-  el('dslot-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+d.name+'</option>'}).join('');
+  el('dslot-dept').innerHTML='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   el('dslot-dept').value=s.dept||'all';
   el('dslot-days').querySelectorAll('input').forEach(function(c){c.checked=(s.days||[]).indexOf(+c.value)>-1});
   OM('mdisp-slot');
@@ -5824,7 +5855,7 @@ function ctlEnsureV6UI(){
   if(el('mctlbatches'))return;
   document.body.insertAdjacentHTML('beforeend',`<div class="modal-bg" id="mctlbatches"><div class="modal"><div class="mh"><span class="mt" id="mctlb-title">Expiry batches</span><button class="xbtn" onclick="CM('mctlbatches')">✕</button></div><div id="mctlb-list"></div><button class="btn bg bsm" onclick="ctlAddBatchEditorRow()">+ Add expiry batch</button><div class="fl g8" style="justify-content:flex-end;margin-top:18px"><button class="btn bg" onclick="CM('mctlbatches')">Cancel</button><button class="btn bp" onclick="ctlSaveBatchEditor()">Save batches</button></div></div></div>
   <div class="modal-bg" id="mctldisp"><div class="modal"><div class="mh"><span class="mt">Dispense controlled medicine / صرف دواء</span><button class="xbtn" onclick="CM('mctldisp')">✕</button></div><input type="hidden" id="ctld-med"><div class="fg"><label>Medicine</label><input id="ctld-name" disabled></div><div class="frow"><div class="fg"><label>Quantity</label><input id="ctld-qty" type="number" min="1"></div><div class="fg"><label>Dispensing type</label><select id="ctld-type" onchange="ctlDispTypeChanged()"><option value="inpatient">Inpatient / تنويم</option><option value="internal">Internal hospital department / قسم داخلي</option><option value="outpatient">Outpatient / عيادات أو مريض خارجي</option></select></div></div><div class="fg" id="ctld-dept-wrap"><label>Hospital department / القسم</label><select id="ctld-dept"></select></div><div class="fg"><label>Recipient name / اسم المستلم</label><input id="ctld-recipient"></div><div class="fg"><label>Notes</label><textarea id="ctld-note" rows="2"></textarea></div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM('mctldisp')">Cancel</button><button class="btn bs" onclick="ctlConfirmDispense()">Confirm dispensing</button></div></div></div>
-  <input type="file" id="ctl-logo-file" accept="image/*" style="display:none" onchange="ctlSavePrintLogo(this.files[0])">`);
+  <input type="file" id="ctl-logo-file" accept="image/png,image/jpeg" style="display:none" onchange="ctlSavePrintLogo(this.files[0])">`);
 }
 var CTL_BATCH_CTX=null;
 function ctlAddBatchEditorRow(b){b=b||{};var d=document.createElement('div');d.className='batch-editor-row';d.innerHTML='<input type="number" class="be-qty" min="0" placeholder="Qty" value="'+esc(b.qty||'')+'"><input type="date" class="be-exp" value="'+esc(b.expiry||'')+'"><input class="be-lot" placeholder="Batch / lot" value="'+esc(b.lot||'')+'"><button class="btn bd2c bxs" onclick="this.parentElement.remove()">✕</button>';el('mctlb-list').appendChild(d)}
@@ -5846,21 +5877,21 @@ async function ctlSaveBatchEditor(){
   var movementSaved=await ctlSaveMovementLog({type:'expiry_batches_update',medId:id,source:src,note:'Expiry batches updated'},'Controlled expiry batches');
   CM('mctlbatches');renderControlled();toast(movementSaved?(actual===0?'Expiry batches cleared ✓':'Expiry batches saved ✓'):(actual===0?'Expiry batches were cleared, but the movement log was not saved.':'Expiry batches were saved, but the movement log was not saved.'),movementSaved?'succ':'info');return true
 }
-function ctlOpenDispense(id){if(!ctlCanDispense())return;ctlEnsureV6UI();var m=ctlMedicine(id)||{};el('ctld-med').value=id;el('ctld-name').value=m.name||'';el('ctld-qty').value='';el('ctld-recipient').value='';el('ctld-note').value='';el('ctld-dept').innerHTML=gd().map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');ctlDispTypeChanged();OM('mctldisp')}
+function ctlOpenDispense(id){if(!ctlCanDispense())return;ctlEnsureV6UI();var m=ctlMedicine(id)||{};el('ctld-med').value=id;el('ctld-name').value=m.name||'';el('ctld-qty').value='';el('ctld-recipient').value='';el('ctld-note').value='';el('ctld-dept').innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');ctlDispTypeChanged();OM('mctldisp')}
 function ctlDispTypeChanged(){var t=el('ctld-type').value;el('ctld-dept-wrap').style.display=(t==='inpatient'||t==='internal')?'block':'none'}
 function ctlLogo(){return S.g('controlled_print_logo')||''}
 function ctlChooseLogo(){ctlEnsureV6UI();el('ctl-logo-file').click()}
-function ctlSavePrintLogo(file){if(!file)return;var r=new FileReader();r.onload=async function(){await S.s('controlled_print_logo',r.result);toast('Print logo saved ✓','succ')};r.readAsDataURL(file)}
+async function ctlSavePrintLogo(file){if(!file)return;try{var data=await window.fsPrepareImageDataUrl(file);await S.s('controlled_print_logo',data);toast('Print logo saved ✓','succ')}catch(error){var input=el('ctl-logo-file');if(input)input.value='';toast(String(error&&error.message||error),'err')}}
 function ctlPrintSettings(dept){return S.g('controlled_settings_'+dept)||{}}
 function ctlPublicUrl(dept){var u=new URL(window.location.href);u.search='';u.hash='';u.searchParams.set('view','controlled-expiry');u.searchParams.set('dept',dept);return u.toString()}
 async function ctlPublishDept(dept){
   if(!window.FB_DB)throw new Error('Firebase is not initialized');
   var d=(typeof gd==='function'?(gd()||[]):[]).find(function(x){return x.id===dept})||{};
-  var items=(typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return {name:m.name||'',classification:m.classification||'narcotic',moh:m.moh||'',nupco:m.nupco||'',qty:ctlNum(x.qty),batches:(x.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':ctlNum(b.qty),lot:b.lot||''}})}});
+  var items=(typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return {name:m.name||'',classification:m.classification||'narcotic',qty:ctlNum(x.qty),batches:(x.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':ctlNum(b.qty)}})}});
   var alertDays=((typeof ctlSettingsGlobal==='function'?(ctlSettingsGlobal()||{}):{}).expiryAlertDays||30);
   await FB_DB.collection('public_controlled_expiry').doc(dept).set({departmentId:dept,departmentName:d.name||((window.CU&&CU.deptId===dept)?CU.deptName:'')||dept,alertDays:Number(alertDays)||30,items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
 }
-function renderCtlAnalytics(){if(!CU)return;var deptSel=el('ctl-an-dept');if(deptSel&&deptSel.options.length<=1)deptSel.innerHTML='<option value="">All departments</option>'+gd().map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');var from=el('ctl-an-from')?el('ctl-an-from').value:'',to=el('ctl-an-to')?el('ctl-an-to').value:'',type=el('ctl-an-type')?el('ctl-an-type').value:'',dept=deptSel?deptSel.value:'',rec=(el('ctl-an-recipient')?el('ctl-an-recipient').value:'').toLowerCase();var rows=ctlMoves().filter(function(x){if(x.type!=='dispense')return false;var d=String(x.at||'').slice(0,10);return (!from||d>=from)&&(!to||d<=to)&&(!type||x.dispenseType===type)&&(!dept||x.dept===dept)&&(!rec||String(x.recipient||'').toLowerCase().includes(rec))});var total=rows.reduce(function(s,x){return s+ctlNum(x.qty)},0),recipients=new Set(rows.map(function(x){return x.recipient}).filter(Boolean)).size,depts=new Set(rows.map(function(x){return x.dept}).filter(Boolean)).size;el('ctl-an-stats').innerHTML='<div class="sc"><div class="sl">Transactions</div><div class="ctl-stat-number">'+rows.length+'</div></div><div class="sc"><div class="sl">Total quantity</div><div class="ctl-stat-number">'+total+'</div></div><div class="sc"><div class="sl">Recipients</div><div class="ctl-stat-number">'+recipients+'</div></div><div class="sc"><div class="sl">Departments</div><div class="ctl-stat-number">'+depts+'</div></div>';el('ctl-an-table').innerHTML=rows.slice().reverse().map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc(x.source||'')+'</td><td>'+esc(x.dispenseType||'')+'</td><td>'+esc(x.deptName||'—')+'</td><td>'+esc(x.recipient||'')+'</td><td>'+esc(x.by||'')+'</td></tr>'}).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px">No matching records</td></tr>'}
+function renderCtlAnalytics(){if(!CU)return;var deptSel=el('ctl-an-dept');if(deptSel&&deptSel.options.length<=1)deptSel.innerHTML='<option value="">All departments</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');var from=el('ctl-an-from')?el('ctl-an-from').value:'',to=el('ctl-an-to')?el('ctl-an-to').value:'',type=el('ctl-an-type')?el('ctl-an-type').value:'',dept=deptSel?deptSel.value:'',rec=(el('ctl-an-recipient')?el('ctl-an-recipient').value:'').toLowerCase();var rows=ctlMoves().filter(function(x){if(x.type!=='dispense')return false;var d=String(x.at||'').slice(0,10);return (!from||d>=from)&&(!to||d<=to)&&(!type||x.dispenseType===type)&&(!dept||x.dept===dept)&&(!rec||String(x.recipient||'').toLowerCase().includes(rec))});var total=rows.reduce(function(s,x){return s+ctlNum(x.qty)},0),recipients=new Set(rows.map(function(x){return x.recipient}).filter(Boolean)).size,depts=new Set(rows.map(function(x){return x.dept}).filter(Boolean)).size;el('ctl-an-stats').innerHTML='<div class="sc"><div class="sl">Transactions</div><div class="ctl-stat-number">'+rows.length+'</div></div><div class="sc"><div class="sl">Total quantity</div><div class="ctl-stat-number">'+total+'</div></div><div class="sc"><div class="sl">Recipients</div><div class="ctl-stat-number">'+recipients+'</div></div><div class="sc"><div class="sl">Departments</div><div class="ctl-stat-number">'+depts+'</div></div>';el('ctl-an-table').innerHTML=rows.slice().reverse().map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+esc(m.name||'')+'</td><td>'+ctlNum(x.qty)+'</td><td>'+esc(x.source||'')+'</td><td>'+esc(x.dispenseType||'')+'</td><td>'+esc(x.deptName||'—')+'</td><td>'+esc(x.recipient||'')+'</td><td>'+esc(x.by||'')+'</td></tr>'}).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px">No matching records</td></tr>'}
 function printCtlAnalytics(){var html=el('ctl-an-table').closest('table').outerHTML;ctlPrintHTML('Controlled dispensing analytics','<h1>إحصائيات صرف الأدوية المخدرة</h1><h2>Controlled Dispensing Analytics</h2>'+html)}
 // Override public barcode page to be login-free and cleaner.
 // Add buttons and improved batch controls after each controlled render.
@@ -5909,7 +5940,7 @@ async function ctlOpenBulkShelf(){
   if(!ids.length)return toast('Select at least one medicine','err');
   var dept=ctlCurrentDept(),shelves=ctlDeptShelves(dept);
   var sel=el('ctl-bulk-shelf-select');
-  sel.innerHTML=shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
+  sel.innerHTML=shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');
   if(!shelves.length){
     var name=await uiPrompt('No shelf exists. Enter a new shelf name, e.g. Refrigerator / ثلاجة','');
     if(!name)return;
@@ -5937,7 +5968,7 @@ function renderCtlDepartments(){
   if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
   var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
   if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
-  else sel.innerHTML=ds.map(function(d){return '<option value="'+d.id+'">'+esc(d.name)+'</option>'}).join('');
+  else sel.innerHTML=ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   if(cur&&Array.from(sel.options).some(function(o){return o.value===cur}))sel.value=cur;
   var dept=ctlCurrentDept(),list=ctlDeptList(dept),can=ctlCanEditDept();
   el('ctl-assign-btn').style.display=can?'inline-flex':'none';
@@ -6168,10 +6199,10 @@ function renderShelfMedicationDatabase(){
   var filter=el('shelf-med-filter'),target=el('shelf-bulk-target');
   if(filter){
     var fv=filter.value;
-    filter.innerHTML='<option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option>'+shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');
+    filter.innerHTML='<option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option>'+shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');
     if(Array.from(filter.options).some(function(o){return o.value===fv}))filter.value=fv;
   }
-  if(target){var tv=target.value;target.innerHTML='<option value="">Choose drawer...</option><option value="__none__">Remove from drawer</option>'+shelves.map(function(s){return '<option value="'+s.id+'">'+esc(s.name)+'</option>'}).join('');if(Array.from(target.options).some(function(o){return o.value===tv}))target.value=tv}
+  if(target){var tv=target.value;target.innerHTML='<option value="">Choose drawer...</option><option value="__none__">Remove from drawer</option>'+shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');if(Array.from(target.options).some(function(o){return o.value===tv}))target.value=tv}
   var rowNo=0,lastCategory=null,html='';
   shown.forEach(function(m){
     var category=String(m.category||'Uncategorized');
@@ -6899,12 +6930,12 @@ body.role-department #ctl-log{pointer-events:none}
     document.body.style.cssText='margin:0;background:#fff;color:#111';
     var r=E('public-live-root');if(!r){r=document.createElement('main');r.id='public-live-root';r.className='public-live-page';document.body.innerHTML='';document.body.appendChild(r)}return r;
   }
-  function renderCrash(d){var r=publicRoot(),rows=(d.items||[]).map(function(it,i){var st=it.status||((n2(it.available)<=0)?'Out of stock':(n2(it.available)<n2(it.required)?'Less than required':'Available')),cls=st==='Out of stock'?'status-out':(st==='Less than required'?'status-low':'status-ok');return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(it.name||'')+'</b></td><td>'+esc2(it.strength||it.concentration||'—')+'</td><td>'+n2(it.required)+'</td><td>'+n2(it.available)+'</td><td class="'+cls+'">'+esc2(st)+'</td><td>'+((it.batches||[]).map(function(b){return dateOnly(b.expiry)+' → '+esc2(b.qty===''?'—':b.qty)+(b.lot?' · '+esc2(b.lot):'')}).join('<br>')||'—')+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>'+esc2(d.name||'Crash Cart')+'</h1><h2>'+esc2(d.department||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Seal:</b> '+esc2(d.seal||'—')+'</span><span class="live-pill"><b>Last closure:</b> '+dateTime(d.lastClosedAt)+'</span><span class="live-pill"><b>Closed by:</b> '+esc2(d.lastClosedByName||'—')+'</span><span class="live-pill"><b>System user:</b> '+esc2(d.lastClosedByUser||'—')+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill"><b>Expiry Track:</b> Urgent ≤ '+n2((d.expiryRules||{}).urgentDays||7)+' days · Near expiry ≤ '+n2((d.expiryRules||{}).nearDays||30)+' days</span><span class="live-pill live-ok">● Live public view — no login</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Generic name</th><th>Concentration</th><th>Standard quantity</th><th>Present</th><th>Status</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+  function renderCrash(d){var r=publicRoot(),rows=(d.items||[]).map(function(it,i){var st=it.status||((n2(it.available)<=0)?'Out of stock':(n2(it.available)<n2(it.required)?'Less than required':'Available')),cls=st==='Out of stock'?'status-out':(st==='Less than required'?'status-low':'status-ok');return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(it.name||'')+'</b></td><td>'+esc2(it.strength||it.concentration||'—')+'</td><td>'+n2(it.required)+'</td><td>'+n2(it.available)+'</td><td class="'+cls+'">'+esc2(st)+'</td><td>'+((it.batches||[]).map(function(b){return dateOnly(b.expiry)+' → '+esc2(b.qty===''?'—':b.qty)}).join('<br>')||'—')+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>'+esc2(d.name||'Crash Cart')+'</h1><h2>'+esc2(d.department||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last verification:</b> '+dateTime(d.lastClosedAt)+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill"><b>Expiry Track:</b> Urgent ≤ '+n2((d.expiryRules||{}).urgentDays||7)+' days · Near expiry ≤ '+n2((d.expiryRules||{}).nearDays||30)+' days</span><span class="live-pill live-ok">● Live public view — no login</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Generic name</th><th>Concentration</th><th>Standard quantity</th><th>Present</th><th>Status</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveCrash(id){var r=publicRoot();r.innerHTML='<h2>Loading latest Crash Cart information…</h2>';return FB_DB.collection('public_controlled_expiry').doc('crash_'+id).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public Crash Cart record was not found.</h2><p>Print a new QR once from the system.</p>';return}renderCrash(s.data()||{})},function(e){r.innerHTML='<h2>Could not load the public Crash Cart page.</h2><p>'+esc2(e.message||e)+'</p>'})}
   function renderEmbeddedCrash(raw){try{var d=JSON.parse(decodeURIComponent(escape(atob(raw||''))));d.department=d.department||d.dept||'';renderCrash(d);return true}catch(e){var r=publicRoot();r.innerHTML='<h2>Invalid or expired Crash Cart QR information.</h2>';return true}}
-  function renderControlled(d){var r=publicRoot(),limit=Number(d.alertDays)||30,soonCount=0,expiredCount=0,rows=(d.items||[]).map(function(x,i){var itemSoon=false,itemExpired=false,bs=(x.batches||[]).map(function(b){var raw=b.expiry||'',dt=new Date(raw),days=isNaN(dt)?null:Math.ceil((dt-new Date())/86400000),cls='status-ok',label='';if(days!==null&&days<0){cls='status-out';label='Expired';itemExpired=true}else if(days!==null&&days<=limit){cls='status-low';label='Near expiry';itemSoon=true}else if(days!==null){label=days+' days'}return '<div class="'+cls+'">'+(b.qty!=null?esc2(b.qty)+' → ':'')+dateOnly(raw)+(b.lot?' · '+esc2(b.lot):'')+(label?' <b>('+esc2(label)+')</b>':'')+'</div>'}).join('')||'—';if(itemExpired)expiredCount++;else if(itemSoon)soonCount++;var rowCls=itemExpired?'status-out':(itemSoon?'status-low':'');return '<tr class="'+rowCls+'"><td>'+(i+1)+'</td><td><b>'+esc2(x.name||'')+'</b></td><td>'+esc2(x.classification||'—')+'</td><td>'+n2(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Controlled Medicines List</h1><h2>'+esc2(d.departmentName||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Near-expiry rule:</b> '+limit+' days</span><span class="live-pill status-low"><b>Near expiry:</b> '+soonCount+'</span><span class="live-pill status-out"><b>Expired:</b> '+expiredCount+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches and status</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+  function renderControlled(d){var r=publicRoot(),limit=Number(d.alertDays)||30,soonCount=0,expiredCount=0,rows=(d.items||[]).map(function(x,i){var itemSoon=false,itemExpired=false,bs=(x.batches||[]).map(function(b){var raw=b.expiry||'',dt=new Date(raw),days=isNaN(dt)?null:Math.ceil((dt-new Date())/86400000),cls='status-ok',label='';if(days!==null&&days<0){cls='status-out';label='Expired';itemExpired=true}else if(days!==null&&days<=limit){cls='status-low';label='Near expiry';itemSoon=true}else if(days!==null){label=days+' days'}return '<div class="'+cls+'">'+(b.qty!=null?esc2(b.qty)+' → ':'')+dateOnly(raw)+(label?' <b>('+esc2(label)+')</b>':'')+'</div>'}).join('')||'—';if(itemExpired)expiredCount++;else if(itemSoon)soonCount++;var rowCls=itemExpired?'status-out':(itemSoon?'status-low':'');return '<tr class="'+rowCls+'"><td>'+(i+1)+'</td><td><b>'+esc2(x.name||'')+'</b></td><td>'+esc2(x.classification||'—')+'</td><td>'+n2(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Controlled Medicines List</h1><h2>'+esc2(d.departmentName||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Near-expiry rule:</b> '+limit+' days</span><span class="live-pill status-low"><b>Near expiry:</b> '+soonCount+'</span><span class="live-pill status-out"><b>Expired:</b> '+expiredCount+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches and status</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveControlled(dept){var r=publicRoot();r.innerHTML='<h2>Loading latest controlled-medicine list…</h2>';return FB_DB.collection('public_controlled_expiry').doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public list was not found.</h2>';return}renderControlled(s.data()||{})},function(e){r.innerHTML='<h2>Could not load the public list.</h2><p>'+esc2(e.message||e)+'</p>'})}
-  function renderExpiry(d,dept){var r=publicRoot(),b=d.batches||[],rows=b.map(function(x,i){var dt=x.date||x.expiry||'';return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(x.medication||x.name||'')+'</b></td><td>'+esc2(x.batch||x.lot||'—')+'</td><td>'+dateOnly(dt)+'</td><td>'+esc2(x.qty==null?'—':x.qty)+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Expiry Monitor</h1><h2>'+esc2(d.departmentName||dept||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Batch</th><th>Expiry date</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+  function renderExpiry(d,dept){var r=publicRoot(),b=d.batches||[],rows=b.map(function(x,i){var dt=x.date||x.expiry||'';return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(x.medication||x.name||'')+'</b></td><td>'+dateOnly(dt)+'</td><td>'+esc2(x.qty==null?'—':x.qty)+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Expiry Monitor</h1><h2>'+esc2(d.departmentName||dept||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Expiry date</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveExpiry(dept){var r=publicRoot();r.innerHTML='<h2>Loading latest expiry data…</h2>';return FB_DB.collection('public_expiry').doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public expiry list was not found.</h2>';return}renderExpiry(s.data()||{},dept)},function(e){r.innerHTML='<h2>Could not load the public expiry page.</h2><p>'+esc2(e.message||e)+'</p>'})}
 
   var _publicLiveUnsub=null;
@@ -6918,7 +6949,7 @@ body.role-department #ctl-log{pointer-events:none}
     var p=new URLSearchParams(location.search),v=p.get('view'),unsub=null;
     if(v!=='crash-cart-public'&&v!=='controlled-expiry'&&v!=='expiry')return false;
     clearPublicLiveSubscriptions();
-    if(v==='crash-cart-public'&&!p.get('id')&&p.get('data'))return renderEmbeddedCrash(p.get('data'));
+    if(v==='crash-cart-public'&&!p.get('id')&&p.get('data')){var legacyRoot=publicRoot();legacyRoot.innerHTML='<h2>This legacy embedded Crash Cart QR is disabled.</h2><p>Print a new live QR from the authenticated system.</p>';return true}
     try{await waitForFirebase()}catch(e){var r=publicRoot();r.innerHTML='<h2>Could not initialize Firebase.</h2><p>'+esc2(e.message||e)+'</p>';return true}
     if(v==='crash-cart-public'&&p.get('id'))unsub=liveCrash(p.get('id'));
     else if(v==='controlled-expiry'&&p.get('dept'))unsub=liveControlled(p.get('dept'));
@@ -8037,7 +8068,7 @@ window.ensureControlledBulkReplacementButton=addBulkReplacement;
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
-function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v)}
+function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function allowed(){return !!(window.CU&&['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>-1)}
 function departments(){return typeof window.gd==='function'?(gd()||[]):[]}
 function reports(){return typeof window.crashReports==='function'?(crashReports()||[]):[]}
@@ -8046,7 +8077,7 @@ function deptName(id){return window.fsDeptName?window.fsDeptName(id):String(id||
 function cartName(id){var c=carts().find(function(x){return String(x.id)===String(id)});return c?(c.name||id):(id||'—')}
 function fmtDate(v){if(!v)return '—';var d=new Date(v);if(isNaN(d.getTime()))return String(v);return d.toLocaleString('en-GB',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'})}
 function monthKey(v){if(!v)return '';var d=new Date(v);if(isNaN(d.getTime()))return '';return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
-function visibleReports(){var dep=(E('v13as-log-dept')||{}).value||'all',month=(E('v13as-log-month')||{}).value||'';return reports().filter(function(r){return (dep==='all'||String(r.deptId)===String(dep))&&(!month||monthKey(r.openedAt)===month)}).sort(function(a,b){return String(b.openedAt||'').localeCompare(String(a.openedAt||''))})}
+function visibleReports(){var dep=(E('v13as-log-dept')||{}).value||'all',month=(E('v13as-log-month')||{}).value||'';return reports().filter(function(r){return r&&r.openingLog!==false&&String(r.operation||'open')!=='seal_correction'&&(dep==='all'||String(r.deptId)===String(dep))&&(!month||monthKey(r.openedAt)===month)}).sort(function(a,b){return String(b.openedAt||'').localeCompare(String(a.openedAt||''))})}
 function ensureUI(){
  if(!allowed())return removeUI();
  var page=E('pg-crashcart'),list=E('crash-list');if(!page||!list)return;
@@ -10497,201 +10528,18 @@ window.floorstockResetInvalidDepartmentSelectors=resetInvalidDeptSelectorsF;
 window.floorstockDepartmentAliases=SEED_ALIASES;
 })();
 </script>
-<!-- ASDHealth final post-unified recovery bundle: Crash Cart restoration. -->
-<script id="v16-crashcart-public-snapshot-restoration">
+<!-- Public-snapshot Crash Cart recovery removed in the hardened production build.
+     Operational carts are loaded only from authenticated floorstock_state/crash_carts. -->
+<script id="r664-private-crash-cart-source-only">
 (function(){
   'use strict';
-  var EMBEDDED_CARTS=[{"id":"cc_mrl6psk7","name":"xx","deptId":"icu","items":[{"id":"cci_recovered_cc_mrl6psk7_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrl6psk7_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrl6psk7_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrl6psk7_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrl6psk7_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrl6psk7_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrl6psk7_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrl6psk7_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrl6psk7_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrl6psk7_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrl6psk7_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrl6psk7_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrl6psk7_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""},{"qty":0,"expiry":"2026-09-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"xxxxx","createdAt":"2026-07-14T21:50:04.795Z","createdBy":"almftres@hotmail.com","stockUpdatedAt":"2026-07-24T18:26:38.175Z","updatedAt":"2026-07-24T18:26:38.175Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwq1pj","name":"ER 1 - Minor OR","deptId":"emergency","items":[{"id":"cci_recovered_cc_mrqwq1pj_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwq1pj_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwq1pj_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwq1pj_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwq1pj_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwq1pj_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwq1pj_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwq1pj_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwq1pj_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwq1pj_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwq1pj_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwq1pj_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwq1pj_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T21:56:58.192Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.632000Z","updatedAt":"2026-07-24T17:03:24.632000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwr4zv","name":"ER polytrauma-left","deptId":"emergency","items":[{"id":"cci_recovered_cc_mrqwr4zv_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwr4zv_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-08-30","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwr4zv_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwr4zv_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwr4zv_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwr4zv_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwr4zv_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwr4zv_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwr4zv_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwr4zv_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwr4zv_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwr4zv_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-10-30","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwr4zv_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T21:57:48.358Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.672000Z","updatedAt":"2026-07-24T17:03:24.672000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwrkwk","name":"ER -XRAY","deptId":"emergency","items":[{"id":"cci_recovered_cc_mrqwrkwk_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwrkwk_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwrkwk_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-30","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwrkwk_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwrkwk_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwrkwk_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwrkwk_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwrkwk_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwrkwk_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwrkwk_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwrkwk_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwrkwk_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwrkwk_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-02-28","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T21:58:09.148Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.720000Z","updatedAt":"2026-07-24T17:03:24.720000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqws2pb","name":"ER ISOLLATION","deptId":"emergency","items":[{"id":"cci_recovered_cc_mrqws2pb_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqws2pb_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqws2pb_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqws2pb_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqws2pb_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqws2pb_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqws2pb_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqws2pb_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqws2pb_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqws2pb_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqws2pb_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqws2pb_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqws2pb_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T21:58:32.192Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.772000Z","updatedAt":"2026-07-24T17:03:24.772000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwsnjb","name":"ENDOSCOPY","deptId":"endoscopy_unit","items":[{"id":"cci_recovered_cc_mrqwsnjb_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwsnjb_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwsnjb_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwsnjb_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwsnjb_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwsnjb_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwsnjb_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwsnjb_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwsnjb_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwsnjb_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwsnjb_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwsnjb_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwsnjb_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T21:58:59.210Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.824000Z","updatedAt":"2026-07-24T17:03:24.824000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwtazb","name":"DR","deptId":"ccu","items":[{"id":"cci_recovered_cc_mrqwtazb_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwtazb_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwtazb_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwtazb_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwtazb_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwtazb_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwtazb_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwtazb_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwtazb_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwtazb_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwtazb_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwtazb_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwtazb_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T21:59:29.551Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.868000Z","updatedAt":"2026-07-24T17:03:24.868000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwuecg","name":"OB","deptId":"obw","items":[{"id":"cci_recovered_cc_mrqwuecg_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwuecg_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwuecg_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwuecg_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwuecg_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwuecg_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwuecg_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwuecg_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwuecg_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwuecg_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwuecg_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwuecg_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwuecg_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-10-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T22:00:20.619Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.921000Z","updatedAt":"2026-07-24T17:03:24.921000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwvdb9","name":"PW","deptId":"pedia","items":[{"id":"cci_recovered_cc_mrqwvdb9_1","name":"Adenosine","strength":"6mg/2ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Adenosine","concentration":"6mg/2ml"},{"id":"cci_recovered_cc_mrqwvdb9_2","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwvdb9_3","name":"Amiodarone","strength":"50mg/ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"50mg/ml"},{"id":"cci_recovered_cc_mrqwvdb9_4","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwvdb9_5","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwvdb9_6","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwvdb9_7","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwvdb9_8","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwvdb9_9","name":"Procainamide","strength":"1 g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-07-31","lot":""}],"genericName":"Procainamide","concentration":"1 g/10ml"},{"id":"cci_recovered_cc_mrqwvdb9_10","name":"Sodium Bicarbonate","strength":"4.2g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate","concentration":"4.2g/10ml"},{"id":"cci_recovered_cc_mrqwvdb9_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"}],"seal":"","createdAt":"2026-07-18T22:01:05.951Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:24.945000Z","updatedAt":"2026-07-24T17:03:24.945000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqww5sq","name":"FW","deptId":"fmw","items":[{"id":"cci_recovered_cc_mrqww5sq_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-09-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqww5sq_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqww5sq_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":2,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqww5sq_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqww5sq_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-02-28","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqww5sq_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqww5sq_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqww5sq_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqww5sq_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqww5sq_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":1,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqww5sq_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqww5sq_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqww5sq_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2028-02-29","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"Y173824","createdAt":"2026-07-18T22:01:43.042Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:22.998Z","updatedAt":"2026-07-24T17:03:22.998Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwwvh9","name":"NICU","deptId":"nursery","items":[{"id":"cci_recovered_cc_mrqwwvh9_1","name":"Adenosine","strength":"6mg/2ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Adenosine","concentration":"6mg/2ml"},{"id":"cci_recovered_cc_mrqwwvh9_2","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwwvh9_3","name":"Amiodarone","strength":"50mg/ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"50mg/ml"},{"id":"cci_recovered_cc_mrqwwvh9_4","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwwvh9_5","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwwvh9_6","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwwvh9_7","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwwvh9_8","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwwvh9_9","name":"Procainamide","strength":"1 g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-07-31","lot":""}],"genericName":"Procainamide","concentration":"1 g/10ml"},{"id":"cci_recovered_cc_mrqwwvh9_10","name":"Sodium Bicarbonate","strength":"4.2g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-02-28","lot":""}],"genericName":"Sodium Bicarbonate","concentration":"4.2g/10ml"},{"id":"cci_recovered_cc_mrqwwvh9_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"}],"seal":"","createdAt":"2026-07-18T22:02:16.885Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:25.033000Z","updatedAt":"2026-07-24T17:03:25.033000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwxgkj","name":"MMW","deptId":"mmw","items":[{"id":"cci_recovered_cc_mrqwxgkj_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwxgkj_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwxgkj_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwxgkj_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwxgkj_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwxgkj_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwxgkj_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwxgkj_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwxgkj_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwxgkj_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwxgkj_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwxgkj_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwxgkj_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-10-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T22:02:43.767Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:25.079000Z","updatedAt":"2026-07-24T17:03:25.079000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwxys3","name":"MSW","deptId":"msw","items":[{"id":"cci_recovered_cc_mrqwxys3_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwxys3_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwxys3_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwxys3_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwxys3_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwxys3_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwxys3_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwxys3_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwxys3_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwxys3_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwxys3_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwxys3_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwxys3_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T22:03:08.006Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:25.129000Z","updatedAt":"2026-07-24T17:03:25.129000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwytpi","name":"OR 1","deptId":"anesthesia","items":[{"id":"cci_recovered_cc_mrqwytpi_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwytpi_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwytpi_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":0,"batches":[{"qty":0,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwytpi_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwytpi_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwytpi_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwytpi_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwytpi_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwytpi_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwytpi_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwytpi_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwytpi_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwytpi_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T22:03:47.405Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:25.182000Z","updatedAt":"2026-07-24T17:03:25.182000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqwzafu","name":"OR 2","deptId":"anesthesia","items":[{"id":"cci_recovered_cc_mrqwzafu_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqwzafu_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqwzafu_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqwzafu_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwzafu_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqwzafu_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqwzafu_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqwzafu_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqwzafu_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqwzafu_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqwzafu_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqwzafu_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqwzafu_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T22:04:09.318Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:25.231000Z","updatedAt":"2026-07-24T17:03:25.231000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrqx15zb","name":"AKU","deptId":"aku","items":[{"id":"cci_recovered_cc_mrqx15zb_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrqx15zb_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2026-10-31","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrqx15zb_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrqx15zb_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqx15zb_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrqx15zb_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrqx15zb_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrqx15zb_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrqx15zb_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrqx15zb_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrqx15zb_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrqx15zb_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-10-30","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrqx15zb_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-02-28","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-18T22:05:37.265Z","createdBy":"abdulrahmanjudayba@gmail.com","stockUpdatedAt":"2026-07-24T17:03:25.279000Z","updatedAt":"2026-07-24T17:03:25.279000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"},{"id":"cc_mrrm1dsi","name":"OPD","deptId":"opd","items":[{"id":"cci_recovered_cc_mrrm1dsi_1","name":"Adrenaline (Epinephrine)","strength":"1mg/1ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-05-30","lot":""}],"genericName":"Adrenaline (Epinephrine)","concentration":"1mg/1ml"},{"id":"cci_recovered_cc_mrrm1dsi_2","name":"Amiodarone","strength":"150mg/3ml","qty":3,"present":3,"batches":[{"qty":3,"expiry":"2027-02-28","lot":""}],"genericName":"Amiodarone","concentration":"150mg/3ml"},{"id":"cci_recovered_cc_mrrm1dsi_3","name":"Atropine","strength":"0.5mg/ml","qty":5,"present":5,"batches":[{"qty":5,"expiry":"2027-04-20","lot":""}],"genericName":"Atropine","concentration":"0.5mg/ml"},{"id":"cci_recovered_cc_mrrm1dsi_4","name":"Calcium Chloride 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-31","lot":""}],"genericName":"Calcium Chloride 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrrm1dsi_5","name":"Calcium Gluconate 10%","strength":"1g/10ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Calcium Gluconate 10%","concentration":"1g/10ml"},{"id":"cci_recovered_cc_mrrm1dsi_6","name":"Dextrose 50%","strength":"25g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-05-30","lot":""}],"genericName":"Dextrose 50%","concentration":"25g/50ml"},{"id":"cci_recovered_cc_mrrm1dsi_7","name":"Dobutamine","strength":"250mg/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-30","lot":""}],"genericName":"Dobutamine","concentration":"250mg/5ml"},{"id":"cci_recovered_cc_mrrm1dsi_8","name":"Dopamine","strength":"200/5ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-09-30","lot":""}],"genericName":"Dopamine","concentration":"200/5ml"},{"id":"cci_recovered_cc_mrrm1dsi_9","name":"Lidocaine 2%","strength":"100mg/5ml","qty":0,"present":0,"batches":[],"genericName":"Lidocaine 2%","concentration":"100mg/5ml"},{"id":"cci_recovered_cc_mrrm1dsi_10","name":"Magnesium Sulfate","strength":"2g/20ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-11-30","lot":""}],"genericName":"Magnesium Sulfate","concentration":"2g/20ml"},{"id":"cci_recovered_cc_mrrm1dsi_11","name":"Naloxone","strength":"0.4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-04-30","lot":""}],"genericName":"Naloxone","concentration":"0.4mg/ml"},{"id":"cci_recovered_cc_mrrm1dsi_12","name":"Norepinephrine 1:1,000","strength":"4mg/ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2026-07-31","lot":""}],"genericName":"Norepinephrine 1:1,000","concentration":"4mg/ml"},{"id":"cci_recovered_cc_mrrm1dsi_13","name":"Sodium Bicarbonate 8.4%","strength":"4.2g/50ml","qty":2,"present":2,"batches":[{"qty":2,"expiry":"2027-01-30","lot":""},{"qty":0,"expiry":"2026-09-30","lot":""}],"genericName":"Sodium Bicarbonate 8.4%","concentration":"4.2g/50ml"}],"seal":"","createdAt":"2026-07-24T17:03:25.302000Z","createdBy":"Recovered from public snapshot","stockUpdatedAt":"2026-07-24T17:03:25.302000Z","updatedAt":"2026-07-24T17:03:25.302000Z","recoveredFrom":"public_controlled_expiry","recoveredBackupAt":"2026-07-24T21:10:55.245Z"}];
-  var REQUIRED_DEPARTMENTS=[{"id":"emergency","name":"EMERGENCY"},{"id":"opd","name":"OPD"}];
-
-  function isMasterRecoveryAllowed(){
-    try{
-      if(typeof window.isMasterActual==='function'&&window.isMasterActual())return true;
-      if(window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)return true;
-      if(window.CU&&window.CU.master===true)return true;
-    }catch(e){}
-    return false;
-  }
-
-  function num(v){
-    var n=Number(v);
-    return Number.isFinite(n)?n:0;
-  }
-
-  function timestampISO(v){
-    if(!v)return new Date().toISOString();
-    if(typeof v==='string')return v;
-    try{
-      if(typeof v.toDate==='function')return v.toDate().toISOString();
-      if(v.seconds!=null)return new Date(Number(v.seconds)*1000+Math.floor(Number(v.nanoseconds||0)/1000000)).toISOString();
-    }catch(e){}
-    return new Date().toISOString();
-  }
-
-  function normalized(v){
-    return String(v||'').trim().toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g,'');
-  }
-
-  function auditDepartmentMap(){
-    var out={};
-    try{
-      var rows=(window.S&&S.g&&S.g('audit_log'))||[];
-      (Array.isArray(rows)?rows:[]).forEach(function(a){
-        if(a&&a.action==='crash_cart_add'&&a.meta&&a.meta.cartId&&a.meta.deptId){
-          out[String(a.meta.cartId)]={deptId:String(a.meta.deptId),createdAt:a.at||'',createdBy:a.actor||''};
-        }
-      });
-    }catch(e){}
-    return out;
-  }
-
-  function embeddedMap(){
-    var out={};
-    EMBEDDED_CARTS.forEach(function(c){out[String(c.id)]=c});
-    return out;
-  }
-
-  function departmentNameMap(){
-    var out={},deps=[];
-    try{deps=(window.S&&S.g&&S.g('departments'))||[]}catch(e){}
-    (Array.isArray(deps)?deps:[]).forEach(function(d){
-      [d&&d.id,d&&d.name,d&&d.departmentName,d&&d.code,d&&d.shortName].forEach(function(v){
-        if(v)out[normalized(v)]=String(d.id);
-      });
-    });
-    var aliases={
-      intensivecareunit:'icu',
-      emergency:'emergency',
-      endoscopyunit:'endoscopy_unit',
-      delivery:'ccu',
-      obstetricsandgynaecology:'obw',
-      pediatric:'pedia',
-      femaleward:'fmw',
-      nursery:'nursery',
-      malemedical:'mmw',
-      malesurgical:'msw',
-      anesthesia:'anesthesia',
-      artificialkidneyunit:'aku',
-      opd:'opd'
-    };
-    Object.keys(aliases).forEach(function(k){if(!out[k])out[k]=aliases[k]});
-    return out;
-  }
-
-  function cartFromPublic(id,data,auditMap,fallbackMap,nameMap){
-    var base=fallbackMap[id]||{},audit=auditMap[id]||{};
-    var deptId=audit.deptId||base.deptId||nameMap[normalized(data.department)]||'unassigned';
-    var updated=timestampISO(data.updatedAt||base.updatedAt||base.stockUpdatedAt);
-    return {
-      id:id,
-      name:String(data.name||base.name||'Crash Cart'),
-      deptId:String(deptId),
-      items:(Array.isArray(data.items)?data.items:[]).map(function(it,index){
-        return {
-          id:'cci_recovered_'+String(id).replace(/[^a-zA-Z0-9_]/g,'_')+'_'+(index+1),
-          name:String(it&&it.name||''),
-          strength:String(it&&it.strength||''),
-          qty:num(it&&it.required),
-          present:num(it&&it.available),
-          batches:(Array.isArray(it&&it.batches)?it.batches:[]).map(function(b){
-            return {qty:num(b&&b.qty),expiry:String(b&&b.expiry||''),lot:String(b&&b.lot||'')};
-          })
-        };
-      }),
-      seal:String(data.seal||base.seal||''),
-      createdAt:audit.createdAt||base.createdAt||updated,
-      createdBy:audit.createdBy||base.createdBy||'Recovered from public snapshot',
-      stockUpdatedAt:updated,
-      updatedAt:updated,
-      recoveredFrom:'public_controlled_expiry',
-      recoveredBackupAt:"2026-07-24T21:10:55.245Z"
-    };
-  }
-
-  async function livePublicCarts(){
-    if(!window.FB_DB||typeof FB_DB.collection!=='function')return [];
-    var snap=await FB_DB.collection('public_controlled_expiry').get();
-    var auditMap=auditDepartmentMap(),fallbackMap=embeddedMap(),nameMap=departmentNameMap(),out=[];
-    snap.forEach(function(doc){
-      if(String(doc.id).indexOf('crash_')!==0)return;
-      var data=doc.data()||{},id=String(data.cartId||doc.id.slice(6));
-      out.push(cartFromPublic(id,data,auditMap,fallbackMap,nameMap));
-    });
-    return out;
-  }
-
-  async function ensureRecoveredDepartments(carts){
-    var deps=(window.S&&S.g&&S.g('departments'))||[];
-    deps=Array.isArray(deps)?deps.slice():[];
-    var known={};
-    deps.forEach(function(d){if(d&&d.id)known[String(d.id)]=true});
-    var labels={};
-    REQUIRED_DEPARTMENTS.forEach(function(d){labels[String(d.id)]=String(d.name||d.id)});
-    EMBEDDED_CARTS.forEach(function(c){
-      if(!labels[String(c.deptId)])labels[String(c.deptId)]=String(c.deptId);
-    });
-    var changed=false;
-    carts.forEach(function(c){
-      var id=String(c.deptId||'');
-      if(!id||id==='unassigned'||known[id])return;
-      deps.push({id:id,name:labels[id]||id.toUpperCase(),created:new Date().toISOString(),recoveredFromCrashCart:true});
-      known[id]=true;changed=true;
-    });
-    if(changed)await S.s('departments',deps);
-    return changed;
-  }
-
-  async function recoverCrashCartsFromPublicSnapshots(force){
-    if(!window.S||!S.ready||typeof S.g!=='function'||typeof S.s!=='function')throw new Error('Floor Stock data is not ready.');
-    if(!isMasterRecoveryAllowed())throw new Error('Sign in with the real Master account to restore Crash Cart data.');
-    var existing=S.g('crash_carts');
-    if(Array.isArray(existing)&&existing.length&&!force){
-      return {status:'skipped',count:existing.length,source:'existing'};
-    }
-
-    var carts=[];
-    try{carts=await livePublicCarts()}catch(err){console.warn('Live Crash Cart snapshot read failed; using embedded backup snapshots.',err)}
-    if(!Array.isArray(carts)||!carts.length)carts=JSON.parse(JSON.stringify(EMBEDDED_CARTS));
-    if(!carts.length)throw new Error('No Crash Cart snapshots were found.');
-
-    await ensureRecoveredDepartments(carts);
-    if(typeof window.setCrashCarts!=='function')throw new Error('Crash Cart save engine is unavailable.');
-    await window.setCrashCarts(carts);
-    if(typeof window.auditAction==='function'){
-      try{window.auditAction('crash_cart_data_restored',{count:carts.length,source:'public_controlled_expiry'})}catch(e){}
-    }
-    if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
-    if(typeof window.toast==='function')window.toast(carts.length+' Crash Cart(s) restored ✓','succ');
-    ensureRecoveryButton();
-    return {status:'restored',count:carts.length,source:'public_controlled_expiry'};
-  }
-
-  window.recoverCrashCartsFromPublicSnapshots=recoverCrashCartsFromPublicSnapshots;
-
-  function ensureRecoveryButton(){
-    var add=document.getElementById('crash-add-btn');
-    if(!add||!isMasterRecoveryAllowed())return;
-    var b=document.getElementById('crash-restore-public-btn');
-    if(!b){
-      b=document.createElement('button');
-      b.id='crash-restore-public-btn';
-      b.type='button';
-      b.className='btn bg bsm';
-      b.textContent='↻ Restore Crash Carts / استرجاع عربات الطوارئ';
-      b.onclick=function(){
-        var old=b.textContent;b.disabled=true;b.textContent='Restoring… / جاري الاسترجاع…';
-        recoverCrashCartsFromPublicSnapshots(false).catch(function(err){
-          console.error(err);
-          if(typeof window.toast==='function')window.toast(err.message||String(err),'err');
-        }).finally(function(){b.disabled=false;b.textContent=old});
-      };
-      add.parentNode.insertBefore(b,add.nextSibling);
-    }
-    var carts=(window.S&&S.g&&S.g('crash_carts'))||[];
-    b.style.display=Array.isArray(carts)&&carts.length?'none':'inline-flex';
-  }
-
-  window.ensureCrashRecoveryButton=ensureRecoveryButton;
+  window.recoverCrashCartsFromPublicSnapshots=async function(){
+    throw new Error('Public Crash Cart recovery is disabled. Restore from an authenticated Master backup instead.');
+  };
+  window.ensureCrashRecoveryButton=function(){
+    var button=document.getElementById('crash-restore-public-btn');
+    if(button)button.remove();
+  };
 })();
 </script>
 <style id="asdh-authoritative-final-fixes-style">
@@ -10911,7 +10759,7 @@ window.enhanceCrashButtons=enhanceButtons;
 
 
 /* Keep the public no-login snapshot aligned with printing, including Expiry Track rules. */
-async function publishPublic(carts){if(!window.FB_DB||!Array.isArray(carts))return;var r=rules(),depts=typeof gd==='function'?(gd()||[]):[];await Promise.all(carts.map(function(c){var d=depts.find(function(x){return String(x.id)===String(c.deptId)})||{},items=(c.items||[]).map(function(it){var med=normalizedMedication(it.name,it.concentration||it.strength),required=num(it.qty),available=num(it.present==null?it.qty:it.present);return {name:med.name,concentration:med.concentration,strength:med.concentration,required:required,available:available,status:available<=0?'Out of stock':(available<required?'Less than required':'Available'),batches:(it.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':num(b.qty),lot:b.lot||''}})}});return FB_DB.collection('public_controlled_expiry').doc('crash_'+String(c.id)).set({cartId:c.id,name:c.name||'',department:d.name||c.deptId||'',seal:c.seal||'',lastClosedAt:c.lastClosedAt||null,lastClosedByName:c.lastClosedByName||'',lastClosedByUser:c.lastClosedByUser||'',expiryRules:r,expiryTrackRules:{urgent:'0–'+r.urgentDays+' days',near:(r.urgentDays+1)+'–'+r.nearDays+' days',expired:'Before today'},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),items:items},{merge:true})}))}
+async function publishPublic(carts){if(!window.FB_DB||!Array.isArray(carts))return;var r=rules(),depts=typeof gd==='function'?(gd()||[]):[];await Promise.all(carts.map(function(c){var d=depts.find(function(x){return String(x.id)===String(c.deptId)})||{},items=(c.items||[]).map(function(it){var med=normalizedMedication(it.name,it.concentration||it.strength),required=num(it.qty),available=num(it.present==null?it.qty:it.present);return {name:med.name,concentration:med.concentration,strength:med.concentration,required:required,available:available,status:available<=0?'Out of stock':(available<required?'Less than required':'Available'),batches:(it.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':num(b.qty)}})}});return FB_DB.collection('public_controlled_expiry').doc('crash_'+String(c.id)).set({cartId:c.id,name:c.name||'',department:d.name||c.deptId||'',lastClosedAt:c.lastClosedAt||null,expiryRules:r,expiryTrackRules:{urgent:'0–'+r.urgentDays+' days',near:(r.urgentDays+1)+'–'+r.nearDays+' days',expired:'Before today'},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),items:items},{merge:false})}))}
 function reconcileCrashCartData(carts){
  var changed=false;
  var output=(Array.isArray(carts)?carts:[]).map(function(cart){
@@ -11504,8 +11352,8 @@ window.acc2RefreshMedicationList=function(){var dept=(E('acc2-assignment-dept')|
 window.acc2EditAssignment=function(id){ACC2_UI.editAssignmentId=id;ACC2_UI.adminTab='custody';renderMedicationAccountability()};
 window.acc2CancelAssignmentEdit=function(){ACC2_UI.editAssignmentId='';renderMedicationAccountability()};
 window.acc2SaveAssignment=async function(){if(!canAccManage())return toast('Not authorized.','err');var id=(E('acc2-assignment-id')||{}).value||'',deptId=(E('acc2-assignment-dept')||{}).value||'',medName=String((E('acc2-assignment-med')||{}).value||'').trim(),quota=acc2Number((E('acc2-assignment-quota')||{}).value),reasons=acc2UniqueLines((E('acc2-assignment-reasons')||{}).value),active=!!(E('acc2-assignment-active')&&E('acc2-assignment-active').checked);if(!deptId||!medName||!(quota>0)||!reasons.length)return toast('Department, medicine, positive custody quantity and at least one reason are required.','err');var list=acc2Assignments().map(function(x){return Object.assign({},x)}),duplicate=list.find(function(x){return String(x.deptId)===String(deptId)&&norm(x.medName)===norm(medName)&&String(x.id)!==String(id)});if(duplicate)return toast('This medicine already has a custody record for the selected department.','err');var meta=acc2ActorMeta(),row=list.find(function(x){return String(x.id)===String(id)});if(row){var deficit=Math.max(0,acc2Number(row.quota)-acc2Number(row.balance));row.deptId=deptId;row.medName=medName;row.quota=quota;row.balance=Math.max(0,Math.min(quota,quota-deficit));row.reasons=reasons;row.active=active;row.updatedAt=meta.at;row.updatedBy=meta.name}else{list.push({id:uid('acc2a'),deptId:deptId,medName:medName,quota:quota,balance:quota,reasons:reasons,active:active,createdAt:meta.at,createdBy:meta.name,updatedAt:meta.at,updatedBy:meta.name})}await S.s(ACC2_ASSIGNMENTS_KEY,list);ACC2_UI.editAssignmentId='';toast('Department custody saved ✓','succ');renderMedicationAccountability()};
-window.acc2ToggleAssignment=async function(id){var list=acc2Assignments().map(function(x){return Object.assign({},x)}),row=acc2Assignment(id,list);if(!row)return;row.active=row.active===false;row.updatedAt=now();row.updatedBy=actor().name;await S.s(ACC2_ASSIGNMENTS_KEY,list);renderMedicationAccountability()};
-window.acc2DeleteAssignment=async function(id){var history=acc2Usage().some(function(u){return String(u.assignmentId)===String(id)});if(history)return toast('This custody has transaction history and cannot be deleted. Deactivate it instead.','err');var ok=typeof uiConfirm==='function'?await uiConfirm('Delete this custody permanently? / حذف هذه العهدة نهائيًا؟'):window.confirm('Delete this custody permanently?');if(!ok)return;await S.s(ACC2_ASSIGNMENTS_KEY,acc2Assignments().filter(function(a){return String(a.id)!==String(id)}));renderMedicationAccountability()};
+window.acc2ToggleAssignment=async function(id){if(!canAccManage())return toast('Not authorized.','err');var list=acc2Assignments().map(function(x){return Object.assign({},x)}),row=acc2Assignment(id,list);if(!row)return;row.active=row.active===false;row.updatedAt=now();row.updatedBy=actor().name;await S.s(ACC2_ASSIGNMENTS_KEY,list);renderMedicationAccountability()};
+window.acc2DeleteAssignment=async function(id){if(!canAccManage())return toast('Not authorized.','err');var history=acc2Usage().some(function(u){return String(u.assignmentId)===String(id)});if(history)return toast('This custody has transaction history and cannot be deleted. Deactivate it instead.','err');var ok=typeof uiConfirm==='function'?await uiConfirm('Delete this custody permanently? / حذف هذه العهدة نهائيًا؟'):window.confirm('Delete this custody permanently?');if(!ok)return;await S.s(ACC2_ASSIGNMENTS_KEY,acc2Assignments().filter(function(a){return String(a.id)!==String(id)}));renderMedicationAccountability()};
 
 function acc2ReviewTab(){var f=ACC2_UI.filters||{},rows=acc2FilterRows(acc2Usage().slice().sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}));return '<div class="card"><div class="ch"><div><span class="ct">Pharmacy review / مراجعة الصيدلية</span><div class="fhint">Approving does not replenish the department balance. Replenishment occurs only after nursing receipt is recorded.</div></div></div><div class="cb"><div class="acc2-filter-grid"><div class="fg"><label>Department</label><select onchange="acc2SetFilter(\'dept\',this.value)"><option value="">All departments</option>'+depts().map(function(d){return '<option value="'+esc(d.id)+'" '+(String(f.dept)===String(d.id)?'selected':'')+'>'+esc(d.name)+'</option>'}).join('')+'</select></div><div class="fg"><label>Status</label><select onchange="acc2SetFilter(\'status\',this.value)"><option value="">All statuses</option>'+['pending_pharmacy','approved_waiting_receipt','received_locked','rejected'].map(function(s){return '<option value="'+s+'" '+(f.status===s?'selected':'')+'>'+acc2StatusLabel(s)+'</option>'}).join('')+'</select></div><div class="fg"><label>Medicine</label><input value="'+esc(f.medicine||'')+'" oninput="ACC2_UI.filters.medicine=this.value;clearTimeout(window.acc2FilterTimer);window.acc2FilterTimer=setTimeout(r17AccRenderVerify,140)" placeholder="Search medicine"></div></div><div id="r17-acc-verify"></div></div></div>'}
 window.r17AccRenderVerify=function(){var host=E('r17-acc-verify');if(!host){renderMedicationAccountability();return}var rows=acc2FilterRows(acc2Usage().slice().sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}));if(!rows.length){host.innerHTML='<div class="acc2-empty">No records match the selected filters.</div>';return}host.innerHTML='<div class="tw"><table class="acc2-table"><thead><tr><th>Date</th><th>Department</th><th>Medicine</th><th>Used</th><th>Patient file</th><th>Doctor</th><th>Reason</th><th>Status</th><th>Decision</th></tr></thead><tbody>'+rows.map(function(u){var locked=u.status!=='pending_pharmacy';return '<tr><td>'+esc(u.consumptionDate||'—')+'</td><td>'+esc(deptName(u.deptId))+'</td><td><b>'+esc(u.medName||((acc2Assignment(u.assignmentId)||{}).medName)||'—')+'</b></td><td>'+acc2Number(u.units)+'</td><td>'+esc(u.patientFile||'—')+'</td><td>'+esc(u.doctor||'—')+'</td><td>'+esc(u.reasonLabel||'—')+'</td><td><span class="badge '+acc2StatusClass(u.status)+'">'+acc2StatusLabel(u.status)+'</span><div class="fhint">'+esc(u.pharmacyNote||u.rejectionReason||'')+'</div></td><td>'+(locked?'<span class="fhint">Decision completed</span>':'<input id="acc2-decision-note-'+esc(u.id)+'" placeholder="Optional note / ملاحظة اختيارية"><div class="fl g8"><button class="btn bs bxs" onclick="acc2Decision(\''+esc(u.id)+'\',\'approve\')">Approve</button><button class="btn bd2c bxs" onclick="acc2Decision(\''+esc(u.id)+'\',\'reject\')">Reject</button></div>')+'</td></tr>'}).join('')+'</tbody></table></div>'};
@@ -11517,10 +11365,10 @@ function acc2RegimenBuilder(){var edit=acc2Regimens().find(function(r){return St
 function acc2RegimensTab(){var regimens=acc2Regimens();return acc2RegimenBuilder()+'<div class="card"><div class="ch"><span class="ct">Configured regimens / الخطط المعرّفة</span></div><div class="cb">'+(regimens.length?regimens.map(function(r){var version=acc2RegimenVersion(r),items=(version&&version.items)||[];return '<div class="acc2-regimen-admin '+(r.paused?'paused':'')+'"><div class="acc2-regimen-head"><div><b>'+esc(r.name)+'</b><div class="fhint">'+esc(deptName(r.deptId))+'</div></div><div class="fl g8"><select onchange="acc2ActivateRegimen(\''+esc(r.id)+'\',this.value)">'+(r.versions||[]).map(function(v){return '<option value="'+esc(v.id)+'" '+(String(v.id)===String(r.activeVersionId)?'selected':'')+'>'+esc(v.label)+'</option>'}).join('')+'</select><button class="btn '+(r.paused?'bs':'bd2c')+' bsm" onclick="acc2ToggleRegimenPause(\''+esc(r.id)+'\')">'+(r.paused?'Resume entry / استئناف':'Pause for replacement / إيقاف للاستبدال')+'</button><button class="btn bg bsm" onclick="acc2StartRegimenVersion(\''+esc(r.id)+'\')">+ Version</button><button class="btn bd2c bsm" onclick="acc2DeleteRegimen(\''+esc(r.id)+'\')">Delete</button></div></div><div class="acc2-regimen-lines">'+items.map(function(i){var a=acc2Assignment(i.assignmentId)||{};return '<span>'+esc(a.medName||i.medName||'Medicine')+' × '+acc2Number(i.qty)+'</span>'}).join('')+'</div><div class="fhint">'+(r.paused?'Department entry is currently blocked for medicines in this regimen.':'Department sees this as the currently approved regimen.')+'</div></div>'}).join(''):'<div class="acc2-empty">No regimens configured.</div>')+'</div></div>'}
 window.acc2StartRegimenVersion=function(id){ACC2_UI.editRegimenId=id;ACC2_UI.adminTab='regimens';renderMedicationAccountability()};
 window.acc2CancelRegimenEdit=function(){ACC2_UI.editRegimenId='';renderMedicationAccountability()};
-window.acc2SaveRegimenVersion=async function(){var list=acc2Regimens().map(function(x){return clone(x)}),edit=list.find(function(r){return String(r.id)===String(ACC2_UI.editRegimenId)})||null,deptId=edit?edit.deptId:((E('acc2-regimen-dept')||{}).value||''),name=edit?edit.name:String((E('acc2-regimen-name')||{}).value||'').trim(),label=String((E('acc2-regimen-version')||{}).value||'').trim(),items=[];document.querySelectorAll('[data-acc2-regimen-assignment]:checked').forEach(function(chk){var assignmentId=chk.getAttribute('data-acc2-regimen-assignment'),qty=acc2Number((document.querySelector('.acc2-regimen-qty[data-assignment="'+CSS.escape(assignmentId)+'"]')||{}).value);if(qty>0)items.push({assignmentId:assignmentId,medName:(acc2Assignment(assignmentId)||{}).medName||'',qty:qty})});if(!deptId||!name||!label||!items.length)return toast('Department, regimen name, version label and at least one medicine quantity are required.','err');var duplicate={};for(var i=0;i<items.length;i++){if(duplicate[items[i].assignmentId])return toast('A medicine can appear only once in a regimen version.','err');duplicate[items[i].assignmentId]=1}var version={id:uid('acc2v'),label:label,items:items,createdAt:now(),createdBy:actor().name};if(edit){edit.versions=Array.isArray(edit.versions)?edit.versions:[];edit.versions.push(version);edit.activeVersionId=version.id;edit.updatedAt=now();edit.updatedBy=actor().name}else{list.push({id:uid('acc2r'),name:name,deptId:deptId,versions:[version],activeVersionId:version.id,paused:false,active:true,createdAt:now(),createdBy:actor().name})}await S.s(ACC2_REGIMENS_KEY,list);ACC2_UI.editRegimenId='';toast('Regimen version saved and activated ✓','succ');renderMedicationAccountability()};
-window.acc2ActivateRegimen=async function(id,versionId){var list=acc2Regimens().map(function(x){return clone(x)}),r=list.find(function(x){return String(x.id)===String(id)});if(!r||!(r.versions||[]).some(function(v){return String(v.id)===String(versionId)}))return;r.activeVersionId=versionId;r.updatedAt=now();r.updatedBy=actor().name;await S.s(ACC2_REGIMENS_KEY,list);toast('Active regimen changed ✓','succ');renderMedicationAccountability()};
-window.acc2ToggleRegimenPause=async function(id){var list=acc2Regimens().map(function(x){return clone(x)}),r=list.find(function(x){return String(x.id)===String(id)});if(!r)return;r.paused=!r.paused;r.pausedAt=r.paused?now():'';r.pausedBy=r.paused?actor().name:'';await S.s(ACC2_REGIMENS_KEY,list);toast(r.paused?'Department entry paused for regimen replacement.':'Department entry resumed.','succ');renderMedicationAccountability()};
-window.acc2DeleteRegimen=async function(id){var ok=typeof uiConfirm==='function'?await uiConfirm('Delete this regimen and all its versions? / حذف الخطة وجميع نسخها؟'):window.confirm('Delete regimen?');if(!ok)return;await S.s(ACC2_REGIMENS_KEY,acc2Regimens().filter(function(r){return String(r.id)!==String(id)}));renderMedicationAccountability()};
+window.acc2SaveRegimenVersion=async function(){if(!canAccManage())return toast('Not authorized.','err');var list=acc2Regimens().map(function(x){return clone(x)}),edit=list.find(function(r){return String(r.id)===String(ACC2_UI.editRegimenId)})||null,deptId=edit?edit.deptId:((E('acc2-regimen-dept')||{}).value||''),name=edit?edit.name:String((E('acc2-regimen-name')||{}).value||'').trim(),label=String((E('acc2-regimen-version')||{}).value||'').trim(),items=[];document.querySelectorAll('[data-acc2-regimen-assignment]:checked').forEach(function(chk){var assignmentId=chk.getAttribute('data-acc2-regimen-assignment'),qty=acc2Number((document.querySelector('.acc2-regimen-qty[data-assignment="'+CSS.escape(assignmentId)+'"]')||{}).value);if(qty>0)items.push({assignmentId:assignmentId,medName:(acc2Assignment(assignmentId)||{}).medName||'',qty:qty})});if(!deptId||!name||!label||!items.length)return toast('Department, regimen name, version label and at least one medicine quantity are required.','err');var duplicate={};for(var i=0;i<items.length;i++){if(duplicate[items[i].assignmentId])return toast('A medicine can appear only once in a regimen version.','err');duplicate[items[i].assignmentId]=1}var version={id:uid('acc2v'),label:label,items:items,createdAt:now(),createdBy:actor().name};if(edit){edit.versions=Array.isArray(edit.versions)?edit.versions:[];edit.versions.push(version);edit.activeVersionId=version.id;edit.updatedAt=now();edit.updatedBy=actor().name}else{list.push({id:uid('acc2r'),name:name,deptId:deptId,versions:[version],activeVersionId:version.id,paused:false,active:true,createdAt:now(),createdBy:actor().name})}await S.s(ACC2_REGIMENS_KEY,list);ACC2_UI.editRegimenId='';toast('Regimen version saved and activated ✓','succ');renderMedicationAccountability()};
+window.acc2ActivateRegimen=async function(id,versionId){if(!canAccManage())return toast('Not authorized.','err');var list=acc2Regimens().map(function(x){return clone(x)}),r=list.find(function(x){return String(x.id)===String(id)});if(!r||!(r.versions||[]).some(function(v){return String(v.id)===String(versionId)}))return;r.activeVersionId=versionId;r.updatedAt=now();r.updatedBy=actor().name;await S.s(ACC2_REGIMENS_KEY,list);toast('Active regimen changed ✓','succ');renderMedicationAccountability()};
+window.acc2ToggleRegimenPause=async function(id){if(!canAccManage())return toast('Not authorized.','err');var list=acc2Regimens().map(function(x){return clone(x)}),r=list.find(function(x){return String(x.id)===String(id)});if(!r)return;r.paused=!r.paused;r.pausedAt=r.paused?now():'';r.pausedBy=r.paused?actor().name:'';await S.s(ACC2_REGIMENS_KEY,list);toast(r.paused?'Department entry paused for regimen replacement.':'Department entry resumed.','succ');renderMedicationAccountability()};
+window.acc2DeleteRegimen=async function(id){if(!canAccManage())return toast('Not authorized.','err');var ok=typeof uiConfirm==='function'?await uiConfirm('Delete this regimen and all its versions? / حذف الخطة وجميع نسخها؟'):window.confirm('Delete regimen?');if(!ok)return;await S.s(ACC2_REGIMENS_KEY,acc2Regimens().filter(function(r){return String(r.id)!==String(id)}));renderMedicationAccountability()};
 
 function acc2DepartmentCards(deptId){var assignments=acc2DeptAssignments(deptId),usage=acc2Usage().filter(function(u){return String(u.deptId)===String(deptId)}),waiting=usage.filter(function(u){return u.status==='approved_waiting_receipt'});return '<div class="acc2-stats"><div class="sc"><div class="sl">Assigned medicines</div><div class="sv">'+assignments.length+'</div></div><div class="sc"><div class="sl">Approved custody</div><div class="sv">'+acc2Sum(assignments,'quota')+'</div></div><div class="sc"><div class="sl">Current balance</div><div class="sv">'+acc2Sum(assignments,'balance')+'</div></div><div class="sc"><div class="sl">Waiting receipt</div><div class="sv">'+acc2Sum(waiting)+'</div><div class="ss">'+waiting.length+' requests</div></div></div>'+acc2RegimenNotice(deptId)+'<div class="acc2-med-grid">'+assignments.map(function(a){var blocked=acc2SubmissionBlocked(deptId,a.id),remaining=acc2Number(a.balance);return '<div class="card acc2-med-card '+(blocked?'blocked':'')+'"><div class="ch"><div><span class="ct">'+esc(a.medName)+' — عهدتهم '+acc2Number(a.quota)+'</span><div class="fhint">Current available balance / الرصيد المتاح: <b>'+remaining+'</b></div></div><span class="badge '+(remaining>0?'bgn':'brd')+'">'+remaining+' / '+acc2Number(a.quota)+'</span></div><div class="cb">'+(blocked?'<div class="alert-banner">Entry is paused because '+esc(blocked.name)+' is being replaced by pharmacy. / الإدخال متوقف مؤقتًا لاستبدال الخطة.</div>':'')+'<div class="acc2-form-grid"><div class="fg"><label>Units used / الوحدات المستعملة *</label><input data-acc2="units" data-assignment="'+esc(a.id)+'" type="number" min="0.001" max="'+remaining+'" step="any"></div><div class="fg"><label>Consumption date / تاريخ الاستهلاك *</label><input data-acc2="date" data-assignment="'+esc(a.id)+'" type="date" max="'+acc2Today()+'"></div><div class="fg"><label>Patient file number / رقم الملف *</label><input data-acc2="file" data-assignment="'+esc(a.id)+'"></div><div class="fg"><label>Doctor recorded in system / الطبيب المسجل *</label><input data-acc2="doctor" data-assignment="'+esc(a.id)+'"></div><div class="fg"><label>Usage reason / سبب الاستهلاك *</label><select data-acc2="reason" data-assignment="'+esc(a.id)+'"><option value="">Select reason...</option>'+(a.reasons||[]).map(function(r){return '<option value="'+esc(r)+'">'+esc(r)+'</option>'}).join('')+'</select></div><div class="fg"><label>Notes / ملاحظات</label><input data-acc2="note" data-assignment="'+esc(a.id)+'"></div></div><button class="btn bp" '+(blocked||remaining<=0?'disabled':'')+' onclick="acc2SubmitUsage(\''+esc(a.id)+'\')">Submit to pharmacy / رفع للصيدلية</button></div></div>'}).join('')+'</div>'}
 function acc2DepartmentReceipt(deptId){var rows=acc2Usage().filter(function(u){return String(u.deptId)===String(deptId)&&u.status==='approved_waiting_receipt'}),totals={};rows.forEach(function(u){if(!totals[u.assignmentId])totals[u.assignmentId]={medName:u.medName,count:0,units:0};totals[u.assignmentId].count++;totals[u.assignmentId].units+=acc2Number(u.units)});return '<div class="card"><div class="ch"><div><span class="ct">Nursing receipt and handover / استلام وتسليم التمريض</span><div class="fhint">Only pharmacy-approved requests are listed. Recording the nurse and receipt date replenishes the custody balance and locks all selected rows.</div></div></div><div class="cb">'+(rows.length?'<div class="acc2-receipt-summary">'+Object.keys(totals).map(function(k){var t=totals[k];return '<span><b>'+esc(t.medName)+'</b>: '+t.units+' units in '+t.count+' request(s)</span>'}).join('')+'</div><div class="fl g8" style="margin-bottom:10px"><button class="btn bg bsm" onclick="acc2ToggleAllReceipt(true)">Select all</button><button class="btn bg bsm" onclick="acc2ToggleAllReceipt(false)">Clear</button></div><div class="tw"><table class="acc2-table"><thead><tr><th></th><th>Date</th><th>Medicine</th><th>Units</th><th>Patient file</th><th>Approved by</th></tr></thead><tbody>'+rows.map(function(u){return '<tr><td><input class="acc2-receipt-check" type="checkbox" value="'+esc(u.id)+'"></td><td>'+esc(u.consumptionDate)+'</td><td>'+esc(u.medName)+'</td><td>'+acc2Number(u.units)+'</td><td>'+esc(u.patientFile)+'</td><td>'+esc(u.approvedBy||'—')+'</td></tr>'}).join('')+'</tbody></table></div><div class="acc2-form-grid" style="margin-top:12px"><div class="fg"><label>Nurse name / اسم الممرض *</label><input id="acc2-receipt-nurse"></div><div class="fg"><label>Receipt date / تاريخ الاستلام *</label><input id="acc2-receipt-date" type="date" max="'+acc2Today()+'" value="'+acc2Today()+'"></div></div><button class="btn bs" onclick="acc2CreateReceipt()">Confirm receipt and replenish balance / تأكيد الاستلام وتعويض الرصيد</button>':'<div class="acc2-empty">No pharmacy-approved requests are waiting for nursing receipt.</div>')+'</div></div>'}
@@ -11894,10 +11742,8 @@ async function publishStorage(unit,medicines){
       });
       if(medicine)rows.push({
         cell:cell.code,
-        moh:medicine.moh||'',
-        nupco:medicine.nupco||'',
         name:medicine.name,
-        batches:medicine.batches||[]
+        batches:(medicine.batches||[]).map(function(batch){return {expiry:batch.expiry||batch.date||'',qty:batch.qty==null?'':batch.qty}})
       });
     });
   });
@@ -11913,7 +11759,7 @@ async function publishStorage(unit,medicines){
       type:unit.type,
       updatedAt:updatedAt,
       rows:rows
-    },{merge:true});
+    },{merge:false});
   return true;
 }
 window.controlledStoragePrint=async function(id,mode){
@@ -12199,27 +12045,19 @@ async function publicStorageView(){
       '<table style="width:100%;border-collapse:collapse">'+
       '<thead><tr>'+
       '<th style="border:1px solid #444;padding:6px">Cell</th>'+
-      '<th style="border:1px solid #444;padding:6px">MOH</th>'+
-      '<th style="border:1px solid #444;padding:6px">NUPCO</th>'+
       '<th style="border:1px solid #444;padding:6px">Medicine</th>'+
-      '<th style="border:1px solid #444;padding:6px">Batch/Lot</th>'+
       '<th style="border:1px solid #444;padding:6px">Expiry date</th>'+
+      '<th style="border:1px solid #444;padding:6px">Qty</th>'+
       '</tr></thead><tbody>'+
       rows.map(function(row){
         var batches=row.batches||[];
-        var lots=batches.map(function(batch){
-          return batch.lot||batch.batch||'—';
-        }).join(' | ')||'—';
-        var expiries=batches.map(function(batch){
-          return batch.expiry||batch.date||'—';
-        }).join(' | ')||'—';
+        var expiries=batches.map(function(batch){return batch.expiry||batch.date||'—'}).join(' | ')||'—';
+        var quantities=batches.map(function(batch){return batch.qty==null||batch.qty===''?'—':batch.qty}).join(' | ')||'—';
         return '<tr>'+
           '<td style="border:1px solid #444;padding:6px">'+esc(row.cell)+'</td>'+
-          '<td style="border:1px solid #444;padding:6px">'+esc(row.moh||'—')+'</td>'+
-          '<td style="border:1px solid #444;padding:6px">'+esc(row.nupco||'—')+'</td>'+
           '<td style="border:1px solid #444;padding:6px">'+esc(row.name)+'</td>'+
-          '<td style="border:1px solid #444;padding:6px">'+esc(lots)+'</td>'+
           '<td style="border:1px solid #444;padding:6px">'+esc(expiries)+'</td>'+
+          '<td style="border:1px solid #444;padding:6px">'+esc(quantities)+'</td>'+
           '</tr>';
       }).join('')+
       '</tbody></table>';
@@ -12432,7 +12270,8 @@ function esc(value){
     .replace(/&/g,'&amp;')
     .replace(/</g,'&lt;')
     .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
 }
 function clamp(value,min,max){return Math.max(min,Math.min(max,value));}
 function round1(value){return Math.round(value*10)/10;}
@@ -14952,5 +14791,327 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else setTimeout(run,300);
 })();
 </script>
+
+<script id="r664-security-idle-timeout">
+(function(){
+  'use strict';
+  var WARNING_MS=28*60*1000,LOGOUT_MS=30*60*1000;
+  var warningTimer=null,logoutTimer=null,lastActivity=Date.now(),warningOpen=false,lastReset=0;
+  function signedIn(){return !!(window.FB_AUTH&&FB_AUTH.currentUser)}
+  function clearTimers(){if(warningTimer)clearTimeout(warningTimer);if(logoutTimer)clearTimeout(logoutTimer);warningTimer=logoutTimer=null}
+  async function forceLogout(){clearTimers();warningOpen=false;try{if(window.FB_AUTH&&FB_AUTH.currentUser)await FB_AUTH.signOut()}catch(ignore){}try{sessionStorage.clear()}catch(ignore){}location.reload()}
+  function showWarning(){
+    if(!signedIn()||warningOpen)return;
+    warningOpen=true;
+    if(typeof window.uiConfirm==='function'){
+      window.uiConfirm('Your session will close in 2 minutes because no activity was detected.\n\nستنتهي الجلسة خلال دقيقتين بسبب عدم النشاط.\n\nContinue this session?',{title:'Session timeout / انتهاء الجلسة',okText:'Continue / متابعة',cancelText:'Sign out / تسجيل الخروج'}).then(function(continueSession){warningOpen=false;if(continueSession)reset(true);else forceLogout()});
+    }else if(typeof window.toast==='function')window.toast('Session will close in 2 minutes بسبب عدم النشاط','info');
+  }
+  function schedule(){clearTimers();if(!signedIn())return;var elapsed=Date.now()-lastActivity;warningTimer=setTimeout(showWarning,Math.max(0,WARNING_MS-elapsed));logoutTimer=setTimeout(forceLogout,Math.max(0,LOGOUT_MS-elapsed))}
+  function reset(force){if(warningOpen&&!force)return;var now=Date.now();if(!force&&now-lastReset<15000)return;lastReset=now;lastActivity=now;schedule()}
+  ['pointerdown','keydown','touchstart','scroll'].forEach(function(name){document.addEventListener(name,function(){reset(false)},{capture:true,passive:true})});
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){if(signedIn()&&Date.now()-lastActivity>=LOGOUT_MS)forceLogout();else schedule()}});
+  function attach(){if(window.FB_AUTH&&typeof FB_AUTH.onAuthStateChanged==='function')FB_AUTH.onAuthStateChanged(function(user){if(user)reset(true);else clearTimers()});else setTimeout(attach,500)}
+  attach();
+})();
+</script>
+
+<script id="r664-production-console-policy">
+(function(){
+  'use strict';
+  if(!window.console)return;
+  ['log','info','debug'].forEach(function(method){try{console[method]=function(){}}catch(ignore){}});
+})();
+</script>
+
+<script id="r664-public-privacy-rewrite">
+(function(){
+  'use strict';
+  var attempts=0,running=false;
+  function allowed(){var u=window.CU||{};return u.active!==false&&(u.master===true||String(u.role||'')==='pharmacy'||String(u.role||'')==='inpatient_supervisor')}
+  async function rewrite(){
+    if(running||sessionStorage.getItem('r664_public_privacy_rewritten')==='1')return;
+    if(!allowed()||!window.S||!S.ready||!window.FB_DB){if(++attempts<40)setTimeout(rewrite,750);return}
+    if(typeof publishPublic!=='function'){if(++attempts<40)setTimeout(rewrite,750);return}
+    running=true;
+    try{
+      var carts=typeof crashCarts==='function'?(crashCarts()||[]):[];
+      if(Array.isArray(carts)&&carts.length)await publishPublic(carts);
+      var departments=typeof gd==='function'?(gd()||[]):[];
+      for(var i=0;i<departments.length;i++){
+        var id=String(departments[i]&&departments[i].id||'');if(!id)continue;
+        if(typeof ctlPublishDept==='function')await ctlPublishDept(id);
+        if(typeof syncPublicExpiry==='function'&&typeof getExpiry==='function')await syncPublicExpiry(id,getExpiry(id)||[]);
+      }
+      if(typeof storageState==='function'&&typeof controlledMeds==='function'&&typeof publishStorage==='function'){
+        var state=storageState(),medicines=controlledMeds();
+        for(var j=0;j<(state.units||[]).length;j++)await publishStorage(state.units[j],medicines);
+      }
+      sessionStorage.setItem('r664_public_privacy_rewritten','1');
+    }catch(error){console.warn('Public privacy rewrite will retry on the next authorized session.',error)}
+    finally{running=false}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(rewrite,1200)},{once:true});else setTimeout(rewrite,1200);
+  var previousStart=window.startApp;
+  if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(rewrite,1500);return result};
+})();
+</script>
+
+<style id="r664-security-complete-style">
+#r664-seal-correction-modal .modal{width:min(620px,96vw)}
+#r664-seal-current{font-family:var(--mono);font-weight:800}
+.r664-security-note{padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:11px;color:var(--tx2);margin-bottom:12px}
+#r664-cloud-backup-card .r664-cloud-status{font-size:12px;color:var(--tx2);margin-top:8px;white-space:pre-wrap}
+</style>
+<script id="r664-security-complete-runtime">
+(function(){
+'use strict';
+
+function E(id){return document.getElementById(id)}
+function safe(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function currentUser(){return window.CU||{}}
+function actualMaster(){
+  try{if(typeof window.isMasterActual==='function')return !!window.isMasterActual()}catch(ignore){}
+  return !!((window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||(window.CU&&CU.master===true));
+}
+function role(){var u=currentUser();return String((window.fsEffectiveRole&&window.fsEffectiveRole())||u.role||'')}
+function deptId(){var u=currentUser();return String(u.deptId||u.departmentId||'')}
+function active(){return !!(window.FB_AUTH&&FB_AUTH.currentUser&&currentUser().active!==false)}
+function director(){return actualMaster()||['pharmacy','pharmacy_director'].indexOf(role())>=0}
+function pharmacyOperations(){return director()||['inpatient_supervisor','pharmacy_staff'].indexOf(role())>=0}
+function controlledOfficer(){return director()||['controlled_pharmacy'].indexOf(role())>=0}
+function warehouseOfficer(){return director()||role()==='warehouse'}
+function stateKeyAllowed(key){
+  key=String(key||'');
+  if(!active())return false;
+  if(actualMaster()||director())return true;
+  if(key==='theme'||key==='audit_log')return true;
+  if(role()==='inpatient_supervisor'){
+    return /^(crash_|accountability_|requests$|notes$|dept_notes$|meds_|expiry_|shelves_|req_windows$|disp_slots$|daily_limits_v2$|weekly_limits_v2$|monthly_limits$|rate_limits_v2$|request_|pharmacy_)/.test(key);
+  }
+  if(role()==='pharmacy_staff'){
+    return /^(crash_carts$|crash_cart_reports$|accountability_|requests$|notes$|dept_notes$|request_analytics_archive$)/.test(key);
+  }
+  if(role()==='controlled_pharmacy'){
+    return /^(controlled_|accountability_)/.test(key);
+  }
+  if(role()==='warehouse'){
+    return /^(controlled_warehouse$|controlled_moves$|controlled_pdf_receipts$)/.test(key);
+  }
+  if(role()==='department'){
+    var d=deptId();
+    return key==='requests'||key==='dept_notes'||key==='notes'||key==='crash_cart_reports'||
+      key==='accountability_usage_v2'||key==='accountability_receipts_v2'||
+      (!!d&&(key==='meds_'+d||key==='expiry_'+d||key==='shelves_'+d||key==='controlled_dept_list_'+d||key==='controlled_dept_shelves_'+d||key==='controlled_settings_'+d));
+  }
+  return false;
+}
+window.fsCanWriteStateKey=stateKeyAllowed;
+
+function installStateGate(){
+  if(!window.S||typeof S.s!=='function'||S.s.__r664SecurityGate)return false;
+  var originalSet=S.s.bind(S),originalRemove=typeof S.rm==='function'?S.rm.bind(S):null;
+  var gatedSet=function(key,value){
+    if(!stateKeyAllowed(key)){
+      var error=new Error('This account is not authorized to modify '+String(key)+'.');
+      if(typeof window.toast==='function')toast('Not authorized for this operation. / غير مصرح بهذه العملية','err');
+      return Promise.reject(error);
+    }
+    return originalSet(key,value);
+  };
+  gatedSet.__r664SecurityGate=true;
+  S.s=gatedSet;
+  if(originalRemove)S.rm=function(key){
+    if(!stateKeyAllowed(key)){
+      if(typeof window.toast==='function')toast('Not authorized for this deletion. / غير مصرح بالحذف','err');
+      return Promise.reject(new Error('Not authorized to delete '+String(key)));
+    }
+    return originalRemove(key);
+  };
+  return true;
+}
+function waitGate(){if(!installStateGate())setTimeout(waitGate,250)}
+waitGate();
+
+/* Secure production build intentionally disables localhost Zebra BrowserPrint.
+   Standard browser printing and downloadable ZPL remain available. */
+window.zebraRefreshPrinters=function(){
+  var status=E('zebra-status'),message=E('zebra-message');
+  if(status){status.textContent='Local connector disabled';status.className='badge byl'}
+  if(message)message.textContent='Zebra BrowserPrint localhost access is disabled in this hardened production build. Use browser printing or downloaded ZPL.';
+  if(typeof window.toast==='function')toast('Local Zebra connector is disabled in the secure production build.','info');
+};
+
+/* Enforce role checks at public-write entry points. */
+function wrapPublicWrite(name,allowed){
+  var fn=window[name];if(typeof fn!=='function'||fn.__r664PublicGate)return;
+  var wrapped=async function(){
+    if(!allowed.apply(null,arguments)){
+      if(typeof window.toast==='function')toast('Not authorized to publish public data.','err');
+      throw new Error('Public publication is not authorized for this role.');
+    }
+    return fn.apply(this,arguments);
+  };
+  wrapped.__r664PublicGate=true;window[name]=wrapped;
+}
+function installPublicGates(){
+  wrapPublicWrite('publishPublic',function(){return pharmacyOperations()});
+  wrapPublicWrite('ctlPublishDept',function(id){return controlledOfficer()||(role()==='department'&&String(id)===deptId())});
+  wrapPublicWrite('syncPublicExpiry',function(id){return pharmacyOperations()||(role()==='department'&&String(id)===deptId())});
+  wrapPublicWrite('publishStorage',function(){return controlledOfficer()||warehouseOfficer()});
+}
+setTimeout(installPublicGates,0);
+
+/* Master-only correction of a mistakenly recorded current seal.
+   It does not open/close the cart and does not alter medicine quantities or dates. */
+var SEAL_CART_ID='';
+function ensureSealModal(){
+  if(E('r664-seal-correction-modal'))return;
+  var bg=document.createElement('div');bg.className='modal-bg';bg.id='r664-seal-correction-modal';
+  bg.innerHTML='<div class="modal"><div class="mh"><span class="mt">Correct recorded seal / تصحيح رقم القفل المسجل</span><button class="xbtn" type="button" data-close>✕</button></div>'+
+    '<div class="r664-security-note">Master only. This corrects a data-entry mistake without recording an opening, without changing cart contents, and without changing opening or closing timestamps.<br>للماستر فقط. تصحيح خطأ إدخال دون تسجيل فتح ودون تعديل المحتويات أو أوقات الفتح والإغلاق.</div>'+
+    '<div class="fg"><label>Crash Cart / عربة الطوارئ</label><div id="r664-seal-cart-name" class="scan-field"></div></div>'+
+    '<div class="fg"><label>Current recorded seal / القفل المسجل حاليًا</label><div id="r664-seal-current" class="scan-field"></div></div>'+
+    '<div class="fg"><label>Correct seal number / رقم القفل الصحيح</label><input id="r664-seal-new" autocomplete="off" maxlength="80" placeholder="Required, unique and not previously used"></div>'+
+    '<div class="fg"><label>Correction reason / سبب التصحيح</label><textarea id="r664-seal-reason" rows="3" maxlength="500" placeholder="Example: seal was entered incorrectly by staff / تم إدخال رقم القفل بالخطأ"></textarea></div>'+
+    '<div id="r664-seal-error" class="alert-banner" style="display:none"></div>'+
+    '<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" type="button" data-close>Cancel</button><button class="btn bs" id="r664-seal-save" type="button">Save correction / حفظ التصحيح</button></div></div>';
+  document.body.appendChild(bg);
+  bg.querySelectorAll('[data-close]').forEach(function(b){b.onclick=function(){bg.classList.remove('on')}});
+  E('r664-seal-save').onclick=saveSealCorrection;
+}
+function usedSeal(newSeal,cartId){
+  var key=String(newSeal||'').trim().toLowerCase(),found='';
+  if(!key)return '';
+  var carts=typeof window.crashCarts==='function'?(crashCarts()||[]):[];
+  carts.forEach(function(c){if(!found&&String(c.id)!==String(cartId)&&String(c.seal||'').trim().toLowerCase()===key)found='another Crash Cart'});
+  var reports=typeof window.crashReports==='function'?(crashReports()||[]):[];
+  reports.forEach(function(r){if(found)return;[r.oldSeal,r.newSeal].forEach(function(s){if(!found&&String(s||'').trim().toLowerCase()===key)found='the seal history'})});
+  return found;
+}
+window.r664OpenSealCorrection=function(cartId){
+  if(!actualMaster())return toast('Only the actual Master can correct a recorded seal.','err');
+  var cart=(typeof crashCarts==='function'?(crashCarts()||[]):[]).find(function(c){return String(c.id)===String(cartId)});
+  if(!cart)return toast('Crash Cart not found.','err');
+  if((typeof crashReports==='function'?(crashReports()||[]):[]).some(function(r){return String(r.cartId)===String(cartId)&&r.status==='open'}))return toast('Close the active opening report before correcting the recorded seal.','err');
+  ensureSealModal();SEAL_CART_ID=String(cartId);
+  E('r664-seal-cart-name').textContent=String(cart.name||cart.number||cart.id);
+  E('r664-seal-current').textContent=String(cart.seal||'—');
+  E('r664-seal-new').value='';E('r664-seal-reason').value='';E('r664-seal-error').style.display='none';
+  E('r664-seal-correction-modal').classList.add('on');setTimeout(function(){E('r664-seal-new').focus()},30);
+};
+async function saveSealCorrection(){
+  if(!actualMaster())return toast('Only the actual Master can correct a recorded seal.','err');
+  var newSeal=String(E('r664-seal-new').value||'').trim(),reason=String(E('r664-seal-reason').value||'').trim(),errorBox=E('r664-seal-error');
+  function fail(message){errorBox.textContent=message;errorBox.style.display='block';toast(message,'err');return false}
+  if(!newSeal)return fail('Enter the correct seal number. / أدخل رقم القفل الصحيح');
+  if(reason.length<5)return fail('Enter a clear correction reason. / اكتب سببًا واضحًا للتصحيح');
+  var original=JSON.parse(JSON.stringify(typeof crashCarts==='function'?(crashCarts()||[]):[]));
+  var carts=JSON.parse(JSON.stringify(original)),cart=carts.find(function(c){return String(c.id)===SEAL_CART_ID});
+  if(!cart)return fail('Crash Cart not found.');
+  var oldSeal=String(cart.seal||'').trim();
+  if(newSeal.toLowerCase()===oldSeal.toLowerCase())return fail('The corrected seal is the same as the current recorded seal.');
+  var conflict=usedSeal(newSeal,cart.id);if(conflict)return fail('This seal is already used in '+conflict+'. Enter a unique seal.');
+  if((typeof crashReports==='function'?(crashReports()||[]):[]).some(function(r){return String(r.cartId)===String(cart.id)&&r.status==='open'}))return fail('Close the active opening report first.');
+  var stamp=new Date().toISOString(),u=currentUser(),actorName=String((window.actualActorName&&actualActorName())||u.displayName||u.name||u.email||u.username||u.id||'Master');
+  cart.seal=newSeal;cart.updatedAt=stamp;cart.updatedBy=actorName;
+  cart.lastSealCorrectionAt=stamp;cart.lastSealCorrectionBy=actorName;cart.lastSealCorrectionReason=reason;cart.lastSealCorrectionOldValue=oldSeal;
+  var button=E('r664-seal-save');button.disabled=true;button.textContent='Saving… / جاري الحفظ';
+  try{
+    await setCrashCarts(carts);
+    var verified=(crashCarts()||[]).find(function(c){return String(c.id)===String(cart.id)});
+    if(!verified||String(verified.seal||'')!==newSeal)throw new Error('The corrected seal did not persist.');
+    if(typeof auditAction==='function')await auditAction('crash_cart_master_seal_correction',{
+      cartId:cart.id,departmentId:cart.deptId||'',cartName:cart.name||'',oldSeal:oldSeal,newSeal:newSeal,
+      reason:reason,operation:'seal_correction',openingLog:false,contentsChanged:false,timestampsChanged:false,correctedAt:stamp
+    });
+    E('r664-seal-correction-modal').classList.remove('on');
+    if(typeof renderCrashOperations==='function')renderCrashOperations();
+    if(typeof renderCrashCarts==='function')renderCrashCarts();
+    toast('Seal corrected and verified without opening the Crash Cart ✓','succ');
+  }catch(error){
+    try{await setCrashCarts(original)}catch(ignore){}
+    fail(String(error&&error.message||error));
+  }finally{button.disabled=false;button.textContent='Save correction / حفظ التصحيح'}
+}
+function installSealButtons(){
+  if(!actualMaster())return;
+  document.querySelectorAll('#r17-crash-admin-list [data-cart]').forEach(function(row){
+    if(row.querySelector('.r664-seal-correct-btn'))return;
+    var cartId=row.getAttribute('data-cart'),actions=row.querySelector('.fl.g8')||row.lastElementChild;
+    if(!actions)return;
+    var b=document.createElement('button');b.type='button';b.className='btn bg bsm r664-seal-correct-btn';b.textContent='Correct seal / تصحيح القفل';
+    b.onclick=function(){window.r664OpenSealCorrection(cartId)};actions.appendChild(b);
+  });
+}
+var originalRenderCrashOperations=window.renderCrashOperations;
+if(typeof originalRenderCrashOperations==='function')window.renderCrashOperations=function(){var result=originalRenderCrashOperations.apply(this,arguments);setTimeout(installSealButtons,0);return result};
+
+/* Master cloud backup: authenticated, chunked Firestore snapshots, latest seven retained.
+   Local IndexedDB backup remains as a second layer. */
+var CLOUD_COLLECTION='floorstock_backups',CLOUD_KEEP=7,CLOUD_CHUNK=420000;
+function backupStatus(message,isError){var e=E('r664-cloud-backup-status');if(e){e.textContent=message||'';e.style.color=isError?'var(--rdl)':'var(--tx2)'}}
+async function readCollection(name){
+  var snapshot=await FB_DB.collection(name).get(),rows=[];
+  snapshot.forEach(function(doc){rows.push({id:doc.id,data:doc.data()})});
+  return rows;
+}
+async function buildCloudPayload(){
+  var names=['floorstock_state','public_expiry','public_controlled_expiry'],collections={};
+  for(var i=0;i<names.length;i++)collections[names[i]]=await readCollection(names[i]);
+  return {format:'ASDHealth-Cloud-Backup',version:1,projectId:(window.FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId)||'',createdAt:new Date().toISOString(),createdBy:FB_AUTH.currentUser.uid,collections:collections};
+}
+async function deleteSnapshot(ref){
+  var chunks=await ref.collection('chunks').get(),docs=chunks.docs||[];
+  for(var start=0;start<docs.length;start+=400){
+    var batch=FB_DB.batch();
+    docs.slice(start,start+400).forEach(function(doc){batch.delete(doc.ref)});
+    await batch.commit();
+  }
+  await ref.delete();
+}
+window.masterCreateCloudBackup=async function(manual){
+  if(!actualMaster()||!FB_AUTH||!FB_AUTH.currentUser||!FB_DB){if(manual)toast('Master permission required.','err');return false}
+  var button=E('r664-cloud-backup-btn');if(button)button.disabled=true;backupStatus('Creating encrypted-at-rest authenticated cloud backup…');
+  try{
+    var payload=await buildCloudPayload(),text=JSON.stringify(payload),chunks=[];
+    for(var i=0;i<text.length;i+=CLOUD_CHUNK)chunks.push(text.slice(i,i+CLOUD_CHUNK));
+    var uid=FB_AUTH.currentUser.uid,id=payload.createdAt.replace(/[:.]/g,'-'),root=FB_DB.collection(CLOUD_COLLECTION).doc(uid).collection('snapshots'),ref=root.doc(id);
+    await ref.set({createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdAtText:payload.createdAt,size:text.length,chunkCount:chunks.length,format:payload.format,version:payload.version});
+    for(var c=0;c<chunks.length;c++)await ref.collection('chunks').doc(String(c).padStart(4,'0')).set({index:c,data:chunks[c]});
+    var all=await root.orderBy('createdAtText','desc').get(),old=[];all.forEach(function(doc,index){if(index>=CLOUD_KEEP)old.push(doc.ref)});
+    for(var j=0;j<old.length;j++)await deleteSnapshot(old[j]);
+    localStorage.setItem('r664_last_cloud_backup',payload.createdAt);
+    backupStatus('Cloud backup saved: '+new Date(payload.createdAt).toLocaleString()+' · '+chunks.length+' chunk(s)');
+    if(manual)toast('Cloud backup saved ✓','succ');return true;
+  }catch(error){backupStatus('Cloud backup failed: '+String(error&&error.message||error),true);if(manual)toast('Cloud backup failed. Check Firestore rules.','err');return false}
+  finally{if(button)button.disabled=false}
+};
+function ensureCloudBackupUi(){
+  if(!actualMaster())return;
+  var page=E('pg-backup-restore');if(!page||E('r664-cloud-backup-card'))return;
+  var card=document.createElement('div');card.className='card';card.id='r664-cloud-backup-card';
+  card.innerHTML='<div class="ch"><span class="ct">☁ Authenticated cloud backup / النسخ السحابي الموثق</span><span class="badge bgn">Master only</span></div>'+
+    '<div class="cb"><p style="font-size:13px;color:var(--tx2);margin-bottom:12px">Creates a private chunked Firestore snapshot in addition to the local browser backup. The latest seven cloud snapshots are retained.</p>'+
+    '<button class="btn bp" id="r664-cloud-backup-btn" type="button">Create cloud backup now / إنشاء نسخة سحابية الآن</button>'+
+    '<div class="r664-cloud-status" id="r664-cloud-backup-status"></div></div>';
+  page.appendChild(card);E('r664-cloud-backup-btn').onclick=function(){window.masterCreateCloudBackup(true)};
+  var last=localStorage.getItem('r664_last_cloud_backup');if(last)backupStatus('Last cloud backup: '+new Date(last).toLocaleString());
+}
+async function dailyCloudBackup(){
+  if(!actualMaster()||!FB_AUTH||!FB_AUTH.currentUser)return;
+  var today=new Date().toISOString().slice(0,10),last=String(localStorage.getItem('r664_last_cloud_backup')||'').slice(0,10);
+  if(last!==today)await window.masterCreateCloudBackup(false);
+}
+function boot(){
+  installPublicGates();ensureCloudBackupUi();setTimeout(installSealButtons,100);
+  setTimeout(function(){dailyCloudBackup().catch(function(){})},3000);
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
+var previousStart=window.startApp;
+if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(boot,900);return result};
+})();
+</script>
+
 </body>
 </html>
