@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 14
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 /* Final warehouse access guard + master-only Firestore backup/restore. */
 (function(){
   /* User profiles contain PII and are intentionally excluded from downloadable JSON backups. */

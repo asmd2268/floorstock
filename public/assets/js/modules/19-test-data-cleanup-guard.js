@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 22
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   function hasTestWord(v){return /(^|[^a-z0-9])test([^a-z0-9]|$)/i.test(String(v||''));}
   function masterAllowed(){try{return typeof isMasterActual==='function'&&isMasterActual();}catch(e){return !!(window.CU&&CU.master===true);}}
@@ -78,3 +73,12 @@
   }
   window.addMasterCleanupButton=addMasterCleanupButton;
   })();
+
+
+
+
+
+
+
+
+export {};

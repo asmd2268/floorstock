@@ -1,7 +1,15 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 11
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
+import { publishLegacy } from '../core/legacy-registry.js';
+
 /* ── Controlled medicines organised shared lists + role-specific filters ── */
 function ctlWarehouseQtyForFilter(w){return ctlNum((w||{}).system)+ctlNum((w||{}).outside)}
+
+
+const __asdhLegacyApi = {
+  ctlWarehouseQtyForFilter: ctlWarehouseQtyForFilter
+};
+publishLegacy("08-controlled-shared-list-filters.js", __asdhLegacyApi);
+export {
+  ctlWarehouseQtyForFilter
+};
+export const legacyVariableNames = Object.freeze([]);
+export default __asdhLegacyApi;

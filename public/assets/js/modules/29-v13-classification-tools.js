@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 32
- * Original id: v13-classification-tools
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -34,3 +29,12 @@ window.v13ApplyControlledClassification=async function(){
 
 
 })();
+
+
+
+
+
+
+
+
+export {};

@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 34
- * Original id: v13-x-controlled-request-fix
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -42,3 +37,12 @@ function resolveDeptX(){var id=(window.CU&&CU.deptId)||(window.MASTER_EFFECTIVE&
 window.renderReqForm=function(){function after(){if(typeof window.refreshRequestIdleTimer==='function')window.refreshRequestIdleTimer();if(typeof window.refreshRequestCountLimitWarning==='function')window.refreshRequestCountLimitWarning();if(typeof window.cleanRequestFormUi==='function')window.cleanRequestFormUi();if(typeof window.refreshRequestScheduleMessage==='function')window.refreshRequestScheduleMessage()}var root=E('rfbody'),sub=E('dnsub');if(!root){after();return}var d=resolveDeptX();if(!d){root.innerHTML='<div class="alert-banner">No department is linked to this account. Assign a department in User Management.</div>';after();return}if(window.CU){CU.deptId=d.id;CU.deptName=d.name||''}if(sub)sub.textContent=(d.name||'Department')+' — Enter quantities needed';var meds=typeof window.getMeds==='function'?(getMeds(d.id)||[]):[];var q=((E('rsrch')||{}).value||'').toLowerCase().trim();meds=meds.filter(function(m){return m&&m.id&&m.name&&(!q||String(m.name).toLowerCase().indexOf(q)>=0)});if(!meds.length){root.innerHTML='<div class="v13x-empty">No medicines are assigned to this department.</div>';if(E('rcnt'))E('rcnt').textContent='0';after();return}var groups={};meds.forEach(function(m){var c=m.category||'Uncategorized';(groups[c]||(groups[c]=[])).push(m)});var cats=Object.keys(groups);var cfg=typeof getPharmacyCategoryConfig==='function'?getPharmacyCategoryConfig(d.id):{order:[]};var order=cfg.order||[];cats.sort(function(a,b){var ai=order.indexOf(a),bi=order.indexOf(b);if(ai<0)ai=999;if(bi<0)bi=999;return ai-bi||String(a).localeCompare(String(b))});root.innerHTML=cats.map(function(c){var items=groups[c]||[];items.sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''),'en',{sensitivity:'base',numeric:true})});return '<div class="cath">'+escX(c)+'</div><div class="tw"><table><thead><tr><th>#</th><th>Medication</th><th>Classification</th><th>Min</th><th>Max</th><th>Qty</th></tr></thead><tbody>'+items.map(function(m,i){var max=Math.max(0,numX(m.max));return '<tr class="'+(typeof window.rowCls==='function'?rowCls(m):'')+'"><td>'+(i+1)+'</td><td><b>'+escX(m.name)+'</b></td><td>'+(typeof window.bdg==='function'?bdg(m):'')+'</td><td>'+numX(m.min)+'</td><td>'+max+'</td><td><div class="qwrap"><input type="number" class="rqi" data-mid="'+escX(m.id)+'" data-max="'+max+'" min="0" max="'+max+'" placeholder="0" oninput="valQ(this)"><span class="qlim">/'+max+'</span></div></td></tr>'}).join('')+'</tbody></table></div>'}).join('');if(typeof window.cntItems==='function')cntItems();after()};
 
 })();
+
+
+
+
+
+
+
+
+export {};

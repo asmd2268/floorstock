@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 53
- * Original id: r617-integrated-operations
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -970,3 +965,12 @@ async function publicStorageView(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
 })();
+
+
+
+
+
+
+
+
+export {};

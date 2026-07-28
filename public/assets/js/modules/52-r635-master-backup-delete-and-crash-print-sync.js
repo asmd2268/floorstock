@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 55
- * Original id: r635-master-backup-delete-and-crash-print-sync
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function master(){try{return !!((window.CU&&CU.master===true)||(typeof isMasterActual==='function'&&isMasterActual())||(typeof masterOnly==='function'&&masterOnly()))}catch(e){return false}}
@@ -104,3 +99,12 @@ function observeDeletionHosts(){
 }
 window.addEventListener('load',observeDeletionHosts);
 })();
+
+
+
+
+
+
+
+
+export {};

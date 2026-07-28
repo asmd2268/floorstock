@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 38
- * Original id: v14nrse-main
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -277,3 +272,12 @@ window.v14SaveEditReq2=async function(){
 
 
 })();
+
+
+
+
+
+
+
+
+export {};

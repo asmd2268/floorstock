@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 59
- * Original id: r664-security-idle-timeout
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   var WARNING_MS=28*60*1000,LOGOUT_MS=30*60*1000;
@@ -24,3 +19,12 @@
   function attach(){if(window.FB_AUTH&&typeof FB_AUTH.onAuthStateChanged==='function')FB_AUTH.onAuthStateChanged(function(user){if(user)reset(true);else clearTimers()});else setTimeout(attach,500)}
   attach();
 })();
+
+
+
+
+
+
+
+
+export {};

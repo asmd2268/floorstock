@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 29
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 /* Department rename repair: the Users page button existed but renameDept was missing. */
 (function(){
   window.renameDept=async function(deptId,currentName){
@@ -45,3 +40,12 @@
     }
   };
 })();
+
+
+
+
+
+
+
+
+export {};

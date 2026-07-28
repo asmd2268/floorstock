@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 27
- * Original id: inventory-name-merge-feature
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   function normMerge(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
   function canMergeNames(){return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
@@ -18,3 +13,12 @@
   };
   
 })();
+
+
+
+
+
+
+
+
+export {};

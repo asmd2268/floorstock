@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 15
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 /* ASDHealth pilot protection: free daily IndexedDB backups + System Health. */
 (function(){
   var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365;
@@ -66,3 +61,12 @@
   window.runDailyBackup=function(){return daily().catch(function(){})};
   window.refreshBackupRestorePage=function(){daily().catch(function(){});Promise.resolve(window.masterRefreshSystemHealth()).catch(function(){})};
 })();
+
+
+
+
+
+
+
+
+export {};

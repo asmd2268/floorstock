@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 50
- * Original id: asdh-authoritative-final-fixes-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 var PREVIEW_KEY='asdh_master_role_preview_v3';
@@ -111,3 +106,12 @@ async function repairNorepinephrineZ(force,silent){
 /* Publish the closure identity and latest stock/expiry state to the existing public no-login record. */
 
 })();
+
+
+
+
+
+
+
+
+export {};

@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 45
- * Original id: weekly-request-grid-bulk-classification-clean-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -663,3 +658,12 @@ window.floorstockPurgeDepartmentState=floorstockPurgeDepartmentState;
 function boot(){if(E('pg-schedule'))window.renderRequestHourGridUI();if(window.CU&&String(CU.role)==='department')applyRequestLock()}
 boot();
 })();
+
+
+
+
+
+
+
+
+export {};

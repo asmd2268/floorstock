@@ -25,6 +25,15 @@ for json_path in [ROOT / "firebase.json", ROOT / "firestore.indexes.json", ROOT 
 public_html = (PUBLIC / "index.html").read_text(encoding="utf-8") if (PUBLIC / "index.html").exists() else ""
 root_html = (ROOT / "index.html").read_text(encoding="utf-8") if (ROOT / "index.html").exists() else ""
 
+if 'name="asdhealth-architecture"' not in public_html or 'content="es-modules-v2"' not in public_html:
+    errors.append("public/index.html is not marked as the ES-module architecture")
+if len(re.findall(r'<script\b[^>]*\btype="module"[^>]*\bsrc="\./assets/js/main\.js', public_html)) != 1:
+    errors.append("public/index.html must have exactly one ES-module application entrypoint")
+if re.search(r'\son[a-z]+\s*=', public_html, re.I):
+    errors.append("static inline event handlers remain in public/index.html")
+if 'assets/js/modules/' in public_html:
+    errors.append("public/index.html still loads legacy modules directly")
+
 for html, base, label in [(public_html, PUBLIC, "public/index.html"), (root_html, ROOT, "index.html")]:
     refs = re.findall(r'''(?:src|href)=["']([^"']+)["']''', html)
     for ref in refs:
@@ -70,10 +79,29 @@ for required in ["crash_cart_master_seal_correction", "masterCreateCloudBackup",
 if "http://localhost:9100" in public_html or "https://localhost:9101" in public_html:
     errors.append("production CSP still allows localhost Zebra connector")
 
+integrated = (PUBLIC / "assets" / "js" / "modules" / "50-r617-integrated-operations.js").read_text(encoding="utf-8")
+for required in [
+    "['pharmacy','inpatient_supervisor','pharmacy_staff']",
+    "window.r17CrashExecuteBulk",
+    "window.renderMedicationAccountability",
+    "crash_cart_open_report",
+]:
+    if required not in integrated:
+        errors.append(f"integrated operations missing {required}")
+
+rules = (ROOT / "firestore.rules").read_text(encoding="utf-8")
+for role in ["pharmacy_staff", "inpatient_supervisor"]:
+    if role not in rules:
+        errors.append(f"Firestore Rules missing role {role}")
+
+modules_check = subprocess.run(["node", str(ROOT / "tools" / "verify_modules.mjs")], capture_output=True, text=True)
+if modules_check.returncode:
+    errors.append("ES module verification failed: " + (modules_check.stderr.strip() or modules_check.stdout.strip()))
+
 if errors:
     print("FAIL")
     for error in errors:
         print("-", error)
     raise SystemExit(1)
 
-print("PASS: repository structure, assets, JavaScript, Functions, roles, and security markers verified.")
+print("PASS: repository structure, ES modules, assets, Functions, roles, permissions, and security markers verified.")

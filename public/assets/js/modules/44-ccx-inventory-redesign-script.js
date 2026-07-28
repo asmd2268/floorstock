@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 47
- * Original id: ccx-inventory-redesign-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 var ccxSearchTimer=null;
@@ -112,3 +107,12 @@ window.ccxRenderDashboardAlerts=function(){var host=E('exp-alerts');if(!host||!c
 
 
 })();
+
+
+
+
+
+
+
+
+export {};

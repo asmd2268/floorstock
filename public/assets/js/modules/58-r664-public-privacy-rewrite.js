@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 61
- * Original id: r664-public-privacy-rewrite
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   var attempts=0,running=false;
@@ -33,3 +28,12 @@
   var previousStart=window.startApp;
   if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(rewrite,1500);return result};
 })();
+
+
+
+
+
+
+
+
+export {};

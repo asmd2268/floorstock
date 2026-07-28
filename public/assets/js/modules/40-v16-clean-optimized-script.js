@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 43
- * Original id: v16-clean-optimized-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -302,3 +297,12 @@ function bootC(){cleanupInvModalsC();if(window.CU&&window.S&&S.ready)repairContr
 window.prepareControlledStartup=bootC;
 
 })();
+
+
+
+
+
+
+
+
+export {};

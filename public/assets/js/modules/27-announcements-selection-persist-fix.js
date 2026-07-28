@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 30
- * Original id: announcements-selection-persist-fix
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   var INV_KEY='asd_inv_selected_by_department_v2';
   var IMP_KEY='asd_import_draft_v2';
@@ -55,3 +50,12 @@
   window.restorePageTransientUi=function(id){moveAnnouncementHostToTop();if(id==='pg-import')restoreImportDraft()};
 
 })();
+
+
+
+
+
+
+
+
+export {};

@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 9
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   var ZDB_KEY='asdhealth_zebra_label_db_v12',ZPR_KEY='asdhealth_zebra_printer_v12';
   var zdb=[],zprinters=[],zebraDevice=null;
@@ -55,3 +50,12 @@
   function initPage(){var ok=allowed();if(E('zebra-access-denied'))E('zebra-access-denied').style.display=ok?'none':'block';if(E('zebra-main'))E('zebra-main').style.display=ok?'block':'none';if(!ok)return;loadDB();zebraTemplateChanged();['zebra-width','zebra-height','zebra-dpi','zebra-copies'].forEach(function(id){var x=E(id);if(x)x.oninput=zebraUpdatePreview});zebraUpdatePreview();if(!zdb.length)zebraImportDatabase();setTimeout(zebraRefreshPrinters,250)}
   window.renderZebraPageUi=initPage;
 })();
+
+
+
+
+
+
+
+
+export {};

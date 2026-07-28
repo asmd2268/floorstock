@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 48
- * Original id: asdh-final-department-controlled-fix-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -168,3 +163,12 @@ function resetInvalidDeptSelectorsF(){var ids=(gd()||[]).map(function(d){return 
 window.floorstockResetInvalidDepartmentSelectors=resetInvalidDeptSelectorsF;
 window.floorstockDepartmentAliases=SEED_ALIASES;
 })();
+
+
+
+
+
+
+
+
+export {};

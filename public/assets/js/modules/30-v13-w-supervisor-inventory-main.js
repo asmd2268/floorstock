@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 33
- * Original id: v13-w-supervisor-inventory-main
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 var state={rows:[],filtered:[],shown:0,pageSize:200,selected:new Map()};
@@ -70,3 +65,12 @@ window.openAllDepartmentsInventory=function(){
 window.ensureBulkReplacementButton=ensureBulkReplacementButtonW;
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&el('all-inv-modal'))window.closeAllDepartmentsInventory()});
 })();
+
+
+
+
+
+
+
+
+export {};

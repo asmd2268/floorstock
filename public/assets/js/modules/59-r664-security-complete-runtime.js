@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 62
- * Original id: r664-security-complete-runtime
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 
@@ -250,3 +245,12 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 var previousStart=window.startApp;
 if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(boot,900);return result};
 })();
+
+
+
+
+
+
+
+
+export {};

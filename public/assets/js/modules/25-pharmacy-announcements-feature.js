@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 28
- * Original id: pharmacy-announcements-feature
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   var ANN_KEY='pharmacy_department_announcements',ANN_EDIT_ID=null;
   function E(id){return document.getElementById(id)}
@@ -34,3 +29,12 @@
   };
 
 })();
+
+
+
+
+
+
+
+
+export {};

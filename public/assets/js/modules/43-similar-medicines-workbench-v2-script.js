@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 46
- * Original id: similar-medicines-workbench-v2-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 var MODAL_ID='similar-medicines-modal-v2';
@@ -178,3 +173,12 @@ async function mergeGroup(groupId){
 }
 window.openSimilarMedicinesAllDepartments=function(){if(!canManage())return typeof toast==='function'?toast('Not authorized.','err'):null;renderModal()};
 })();
+
+
+
+
+
+
+
+
+export {};

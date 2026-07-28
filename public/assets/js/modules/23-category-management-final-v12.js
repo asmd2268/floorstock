@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 26
- * Original id: category-management-final-v12
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   function uniq(a){return (a||[]).filter(function(v,i,x){return v&&x.indexOf(v)===i});}
@@ -116,3 +111,12 @@
   window.refreshCategoryManagementUi=function(){enforceButton();refreshDeptCategorySelectors();};
 
 })();
+
+
+
+
+
+
+
+
+export {};

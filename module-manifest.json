@@ -1,7 +1,7 @@
 {
-  "build": "R6.65 Modular Protected",
+  "build": "R6.65 ES Modules Protected",
   "source": "ASDHealth_FloorStock_R6_64_SECURITY_COMPLETE_MASTER_SEAL_20260728.html",
-  "architecture": "Ordered external classic-script modules preserving the original global API and DOM execution positions.",
+  "architecture": "Native ES modules with ordered imports, explicit provider exports, a constrained legacy registry, and external DOM event bindings.",
   "cssBundles": [
     {
       "file": "assets/css/modules/01-styles-01-06.css",
@@ -705,5 +705,7 @@
       "bytes": 17628
     }
   ],
-  "firebaseProject": "floorstock-6ac2d"
+  "firebaseProject": "floorstock-6ac2d",
+  "entrypoint": "assets/js/main.js",
+  "staticEventBindings": 214
 }

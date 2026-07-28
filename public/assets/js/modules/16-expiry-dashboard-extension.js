@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 19
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   function E(id){return document.getElementById(id)}
   function esc2(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -48,3 +43,12 @@
 
   /* Publish Crash Cart public records automatically after every local/database save. */
 })();
+
+
+
+
+
+
+
+
+export {};

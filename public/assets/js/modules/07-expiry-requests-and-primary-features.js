@@ -1,8 +1,5 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 10
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
+import { publishLegacy } from '../core/legacy-registry.js';
+
 // ── EXPIRY DATES ─────────────────────────────────────────
 function renderShelfAlertSettings(){
   if(!CU||CU.role!=='department')return;
@@ -186,7 +183,7 @@ async function cleanupOldOrders(autoMode){
   if(!autoMode)toast(old.length+' old orders deleted; analytics preserved.','succ');
   if(document.querySelector('#pg-print.on'))renderPrint();
 }
-var _orderCleanupStarted=false;
+globalThis._orderCleanupStarted = false;
 function scheduleAutomaticOrderCleanup(){
   if(_orderCleanupStarted||!CU||CU.role!=='pharmacy')return;_orderCleanupStarted=true;
   cleanupOldOrders(true).catch(function(e){console.error('Automatic order cleanup failed',e)});
@@ -194,7 +191,7 @@ function scheduleAutomaticOrderCleanup(){
 
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
 // Final Print Orders renderer/engine is installed later in one canonical module.
-var PPP=0; // employee must choose 2, 3, 4, or 5 orders per page
+globalThis.PPP = 0; // employee must choose 2, 3, 4, or 5 orders per page
 function setPPP(n,btn){
   PPP=n;
   document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
@@ -961,13 +958,13 @@ function renderMobileRequest(requestId){
 function getNotes(){return S.g('dept_notes')||[]}
 function setNotes(arr){return S.s('dept_notes',arr)}
 
-var NOTE_TYPE_LABELS={
+globalThis.NOTE_TYPE_LABELS = {
   classification:'&#x1F3F7; Classification',
   request:'&#x2795; Add Medication',
   missing:'&#x26A0; Missing Info',
   other:'&#x1F4AC; Other'
 };
-var NOTE_STATUS_LABELS={
+globalThis.NOTE_STATUS_LABELS = {
   open:'open',urgent:'urgent',resolved:'resolved'
 };
 function noteEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -1095,10 +1092,10 @@ function updateNotesBadge(){
 
 
 // ── BARCODE SCANNER ──────────────────────────────────────
-var _scanReader = null;
-var _scanStream = null;
-var _parsedScan = {};   // holds parsed result from camera
-var _parsedType = {};   // holds parsed result from type tab
+globalThis._scanReader = null;
+globalThis._scanStream = null;
+globalThis._parsedScan = {};   // holds parsed result from camera
+globalThis._parsedType = {};   // holds parsed result from type tab
 
 // ── Tab switcher ──────────────────────────────────────────
 function switchExpTab(tab){
@@ -1384,7 +1381,7 @@ function CM(id){document.getElementById(id).classList.remove('on');if(id==='mexp
 
 
 // ── CATEGORIES (global custom list) ─────────────────────
-var DEFAULT_CATS=['Injections','Inhalers','Suppositories','Tablets','Syrups','Topical','Ointments & Drops','Solutions'];
+globalThis.DEFAULT_CATS = ['Injections','Inhalers','Suppositories','Tablets','Syrups','Topical','Ointments & Drops','Solutions'];
 function getCategories(){
   var saved=S.g('custom_categories');
   return saved&&saved.length?saved:DEFAULT_CATS.slice();
@@ -1559,7 +1556,7 @@ function getCatOptions(selected){
 // ════════════════════════════════════════════════════════
 // SCHEDULE & LIMITS
 // ════════════════════════════════════════════════════════
-var DAY_NAMES=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+globalThis.DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 // ── Storage ──────────────────────────────────────────────
 function getReqWindows(){return S.g('req_windows')||[]}
@@ -1794,7 +1791,7 @@ function ctlStatus(m,w,p){
 
 
 // ── WAREHOUSE PDF RECEIPT IMPORT ─────────────────────────────
-var CTL_PDF_REVIEW=[];
+globalThis.CTL_PDF_REVIEW = [];
 function ctlPdfReceipts(){return S.g('controlled_pdf_receipts')||[]}
 function ctlSetPdfReceipts(v){return S.s('controlled_pdf_receipts',v)}
 function ctlPdfNormalizeCode(v){return String(v==null?'':v).replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'')}
@@ -1927,7 +1924,7 @@ function ctlEnsureV6UI(){
   <div class="modal-bg" id="mctldisp"><div class="modal"><div class="mh"><span class="mt">Dispense controlled medicine / صرف دواء</span><button class="xbtn" onclick="CM('mctldisp')">✕</button></div><input type="hidden" id="ctld-med"><div class="fg"><label>Medicine</label><input id="ctld-name" disabled></div><div class="frow"><div class="fg"><label>Quantity</label><input id="ctld-qty" type="number" min="1"></div><div class="fg"><label>Dispensing type</label><select id="ctld-type" onchange="ctlDispTypeChanged()"><option value="inpatient">Inpatient / تنويم</option><option value="internal">Internal hospital department / قسم داخلي</option><option value="outpatient">Outpatient / عيادات أو مريض خارجي</option></select></div></div><div class="fg" id="ctld-dept-wrap"><label>Hospital department / القسم</label><select id="ctld-dept"></select></div><div class="fg"><label>Recipient name / اسم المستلم</label><input id="ctld-recipient"></div><div class="fg"><label>Notes</label><textarea id="ctld-note" rows="2"></textarea></div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM('mctldisp')">Cancel</button><button class="btn bs" onclick="ctlConfirmDispense()">Confirm dispensing</button></div></div></div>
   <input type="file" id="ctl-logo-file" accept="image/png,image/jpeg" style="display:none" onchange="ctlSavePrintLogo(this.files[0])">`);
 }
-var CTL_BATCH_CTX=null;
+globalThis.CTL_BATCH_CTX = null;
 function ctlAddBatchEditorRow(b){b=b||{};var d=document.createElement('div');d.className='batch-editor-row';d.innerHTML='<input type="number" class="be-qty" min="0" placeholder="Qty" value="'+esc(b.qty||'')+'"><input type="date" class="be-exp" value="'+esc(b.expiry||'')+'"><input class="be-lot" placeholder="Batch / lot" value="'+esc(b.lot||'')+'"><button class="btn bd2c bxs" onclick="this.parentElement.remove()">✕</button>';el('mctlb-list').appendChild(d)}
 async function ctlSaveBatchEditor(){
   if(!CTL_BATCH_CTX)return;
@@ -1967,7 +1964,7 @@ function printCtlAnalytics(){var html=el('ctl-an-table').closest('table').outerH
 // Add buttons and improved batch controls after each controlled render.
 
 
-var CTL_DEPT_SELECTED = {};
+globalThis.CTL_DEPT_SELECTED = {};
 
 function ctlDeptShelves(deptId){
   return S.g('controlled_dept_shelves_'+deptId)||[];
@@ -2093,7 +2090,8 @@ function requestColdMarker(m){
 // COMPREHENSIVE ACCESS, DEPARTMENT INVENTORY, CRASH CART,
 // REQUEST RECEIVING AND CONTROLLED-MEDICINE ENHANCEMENTS
 // ═══════════════════════════════════════════════════════════
-var MASTER_ACTUAL=null, MASTER_EFFECTIVE=null;
+globalThis.MASTER_ACTUAL = null;
+globalThis.MASTER_EFFECTIVE = null;
 
 function actualUser(){
   return MASTER_ACTUAL||CU;
@@ -2208,7 +2206,7 @@ async function bulkSetMedicationFlag(flag){
 
 
 // ── DEPARTMENT SHELF MEDICATION DATABASE ─────────────────
-var SHELF_MED_SELECTED={};
+globalThis.SHELF_MED_SELECTED = {};
 function shelfSelectedIds(){return Object.keys(SHELF_MED_SELECTED).filter(function(id){return SHELF_MED_SELECTED[id]})}
 function shelfMedMatches(m){
   var q=((el('shelf-med-search')||{}).value||'').trim().toLowerCase();
@@ -2353,3 +2351,402 @@ window.runExpiryStartupAlert=function(){
   });
   if(alerts.length)toast('&#x26A0; Expiry alert: '+alerts.slice(0,3).join(', ')+(alerts.length>3?' +more':''),'info');
 };
+
+
+const __asdhLegacyApi = {
+  renderShelfAlertSettings: renderShelfAlertSettings,
+  openAddExpiry: openAddExpiry,
+  openEditExpiry: openEditExpiry,
+  renderUsers: renderUsers,
+  updateUserRoleFields: updateUserRoleFields,
+  openAddUser: openAddUser,
+  saveUser: saveUser,
+  delUser: delUser,
+  toggleMasterUser: toggleMasterUser,
+  renderAn: renderAn,
+  orderRetentionCutoff: orderRetentionCutoff,
+  requestArchiveRecord: requestArchiveRecord,
+  cleanupOldOrders: cleanupOldOrders,
+  scheduleAutomaticOrderCleanup: scheduleAutomaticOrderCleanup,
+  setPPP: setPPP,
+  resetPrintPageState: resetPrintPageState,
+  renderImport: renderImport,
+  clearImport: clearImport,
+  ensureXLSX: ensureXLSX,
+  handleXlsxDrop: handleXlsxDrop,
+  handleXlsxFile: handleXlsxFile,
+  parseCsvData: parseCsvData,
+  parseXlsxData: parseXlsxData,
+  recognizeCat: recognizeCat,
+  parseImport: parseImport,
+  renderImportPreview: renderImportPreview,
+  impEdit: impEdit,
+  impToggleRow: impToggleRow,
+  impSelectAll: impSelectAll,
+  confirmImport: confirmImport,
+  renderDeptPrint: renderDeptPrint,
+  doDeptPrint: doDeptPrint,
+  catAr: catAr,
+  renderShelves: renderShelves,
+  getShelfName: getShelfName,
+  openAddShelf: openAddShelf,
+  openEditShelf: openEditShelf,
+  printShelfList: printShelfList,
+  checkPublicView: checkPublicView,
+  renderMobileRequest: renderMobileRequest,
+  getNotes: getNotes,
+  setNotes: setNotes,
+  noteEsc: noteEsc,
+  noteStatus: noteStatus,
+  noteType: noteType,
+  renderDeptNotes: renderDeptNotes,
+  renderPharmNotes: renderPharmNotes,
+  openNoteReply: openNoteReply,
+  updateNotesBadge: updateNotesBadge,
+  switchExpTab: switchExpTab,
+  parseBarcode: parseBarcode,
+  parseExpiryStr: parseExpiryStr,
+  formatParsedFields: formatParsedFields,
+  getMedSelectOptions: getMedSelectOptions,
+  fuzzyMatchMed: fuzzyMatchMed,
+  startScanner: startScanner,
+  switchCamera: switchCamera,
+  stopScanner: stopScanner,
+  restartScanner: restartScanner,
+  captureFrame: captureFrame,
+  onScanSuccess: onScanSuccess,
+  applyScanResult: applyScanResult,
+  parseTypedBarcode: parseTypedBarcode,
+  applyTypedResult: applyTypedResult,
+  CM: CM,
+  getCategories: getCategories,
+  setCategories: setCategories,
+  refreshCatSelectors: refreshCatSelectors,
+  toggleAllInv: toggleAllInv,
+  onInvCheck: onInvCheck,
+  clearInvSelection: clearInvSelection,
+  getSelectedMedIds: getSelectedMedIds,
+  bulkDelete: bulkDelete,
+  getLogo: getLogo,
+  setLogoData: setLogoData,
+  openLogoSettings: openLogoSettings,
+  handleLogoDrop: handleLogoDrop,
+  handleLogoFile: handleLogoFile,
+  saveLogo: saveLogo,
+  clearLogo: clearLogo,
+  officialPrintHeaderHTML: officialPrintHeaderHTML,
+  getCatOptions: getCatOptions,
+  getReqWindows: getReqWindows,
+  setReqWindows: setReqWindows,
+  getDispSlots: getDispSlots,
+  setDispSlots: setDispSlots,
+  getMonthlyLimits: getMonthlyLimits,
+  setMonthlyLimits: setMonthlyLimits,
+  fmt12: fmt12,
+  dayBits: dayBits,
+  timeToMins: timeToMins,
+  getMonthlyReqCount: getMonthlyReqCount,
+  getMonthlyLimit: getMonthlyLimit,
+  renderSchedule: renderSchedule,
+  editReqWindow: editReqWindow,
+  addDispSlot: addDispSlot,
+  editDispSlot: editDispSlot,
+  openBulkLimits: openBulkLimits,
+  applyBulkLimit: applyBulkLimit,
+  getNextDispSlot: getNextDispSlot,
+  ctlIsMaster: ctlIsMaster,
+  ctlCanEditCatalog: ctlCanEditCatalog,
+  ctlCanAddCatalog: ctlCanAddCatalog,
+  ctlCanEditDept: ctlCanEditDept,
+  ctlAlertDays: ctlAlertDays,
+  ctlFridgeIcon: ctlFridgeIcon,
+  ctlFlags: ctlFlags,
+  ctlClassLabel: ctlClassLabel,
+  ctlEarliestDays: ctlEarliestDays,
+  ctlStatus: ctlStatus,
+  ctlPdfReceipts: ctlPdfReceipts,
+  ctlSetPdfReceipts: ctlSetPdfReceipts,
+  ctlPdfNormalizeCode: ctlPdfNormalizeCode,
+  ctlPdfCanUse: ctlPdfCanUse,
+  ctlPdfDrag: ctlPdfDrag,
+  ctlPdfDrop: ctlPdfDrop,
+  ctlPdfClearReview: ctlPdfClearReview,
+  ctlPdfFindMedicine: ctlPdfFindMedicine,
+  ctlPdfRowsFromItems: ctlPdfRowsFromItems,
+  ctlParseReceiptPdf: ctlParseReceiptPdf,
+  ctlRenderPdfReview: ctlRenderPdfReview,
+  ctlPdfSetField: ctlPdfSetField,
+  ctlPdfToggleAll: ctlPdfToggleAll,
+  ctlApprovePdfReceipt: ctlApprovePdfReceipt,
+  ctlPendingPdfExpiryRows: ctlPendingPdfExpiryRows,
+  renderCtlPdfReceiptPanel: renderCtlPdfReceiptPanel,
+  ctlSavePendingPdfExpiry: ctlSavePendingPdfExpiry,
+  ctlPromptMed: ctlPromptMed,
+  ctlAddCatalogMedicine: ctlAddCatalogMedicine,
+  ctlFmtDMY: ctlFmtDMY,
+  ctlCanDispense: ctlCanDispense,
+  ctlEnsureV6UI: ctlEnsureV6UI,
+  ctlAddBatchEditorRow: ctlAddBatchEditorRow,
+  ctlSaveBatchEditor: ctlSaveBatchEditor,
+  ctlOpenDispense: ctlOpenDispense,
+  ctlDispTypeChanged: ctlDispTypeChanged,
+  ctlLogo: ctlLogo,
+  ctlChooseLogo: ctlChooseLogo,
+  ctlSavePrintLogo: ctlSavePrintLogo,
+  ctlPrintSettings: ctlPrintSettings,
+  ctlPublicUrl: ctlPublicUrl,
+  ctlPublishDept: ctlPublishDept,
+  renderCtlAnalytics: renderCtlAnalytics,
+  printCtlAnalytics: printCtlAnalytics,
+  ctlDeptShelves: ctlDeptShelves,
+  ctlSetDeptShelves: ctlSetDeptShelves,
+  ctlDeptShelfName: ctlDeptShelfName,
+  ctlToggleDeptMed: ctlToggleDeptMed,
+  ctlToggleAllDeptMeds: ctlToggleAllDeptMeds,
+  ctlSelectedDeptIds: ctlSelectedDeptIds,
+  ctlRefreshDeptBulkBar: ctlRefreshDeptBulkBar,
+  ctlOpenBulkShelf: ctlOpenBulkShelf,
+  ctlApplyBulkShelf: ctlApplyBulkShelf,
+  renderCtlDepartments: renderCtlDepartments,
+  requestColdMarker: requestColdMarker,
+  actualUser: actualUser,
+  actualActorName: actualActorName,
+  isMasterActual: isMasterActual,
+  isPharmacyDirector: isPharmacyDirector,
+  isInpatientSupervisor: isInpatientSupervisor,
+  isPharmacyStaff: isPharmacyStaff,
+  canManageRequests: canManageRequests,
+  canManageCrashCart: canManageCrashCart,
+  canConfigureCrashCart: canConfigureCrashCart,
+  requireCrashCartConfigurationPermission: requireCrashCartConfigurationPermission,
+  canManageUsers: canManageUsers,
+  masterRoleLabel: masterRoleLabel,
+  ensureMasterRoleModal: ensureMasterRoleModal,
+  masterRoleSelectionChanged: masterRoleSelectionChanged,
+  masterPreviewRole: masterPreviewRole,
+  startApp: startApp,
+  bulkSetMedicationFlag: bulkSetMedicationFlag,
+  shelfSelectedIds: shelfSelectedIds,
+  shelfMedMatches: shelfMedMatches,
+  shelfExpiryCell: shelfExpiryCell,
+  openAddExpiryForMed: openAddExpiryForMed,
+  renderShelfMedicationDatabase: renderShelfMedicationDatabase,
+  toggleShelfMedication: toggleShelfMedication,
+  toggleAllShelfMedications: toggleAllShelfMedications,
+  clearShelfMedicationSelection: clearShelfMedicationSelection,
+  assignSelectedMedsToShelf: assignSelectedMedsToShelf,
+  crashCarts: crashCarts,
+  crashReports: crashReports,
+  setCrashReports: setCrashReports,
+  crashCart: crashCart,
+  ctlSettingsGlobal: ctlSettingsGlobal,
+  boot: boot,
+  _orderCleanupStarted: globalThis._orderCleanupStarted,
+  PPP: globalThis.PPP,
+  NOTE_TYPE_LABELS: globalThis.NOTE_TYPE_LABELS,
+  NOTE_STATUS_LABELS: globalThis.NOTE_STATUS_LABELS,
+  _scanReader: globalThis._scanReader,
+  _scanStream: globalThis._scanStream,
+  _parsedScan: globalThis._parsedScan,
+  _parsedType: globalThis._parsedType,
+  DEFAULT_CATS: globalThis.DEFAULT_CATS,
+  DAY_NAMES: globalThis.DAY_NAMES,
+  CTL_PDF_REVIEW: globalThis.CTL_PDF_REVIEW,
+  CTL_BATCH_CTX: globalThis.CTL_BATCH_CTX,
+  CTL_DEPT_SELECTED: globalThis.CTL_DEPT_SELECTED,
+  MASTER_ACTUAL: globalThis.MASTER_ACTUAL,
+  MASTER_EFFECTIVE: globalThis.MASTER_EFFECTIVE,
+  SHELF_MED_SELECTED: globalThis.SHELF_MED_SELECTED
+};
+publishLegacy("07-expiry-requests-and-primary-features.js", __asdhLegacyApi);
+export {
+  renderShelfAlertSettings,
+  openAddExpiry,
+  openEditExpiry,
+  renderUsers,
+  updateUserRoleFields,
+  openAddUser,
+  saveUser,
+  delUser,
+  toggleMasterUser,
+  renderAn,
+  orderRetentionCutoff,
+  requestArchiveRecord,
+  cleanupOldOrders,
+  scheduleAutomaticOrderCleanup,
+  setPPP,
+  resetPrintPageState,
+  renderImport,
+  clearImport,
+  ensureXLSX,
+  handleXlsxDrop,
+  handleXlsxFile,
+  parseCsvData,
+  parseXlsxData,
+  recognizeCat,
+  parseImport,
+  renderImportPreview,
+  impEdit,
+  impToggleRow,
+  impSelectAll,
+  confirmImport,
+  renderDeptPrint,
+  doDeptPrint,
+  catAr,
+  renderShelves,
+  getShelfName,
+  openAddShelf,
+  openEditShelf,
+  printShelfList,
+  checkPublicView,
+  renderMobileRequest,
+  getNotes,
+  setNotes,
+  noteEsc,
+  noteStatus,
+  noteType,
+  renderDeptNotes,
+  renderPharmNotes,
+  openNoteReply,
+  updateNotesBadge,
+  switchExpTab,
+  parseBarcode,
+  parseExpiryStr,
+  formatParsedFields,
+  getMedSelectOptions,
+  fuzzyMatchMed,
+  startScanner,
+  switchCamera,
+  stopScanner,
+  restartScanner,
+  captureFrame,
+  onScanSuccess,
+  applyScanResult,
+  parseTypedBarcode,
+  applyTypedResult,
+  CM,
+  getCategories,
+  setCategories,
+  refreshCatSelectors,
+  toggleAllInv,
+  onInvCheck,
+  clearInvSelection,
+  getSelectedMedIds,
+  bulkDelete,
+  getLogo,
+  setLogoData,
+  openLogoSettings,
+  handleLogoDrop,
+  handleLogoFile,
+  saveLogo,
+  clearLogo,
+  officialPrintHeaderHTML,
+  getCatOptions,
+  getReqWindows,
+  setReqWindows,
+  getDispSlots,
+  setDispSlots,
+  getMonthlyLimits,
+  setMonthlyLimits,
+  fmt12,
+  dayBits,
+  timeToMins,
+  getMonthlyReqCount,
+  getMonthlyLimit,
+  renderSchedule,
+  editReqWindow,
+  addDispSlot,
+  editDispSlot,
+  openBulkLimits,
+  applyBulkLimit,
+  getNextDispSlot,
+  ctlIsMaster,
+  ctlCanEditCatalog,
+  ctlCanAddCatalog,
+  ctlCanEditDept,
+  ctlAlertDays,
+  ctlFridgeIcon,
+  ctlFlags,
+  ctlClassLabel,
+  ctlEarliestDays,
+  ctlStatus,
+  ctlPdfReceipts,
+  ctlSetPdfReceipts,
+  ctlPdfNormalizeCode,
+  ctlPdfCanUse,
+  ctlPdfDrag,
+  ctlPdfDrop,
+  ctlPdfClearReview,
+  ctlPdfFindMedicine,
+  ctlPdfRowsFromItems,
+  ctlParseReceiptPdf,
+  ctlRenderPdfReview,
+  ctlPdfSetField,
+  ctlPdfToggleAll,
+  ctlApprovePdfReceipt,
+  ctlPendingPdfExpiryRows,
+  renderCtlPdfReceiptPanel,
+  ctlSavePendingPdfExpiry,
+  ctlPromptMed,
+  ctlAddCatalogMedicine,
+  ctlFmtDMY,
+  ctlCanDispense,
+  ctlEnsureV6UI,
+  ctlAddBatchEditorRow,
+  ctlSaveBatchEditor,
+  ctlOpenDispense,
+  ctlDispTypeChanged,
+  ctlLogo,
+  ctlChooseLogo,
+  ctlSavePrintLogo,
+  ctlPrintSettings,
+  ctlPublicUrl,
+  ctlPublishDept,
+  renderCtlAnalytics,
+  printCtlAnalytics,
+  ctlDeptShelves,
+  ctlSetDeptShelves,
+  ctlDeptShelfName,
+  ctlToggleDeptMed,
+  ctlToggleAllDeptMeds,
+  ctlSelectedDeptIds,
+  ctlRefreshDeptBulkBar,
+  ctlOpenBulkShelf,
+  ctlApplyBulkShelf,
+  renderCtlDepartments,
+  requestColdMarker,
+  actualUser,
+  actualActorName,
+  isMasterActual,
+  isPharmacyDirector,
+  isInpatientSupervisor,
+  isPharmacyStaff,
+  canManageRequests,
+  canManageCrashCart,
+  canConfigureCrashCart,
+  requireCrashCartConfigurationPermission,
+  canManageUsers,
+  masterRoleLabel,
+  ensureMasterRoleModal,
+  masterRoleSelectionChanged,
+  masterPreviewRole,
+  startApp,
+  bulkSetMedicationFlag,
+  shelfSelectedIds,
+  shelfMedMatches,
+  shelfExpiryCell,
+  openAddExpiryForMed,
+  renderShelfMedicationDatabase,
+  toggleShelfMedication,
+  toggleAllShelfMedications,
+  clearShelfMedicationSelection,
+  assignSelectedMedsToShelf,
+  crashCarts,
+  crashReports,
+  setCrashReports,
+  crashCart,
+  ctlSettingsGlobal,
+  boot
+};
+export const legacyVariableNames = Object.freeze(["_orderCleanupStarted", "PPP", "NOTE_TYPE_LABELS", "NOTE_STATUS_LABELS", "_scanReader", "_scanStream", "_parsedScan", "_parsedType", "DEFAULT_CATS", "DAY_NAMES", "CTL_PDF_REVIEW", "CTL_BATCH_CTX", "CTL_DEPT_SELECTED", "MASTER_ACTUAL", "MASTER_EFFECTIVE", "SHELF_MED_SELECTED"]);
+export default __asdhLegacyApi;

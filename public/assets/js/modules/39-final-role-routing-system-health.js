@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 42
- * Original id: final-role-routing-system-health
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   var ROLE_CLASSES=['role-pharmacy','role-inpatient_supervisor','role-pharmacy_staff','role-controlled_pharmacy','role-warehouse','role-department'];
@@ -59,3 +54,12 @@
   window.enforceRoleUi=enforce;
   enforce();
 })();
+
+
+
+
+
+
+
+
+export {};

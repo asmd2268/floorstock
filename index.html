@@ -15,10 +15,8 @@
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
-<script id="firebase-global-bootstrap" src="./public/assets/js/modules/01-firebase-global-bootstrap.js?v=R6.65.0"></script>
-<script id="r664-early-production-console-policy" src="./public/assets/js/modules/02-r664-early-production-console-policy.js?v=R6.65.0"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
-<link href="./public/assets/css/modules/01-styles-01-06.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/02-styles-07-12.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/03-styles-13-18.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/04-styles-19-24.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/05-styles-25-30.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/06-styles-31-36.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/07-styles-37-42.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/08-styles-43-48.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/09-styles-49-54.css?v=R6.65.0" rel="stylesheet"/><link href="./public/assets/css/modules/10-styles-55-59.css?v=R6.65.0" rel="stylesheet"/>
+<link href="./public/assets/css/modules/01-styles-01-06.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/02-styles-07-12.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/03-styles-13-18.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/04-styles-19-24.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/05-styles-25-30.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/06-styles-31-36.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/07-styles-37-42.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/08-styles-43-48.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/09-styles-49-54.css?v=R6.65.1" rel="stylesheet"/><link href="./public/assets/css/modules/10-styles-55-59.css?v=R6.65.1" rel="stylesheet"/>
 
 
 
@@ -29,7 +27,7 @@
 
 
 
-<meta content="multi-file-classic-modules-v1" name="asdhealth-architecture"/></head>
+<meta content="es-modules-v2" name="asdhealth-architecture"/></head>
 <body>
 <div id="auth">
 <div class="login-attribution">By Ali Abudahash</div>
@@ -39,13 +37,13 @@
 <div><h1>ASDHealth</h1><span>Pharmacy Operations Module</span></div>
 </div>
 <div class="rtabs">
-<div class="rtab on" id="tph" onclick="selRole('pharmacy')">🏥 Pharmacy<br/><small>الصيدلية</small></div>
-<div class="rtab" id="tdp" onclick="selRole('department')">🏢 Department<br/><small>الجهة الطالبة</small></div>
+<div class="rtab on" id="tph" data-asdh-binding="b001">🏥 Pharmacy<br/><small>الصيدلية</small></div>
+<div class="rtab" id="tdp" data-asdh-binding="b002">🏢 Department<br/><small>الجهة الطالبة</small></div>
 </div>
-<div class="fg"><label>Email</label><input autocomplete="username" id="lgu" onkeydown="if(event.key==='Enter')doLogin()" placeholder="name@example.com" type="email"/></div>
-<div class="fg"><label>Password</label><input id="lgp" onkeydown="if(event.key==='Enter')doLogin()" placeholder="Password" type="password"/></div>
+<div class="fg"><label>Email</label><input autocomplete="username" id="lgu" placeholder="name@example.com" type="email"data-asdh-binding="b003"></div>
+<div class="fg"><label>Password</label><input id="lgp" placeholder="Password" type="password"data-asdh-binding="b004"></div>
 <div id="aerr">⚠ Incorrect credentials</div>
-<button class="btn bp bw" onclick="doLogin()">Sign In / دخول</button>
+<button class="btn bp bw" data-asdh-binding="b005">Sign In / دخول</button>
 <p style="margin-top:13px;font-size:11px;color:var(--tx2);text-align:center">Use your Firebase account. Data is stored securely in Firestore.</p>
 </div>
 </div>
@@ -57,10 +55,10 @@
 </div>
 <div class="fl ic g8">
 <span id="tuser" style="font-size:12px;color:var(--tx2)"></span>
-<button class="theme-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle">🌙</button>
-<button class="btn bg bsm" id="print-branding-btn" onclick="openLogoSettings()" style="display:none" title="Print header settings">⚙ Official Print Header</button>
-<button class="btn bs bsm" id="master-local-backup-top-btn" onclick="masterSaveLocalBackupToDevice()" title="Master only: save a complete local JSON backup">💾 Local Backup</button>
-<button class="btn bg bsm" onclick="doLogout()">Sign Out</button>
+<button class="theme-btn" id="themeBtn" title="Toggle" data-asdh-binding="b006">🌙</button>
+<button class="btn bg bsm" id="print-branding-btn" style="display:none" title="Print header settings" data-asdh-binding="b007">⚙ Official Print Header</button>
+<button class="btn bs bsm" id="master-local-backup-top-btn" title="Master only: save a complete local JSON backup" data-asdh-binding="b008">💾 Local Backup</button>
+<button class="btn bg bsm" data-asdh-binding="b009">Sign Out</button>
 </div>
 </div>
 <nav id="mnav"></nav>
@@ -85,15 +83,15 @@
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
 <div><div class="stitle">Inventory</div><div class="ssub" style="margin:0">Per-department drug lists</div></div>
 <div class="fl g8 ic" style="flex-wrap:wrap">
-<select class="psel" id="inv-dept-sel" onchange="renderInv()"><option value="">Select Dept...</option></select>
-<button class="btn bp" onclick="openAddDrug()">+ Add</button>
-<button class="btn bg bsm" onclick="openManageCats()">🏷 Categories &amp; order / التصنيفات والترتيب</button>
+<select class="psel" id="inv-dept-sel" data-asdh-binding="b010"><option value="">Select Dept...</option></select>
+<button class="btn bp" data-asdh-binding="b011">+ Add</button>
+<button class="btn bg bsm" data-asdh-binding="b012">🏷 Categories &amp; order / التصنيفات والترتيب</button>
 </div>
 </div>
 <div class="alert-banner-y" id="dup-banner" style="display:none">
 <div class="fl jb ic">
 <span id="dup-count-txt"></span>
-<button class="btn bg bsm" onclick="showDupPanel()">🔍 Duplicates</button>
+<button class="btn bg bsm" data-asdh-binding="b013">🔍 Duplicates</button>
 </div>
 </div>
 <div id="bulk-bar" style="display:none;background:var(--s2);border:1px solid var(--ac);border-radius:8px;padding:10px 14px;margin-bottom:10px">
@@ -103,18 +101,18 @@
 <select class="psel" id="bulk-cat-sel" style="min-width:160px">
 <option value="">Change category to...</option>
 </select>
-<button class="btn bp bsm" onclick="bulkChangeCategory()">🏷 Apply Category</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('refrigerated')">❄ Refrigerated</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('lasa')">LASA</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('hazard')">⚠ Hazard</button><button class="btn bg bsm" onclick="bulkSetMedicationFlag('high_alert')">High Alert</button>
-<button class="btn bd2c bsm" onclick="bulkDelete()">🗑 Delete Selected</button>
-<button class="btn bg bsm" onclick="clearInvSelection()">✕ Clear</button>
+<button class="btn bp bsm" data-asdh-binding="b014">🏷 Apply Category</button><button class="btn bg bsm" data-asdh-binding="b015">❄ Refrigerated</button><button class="btn bg bsm" data-asdh-binding="b016">LASA</button><button class="btn bg bsm" data-asdh-binding="b017">⚠ Hazard</button><button class="btn bg bsm" data-asdh-binding="b018">High Alert</button>
+<button class="btn bd2c bsm" data-asdh-binding="b019">🗑 Delete Selected</button>
+<button class="btn bg bsm" data-asdh-binding="b020">✕ Clear</button>
 </div>
 </div>
 </div>
 <div class="card">
 <div class="ch" style="flex-wrap:wrap;gap:8px">
-<div class="sbr"><span class="sic">🔍</span><input id="isrch" oninput="renderInvDebounced()" placeholder="Search..." type="text"/></div>
+<div class="sbr"><span class="sic">🔍</span><input id="isrch" placeholder="Search..." type="text"data-asdh-binding="b021"></div>
 <div class="fl g8 ic" style="flex-wrap:wrap">
-<select class="psel" id="icatf" onchange="renderInv()"><option value="">All Categories</option></select>
-<select class="psel" id="iclsf" onchange="renderInv()">
+<select class="psel" id="icatf" data-asdh-binding="b022"><option value="">All Categories</option></select>
+<select class="psel" id="iclsf" data-asdh-binding="b023">
 <option value="">All</option>
 <option value="high_alert">🔴 High Alert</option>
 <option value="hazard">🟡 Hazard</option>
@@ -124,7 +122,7 @@
 </div>
 <div class="tw"><table>
 <thead><tr>
-<th style="width:36px"><input id="inv-all-chk" onchange="toggleAllInv(this)" title="Select all" type="checkbox"/></th>
+<th style="width:36px"><input id="inv-all-chk" title="Select all" type="checkbox"data-asdh-binding="b024"></th>
 <th style="width:48px;text-align:center">#</th>
 <th>Medication</th><th>Category</th><th>Classification</th>
 <th style="text-align:center">Min</th><th style="text-align:center">Max</th>
@@ -137,19 +135,19 @@
 <div class="pg" id="pg-reqs">
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
 <div><div class="stitle">All Requests</div><div class="ssub" style="margin:0">Review and fulfill department requests</div></div>
-<button class="btn bd2c" id="purge-old-requests-btn" onclick="cleanupOldOrders(false)" style="display:none">🗑 Delete orders older than 6 months</button>
+<button class="btn bd2c" id="purge-old-requests-btn" style="display:none" data-asdh-binding="b025">🗑 Delete orders older than 6 months</button>
 </div>
 <div class="tgrp">
-<button class="tbtn on" onclick="filterR('all',this)">All</button>
-<button class="tbtn" onclick="filterR('pending',this)">Pending</button>
-<button class="tbtn" onclick="filterR('fulfilled',this)">Fulfilled</button>
+<button class="tbtn on" data-asdh-binding="b026">All</button>
+<button class="tbtn" data-asdh-binding="b027">Pending</button>
+<button class="tbtn" data-asdh-binding="b028">Fulfilled</button>
 </div>
 <div id="rlist"></div>
 </div>
 <div class="pg" id="pg-users">
 <div class="fl ic jb mb14">
 <div><div class="stitle">User Management</div><div class="ssub" style="margin:0">Departments &amp; access control</div></div>
-<button class="btn bp" onclick="openAddUser()">+ Add User</button>
+<button class="btn bp" data-asdh-binding="b029">+ Add User</button>
 </div>
 <div class="card" style="border:1px solid var(--ac)">
 <div class="ch" style="background:rgba(31,111,235,.06)">
@@ -160,7 +158,7 @@
 <div class="frow" style="align-items:flex-end">
 <div class="fg" style="margin:0">
 <label>Department Name / اسم القسم</label>
-<input id="ndname" onkeydown="if(event.key==='Enter')addDept()" placeholder="e.g. ICU, Emergency, Pediatrics..." style="margin:0" type="text"/>
+<input id="ndname" placeholder="e.g. ICU, Emergency, Pediatrics..." style="margin:0" type="text"data-asdh-binding="b030">
 </div>
 <div class="fg" style="margin:0">
 <label>Copy drug list from / نسخ قائمة أدوية من</label>
@@ -170,7 +168,7 @@
 </select>
 </div>
 <div style="padding-bottom:13px;flex-shrink:0">
-<button class="btn bp" onclick="addDept()" style="height:40px;padding:0 20px">+ Add Department</button>
+<button class="btn bp" style="height:40px;padding:0 20px" data-asdh-binding="b031">+ Add Department</button>
 </div>
 </div>
 <div id="dept-add-hint" style="font-size:11px;color:var(--tx2);margin-top:8px">
@@ -195,7 +193,7 @@
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
 <div><div class="stitle">Analytics</div><div class="ssub" style="margin:0">Consumption trends</div></div>
 <div class="fl g8 ic" style="flex-wrap:wrap">
-<select class="psel" id="aperiod" onchange="renderAn()">
+<select class="psel" id="aperiod" data-asdh-binding="b032">
 <option value="month">This Month</option><option value="quarter">This Quarter</option>
 <option value="year">This Year</option><option value="custom">Custom Range</option>
 </select>
@@ -203,9 +201,9 @@
 <input id="rfrom" style="width:135px;margin:0;padding:7px 8px" type="date"/>
 <span style="color:var(--tx2)">→</span>
 <input id="rto" style="width:135px;margin:0;padding:7px 8px" type="date"/>
-<button class="btn bg bsm" onclick="renderAn()">Apply</button>
+<button class="btn bg bsm" data-asdh-binding="b033">Apply</button>
 </div>
-<select class="psel" id="adept" onchange="renderAn()"><option value="">All Departments</option></select>
+<select class="psel" id="adept" data-asdh-binding="b034"><option value="">All Departments</option></select>
 </div>
 </div>
 <div class="g2 mb14">
@@ -231,8 +229,8 @@
 <label style="margin:0;font-size:13px;color:var(--tx2)">Orders per page</label>
 <div class="fl g6 ic">
 </div>
-<button class="btn bg" id="purge-old-orders-btn" onclick="cleanupOldOrders(false)" style="display:none">🗑 Delete orders older than 6 months</button>
-<button class="btn bp" onclick="doPrint()">🖨 Print selected</button>
+<button class="btn bg" id="purge-old-orders-btn" style="display:none" data-asdh-binding="b035">🗑 Delete orders older than 6 months</button>
+<button class="btn bp" data-asdh-binding="b036">🖨 Print selected</button>
 </div>
 </div>
 <div class="card" id="print-orders-preparation-guide" style="border:2px solid var(--ac);box-shadow:0 4px 14px rgba(0,0,0,.18);margin-bottom:14px">
@@ -278,8 +276,8 @@
 </div>
 </div>
 <div class="card">
-<div class="ch"><span class="ct">Fulfilled Requests</span><button class="btn bg bsm" onclick="document.querySelectorAll('.pchk').forEach(function(c){c.checked=true;})">Select All</button></div>
-<div class="tw"><table><thead><tr><th><input onchange="document.querySelectorAll('.pchk').forEach(function(c){c.checked=this.checked;}.bind(this))" type="checkbox"/></th><th>Department</th><th>Request Date</th><th>Fulfilled</th><th>Items</th><th>Printed</th></tr></thead><tbody id="ptbl"></tbody></table></div>
+<div class="ch"><span class="ct">Fulfilled Requests</span><button class="btn bg bsm" data-asdh-binding="b037">Select All</button></div>
+<div class="tw"><table><thead><tr><th><input type="checkbox"data-asdh-binding="b038"></th><th>Department</th><th>Request Date</th><th>Fulfilled</th><th>Items</th><th>Printed</th></tr></thead><tbody id="ptbl"></tbody></table></div>
 </div>
 </div>
 <div class="pg" id="pg-import">
@@ -298,12 +296,12 @@
 <option>Ointments &amp; Drops</option><option>Solutions</option>
 </select>
 </div>
-<div id="xlsx-drop-zone" onclick="document.getElementById('xlsx-file-inp').click()" ondragleave="this.style.borderColor='var(--bd)'" ondragover="event.preventDefault();this.style.borderColor='var(--ac)'" ondrop="handleXlsxDrop(event)" style="border:2px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:14px;transition:all .2s">
+<div id="xlsx-drop-zone" style="border:2px dashed var(--bd);border-radius:10px;padding:20px;text-align:center;cursor:pointer;margin-bottom:14px;transition:all .2s" data-asdh-binding="b039 b206">
 <div style="font-size:28px;margin-bottom:8px">📂</div>
 <div style="font-weight:600;color:var(--tx);margin-bottom:4px">Upload Excel / CSV file</div>
 <div style="font-size:11px;color:var(--tx2)">Drag &amp; drop or click to browse — .xlsx, .xls, .csv supported</div>
 <div style="font-size:11px;color:var(--acl);margin-top:6px">🟢 Red cells = High Alert  |  🟡 Yellow cells = Hazard  |  🟣 Gray rows = Category headers</div>
-<input accept=".xlsx,.xls,.csv" id="xlsx-file-inp" onchange="handleXlsxFile(this.files[0])" style="display:none" type="file"/>
+<input accept=".xlsx,.xls,.csv" id="xlsx-file-inp" style="display:none" type="file"data-asdh-binding="b040">
 </div>
 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
 <hr style="flex:1;border-color:var(--bd)"/>
@@ -320,8 +318,8 @@ Adrenaline 1mg/ml ampoule	1	20
 Furosemide 40mg tablet	5	20" rows="10" style="margin-bottom:8px;resize:vertical;line-height:1.6;font-size:12px;font-family:var(--mono)"></textarea>
 </div>
 <div style="display:flex;gap:8px;flex-wrap:wrap">
-<button class="btn bp" onclick="parseImport()">🔍 Parse &amp; Preview</button>
-<button class="btn bg" onclick="clearImport()">🗑 Clear</button>
+<button class="btn bp" data-asdh-binding="b041">🔍 Parse &amp; Preview</button>
+<button class="btn bg" data-asdh-binding="b042">🗑 Clear</button>
 </div>
 </div>
 </div>
@@ -330,9 +328,9 @@ Furosemide 40mg tablet	5	20" rows="10" style="margin-bottom:8px;resize:vertical;
 <span class="ct" id="imp-ptitle">Preview / معاينة</span>
 <div class="fl g8 ic" id="imp-actions" style="display:none">
 <span id="imp-count-txt" style="font-size:12px;color:var(--tx2)"></span>
-<button class="btn bg bsm" onclick="impSelectAll(true)">All</button>
-<button class="btn bg bsm" onclick="impSelectAll(false)">None</button>
-<button class="btn bs bsm" id="imp-cbtn" onclick="confirmImport()">✓ Import Selected</button>
+<button class="btn bg bsm" data-asdh-binding="b043">All</button>
+<button class="btn bg bsm" data-asdh-binding="b044">None</button>
+<button class="btn bs bsm" id="imp-cbtn" data-asdh-binding="b045">✓ Import Selected</button>
 </div>
 </div>
 <div id="imp-prev" style="padding:12px;min-height:200px">
@@ -377,14 +375,14 @@ Furosemide 40mg tab	5	20</pre>
 <div class="ssub" id="dnsub">Enter quantities needed</div>
 <div class="card">
 <div class="ch">
-<div class="sbr"><span class="sic">🔍</span><input id="rsrch" oninput="renderReqFormDebounced()" placeholder="Search medications..." type="text"/></div>
+<div class="sbr"><span class="sic">🔍</span><input id="rsrch" placeholder="Search medications..." type="text"data-asdh-binding="b046"></div>
 <div style="font-size:12px;color:var(--tx2)"><span id="rcnt">0</span> items entered</div>
 </div>
 <div id="rfbody"></div>
 <div class="cb" style="border-top:1px solid var(--bd)">
 <div class="fl jb ic">
 <span style="font-size:12px;color:var(--tx2)">Quantities above max are blocked automatically</span>
-<button class="btn bs" onclick="submitReq()">Submit Request ✓</button>
+<button class="btn bs" data-asdh-binding="b047">Submit Request ✓</button>
 </div>
 </div>
 </div>
@@ -400,7 +398,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="stitle">Controlled Medicines / الأدوية المخدرة والمقيدة</div>
 <div class="ssub" id="ctl-sub">Unified warehouse and pharmacy comparison with inpatient-department expiry monitoring</div>
 </div>
-<button class="btn bg" id="ctl-main-print-btn" onclick="ctlOpenDepartmentPrintOptions()">🖨 Print department custody / طباعة عهدة القسم</button>
+<button class="btn bg" id="ctl-main-print-btn" data-asdh-binding="b048">🖨 Print department custody / طباعة عهدة القسم</button>
 </div>
 <div class="tgrp" id="ctl-tabs"></div>
 <div class="alert-banner-y" id="ctl-permission-note" style="display:none"></div>
@@ -413,21 +411,21 @@ Furosemide 40mg tab	5	20</pre>
 <span class="chip">Warehouse only</span>
 </div>
 <div class="cb">
-<div class="ctl-pdf-drop" id="ctl-pdf-drop" ondragleave="ctlPdfDrag(event,false)" ondragover="ctlPdfDrag(event,true)" ondrop="ctlPdfDrop(event)">
+<div class="ctl-pdf-drop" id="ctl-pdf-drop" data-asdh-binding="b209">
 <div style="font-size:28px">📄</div>
 <b>اختر ملف PDF أو اسحبه هنا</b>
 <div class="fhint">يدعم صفحة واحدة أو عدة صفحات. الأعمدة المستخدمة: Item و Quantity فقط.</div>
-<input accept="application/pdf,.pdf" id="ctl-pdf-receipt-file" onchange="ctlParseReceiptPdf(this.files[0])" style="margin:10px auto 0;max-width:420px" type="file"/>
+<input accept="application/pdf,.pdf" id="ctl-pdf-receipt-file" style="margin:10px auto 0;max-width:420px" type="file"data-asdh-binding="b049">
 </div>
 <div class="fhint" id="ctl-pdf-progress" style="margin-top:8px"></div>
 <div id="ctl-pdf-review-wrap" style="display:none">
 <div class="ctl-pdf-summary" id="ctl-pdf-summary"></div>
 <div class="fl jb ic" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">
-<label style="margin:0;display:flex;align-items:center;gap:6px"><input id="ctl-pdf-select-all" onchange="ctlPdfToggleAll(this.checked)" type="checkbox"/> تحديد كل الأصناف المطابقة</label>
+<label style="margin:0;display:flex;align-items:center;gap:6px"><input id="ctl-pdf-select-all" type="checkbox"data-asdh-binding="b050"> تحديد كل الأصناف المطابقة</label>
 <div class="fl g8" style="flex-wrap:wrap">
-<button class="btn bg bsm" onclick="ctlPdfClearReview()">إلغاء الملف</button>
-<button class="btn bp bsm" onclick="ctlApprovePdfReceipt(false)">موافقة جزئية (المحدد فقط)</button>
-<button class="btn bs bsm" onclick="ctlApprovePdfReceipt(true)">موافقة كلية (كل المطابق)</button>
+<button class="btn bg bsm" data-asdh-binding="b051">إلغاء الملف</button>
+<button class="btn bp bsm" data-asdh-binding="b052">موافقة جزئية (المحدد فقط)</button>
+<button class="btn bs bsm" data-asdh-binding="b053">موافقة كلية (كل المطابق)</button>
 </div>
 </div>
 <div class="ctl-pdf-review"><table>
@@ -448,15 +446,15 @@ Furosemide 40mg tab	5	20</pre>
 <div class="ch" style="flex-wrap:wrap;gap:8px">
 <span class="ct">Controlled and Restricted Medicines List / قائمة الأدوية المخدرة والمقيدة</span>
 <div class="fl g8" style="flex-wrap:wrap">
-<select class="psel" id="ctl-dept" onchange="renderControlled()"></select>
-<button class="btn bp bsm" id="ctl-assign-btn" onclick="ctlAssignMedicineToDept()">+ Add from shared catalogue</button>
-<button class="btn bg bsm" id="ctl-sign-btn" onclick="ctlEditSignatures()">Edit Signatures / تعديل التوقيعات</button>
-<button class="btn bg bsm" id="ctl-bulk-shelf-btn" onclick="ctlOpenBulkShelf()" style="display:none">Add selected to shelf</button>
+<select class="psel" id="ctl-dept" data-asdh-binding="b054"></select>
+<button class="btn bp bsm" id="ctl-assign-btn" data-asdh-binding="b055">+ Add from shared catalogue</button>
+<button class="btn bg bsm" id="ctl-sign-btn" data-asdh-binding="b056">Edit Signatures / تعديل التوقيعات</button>
+<button class="btn bg bsm" id="ctl-bulk-shelf-btn" style="display:none" data-asdh-binding="b057">Add selected to shelf</button>
 </div>
 </div>
 <div class="cb" id="ctl-dept-alerts" style="padding-bottom:0"></div>
 <div class="tw"><table><thead><tr>
-<th style="width:34px"><input id="ctl-dept-select-all" onchange="ctlToggleAllDeptMeds(this)" type="checkbox"/></th>
+<th style="width:34px"><input id="ctl-dept-select-all" type="checkbox"data-asdh-binding="b058"></th>
 <th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine</th><th>Class</th><th>Flags</th><th>Min</th><th>Max</th><th>Current qty</th><th>Shelf</th><th>Expiry batches</th><th></th>
 </tr></thead><tbody id="ctl-dept-table"></tbody></table></div>
 </div>
@@ -468,7 +466,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="stitle">Pharmacy Controlled Cabinets &amp; Safes / دواليب وخزائن عهدة الصيدلية المقيدة</div>
 <div class="ssub">This map organizes medicines held in the controlled-pharmacy officer's central custody. It is not linked to inpatient-department custody.</div>
 </div>
-<button class="btn bp" id="controlled-storage-create-btn" onclick="controlledStorageOpenCreate()" type="button">+ Create cabinet or safe / إنشاء دولاب أو خزنة</button>
+<button class="btn bp" id="controlled-storage-create-btn" type="button" data-asdh-binding="b059">+ Create cabinet or safe / إنشاء دولاب أو خزنة</button>
 </div>
 <div class="alert-banner" id="controlled-storage-auth-message" style="display:none"></div>
 <div id="controlled-storage-workspace">
@@ -478,14 +476,14 @@ Furosemide 40mg tab	5	20</pre>
 <div class="r17-grid4">
 <div class="fg">
 <label>Display mode / طريقة العرض</label>
-<select id="controlled-storage-mode" onchange="controlledStorageModeChanged()">
+<select id="controlled-storage-mode" data-asdh-binding="b060">
 <option value="map">Map / خريطة</option>
 <option value="list">List / قائمة</option>
 </select>
 </div>
 <div class="fg">
 <label>Medicine filter / فلتر الأدوية</label>
-<select id="controlled-storage-filter" onchange="renderControlledStorage()">
+<select id="controlled-storage-filter" data-asdh-binding="b061">
 <option value="all">All pharmacy-custody medicines / كل أدوية عهدة الصيدلية</option>
 <option value="unassigned">Not assigned / غير مضافة لخانة</option>
 </select>
@@ -508,7 +506,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="mt" id="controlled-storage-builder-title">Create cabinet or safe / إنشاء دولاب أو خزنة</div>
 <div class="fhint">Define every shelf separately. Cell codes are created automatically: A1, A2… B1, B2…</div>
 </div>
-<button class="xbtn" onclick="controlledStorageCloseUnitModal()" type="button">✕</button>
+<button class="xbtn" type="button" data-asdh-binding="b062">✕</button>
 </div>
 <div class="r21-storage-builder">
 <input id="controlled-storage-edit-id" type="hidden"/>
@@ -527,7 +525,7 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 <div class="fg">
 <label>Number of shelves / عدد الأرفف</label>
-<input id="controlled-storage-shelf-count" max="26" min="1" oninput="controlledStorageShelfCountChanged()" type="number" value="5"/>
+<input id="controlled-storage-shelf-count" max="26" min="1" type="number" value="5"data-asdh-binding="b063">
 </div>
 </div>
 <div class="r21-storage-shelf-editor">
@@ -543,9 +541,9 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 <div class="r21-storage-inline-error" id="controlled-storage-builder-error" style="display:none"></div>
 <div class="fl" style="gap:8px;justify-content:flex-end;flex-wrap:wrap">
-<button class="btn bg" id="controlled-storage-cancel-edit" onclick="controlledStorageCancelEdit()" style="display:none" type="button">Cancel edit / إلغاء التعديل</button>
-<button class="btn bg" onclick="controlledStorageCloseUnitModal()" type="button">Close / إغلاق</button>
-<button class="btn bp" id="controlled-storage-save" onclick="controlledStorageSaveUnit()" type="button">Save storage unit / حفظ الوحدة</button>
+<button class="btn bg" id="controlled-storage-cancel-edit" style="display:none" type="button" data-asdh-binding="b064">Cancel edit / إلغاء التعديل</button>
+<button class="btn bg" type="button" data-asdh-binding="b065">Close / إغلاق</button>
+<button class="btn bp" id="controlled-storage-save" type="button" data-asdh-binding="b066">Save storage unit / حفظ الوحدة</button>
 </div>
 </div>
 </div>
@@ -559,11 +557,11 @@ Furosemide 40mg tab	5	20</pre>
 <select class="psel" id="ctl-an-type"><option value="">All types</option><option value="inpatient">Inpatient</option><option value="outpatient">Outpatient</option></select>
 <select class="psel" id="ctl-an-dept"><option value="">All departments</option></select>
 <input id="ctl-an-recipient" placeholder="Recipient name" style="width:180px;margin:0">
-<button class="btn bp" onclick="renderCtlAnalytics()">Apply</button>
+<button class="btn bp" data-asdh-binding="b067">Apply</button>
 </input></input></input></div>
 </div>
 <div class="g4 mb14" id="ctl-an-stats"></div>
-<div class="card"><div class="ch"><span class="ct">Dispensing records / سجل الصرف</span><button class="btn bg bsm" onclick="printCtlAnalytics()">🖨 Print</button></div><div class="tw"><table><thead><tr><th>Date</th><th>Medicine</th><th>Qty</th><th>Source</th><th>Type</th><th>Department</th><th>Recipient</th><th>By</th></tr></thead><tbody id="ctl-an-table"></tbody></table></div></div>
+<div class="card"><div class="ch"><span class="ct">Dispensing records / سجل الصرف</span><button class="btn bg bsm" data-asdh-binding="b068">🖨 Print</button></div><div class="tw"><table><thead><tr><th>Date</th><th>Medicine</th><th>Qty</th><th>Source</th><th>Type</th><th>Department</th><th>Recipient</th><th>By</th></tr></thead><tbody id="ctl-an-table"></tbody></table></div></div>
 </div>
 <div class="pg" id="pg-deptprint">
 <div class="stitle">🖨 Drug List / قائمة الأدوية</div>
@@ -593,7 +591,7 @@ Furosemide 40mg tab	5	20</pre>
 <option value="barcode">Existing expiry dates + barcode</option>
 </select>
 </div>
-<button class="btn bp" onclick="doDeptPrint()">🖨 Print</button>
+<button class="btn bp" data-asdh-binding="b069">🖨 Print</button>
 </div>
 </div>
 <div class="cb">
@@ -613,13 +611,13 @@ Furosemide 40mg tab	5	20</pre>
 <div class="fg"><label>Early alert — Days before expiry / التنبيه المبكر</label><input id="alert-days1" max="1095" min="1" type="number" value="30"/><div class="fhint">مثال: 90 يعني بدء التنبيه قبل الانتهاء بـ 90 يومًا.</div></div>
 <div class="fg"><label>Urgent alert — Days before expiry / التنبيه العاجل</label><input id="alert-days2" max="1095" min="1" type="number" value="7"/><div class="fhint">يجب أن تكون مدة التنبيه العاجل أقل من مدة التنبيه المبكر.</div></div>
 </div>
-<button class="btn bp" onclick="saveAlertSettings()">Save Settings / حفظ الإعدادات</button>
+<button class="btn bp" data-asdh-binding="b070">Save Settings / حفظ الإعدادات</button>
 <div class="next-window-info" style="margin-top:14px;margin-bottom:0">يمكن لمستخدم القسم تعديل هذه المدد، وتُطبق مباشرة على تواريخ الأدوية المعروضة في هذه الصفحة.</div>
 </div>
 </div>
 <div class="g2" style="align-items:start">
 <div class="card">
-<div class="ch"><span class="ct">Manage Shelves / إدارة الأرفف</span><button class="btn bp bsm" onclick="openAddShelf()">+ Add Shelf</button></div>
+<div class="ch"><span class="ct">Manage Shelves / إدارة الأرفف</span><button class="btn bp bsm" data-asdh-binding="b071">+ Add Shelf</button></div>
 <div class="tw"><table>
 <thead><tr><th>Shelf / الرف</th><th>Description</th><th>Items</th><th></th></tr></thead>
 <tbody id="shelves-tbl"></tbody>
@@ -637,8 +635,8 @@ Furosemide 40mg tab	5	20</pre>
 <div style="font-size:11px;color:var(--tx2);margin-top:3px">Select one or more medicines, then assign all selected items to a drawer.</div>
 </div>
 <div class="fl g8 ic" style="flex-wrap:wrap">
-<div class="sbr" style="min-width:240px"><span class="sic">🔍</span><input id="shelf-med-search" oninput="renderShelfMedicationDatabase()" placeholder="Search medication..." type="text"/></div>
-<select class="psel" id="shelf-med-filter" onchange="renderShelfMedicationDatabase()"><option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option></select>
+<div class="sbr" style="min-width:240px"><span class="sic">🔍</span><input id="shelf-med-search" placeholder="Search medication..." type="text"data-asdh-binding="b072"></div>
+<select class="psel" id="shelf-med-filter" data-asdh-binding="b073"><option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option></select>
 </div>
 </div>
 <div id="shelf-bulk-bar" style="display:none;background:var(--s2);border-bottom:1px solid var(--bd);padding:10px 14px">
@@ -646,14 +644,14 @@ Furosemide 40mg tab	5	20</pre>
 <strong id="shelf-selected-count">0 selected</strong>
 <div class="fl g8 ic" style="flex-wrap:wrap">
 <select class="psel" id="shelf-bulk-target"><option value="">Choose drawer...</option><option value="__none__">Remove from drawer</option></select>
-<button class="btn bp bsm" onclick="assignSelectedMedsToShelf()">Assign selected ✓</button>
-<button class="btn bg bsm" onclick="clearShelfMedicationSelection()">Clear selection</button>
+<button class="btn bp bsm" data-asdh-binding="b074">Assign selected ✓</button>
+<button class="btn bg bsm" data-asdh-binding="b075">Clear selection</button>
 </div>
 </div>
 </div>
 <div class="tw"><table>
 <thead><tr>
-<th style="width:38px"><input id="shelf-med-all" onchange="toggleAllShelfMedications(this.checked)" type="checkbox"/></th>
+<th style="width:38px"><input id="shelf-med-all" type="checkbox"data-asdh-binding="b076"></th>
 <th style="width:52px">#</th><th>Medication</th><th>Category</th><th>Classification</th><th>Current drawer</th><th>Expiry dates / تواريخ الانتهاء</th><th style="width:110px">Min</th><th style="width:110px">Max</th>
 </tr></thead>
 <tbody id="shelf-med-db"></tbody>
@@ -671,7 +669,7 @@ Furosemide 40mg tab	5	20</pre>
 <option value="lasa">🔵 LASA</option>
 <option value="standard">Standard</option>
 </select>
-<button class="btn bp" onclick="printShelfList()">🖨 Print</button>
+<button class="btn bp" data-asdh-binding="b077">🖨 Print</button>
 </div>
 </div>
 <div class="cb" id="shelf-preview" style="min-height:120px;color:var(--tx2);font-size:13px">
@@ -714,7 +712,7 @@ Furosemide 40mg tab	5	20</pre>
 <textarea id="note-body" placeholder="Describe the issue, request, or suggestion...
 اكتب ملاحظتك أو طلبك هنا..." rows="4" style="margin-bottom:8px;resize:vertical"></textarea>
 </div>
-<button class="btn bp" onclick="submitNote()">📨 Submit Note / إرسال الملاحظة</button>
+<button class="btn bp" data-asdh-binding="b078">📨 Submit Note / إرسال الملاحظة</button>
 </div>
 </div>
 <div class="card">
@@ -726,15 +724,15 @@ Furosemide 40mg tab	5	20</pre>
 <div class="stitle">📝 Department Notes / ملاحظات الأقسام</div>
 <div class="ssub">Review and respond to notes from all departments</div>
 <div class="fl g8 ic mb14" style="flex-wrap:wrap">
-<select class="psel" id="notes-filter-dept" onchange="renderPharmNotes()"><option value="">All Departments</option></select>
-<select class="psel" id="notes-filter-type" onchange="renderPharmNotes()">
+<select class="psel" id="notes-filter-dept" data-asdh-binding="b079"><option value="">All Departments</option></select>
+<select class="psel" id="notes-filter-type" data-asdh-binding="b080">
 <option value="">All Types</option>
 <option value="classification">Classification</option>
 <option value="request">Add Med Request</option>
 <option value="missing">Missing Info</option>
 <option value="other">Other</option>
 </select>
-<select class="psel" id="notes-filter-status" onchange="renderPharmNotes()">
+<select class="psel" id="notes-filter-status" data-asdh-binding="b081">
 <option value="">All Status</option>
 <option value="open">Open</option>
 <option value="urgent">Urgent</option>
@@ -750,25 +748,25 @@ Furosemide 40mg tab	5	20</pre>
 <div class="card mb14" id="request-hour-grid-card">
 <div class="ch">
 <div><span class="ct">📥 Request Windows / أوقات قبول الطلبيات</span><div class="fhint">Weekly 24-hour schedule per department. Light cells are allowed; dark cells are blocked.</div></div>
-<button class="btn bs bsm request-grid-save-btn" onclick="saveRequestHourGrid()" type="button">✓ Apply to selected departments / تطبيق</button>
+<button class="btn bs bsm request-grid-save-btn" type="button" data-asdh-binding="b082">✓ Apply to selected departments / تطبيق</button>
 </div>
 <div class="cb">
 <div id="req-windows-list" style="display:none"></div>
 <div class="request-grid-controls">
-<div class="fg" style="margin:0"><label>Load schedule for / عرض جدول قسم</label><select class="psel" id="request-grid-source" onchange="loadRequestHourGrid(this.value)"></select></div>
-<div class="fg" style="margin:0"><label>Apply this schedule to / تطبيق الجدول على</label><div class="fl g8"><button class="btn bg bxs" onclick="selectAllRequestGridTargets(true)" type="button">Select all</button><button class="btn bg bxs" onclick="selectAllRequestGridTargets(false)" type="button">Clear</button></div></div>
+<div class="fg" style="margin:0"><label>Load schedule for / عرض جدول قسم</label><select class="psel" id="request-grid-source" data-asdh-binding="b083"></select></div>
+<div class="fg" style="margin:0"><label>Apply this schedule to / تطبيق الجدول على</label><div class="fl g8"><button class="btn bg bxs" type="button" data-asdh-binding="b084">Select all</button><button class="btn bg bxs" type="button" data-asdh-binding="b085">Clear</button></div></div>
 </div>
 <div class="request-grid-targets" id="request-grid-targets"></div>
 <div class="request-grid-orphans" id="request-grid-orphans"></div>
 <div class="request-grid-legend"><span class="request-grid-swatch allowed"></span> Allowed / مسموح <span class="request-grid-swatch blocked"></span> Blocked / ممنوع <span class="fhint">Click or drag across hours. Each cell represents one full hour.</span></div>
 <div class="request-hour-grid-wrap" id="request-hour-grid"></div>
-<div class="fl jb ic" style="margin-top:12px;gap:8px;flex-wrap:wrap"><span class="fhint">The New Request form remains visible outside allowed hours, but quantity fields and submission are locked.</span><button class="btn bs request-grid-save-btn" onclick="saveRequestHourGrid()" type="button">Save and apply / حفظ وتطبيق</button></div><div aria-live="polite" class="fhint" id="request-grid-save-status" role="status" style="margin-top:8px"></div>
+<div class="fl jb ic" style="margin-top:12px;gap:8px;flex-wrap:wrap"><span class="fhint">The New Request form remains visible outside allowed hours, but quantity fields and submission are locked.</span><button class="btn bs request-grid-save-btn" type="button" data-asdh-binding="b086">Save and apply / حفظ وتطبيق</button></div><div aria-live="polite" class="fhint" id="request-grid-save-status" role="status" style="margin-top:8px"></div>
 </div>
 </div>
 <div class="card mb14">
 <div class="ch">
 <span class="ct">📤 Dispense Slots / مواعيد الصرف</span>
-<button class="btn bp bsm" onclick="addDispSlot()">+ Add Slot</button>
+<button class="btn bp bsm" data-asdh-binding="b087">+ Add Slot</button>
 </div>
 <div class="cb">
 <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Pharmacy dispense rounds — shown to departments on their request page.</p>
@@ -779,8 +777,8 @@ Furosemide 40mg tab	5	20</pre>
 <div class="ch">
 <span class="ct">📊 Monthly Order Limits / الحد الشهري للطلبيات</span>
 <div class="fl g8 ic">
-<button class="btn bg bsm" onclick="openBulkLimits()">📋 Bulk Edit</button>
-<button class="btn bp bsm" onclick="saveAllLimits()">✓ Save All</button>
+<button class="btn bg bsm" data-asdh-binding="b088">📋 Bulk Edit</button>
+<button class="btn bp bsm" data-asdh-binding="b089">✓ Save All</button>
 </div>
 </div>
 <div class="cb">
@@ -792,7 +790,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="pg" id="pg-crashcart">
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
 <div><div class="stitle">Crash Cart / عربة الطوارئ</div><div class="ssub" style="margin:0">Pharmacy manages carts and expiry dates. Departments see only carts assigned to them.</div></div>
-<button class="btn bp" id="crash-add-btn" onclick="crashAddCart()">+ Add Crash Cart</button>
+<button class="btn bp" id="crash-add-btn" data-asdh-binding="b090">+ Add Crash Cart</button>
 </div>
 <div id="crash-open-alerts"></div>
 <div id="crash-list"></div>
@@ -808,26 +806,26 @@ Furosemide 40mg tab	5	20</pre>
 <div class="card"><div class="ch"><span class="ct">Cart details / بيانات العربات</span></div><div class="cb" id="r17-crash-admin-list"></div></div>
 <div class="card"><div class="ch"><div><span class="ct">Bulk opening &amp; replacement / الفتح والاستبدال الجماعي</span><div class="fhint">Choose a medicine and source expiry. The system finds every cart with the same date, then lets you select all or some.</div></div></div>
 <div class="cb">
-<div class="r17-grid4"><div class="fg"><label>Source medicine / العلاج المسحوب</label><select id="r17-cr-source-med" onchange="r17CrashSourceChanged()"></select></div><div class="fg"><label>Source expiry / تاريخ المصدر</label><select id="r17-cr-source-expiry" onchange="r17CrashScanMatches()"></select></div><div class="fg"><label>Default removal qty per cart</label><input id="r17-cr-source-qty" min="0" oninput="r17CrashRenderMatrix()" step="any" type="number" value="0"/><div class="fhint">0 = full matching batch.</div></div><div class="fg"><label>Operation note / الملاحظة</label><input id="r17-cr-note" placeholder="Optional"/></div></div>
+<div class="r17-grid4"><div class="fg"><label>Source medicine / العلاج المسحوب</label><select id="r17-cr-source-med" data-asdh-binding="b091"></select></div><div class="fg"><label>Source expiry / تاريخ المصدر</label><select id="r17-cr-source-expiry" data-asdh-binding="b092"></select></div><div class="fg"><label>Default removal qty per cart</label><input id="r17-cr-source-qty" min="0" step="any" type="number" value="0"data-asdh-binding="b093"><div class="fhint">0 = full matching batch.</div></div><div class="fg"><label>Operation note / الملاحظة</label><input id="r17-cr-note" placeholder="Optional"/></div></div>
 <div class="alert-banner-y" id="r17-cr-match-alert" style="display:none"></div>
-<div class="fl g8" style="margin:8px 0"><button class="btn bg bsm" onclick="r17CrashSelectAllMatches(true)">Select all matching</button><button class="btn bg bsm" onclick="r17CrashSelectAllMatches(false)">Clear</button></div>
+<div class="fl g8" style="margin:8px 0"><button class="btn bg bsm" data-asdh-binding="b094">Select all matching</button><button class="btn bg bsm" data-asdh-binding="b095">Clear</button></div>
 <div class="r17-check-grid" id="r17-cr-match-carts"></div>
-<div class="fl jb ic" style="margin-top:14px"><b>Replacement medicines / الأدوية البديلة</b><button class="btn bp bsm" onclick="r17CrashAddReplacement()">+ Add medicine</button></div>
+<div class="fl jb ic" style="margin-top:14px"><b>Replacement medicines / الأدوية البديلة</b><button class="btn bp bsm" data-asdh-binding="b096">+ Add medicine</button></div>
 <div id="r17-cr-replacements"></div>
 <div id="r17-cr-cart-matrix"></div>
-<div class="fl" style="justify-content:flex-end;margin-top:14px"><button class="btn bs" onclick="r17CrashExecuteBulk()">Validate, assign unique seals and close all selected carts</button></div>
+<div class="fl" style="justify-content:flex-end;margin-top:14px"><button class="btn bs" data-asdh-binding="b097">Validate, assign unique seals and close all selected carts</button></div>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="r18-crash-correction-modal">
 <div class="modal r18-crash-correction-modal">
-<div class="mh"><span class="mt">Master Direct Cart Correction / تصحيح مباشر للعربة</span><button class="xbtn" onclick="CM('r18-crash-correction-modal')" type="button">✕</button></div>
+<div class="mh"><span class="mt">Master Direct Cart Correction / تصحيح مباشر للعربة</span><button class="xbtn" type="button" data-asdh-binding="b098">✕</button></div>
 <input id="r18-cc-cart-id" type="hidden"/>
 <div class="alert-banner-y"><b>Seal number / رقم القفل:</b> <span id="r18-cc-seal"></span><br/><span class="fhint">Read-only. This correction cannot change the current seal and does not open or close the cart.</span></div>
 <div class="fg"><label>Correction reason / سبب التصحيح</label><textarea id="r18-cc-reason" placeholder="Required / مطلوب"></textarea></div>
-<div class="fl jb ic" style="margin:10px 0"><b>Cart medicines / أدوية العربة</b><button class="btn bp bsm" onclick="r18CrashCorrectionAddItem()" type="button">+ Add medicine</button></div>
+<div class="fl jb ic" style="margin:10px 0"><b>Cart medicines / أدوية العربة</b><button class="btn bp bsm" type="button" data-asdh-binding="b099">+ Add medicine</button></div>
 <div id="r18-cc-items"></div>
-<div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" onclick="CM('r18-crash-correction-modal')" type="button">Cancel</button><button class="btn bs" id="r18-cc-save" onclick="r18SaveCrashCorrection()" type="button">Save correction without changing seal</button></div>
+<div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" type="button" data-asdh-binding="b100">Cancel</button><button class="btn bs" id="r18-cc-save" type="button" data-asdh-binding="b101">Save correction without changing seal</button></div>
 </div>
 </div>
 <div class="pg" id="pg-backup-restore">
@@ -838,7 +836,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="ch"><span class="ct">⬇ Export complete database backup</span></div>
 <div class="cb">
 <p style="font-size:13px;color:var(--tx2);margin-bottom:14px">Downloads all operational data, department stock, requests, Crash Cart data, controlled-medicine data, settings, and Firestore user profiles into one JSON file.</p>
-<button class="btn bp" id="db-export-btn" onclick="masterExportDatabase()">Download backup / تنزيل النسخة</button>
+<button class="btn bp" id="db-export-btn" data-asdh-binding="b102">Download backup / تنزيل النسخة</button>
 <div class="fhint" id="db-export-status" style="margin-top:10px"></div>
 </div>
 </div>
@@ -846,9 +844,9 @@ Furosemide 40mg tab	5	20</pre>
 <div class="ch"><span class="ct">⬆ Restore database backup</span></div>
 <div class="cb">
 <p style="font-size:13px;color:var(--tx2);margin-bottom:12px">Choose a backup JSON file, then restore it. Existing documents in the managed collections will be replaced by the backup.</p>
-<input accept="application/json,.json" id="db-restore-file" onchange="masterPreviewBackupFile(this.files[0])" type="file"/>
+<input accept="application/json,.json" id="db-restore-file" type="file"data-asdh-binding="b103">
 <div class="alert-banner-y" id="db-restore-preview" style="display:none"></div>
-<button class="btn bd2c" disabled="" id="db-restore-btn" onclick="masterRestoreDatabase()">Restore selected backup / استرجاع النسخة</button>
+<button class="btn bd2c" disabled="" id="db-restore-btn" data-asdh-binding="b104">Restore selected backup / استرجاع النسخة</button>
 <div class="fhint" id="db-restore-status" style="margin-top:10px"></div>
 <div class="fhint" style="margin-top:12px">Firebase Authentication passwords/accounts are not exported by the browser. Firestore user profiles are included, while existing Firebase Auth accounts remain unchanged.</div>
 </div>
@@ -864,10 +862,10 @@ Furosemide 40mg tab	5	20</pre>
 <div class="sc"><div class="sl">Estimated latest size</div><div class="sv" id="health-backup-size">—</div></div>
 </div>
 <div class="fl g8" style="margin-top:14px;flex-wrap:wrap">
-<button class="btn bp" onclick="masterCreateLocalBackup(true)">Create local backup now</button>
-<button class="btn bs" id="master-local-device-backup-btn" onclick="masterSaveLocalBackupToDevice()">💾 Save backup to this device / حفظ نسخة محلية على الجهاز</button>
-<button class="btn bg" onclick="masterDownloadLatestLocalBackup()">Download latest local backup</button>
-<button class="btn bg" onclick="masterRefreshSystemHealth()">Refresh health</button>
+<button class="btn bp" data-asdh-binding="b105">Create local backup now</button>
+<button class="btn bs" id="master-local-device-backup-btn" data-asdh-binding="b106">💾 Save backup to this device / حفظ نسخة محلية على الجهاز</button>
+<button class="btn bg" data-asdh-binding="b107">Download latest local backup</button>
+<button class="btn bg" data-asdh-binding="b108">Refresh health</button>
 </div>
 <div class="fhint" id="auto-backup-message" style="margin-top:10px"></div>
 </div>
@@ -894,7 +892,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="modal">
 <div class="mh">
 <span class="mt">Add selected medicines to shelf / إضافة الأدوية المحددة إلى رف</span>
-<button class="xbtn" onclick="CM('mctl-bulk-shelf')">✕</button>
+<button class="xbtn" data-asdh-binding="b109">✕</button>
 </div>
 <div class="fg">
 <label>Shelf / الرف</label>
@@ -902,26 +900,26 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 <div class="fhint" id="ctl-bulk-shelf-count" style="margin-bottom:14px"></div>
 <div class="fl g8" style="justify-content:flex-end">
-<button class="btn bg" onclick="CM('mctl-bulk-shelf')">Cancel</button>
-<button class="btn bp" onclick="ctlApplyBulkShelf()">Add selected ✓</button>
+<button class="btn bg" data-asdh-binding="b110">Cancel</button>
+<button class="btn bp" data-asdh-binding="b111">Add selected ✓</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mshelf">
 <div class="modal">
-<div class="mh"><span class="mt" id="mshelf-title">Add Shelf</span><button class="xbtn" onclick="CM('mshelf')">✕</button></div>
+<div class="mh"><span class="mt" id="mshelf-title">Add Shelf</span><button class="xbtn" data-asdh-binding="b112">✕</button></div>
 <div class="fg"><label>Shelf Name / اسم الرف</label><input id="shelf-name-inp" placeholder="e.g. Shelf A, Fridge 1, Cabinet 3"/></div>
 <div class="fg"><label>Description (optional)</label><input id="shelf-desc-inp" placeholder="e.g. Injectable medications"/></div>
 <input id="shelf-edit-id" type="hidden"/>
 <div style="display:flex;gap:8px;justify-content:flex-end">
-<button class="btn bg" onclick="CM('mshelf')">Cancel</button>
-<button class="btn bp" onclick="saveShelf()">Save</button>
+<button class="btn bg" data-asdh-binding="b113">Cancel</button>
+<button class="btn bp" data-asdh-binding="b114">Save</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mdrug">
 <div class="modal">
-<div class="mh"><span class="mt" id="dmtitle">Add Medication</span><button class="xbtn" onclick="CM('mdrug')">✕</button></div>
+<div class="mh"><span class="mt" id="dmtitle">Add Medication</span><button class="xbtn" data-asdh-binding="b115">✕</button></div>
 <div class="fg"><label>Target Department</label><select id="ddept-sel" style="margin-bottom:14px"></select></div>
 <div class="frow">
 <div class="fg"><label>Medication Name</label><input id="dname" placeholder="e.g. Morphine 10mg/ml"/></div>
@@ -948,42 +946,42 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 </div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px">
-<button class="btn bg" onclick="CM('mdrug')">Cancel</button>
-<button class="btn bp" onclick="saveDrug()">Save</button>
+<button class="btn bg" data-asdh-binding="b116">Cancel</button>
+<button class="btn bp" data-asdh-binding="b117">Save</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="muser">
 <div class="modal">
-<div class="mh"><span class="mt">Add User / إضافة مستخدم</span><button class="xbtn" onclick="CM('muser')">✕</button></div>
+<div class="mh"><span class="mt">Add User / إضافة مستخدم</span><button class="xbtn" data-asdh-binding="b118">✕</button></div>
 <div class="fg"><label>Email</label><input id="nuname" placeholder="e.g. icu@example.com" type="email"/></div>
 <div class="fg"><label>Password</label><input id="nupass" placeholder="At least 8 characters" type="password"/></div>
-<div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" onchange="updateUserRoleFields()"><option value="department">Department user</option><option value="controlled_pharmacy">Pharmacy controlled &amp; psychotropic medicines officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy_staff">Pharmacy Employee / موظف صيدلية</option><option value="inpatient_supervisor">Inpatient Pharmacy Supervisor / مشرف صيدلية داخلية</option><option value="pharmacy">Pharmacy Director / مدير الصيدلية</option></select></div>
+<div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" data-asdh-binding="b119"><option value="department">Department user</option><option value="controlled_pharmacy">Pharmacy controlled &amp; psychotropic medicines officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy_staff">Pharmacy Employee / موظف صيدلية</option><option value="inpatient_supervisor">Inpatient Pharmacy Supervisor / مشرف صيدلية داخلية</option><option value="pharmacy">Pharmacy Director / مدير الصيدلية</option></select></div>
 <div class="fg" id="nudept-wrap"><label>Department</label><select id="nudept"></select></div>
 <div class="fg" id="numaster-wrap" style="display:none"><label style="display:flex;align-items:center;gap:8px;color:var(--tx);cursor:pointer"><input id="numaster" style="width:auto;margin:0" type="checkbox"/> Grant Master access</label><div class="fhint">Only a current Master can grant this permission.</div></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
-<button class="btn bg" onclick="CM('muser')">Cancel</button>
-<button class="btn bs" onclick="saveUser()">Create User</button>
+<button class="btn bg" data-asdh-binding="b120">Cancel</button>
+<button class="btn bs" data-asdh-binding="b121">Create User</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mfulfill">
 <div class="modal fulfill-modal">
-<div class="mh"><span class="mt" id="fulfill-title">Fulfill Request</span><button class="xbtn" onclick="CM('mfulfill')">✕</button></div>
+<div class="mh"><span class="mt" id="fulfill-title">Fulfill Request</span><button class="xbtn" data-asdh-binding="b122">✕</button></div>
 <div class="unit-qty-notice" id="fulfill-unit-qty-notice"><strong>⚠ Dispensing reminder — Requested quantities are single items, not boxes or cartons.</strong><div class="unit-example">Example: <b>Sodium Chloride 0.9% w/v 500 ml</b><br>Requested Qty = <b>1</b> means dispense <b>one bottle</b>, not one box/carton.</br></div></div>
 <p id="fulfill-hint" style="font-size:12px;color:var(--tx2);margin-bottom:13px">Enter actual quantity to dispense. 0 = skip.</p>
 <div class="fulfill-table-wrap">
 <table class="fulfill-table"><colgroup><col class="fc-num"/><col class="fc-med"/><col class="fc-class"/><col class="fc-min"/><col class="fc-max"/><col class="fc-last30"/><col class="fc-req"/><col class="fc-disp"/></colgroup><thead><tr><th style="text-align:center">#</th><th>Medication</th><th>Class</th><th style="text-align:center">Min</th><th style="text-align:center">Max</th><th style="text-align:center">Last 30 days<br/><span class="fulfill-head-sub">to this dept</span></th><th style="text-align:center">Requested</th><th style="text-align:center">Dispense</th></tr></thead><tbody id="ftbl"></tbody></table>
 </div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-<button class="btn bg" onclick="CM('mfulfill')">Cancel</button>
-<button class="btn bs" id="fulfill-btn" onclick="submitFulfill()">Confirm ✓</button>
+<button class="btn bg" data-asdh-binding="b123">Cancel</button>
+<button class="btn bs" id="fulfill-btn" data-asdh-binding="b124">Confirm ✓</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mview">
 <div class="modal" style="width:620px">
-<div class="mh"><span class="mt">Request Details — <span id="vdname"></span></span><button class="xbtn" onclick="CM('mview')">✕</button></div>
+<div class="mh"><span class="mt">Request Details — <span id="vdname"></span></span><button class="xbtn" data-asdh-binding="b125">✕</button></div>
 <div id="vbody"></div>
 </div>
 </div>
@@ -991,12 +989,12 @@ Furosemide 40mg tab	5	20</pre>
 <div class="modal" style="width:620px">
 <div class="mh">
 <span class="mt" id="mexpiry-title">Add Batch / إضافة دفعة</span>
-<button class="xbtn" onclick="stopScanner();CM('mexpiry')">✕</button>
+<button class="xbtn" data-asdh-binding="b126">✕</button>
 </div>
 <div style="display:flex;gap:8px;margin-bottom:16px">
-<button class="btn bp bsm" id="tab-manual-btn" onclick="switchExpTab('manual')" style="flex:1">✏ Manual Entry</button>
-<button class="btn bg bsm" id="tab-scan-btn" onclick="switchExpTab('scan')" style="flex:1">📷 Scan Barcode</button>
-<button class="btn bg bsm" id="tab-type-btn" onclick="switchExpTab('type')" style="flex:1">⌨ Type Barcode</button>
+<button class="btn bp bsm" id="tab-manual-btn" style="flex:1" data-asdh-binding="b127">✏ Manual Entry</button>
+<button class="btn bg bsm" id="tab-scan-btn" style="flex:1" data-asdh-binding="b128">📷 Scan Barcode</button>
+<button class="btn bg bsm" id="tab-type-btn" style="flex:1" data-asdh-binding="b129">⌨ Type Barcode</button>
 </div>
 <div id="tab-manual">
 <div class="fg"><label>Medication / الدواء</label><select id="exp-med-sel" style="margin-bottom:14px"></select></div>
@@ -1006,7 +1004,7 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 </div>
 <div id="tab-scan" style="display:none">
-<select class="scan-cam-sel" id="scan-cam-sel" onchange="switchCamera(this.value)"><option>Loading cameras...</option></select>
+<select class="scan-cam-sel" id="scan-cam-sel" data-asdh-binding="b130"><option>Loading cameras...</option></select>
 <div class="scan-overlay">
 <video autoplay="" id="scan-modal-video" muted="" playsinline=""></video>
 <div class="scan-line" id="scan-line" style="display:none"></div>
@@ -1022,8 +1020,8 @@ Furosemide 40mg tab	5	20</pre>
 <select id="scan-med-sel" style="margin-bottom:10px"></select>
 </div>
 <div style="display:flex;gap:8px">
-<button class="btn bg bsm" onclick="restartScanner()">🔄 Scan Again</button>
-<button class="btn bs" onclick="applyScanResult()">✓ Use This Result</button>
+<button class="btn bg bsm" data-asdh-binding="b131">🔄 Scan Again</button>
+<button class="btn bs" data-asdh-binding="b132">✓ Use This Result</button>
 </div>
 </div>
 </div>
@@ -1034,30 +1032,30 @@ Furosemide 40mg tab	5	20</pre>
 <textarea id="type-barcode-inp" placeholder="(01)03701234567890(17)251231(10)LOT001
 or
 EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);font-size:12px;margin-bottom:8px;resize:vertical"></textarea>
-<button class="btn bp" onclick="parseTypedBarcode()">🔍 Parse</button>
+<button class="btn bp" data-asdh-binding="b133">🔍 Parse</button>
 </div>
 <div id="type-parsed-fields" style="display:none;margin-top:10px"></div>
 <div id="type-med-wrap" style="display:none">
 <div class="fg"><label>Match to Medication</label><select id="type-med-sel" style="margin-bottom:10px"></select></div>
-<button class="btn bs" onclick="applyTypedResult()">✓ Use This Result</button>
+<button class="btn bs" data-asdh-binding="b134">✓ Use This Result</button>
 </div>
 </div>
 <input id="exp-edit-id" type="hidden"/>
 <hr style="border:none;border-top:1px solid var(--bd);margin:14px 0"/>
 <div style="display:flex;gap:8px;justify-content:flex-end">
-<button class="btn bg" onclick="stopScanner();CM('mexpiry')">Cancel</button>
-<button class="btn bp" id="exp-save-btn" onclick="saveExpiry()">Save Expiry / حفظ الصلاحية</button>
+<button class="btn bg" data-asdh-binding="b135">Cancel</button>
+<button class="btn bp" id="exp-save-btn" data-asdh-binding="b136">Save Expiry / حفظ الصلاحية</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mdup">
 <div class="modal" style="width:700px">
-<div class="mh"><span class="mt">🔍 Duplicate Detection</span><button class="xbtn" onclick="CM('mdup')">✕</button></div>
+<div class="mh"><span class="mt">🔍 Duplicate Detection</span><button class="xbtn" data-asdh-binding="b137">✕</button></div>
 <p style="font-size:12px;color:var(--tx2);margin-bottom:13px">Select items to delete. Similar names are grouped together.</p>
-<div class="tw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th><input id="dup-all-chk" onchange="toggleDupAll(this)" type="checkbox"/></th><th>Medication</th><th>Category</th><th>Class</th></tr></thead><tbody id="duptbl"></tbody></table></div>
+<div class="tw" style="max-height:420px;overflow-y:auto"><table><thead><tr><th><input id="dup-all-chk" type="checkbox"data-asdh-binding="b138"></th><th>Medication</th><th>Category</th><th>Class</th></tr></thead><tbody id="duptbl"></tbody></table></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-<button class="btn bg" onclick="CM('mdup')">Cancel</button>
-<button class="btn bd2c" onclick="deleteSelected()">🗑 Delete Selected</button>
+<button class="btn bg" data-asdh-binding="b139">Cancel</button>
+<button class="btn bd2c" data-asdh-binding="b140">🗑 Delete Selected</button>
 </div>
 </div>
 </div>
@@ -1068,7 +1066,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div class="modal" style="width:580px">
 <div class="mh">
 <span class="mt">Reply to Note / الرد على الملاحظة</span>
-<button class="xbtn" onclick="CM('mnote-reply')">✕</button>
+<button class="xbtn" data-asdh-binding="b141">✕</button>
 </div>
 <div id="mnote-content" style="background:var(--s2);border-radius:8px;padding:12px;margin-bottom:14px;font-size:13px"></div>
 <div class="fg"><label>Reply / الرد</label>
@@ -1084,30 +1082,30 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 <input id="note-reply-id" type="hidden"/>
 <div style="display:flex;gap:8px;justify-content:flex-end">
-<button class="btn bg" onclick="CM('mnote-reply')">Cancel</button>
-<button class="btn bp" onclick="saveNoteReply()">Save Reply</button>
+<button class="btn bg" data-asdh-binding="b142">Cancel</button>
+<button class="btn bp" data-asdh-binding="b143">Save Reply</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mcat-mgr">
 <div class="modal" style="width:580px">
-<div class="mh"><span class="mt">🏷 Manage Categories / إدارة التصنيفات</span><button class="xbtn" onclick="CM('mcat-mgr')">✕</button></div>
+<div class="mh"><span class="mt">🏷 Manage Categories / إدارة التصنيفات</span><button class="xbtn" data-asdh-binding="b144">✕</button></div>
 <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Add, rename, or remove drug categories. Changes reflect in all lists — shelf assignments are unaffected.</p>
 <div class="fl g8 mb14">
-<input id="new-cat-inp" onkeydown="if(event.key==='Enter')addCategory()" placeholder="New category name..." style="margin:0;flex:1" type="text"/>
-<button class="btn bp" onclick="addCategory()">Add</button>
+<input id="new-cat-inp" placeholder="New category name..." style="margin:0;flex:1" type="text"data-asdh-binding="b145">
+<button class="btn bp" data-asdh-binding="b146">Add</button>
 </div>
 <div id="dept-cat-context" style="padding:10px 12px;margin-bottom:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:12px"></div>
 <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Use ↑ and ↓ to set the global Pharmacy category order. The same order is used in Inventory, New Request, and Pharmacy Print. Solutions is always fixed at the bottom.</div>
 <div id="cat-list" style="max-height:360px;overflow-y:auto"></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-<button class="btn bg" onclick="CM('mcat-mgr')">Close</button>
+<button class="btn bg" data-asdh-binding="b147">Close</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mlogo">
 <div class="modal" style="width:920px;max-width:96vw">
-<div class="mh"><span class="mt">🖨 Official print header / ترويسة الطباعة الرسمية</span><button class="xbtn" onclick="CM('mlogo')">✕</button></div>
+<div class="mh"><span class="mt">🖨 Official print header / ترويسة الطباعة الرسمية</span><button class="xbtn" data-asdh-binding="b148">✕</button></div>
 <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Master only. The header is applied to official printouts, including Department List, Crash Cart List and Controlled Custody. Print Orders is excluded.</p>
 <div style="display:grid;grid-template-columns:minmax(0,1fr) 220px minmax(0,1fr);gap:18px;align-items:start">
 <div>
@@ -1123,9 +1121,9 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <img id="logo-preview-img" src="" style="max-height:105px;max-width:200px;display:none;border-radius:6px;border:1px solid var(--bd)"/>
 <span id="logo-preview-none" style="color:var(--tx2);font-size:13px">No logo uploaded</span>
 </div>
-<div id="logo-drop" onclick="el('logo-file-inp').click()" ondragleave="this.style.borderColor='var(--bd)'" ondragover="event.preventDefault();this.style.borderColor='var(--ac)'" ondrop="handleLogoDrop(event)" style="border:2px dashed var(--bd);border-radius:10px;padding:16px;text-align:center;cursor:pointer;margin-bottom:14px">
+<div id="logo-drop" style="border:2px dashed var(--bd);border-radius:10px;padding:16px;text-align:center;cursor:pointer;margin-bottom:14px" data-asdh-binding="b149 b212">
 <div style="font-size:22px;margin-bottom:4px">📷</div><div style="font-size:13px;color:var(--tx2)">Click or drag image</div>
-<input accept="image/png,image/jpeg" id="logo-file-inp" onchange="handleLogoFile(this.files[0])" style="display:none" type="file"/>
+<input accept="image/png,image/jpeg" id="logo-file-inp" style="display:none" type="file"data-asdh-binding="b150">
 </div>
 </div>
 <div dir="rtl">
@@ -1137,15 +1135,15 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 </div>
 <div style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:8px">
-<button class="btn bg bsm" onclick="clearLogo()">Remove logo</button>
-<button class="btn bg" onclick="CM('mlogo')">Cancel</button>
-<button class="btn bp" onclick="saveLogo()">Save official header</button>
+<button class="btn bg bsm" data-asdh-binding="b151">Remove logo</button>
+<button class="btn bg" data-asdh-binding="b152">Cancel</button>
+<button class="btn bp" data-asdh-binding="b153">Save official header</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mreq-window">
 <div class="modal">
-<div class="mh"><span class="mt" id="mreqwin-title">Add Request Window</span><button class="xbtn" onclick="CM('mreq-window')">✕</button></div>
+<div class="mh"><span class="mt" id="mreqwin-title">Add Request Window</span><button class="xbtn" data-asdh-binding="b154">✕</button></div>
 <div class="frow">
 <div class="fg"><label>Label / الوصف</label><input id="rwin-label" placeholder="e.g. Morning Window, نافذة الصباح"/></div>
 <div class="fg"><label>Applies to / للقسم</label>
@@ -1179,14 +1177,14 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 <input id="rwin-edit-id" type="hidden"/>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-<button class="btn bg" onclick="CM('mreq-window')">Cancel</button>
-<button class="btn bp" onclick="saveReqWindow()">Save</button>
+<button class="btn bg" data-asdh-binding="b155">Cancel</button>
+<button class="btn bp" data-asdh-binding="b156">Save</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mdisp-slot">
 <div class="modal">
-<div class="mh"><span class="mt" id="mdisp-title">Add Dispense Slot</span><button class="xbtn" onclick="CM('mdisp-slot')">✕</button></div>
+<div class="mh"><span class="mt" id="mdisp-title">Add Dispense Slot</span><button class="xbtn" data-asdh-binding="b157">✕</button></div>
 <div class="frow">
 <div class="fg"><label>Label / الوصف</label><input id="dslot-label" placeholder="e.g. Morning Round, جولة الصباح"/></div>
 <div class="fg"><label>Applies to / للقسم</label>
@@ -1212,26 +1210,26 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div class="fg"><label>Notes (optional)</label><input id="dslot-notes" placeholder="e.g. Urgent orders only after hours"/></div>
 <input id="dslot-edit-id" type="hidden"/>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-<button class="btn bg" onclick="CM('mdisp-slot')">Cancel</button>
-<button class="btn bp" onclick="saveDispSlot()">Save</button>
+<button class="btn bg" data-asdh-binding="b158">Cancel</button>
+<button class="btn bp" data-asdh-binding="b159">Save</button>
 </div>
 </div>
 </div>
 <div class="modal-bg" id="mbulk-limits">
 <div class="modal" style="width:580px">
-<div class="mh"><span class="mt">📋 Bulk Set Monthly Limits</span><button class="xbtn" onclick="CM('mbulk-limits')">✕</button></div>
+<div class="mh"><span class="mt">📋 Bulk Set Monthly Limits</span><button class="xbtn" data-asdh-binding="b160">✕</button></div>
 <div class="fg"><label>Set all departments to this limit</label>
 <div class="fl g8 ic">
 <input id="bulk-limit-val" min="1" placeholder="e.g. 10" style="width:120px;margin:0" type="number"/>
-<button class="btn bp" onclick="applyBulkLimit()">Apply to All</button>
+<button class="btn bp" data-asdh-binding="b161">Apply to All</button>
 </div>
 <div class="fhint">Leave empty to remove limit (unlimited)</div>
 </div>
 <hr style="border:none;border-top:1px solid var(--bd);margin:14px 0"/>
 <div id="bulk-limits-per-dept"></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
-<button class="btn bg" onclick="CM('mbulk-limits')">Cancel</button>
-<button class="btn bp" onclick="saveBulkLimits()">Save All</button>
+<button class="btn bg" data-asdh-binding="b162">Cancel</button>
+<button class="btn bp" data-asdh-binding="b163">Save All</button>
 </div>
 </div>
 </div>
@@ -1242,8 +1240,8 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div class="ssub" style="margin:0">Direct Zebra label printing — Pharmacy Director &amp; Master only</div>
 </div>
 <div class="fl g8 ic" style="flex-wrap:wrap">
-<button class="btn bg" onclick="zebraRefreshPrinters()">↻ Detect printers</button>
-<button class="btn bg" onclick="zebraImportDatabase()">⬇ Import medicines</button>
+<button class="btn bg" data-asdh-binding="b164">↻ Detect printers</button>
+<button class="btn bg" data-asdh-binding="b165">⬇ Import medicines</button>
 </div>
 </div>
 <div class="alert-banner" id="zebra-access-denied" style="display:none">This experimental page is available only to the Pharmacy Director or Master.</div>
@@ -1273,11 +1271,11 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div class="fg"><label>Import source</label>
 <select id="zebra-source"><option value="all">All available lists</option><option value="inventory">Department inventory</option><option value="controlled">Controlled medicines</option><option value="crash">Crash carts</option></select>
 </div>
-<button class="btn bp bw" onclick="zebraImportDatabase()">Import / refresh experimental database</button>
+<button class="btn bp bw" data-asdh-binding="b166">Import / refresh experimental database</button>
 <div class="fhint" style="margin-top:8px">Duplicates are merged by medicine name and strength. This experimental label database is stored locally on this device and can be refreshed from the system lists at any time.</div>
 <hr style="border:none;border-top:1px solid var(--bd);margin:14px 0"/>
-<div class="fg"><label>Search medicine</label><input id="zebra-search" oninput="zebraFilterMedicines()" placeholder="Type medicine name or strength…"/></div>
-<div class="fg"><label>Medicine</label><select id="zebra-med" onchange="zebraSelectMedicine()" size="8" style="min-height:190px"></select></div>
+<div class="fg"><label>Search medicine</label><input id="zebra-search" placeholder="Type medicine name or strength…"data-asdh-binding="b167"></div>
+<div class="fg"><label>Medicine</label><select id="zebra-med" size="8" style="min-height:190px" data-asdh-binding="b168"></select></div>
 </div>
 </div>
 </div>
@@ -1285,11 +1283,11 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div class="card">
 <div class="ch"><span class="ct">3. Label content</span></div>
 <div class="cb">
-<div class="fg"><label>Medicine name</label><input id="zebra-name" oninput="zebraUpdatePreview()"/></div>
-<div class="fg"><label>Strength</label><input id="zebra-strength" oninput="zebraUpdatePreview()"/></div>
-<div class="fg"><label>Label type</label><select id="zebra-template" onchange="zebraTemplateChanged()"><option value="name_strength">Medicine + strength only</option><option value="name_strength_expiry">Medicine + strength + expiry</option></select></div>
-<div class="fg" id="zebra-expiry-wrap" style="display:none"><label>Expiry date (Gregorian)</label><input id="zebra-expiry" onchange="zebraUpdatePreview()" type="date"/></div>
-<div class="fg"><label>Optional footer</label><input id="zebra-footer" maxlength="60" oninput="zebraUpdatePreview()" placeholder="e.g. Keep refrigerated"/></div>
+<div class="fg"><label>Medicine name</label><input id="zebra-name"data-asdh-binding="b169"></div>
+<div class="fg"><label>Strength</label><input id="zebra-strength"data-asdh-binding="b170"></div>
+<div class="fg"><label>Label type</label><select id="zebra-template" data-asdh-binding="b171"><option value="name_strength">Medicine + strength only</option><option value="name_strength_expiry">Medicine + strength + expiry</option></select></div>
+<div class="fg" id="zebra-expiry-wrap" style="display:none"><label>Expiry date (Gregorian)</label><input id="zebra-expiry" type="date"data-asdh-binding="b172"></div>
+<div class="fg"><label>Optional footer</label><input id="zebra-footer" maxlength="60" placeholder="e.g. Keep refrigerated"data-asdh-binding="b173"></div>
 </div>
 </div>
 <div class="card">
@@ -1299,9 +1297,9 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div id="zebra-preview" style="background:#fff;color:#000;border:1px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:4px;overflow:hidden;width:400px;height:200px;font-family:Arial,sans-serif"></div>
 </div>
 <div class="fl g8" style="margin-top:14px;flex-wrap:wrap">
-<button class="btn bs" onclick="zebraPrintLabels()">🖨 Print labels</button>
-<button class="btn bg" onclick="zebraTestLabel()">Test label</button>
-<button class="btn bg" onclick="zebraDownloadZPL()">Download ZPL</button>
+<button class="btn bs" data-asdh-binding="b174">🖨 Print labels</button>
+<button class="btn bg" data-asdh-binding="b175">Test label</button>
+<button class="btn bg" data-asdh-binding="b176">Download ZPL</button>
 </div>
 <div class="fhint" id="zebra-message" style="margin-top:10px"></div>
 </div>
@@ -1311,48 +1309,39 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 <div id="parea"></div>
 <div id="toast"></div>
-<script src="./public/assets/js/modules/03-core-application-firebase-state-auth.js?v=R6.65.0"></script>
 
 
-<div class="modal-bg" id="v13-receive-modal"><div class="modal v13-wide"><div class="mh"><span class="mt">Receive &amp; Add Expiry / استلام وإضافة الصلاحية</span><button class="xbtn" onclick="CM('v13-receive-modal')">✕</button></div><div class="fhint" id="v13-receive-meta" style="margin-bottom:10px"></div><div class="v13-review"><table><thead><tr><th>#</th><th>Medication</th><th>Received Qty</th><th>Expiry date</th><th>Batch / Lot</th></tr></thead><tbody id="v13-receive-body"></tbody></table></div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" onclick="CM('v13-receive-modal')">Cancel</button><button class="btn bs" onclick="v13SaveReceive()">Confirm all / تأكيد الكل</button></div></div></div>
-<script id="v13-complete-clean-fix-script" src="./public/assets/js/modules/04-v13-complete-clean-fix-script.js?v=R6.65.0"></script>
-
-<script src="./public/assets/js/modules/05-controlled-ui-compatibility-fixes.js?v=R6.65.0"></script>
-
-<script src="./public/assets/js/modules/06-zebra-label-printing.js?v=R6.65.0"></script>
-<script src="./public/assets/js/modules/07-expiry-requests-and-primary-features.js?v=R6.65.0"></script>
-<script src="./public/assets/js/modules/08-controlled-shared-list-filters.js?v=R6.65.0"></script>
+<div class="modal-bg" id="v13-receive-modal"><div class="modal v13-wide"><div class="mh"><span class="mt">Receive &amp; Add Expiry / استلام وإضافة الصلاحية</span><button class="xbtn" data-asdh-binding="b177">✕</button></div><div class="fhint" id="v13-receive-meta" style="margin-bottom:10px"></div><div class="v13-review"><table><thead><tr><th>#</th><th>Medication</th><th>Received Qty</th><th>Expiry date</th><th>Batch / Lot</th></tr></thead><tbody id="v13-receive-body"></tbody></table></div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" data-asdh-binding="b178">Cancel</button><button class="btn bs" data-asdh-binding="b179">Confirm all / تأكيد الكل</button></div></div></div>
 
 
 
 <div class="modal-bg" id="mwh-stock-pro">
 <div class="modal" style="width:760px">
-<div class="mh"><span class="mt" id="mwh-stock-title">Warehouse custody</span><button class="xbtn" onclick="CM('mwh-stock-pro')">✕</button></div>
+<div class="mh"><span class="mt" id="mwh-stock-title">Warehouse custody</span><button class="xbtn" data-asdh-binding="b180">✕</button></div>
 <input id="mwh-stock-med-id" type="hidden"/>
 <div class="wh-stock-grid">
 <div class="fg"><label>System quantity / كمية النظام</label><input id="mwh-system" min="0" type="number"/></div>
 <div class="fg"><label>Outside-system quantity / أدوية خارج النظام</label><input id="mwh-outside" min="0" type="number"/></div>
 </div>
-<div class="card" style="margin-top:4px"><div class="ch"><div><span class="ct">Expiry dates / تواريخ الانتهاء</span><div class="fhint">Add any number of expiry dates. Linking a quantity to each date is optional.</div></div><button class="btn bg bsm" onclick="whAddBatchRow()">+ Add expiry</button></div><div class="cb" id="mwh-batches"></div></div>
+<div class="card" style="margin-top:4px"><div class="ch"><div><span class="ct">Expiry dates / تواريخ الانتهاء</span><div class="fhint">Add any number of expiry dates. Linking a quantity to each date is optional.</div></div><button class="btn bg bsm" data-asdh-binding="b181">+ Add expiry</button></div><div class="cb" id="mwh-batches"></div></div>
 <div class="fhint">Unallocated quantities are allowed. During dispensing you may optionally choose a specific expiry batch.</div>
-<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-stock-pro')">Cancel</button><button class="btn bp" onclick="whSaveStockPro()">Save custody</button></div>
+<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" data-asdh-binding="b182">Cancel</button><button class="btn bp" data-asdh-binding="b183">Save custody</button></div>
 </div>
 </div>
 <div class="modal-bg" id="mcrash-cart-pro">
 <div class="modal" style="width:680px">
-<div class="mh"><span class="mt">Add Crash Cart / إضافة عربة</span><button class="xbtn" onclick="CM('mcrash-cart-pro')">✕</button></div>
+<div class="mh"><span class="mt">Add Crash Cart / إضافة عربة</span><button class="xbtn" data-asdh-binding="b184">✕</button></div>
 <div class="frow"><div class="fg"><label>Cart name / اسم العربة</label><input id="ccp-name"/></div><div class="fg"><label>Cart number / رقم العربة</label><input id="ccp-number"/></div></div>
 <div class="frow"><div class="fg"><label>Assigned department / القسم</label><select id="ccp-dept"></select></div><div class="fg"><label>Location / الموقع</label><input id="ccp-location"/></div></div>
 <div class="fg"><label>Current seal number / رقم القفل الحالي</label><input id="ccp-seal"/></div>
-<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM('mcrash-cart-pro')">Cancel</button><button class="btn bp" onclick="crashSaveCartPro()">Create cart</button></div>
+<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" data-asdh-binding="b185">Cancel</button><button class="btn bp" data-asdh-binding="b186">Create cart</button></div>
 </div>
 </div>
-<script src="./public/assets/js/modules/09-warehouse-batch-editor.js?v=R6.65.0"></script>
 
 <div class="modal-bg" id="mwh-receive">
 <div class="modal" style="width:760px">
-<div class="mh"><span class="mt">Receive medicines into warehouse / استلام أدوية للمستودع</span><button class="xbtn" onclick="CM('mwh-receive')">✕</button></div>
-<div class="fg"><label>Search shared medicine list / البحث في القائمة المشتركة</label><input id="wh-receive-search" oninput="whReceiveRenderSearch()" placeholder="Medication name, MOH or NUPCO code..." type="text"/></div>
+<div class="mh"><span class="mt">Receive medicines into warehouse / استلام أدوية للمستودع</span><button class="xbtn" data-asdh-binding="b187">✕</button></div>
+<div class="fg"><label>Search shared medicine list / البحث في القائمة المشتركة</label><input id="wh-receive-search" placeholder="Medication name, MOH or NUPCO code..." type="text"data-asdh-binding="b188"></div>
 <div class="wh-receive-results" id="wh-receive-results"></div>
 <input id="wh-receive-med-id" type="hidden"/>
 <div class="alert-banner-y" id="wh-receive-selected" style="display:none;margin-top:12px"></div>
@@ -1363,49 +1352,39 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div><label>Batch / Lot (optional)</label><input id="wh-receive-lot" placeholder="Batch number" type="text"/></div>
 </div>
 <div class="fhint" style="margin-top:6px">If an expiry date is entered, the received quantity is linked to that expiry batch. Leaving it blank adds unallocated stock.</div>
-<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-receive')">Cancel</button><button class="btn bs" onclick="whReceiveSave()">Receive &amp; save / استلام وحفظ</button></div>
+<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" data-asdh-binding="b189">Cancel</button><button class="btn bs" data-asdh-binding="b190">Receive &amp; save / استلام وحفظ</button></div>
 </div>
 </div>
-<script src="./public/assets/js/modules/10-warehouse-receiving-workflow.js?v=R6.65.0"></script>
-<script src="./public/assets/js/modules/11-master-backup-restore-access.js?v=R6.65.0"></script>
-<script src="./public/assets/js/modules/12-local-daily-backups-system-health.js?v=R6.65.0"></script>
-<script src="./public/assets/js/modules/13-pilot-controlled-public-expiry-fixes.js?v=R6.65.0"></script>
 
 <div class="modal-bg" id="mcc-report">
 <div class="modal" style="width:860px">
-<div class="mh"><span class="mt">بلاغ فتح الكراش كارت / Crash Cart Report</span><button class="xbtn" onclick="CM('mcc-report')">✕</button></div>
+<div class="mh"><span class="mt">بلاغ فتح الكراش كارت / Crash Cart Report</span><button class="xbtn" data-asdh-binding="b191">✕</button></div>
 <input id="ccr-cart-id" type="hidden"/>
 <div class="cc-report-meta">
 <div class="fg"><label>Reason for opening / سبب فتح العربة</label><select id="ccr-reason"><option disabled="" selected="" value="">Select reason / اختر سبب فتح العربة...</option><option>Code Blue / كود بلو</option><option>Emergency intubation / تنبيب طارئ</option><option>Rapid response / الاستجابة السريعة</option><option>Medication emergency / طوارئ دوائية</option><option>Training or drill / تدريب أو محاكاة</option><option value="other">Other / سبب آخر</option></select></div>
 <div class="fg"><label>Old seal number / رقم القفل القديم</label><input id="ccr-old-seal" placeholder="Old seal number / رقم القفل القديم"/></div>
 </div>
 <div class="card"><div class="ch"><div><span class="ct">Used medications / الأدوية المستخدمة</span><div class="fhint">Select the medicine and consumed quantity. Selecting the consumed expiry is optional at reporting time; pharmacy will confirm it during replacement.</div></div></div><div class="cb" id="ccr-items"></div></div>
-<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM('mcc-report')">Cancel / إلغاء</button><button class="btn bd2c" onclick="ccSubmitReport()">Submit report / إرسال البلاغ</button></div>
+<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" data-asdh-binding="b192">Cancel / إلغاء</button><button class="btn bd2c" data-asdh-binding="b193">Submit report / إرسال البلاغ</button></div>
 </div>
 </div>
 <div class="modal-bg" id="mcc-close">
 <div class="modal crash-response-modal">
-<div class="mh"><span class="mt">رد الصيدلية على البلاغ / Pharmacy Response</span><button class="xbtn" onclick="CM('mcc-close')">✕</button></div>
+<div class="mh"><span class="mt">رد الصيدلية على البلاغ / Pharmacy Response</span><button class="xbtn" data-asdh-binding="b194">✕</button></div>
 <input id="ccc-report-id" type="hidden"/>
 <div class="cc-report-meta">
 <div class="fg"><label>New seal number / رقم القفل الجديد</label><input id="ccc-new-seal" placeholder="New seal number / رقم القفل الجديد"/></div>
 <div class="fg"><label>Pharmacy note / ملاحظة الصيدلية</label><input id="ccc-note" placeholder="Optional note / ملاحظة اختيارية"/></div>
 </div>
 <div class="card"><div class="ch"><div><span class="ct">Exact dated replacement / الاستبدال المرتبط بتاريخ محدد</span><div class="fhint">For every medicine choose whether the new dated quantity replaces stock from a specific old expiry or is added without removing an old expiry. The final quantity cannot exceed the cart standard.</div></div></div><div class="tw"><table class="crash-response-table"><thead><tr><th>Medication</th><th>Reported qty</th><th>Current dated stock</th><th>Action</th><th>Old expiry to deduct</th><th>Replacement qty</th><th>New expiry</th></tr></thead><tbody id="ccc-items"></tbody></table></div><div class="crash-response-validation" id="ccc-validation"></div></div>
-<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM('mcc-close')">Cancel / إلغاء</button><button class="btn bs" id="ccc-save-btn" onclick="ccSavePharmacyResponse()">Save and close / حفظ وإغلاق البلاغ</button></div>
+<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" data-asdh-binding="b195">Cancel / إلغاء</button><button class="btn bs" id="ccc-save-btn" data-asdh-binding="b196">Save and close / حفظ وإغلاق البلاغ</button></div>
 </div>
 </div>
-<script src="./public/assets/js/modules/14-controlled-print-layout-and-tools.js?v=R6.65.0"></script>
-
-
-<script src="./public/assets/js/modules/15-controlled-print-pages.js?v=R6.65.0"></script>
-
-<script src="./public/assets/js/modules/16-expiry-dashboard-extension.js?v=R6.65.0"></script>
 
 <div class="pg" id="pg-system-health">
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
 <div><div class="stitle">🩺 System Health</div><div class="ssub" style="margin:0">Master-only diagnostics — v1.2</div></div>
-<button class="btn bp" onclick="runSystemHealthDiagnostics()" type="button">Run Diagnostics</button>
+<button class="btn bp" type="button" data-asdh-binding="b197">Run Diagnostics</button>
 </div>
 <div class="health-grid">
 <div class="health-card"><div class="health-label">Network</div><div class="health-value" id="health-network">—</div></div>
@@ -1415,100 +1394,28 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 <div class="card"><div class="ch"><span class="ct">Diagnostics Report</span><span class="fhint" id="health-last-run"></span></div><div class="cb"><div class="health-report" id="health-report">Press “Run Diagnostics”.</div></div></div>
 </div>
-<script id="system-health-script" src="./public/assets/js/modules/17-system-health-script.js?v=R6.65.0"></script>
 
 
 <div class="modal-bg" id="mwh-bulk-receive">
 <div class="modal" style="width:min(1180px,98vw);max-width:98vw">
-<div class="mh"><span class="mt">Bulk warehouse receiving / استلام عدة أدوية للمستودع</span><button class="xbtn" onclick="CM('mwh-bulk-receive')">✕</button></div>
+<div class="mh"><span class="mt">Bulk warehouse receiving / استلام عدة أدوية للمستودع</span><button class="xbtn" data-asdh-binding="b198">✕</button></div>
 <div class="alert-banner-y">Enter either a NUPCO code or MOH code in the first column. The system identifies the code automatically. Add as many rows as needed.</div>
-<div class="wh-bulk-toolbar"><button class="btn bg bsm" onclick="whBulkAddReceiveRow()" type="button">+ Add row / إضافة صف</button><span class="fhint">Expiry and batch may be left blank and added later.</span></div>
+<div class="wh-bulk-toolbar"><button class="btn bg bsm" type="button" data-asdh-binding="b199">+ Add row / إضافة صف</button><span class="fhint">Expiry and batch may be left blank and added later.</span></div>
 <div class="wh-bulk-scroll"><table class="wh-bulk-table"><thead><tr><th class="code">NUPCO or MOH code</th><th class="match">Matched medicine</th><th class="qty">Received qty</th><th class="exp">Expiry (optional)</th><th class="lot">Batch (optional)</th><th class="act"></th></tr></thead><tbody id="wh-bulk-receive-rows"></tbody></table></div>
-<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-bulk-receive')">Cancel</button><button class="btn bs" onclick="whBulkReceiveSave()">Receive matched rows / استلام الصفوف المطابقة</button></div>
+<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" data-asdh-binding="b200">Cancel</button><button class="btn bs" data-asdh-binding="b201">Receive matched rows / استلام الصفوف المطابقة</button></div>
 </div>
 </div>
 <div class="modal-bg" id="mwh-bulk-dispense">
 <div class="modal" style="width:min(1180px,98vw);max-width:98vw">
-<div class="mh"><span class="mt">Bulk dispense to pharmacy custody officer / صرف متعدد لمسؤول أدوية الصيدلية</span><button class="xbtn" onclick="CM('mwh-bulk-dispense')">✕</button></div>
+<div class="mh"><span class="mt">Bulk dispense to pharmacy custody officer / صرف متعدد لمسؤول أدوية الصيدلية</span><button class="xbtn" data-asdh-binding="b202">✕</button></div>
 <div class="alert-banner-y">Enter either a NUPCO code or MOH code. Each valid row creates a pending warehouse-to-pharmacy transfer for pharmacy acceptance.</div>
-<div class="wh-bulk-toolbar"><button class="btn bg bsm" onclick="whBulkAddDispenseRow()" type="button">+ Add row / إضافة صف</button><span class="fhint">The quantity cannot exceed the current warehouse balance.</span></div>
+<div class="wh-bulk-toolbar"><button class="btn bg bsm" type="button" data-asdh-binding="b203">+ Add row / إضافة صف</button><span class="fhint">The quantity cannot exceed the current warehouse balance.</span></div>
 <div class="wh-bulk-scroll"><table class="wh-bulk-table"><thead><tr><th class="code">NUPCO or MOH code</th><th class="match">Matched medicine / available</th><th class="qty">Dispense qty</th><th class="exp">Expiry</th><th class="lot">Batch (optional)</th><th class="act"></th></tr></thead><tbody id="wh-bulk-dispense-rows"></tbody></table></div>
-<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" onclick="CM('mwh-bulk-dispense')">Cancel</button><button class="btn bp" onclick="whBulkDispenseSave()">Create pending transfers / إنشاء حركات الصرف</button></div>
+<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" data-asdh-binding="b204">Cancel</button><button class="btn bp" data-asdh-binding="b205">Create pending transfers / إنشاء حركات الصرف</button></div>
 </div>
 </div>
-<script id="wh-bulk-rx-dx-script" src="./public/assets/js/modules/18-wh-bulk-rx-dx-script.js?v=R6.65.0"></script>
-
-<script src="./public/assets/js/modules/19-test-data-cleanup-guard.js?v=R6.65.0"></script>
-<script id="psychotropic-shared-list-v12" src="./public/assets/js/modules/20-psychotropic-shared-list-v12.js?v=R6.65.0"></script>
-<script id="r664-psychotropic-pharmacy-stock-import-20260728" src="./public/assets/js/modules/21-r664-psychotropic-pharmacy-stock-import-20260728.js?v=R6.65.0"></script>
-<script id="pharmacy-narcotic-stock-and-independent-list-mode-v12" src="./public/assets/js/modules/22-pharmacy-narcotic-stock-and-independent-list-mode-v12.js?v=R6.65.0"></script>
-<script id="category-management-final-v12" src="./public/assets/js/modules/23-category-management-final-v12.js?v=R6.65.0"></script>
-
-<script id="inventory-name-merge-feature" src="./public/assets/js/modules/24-inventory-name-merge-feature.js?v=R6.65.0"></script>
-
-<script id="pharmacy-announcements-feature" src="./public/assets/js/modules/25-pharmacy-announcements-feature.js?v=R6.65.0"></script>
-<script src="./public/assets/js/modules/26-department-rename-repair.js?v=R6.65.0"></script>
-
-<script id="announcements-selection-persist-fix" src="./public/assets/js/modules/27-announcements-selection-persist-fix.js?v=R6.65.0"></script>
-
-<script id="v13-final-controlled-bulk-print-fix" src="./public/assets/js/modules/28-v13-final-controlled-bulk-print-fix.js?v=R6.65.0"></script>
-
-<script id="v13-classification-tools" src="./public/assets/js/modules/29-v13-classification-tools.js?v=R6.65.0"></script>
-
-<script id="v13-w-supervisor-inventory-main" src="./public/assets/js/modules/30-v13-w-supervisor-inventory-main.js?v=R6.65.0"></script>
-
-<script id="v13-x-controlled-request-fix" src="./public/assets/js/modules/31-v13-x-controlled-request-fix.js?v=R6.65.0"></script>
-<script id="aa-final-controlled-stability-script" src="./public/assets/js/modules/32-aa-final-controlled-stability-script.js?v=R6.65.0"></script>
-
-
-<script id="v13-ap-custodian-bulk-replacement-fix" src="./public/assets/js/modules/33-v13-ap-custodian-bulk-replacement-fix.js?v=R6.65.0"></script>
-
-<script id="v13-as-crash-opening-log" src="./public/assets/js/modules/34-v13-as-crash-opening-log.js?v=R6.65.0"></script>
-
-<script id="v14nrse-main" src="./public/assets/js/modules/35-v14nrse-main.js?v=R6.65.0"></script>
-
-<script id="v14dp-main" src="./public/assets/js/modules/36-v14dp-main.js?v=R6.65.0"></script>
-
-<script id="v16-radical-fixes" src="./public/assets/js/modules/37-v16-radical-fixes.js?v=R6.65.0"></script>
-
-<script id="v16-user-operations-main" src="./public/assets/js/modules/38-v16-user-operations-main.js?v=R6.65.0"></script>
-
-<script id="final-role-routing-system-health" src="./public/assets/js/modules/39-final-role-routing-system-health.js?v=R6.65.0"></script>
-<script id="v16-clean-optimized-script" src="./public/assets/js/modules/40-v16-clean-optimized-script.js?v=R6.65.0"></script>
-
-<script id="v16-inventory-status-merge-clean-script" src="./public/assets/js/modules/41-v16-inventory-status-merge-clean-script.js?v=R6.65.0"></script>
-
-<script id="weekly-request-grid-bulk-classification-clean-script" src="./public/assets/js/modules/42-weekly-request-grid-bulk-classification-clean-script.js?v=R6.65.0"></script>
-
-<script id="similar-medicines-workbench-v2-script" src="./public/assets/js/modules/43-similar-medicines-workbench-v2-script.js?v=R6.65.0"></script>
-
-<script id="ccx-inventory-redesign-script" src="./public/assets/js/modules/44-ccx-inventory-redesign-script.js?v=R6.65.0"></script>
-
-<script id="asdh-final-department-controlled-fix-script" src="./public/assets/js/modules/45-asdh-final-department-controlled-fix-script.js?v=R6.65.0"></script>
 <!-- Public-snapshot Crash Cart recovery removed in the hardened production build.
      Operational carts are loaded only from authenticated floorstock_state/crash_carts. -->
-<script id="r664-private-crash-cart-source-only" src="./public/assets/js/modules/46-r664-private-crash-cart-source-only.js?v=R6.65.0"></script>
-
-<script id="asdh-authoritative-final-fixes-script" src="./public/assets/js/modules/47-asdh-authoritative-final-fixes-script.js?v=R6.65.0"></script>
-
-<script id="asdh-final-request-completion-script" src="./public/assets/js/modules/48-asdh-final-request-completion-script.js?v=R6.65.0"></script>
-
-<script id="asdh-final-persistence-actions-20260725" src="./public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js?v=R6.65.0"></script>
-<script id="r617-integrated-operations" src="./public/assets/js/modules/50-r617-integrated-operations.js?v=R6.65.0"></script><script id="asdhealth-canonical-r6-32-20260727" src="./public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js?v=R6.65.0"></script>
-
-<script id="r635-master-backup-delete-and-crash-print-sync" src="./public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.65.0"></script>
-
-
-
-
-<script id="r661-authoritative-inventory-safety" src="./public/assets/js/modules/53-r661-authoritative-inventory-safety.js?v=R6.65.0"></script>
-
-<script id="r662-accountability-draft-protection" src="./public/assets/js/modules/54-r662-accountability-draft-protection.js?v=R6.65.0"></script>
-<script id="r647-crash-cart-authoritative-boot" src="./public/assets/js/modules/55-r647-crash-cart-authoritative-boot.js?v=R6.65.0"></script>
-<script id="r664-security-idle-timeout" src="./public/assets/js/modules/56-r664-security-idle-timeout.js?v=R6.65.0"></script>
-<script id="r664-production-console-policy" src="./public/assets/js/modules/57-r664-production-console-policy.js?v=R6.65.0"></script>
-<script id="r664-public-privacy-rewrite" src="./public/assets/js/modules/58-r664-public-privacy-rewrite.js?v=R6.65.0"></script>
-
-<script id="r664-security-complete-runtime" src="./public/assets/js/modules/59-r664-security-complete-runtime.js?v=R6.65.0"></script>
+<script type="module" src="./public/assets/js/main.js?v=R6.65.1"></script>
 </body>
 </html>

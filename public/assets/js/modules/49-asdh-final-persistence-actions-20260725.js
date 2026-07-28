@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 52
- * Original id: asdh-final-persistence-actions-20260725
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 
@@ -261,3 +256,12 @@ window.delDept=async function(id){
 };
 
 })();
+
+
+
+
+
+
+
+
+export {};

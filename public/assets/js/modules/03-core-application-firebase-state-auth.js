@@ -1,18 +1,15 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 6
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
+import { publishLegacy } from '../core/legacy-registry.js';
+
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
-var FIREBASE_CONFIG={apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
+globalThis.FIREBASE_CONFIG = {apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
 FB_APP=window.FB_APP||null;FB_AUTH=window.FB_AUTH||null;FB_DB=window.FB_DB||null;FB_FUNCTIONS=window.FB_FUNCTIONS||null;
 // Global Firebase handles for injected modules and Safari/WebKit compatibility
 window.FB_APP=null;
 window.FB_AUTH=null;
 window.FB_DB=null;
 window.FB_FUNCTIONS=null;
-var _lazyScripts={};
+globalThis._lazyScripts = {};
 function loadScriptOnce(key,src,test){
   if(test&&test())return Promise.resolve();
   if(_lazyScripts[key])return _lazyScripts[key];
@@ -27,11 +24,11 @@ function ensurePDFJS(){return loadScriptOnce('PDF','https://cdnjs.cloudflare.com
 function ensureZXing(){return loadScriptOnce('Barcode scanner','https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js',function(){return typeof ZXing!=='undefined'})}
 function ensureFirebaseFunctions(){return loadScriptOnce('Firebase Functions','https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js',function(){return !!(window.firebase&&firebase.functions)}).then(function(){FB_FUNCTIONS=firebase.functions();return FB_FUNCTIONS})}
 function debounce(fn,wait){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},wait)}}
-var renderInvDebounced=debounce(function(){renderInv()},220);
-var renderReqFormDebounced=debounce(function(){renderReqForm()},220);
-var renderControlledDebounced=debounce(function(){renderControlled()},220);
-var _firebasePersistenceAttempted=false;
-var _firebaseReadyPromise=null;
+globalThis.renderInvDebounced = debounce(function(){renderInv()},220);
+globalThis.renderReqFormDebounced = debounce(function(){renderReqForm()},220);
+globalThis.renderControlledDebounced = debounce(function(){renderControlled()},220);
+globalThis._firebasePersistenceAttempted = false;
+globalThis._firebaseReadyPromise = null;
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
@@ -85,7 +82,9 @@ function waitForFirebase(timeoutMs){
 window.waitForFirebase=waitForFirebase;
 
 // Firestore is the only operational data store. Memory is a short-lived UI cache, never persistent storage.
-var _pendingWrites=0,_trackedSaves=new Set(),_lastSaveFailure=null;
+globalThis._pendingWrites = 0;
+globalThis._trackedSaves = new Set();
+globalThis._lastSaveFailure = null;
 function _trackSave(promise,label){
   var p=(promise&&typeof promise.then==='function')?promise:Promise.resolve(promise);
   _pendingWrites++;_trackedSaves.add(p);
@@ -276,7 +275,7 @@ function fsStateApplyCache(nextCache){
   return changed;
 }
 
-var S={
+globalThis.S = {
   cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',
   init:async function(statusCallback,profileHint){
     S.stopRealtime();
@@ -454,7 +453,7 @@ var S={
     return S.s(k,a).then(function(){return true;});
   }
 };
-var _publicSyncWarningAt=0;
+globalThis._publicSyncWarningAt = 0;
 function warnPublicSync(scope,error){
   console.error((scope||'Public QR')+' sync failed',error);
   var now=Date.now();if(now-_publicSyncWarningAt<12000)return;_publicSyncWarningAt=now;
@@ -505,7 +504,7 @@ async function syncPublicExpiry(deptId,rows){
   return true;
 }
 // Per-dept keys: medications are stored per dept
-var FS_R17_MED_MIGRATION_PENDING={};
+globalThis.FS_R17_MED_MIGRATION_PENDING = {};
 function fsR17Now(){return typeof nowISO==='function'?nowISO():new Date().toISOString()}
 function fsR17MedNorm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
 function fsR17MedIdentity(v){var stop={mg:1,mcg:1,g:1,gm:1,ml:1,l:1,iu:1,unit:1,units:1,tab:1,tabs:1,tablet:1,tablets:1,cap:1,caps:1,capsule:1,capsules:1,amp:1,amps:1,ampoule:1,ampoules:1,vial:1,vials:1,bottle:1,bottles:1,bag:1,bags:1,syrup:1,solution:1,solutions:1,injection:1,injections:1,cream:1,ointment:1,drops:1,inhaler:1,inhalers:1,suppository:1,suppositories:1,oral:1,iv:1,im:1,sc:1,infusion:1,for:1,of:1};return fsR17MedNorm(v).split(/\s+/).filter(function(x){return x&&!stop[x]}).join(' ')}
@@ -527,7 +526,7 @@ window.moveDrugOrder=async function(id,deptId,dir){var all=getMeds(deptId).slice
 window.fsR17RefreshMedicationReferences=async function(deptId,medId,oldName,newName){var tasks=[];if(typeof getExpiry==='function'&&typeof setExpiry==='function'){var exp=getExpiry(deptId),changed=false,next=exp.map(function(x){if(String(x.medId)===String(medId)){changed=true;return Object.assign({},x,{medName:newName})}return x});if(changed)tasks.push(setExpiry(deptId,next))}if(typeof crashCarts==='function'&&typeof setCrashCarts==='function'){var carts=JSON.parse(JSON.stringify(crashCarts()||[])),cartChanged=false;carts.forEach(function(c){if(String(c.deptId)!==String(deptId))return;(c.items||[]).forEach(function(it){if(String(it.medId||'')===String(medId)||fsR17MedNorm(it.name)===fsR17MedNorm(oldName)){it.medId=medId;it.name=newName;it.genericName=newName;cartChanged=true}})});if(cartChanged)tasks.push(setCrashCarts(carts))}for(var z=0;z<2;z++){var key=z?'medication_freeze_rules_v3':'medication_visibility_rules_v3',map=Object.assign({},S.g(key)||{}),rk='med:'+medId;if(map[rk]){map[rk]=Object.assign({},map[rk],{medId:medId,name:newName,updatedAt:fsR17Now()});tasks.push(S.s(key,map))}}await Promise.all(tasks)};
 window.fsR17MigrateMedicationIdentity=async function(){var depts=typeof gd==='function'?(gd()||[]):[];for(var di=0;di<depts.length;di++)await setMeds(depts[di].id,getMeds(depts[di].id));var keys=['medication_visibility_rules_v3','medication_freeze_rules_v3'];for(var ki=0;ki<keys.length;ki++){var key=keys[ki],old=Object.assign({},S.g(key)||{}),next={},changed=false;Object.keys(old).forEach(function(k){if(k.indexOf('med:')===0){next[k]=old[k];return}var rule=old[k]||{},targets=rule.allDepartments===true?depts:depts.filter(function(d){var ids=(rule.departmentIds||rule.deptIds||[]).map(String);return ids.indexOf(String(d.id))>=0});targets.forEach(function(d){getMeds(d.id).forEach(function(m){var names=[m.name].concat(m.aliases||[]),match=names.some(function(n){return fsR17MedNorm(n)===fsR17MedNorm(rule.name||k)||fsR17MedIdentity(n)===String(k).replace(/^identity:/,'')});if(match){next['med:'+m.id]=Object.assign({},rule,{medId:m.id,name:m.name,allDepartments:false,departmentIds:[d.id],deptIds:[d.id]});changed=true}})});if(!targets.length)next[k]=rule});if(changed||Object.keys(next).length!==Object.keys(old).length)await S.s(key,next)}};
 function fsR17Hash(v){var h=2166136261,s=String(v||'');for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
-var FS_R18_EXPIRY_MIGRATION_PENDING={};
+globalThis.FS_R18_EXPIRY_MIGRATION_PENDING = {};
 function fsR18ExpiryId(){return 'ex_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,9)}
 function fsR17NormalizeExpiryRow(deptId,row,index,usedIds){
   row=Object.assign({},row||{});
@@ -641,7 +640,10 @@ function delShelf(deptId,id){return setShelves(deptId,(getShelves(deptId)||[]).f
 function updShelf(deptId,id,d){var arr=(getShelves(deptId)||[]).slice(),i=arr.findIndex(function(x){return String(x.id)===String(id)});if(i<0)return Promise.resolve(false);arr[i]=Object.assign({},arr[i],d||{});return setShelves(deptId,arr).then(function(){return true})}
 function getAlertSettings(deptId){return S.g('alerts_'+deptId)||{d1:30,d2:7}}
 function setAlertSettings(deptId,obj){return S.s('alerts_'+deptId,obj)}
-var _gdRawRef=null,_gdDeletedRef=null,_gdFiltered=[],_deletedDeptRepairBusy=false;
+globalThis._gdRawRef = null;
+globalThis._gdDeletedRef = null;
+globalThis._gdFiltered = [];
+globalThis._deletedDeptRepairBusy = false;
 function gd(){var raw=S.g('departments')||[],deleted=S.g('deleted_departments')||[];if(raw!==_gdRawRef||deleted!==_gdDeletedRef){_gdRawRef=raw;_gdDeletedRef=deleted;var blocked=new Set((Array.isArray(deleted)?deleted:[]).map(function(x){return String(x)}));_gdFiltered=(Array.isArray(raw)?raw:[]).filter(function(d){return !blocked.has(String(d&&d.id))})}return _gdFiltered.slice()}
 async function repairDeletedDepartments(){
   if(_deletedDeptRepairBusy)return;
@@ -679,7 +681,7 @@ function todayISO(){return new Date().toISOString().slice(0,10)}
 function nowISO(){return window.fsNowISO?window.fsNowISO():new Date().toISOString()}
 
 // ── SEED ─────────────────────────────────────────────────
-var MEDS = [
+globalThis.MEDS = [
   {n:"Acetylcysteine 2g/10ml Ampoule",c:"Injections",mn:1,mx:5,ha:0,hz:0,ls:0},
   {n:"Actilyse 50mg Syringe",c:"Injections",mn:1,mx:6,ha:1,hz:0,ls:0},
   {n:"Acyclovir 250mg Vial",c:"Injections",mn:1,mx:5,ha:0,hz:0,ls:0},
@@ -951,7 +953,12 @@ window.fsNowISO=function(){return new Date().toISOString()};
 window.fsMedNorm=function(value){return String(value==null?'':value).toLowerCase().normalize('NFKD').replace(/[̀-ًͯ-ٰٟ]/g,'').replace(/أ|إ|آ/g,'ا').replace(/&/g,' and ').replace(/(\d)\s*(mg|mcg|gm|g|ml|iu|mmol|meq|%)/gi,'$1 $2').replace(/[^a-z0-9؀-ۿ%]+/g,' ').replace(/\s+/g,' ').trim()};
 
 // ── STATE ────────────────────────────────────────────────
-var CU=null,RFS='all',EDID=null,FRID=null,IROWS=[],SROLE='pharmacy';
+globalThis.CU = null;
+globalThis.RFS = 'all';
+globalThis.EDID = null;
+globalThis.FRID = null;
+globalThis.IROWS = [];
+globalThis.SROLE = 'pharmacy';
 function getAppUrl(){
   var url=new URL(window.location.href);
   url.search='';
@@ -1490,7 +1497,7 @@ async function deleteSelected(){
 }
 
 // ── REQUESTS ─────────────────────────────────────────────
-var RFS='all';
+globalThis.RFS = 'all';
 function filterR(s,btn){
   RFS=s;document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('on')});btn.classList.add('on');renderReqs();
 }
@@ -1593,7 +1600,7 @@ function renderMyReqs(){
 
 
 // ── CONTROLLED & PSYCHOTROPIC MEDICINES ────────────────────────────────
-var CTL_VIEW='overview';
+globalThis.CTL_VIEW = 'overview';
 function ctlCatalog(){return S.g('controlled_catalog')||[]}
 async function ctlSetCatalog(v){var out=await S.s('controlled_catalog',v);try{if(window.FB_DB&&typeof ctlPublishDept==='function'){var ids=(typeof gd==='function'?(gd()||[]):[]).map(function(d){return d.id});await Promise.all(ids.map(function(id){return ctlPublishDept(id)}))}}catch(e){warnPublicSync('Controlled catalogue',e)}return out}
 function ctlWarehouse(){return S.g('controlled_warehouse')||{}}
@@ -1707,3 +1714,324 @@ async function ctlImportRows(rows,source){
 }
 async function ctlImportMasterFile(file){if(!file)return;try{await ensureXLSX()}catch(e){return toast('Excel library unavailable','err')};var reader=new FileReader();reader.onload=function(e){try{var wb=XLSX.read(e.target.result,{type:'array',cellDates:true}),ws=wb.Sheets[wb.SheetNames[0]],rows=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});ctlImportRows(rows,file.name)}catch(err){console.error(err);toast(err.message||'Import failed','err')}el('ctl-import-file').value=''};reader.readAsArrayBuffer(file)}
 function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)return toast('Paste text first','err');var rows=t.split(/\r?\n/).map(function(line){return line.split('\t')});ctlImportRows(rows,'pasted text')}
+
+
+const __asdhLegacyApi = {
+  loadScriptOnce: loadScriptOnce,
+  ensurePDFJS: ensurePDFJS,
+  ensureZXing: ensureZXing,
+  ensureFirebaseFunctions: ensureFirebaseFunctions,
+  debounce: debounce,
+  initFirebase: initFirebase,
+  waitForFirebase: waitForFirebase,
+  _trackSave: _trackSave,
+  stateValueEqual: stateValueEqual,
+  fsStateRestEncode: fsStateRestEncode,
+  fsStateToken: fsStateToken,
+  fsStateRestBase: fsStateRestBase,
+  fsStateRestRequest: fsStateRestRequest,
+  fsStateRestListCollection: fsStateRestListCollection,
+  fsStateLoadFloorstockViaRest: fsStateLoadFloorstockViaRest,
+  fsStateLoadUsersViaRest: fsStateLoadUsersViaRest,
+  fsStateLoadFloorstockViaSdk: fsStateLoadFloorstockViaSdk,
+  fsStateLoadUsersViaSdk: fsStateLoadUsersViaSdk,
+  fsStateFirstSuccess: fsStateFirstSuccess,
+  fsStateRestSetDocument: fsStateRestSetDocument,
+  fsStateRestDeleteDocument: fsStateRestDeleteDocument,
+  fsStateSdkSetDocument: fsStateSdkSetDocument,
+  fsStateSdkDeleteDocument: fsStateSdkDeleteDocument,
+  fsStateSetSmart: fsStateSetSmart,
+  fsStateDeleteSmart: fsStateDeleteSmart,
+  fsStateApplyCache: fsStateApplyCache,
+  warnPublicSync: warnPublicSync,
+  syncPublicExpiry: syncPublicExpiry,
+  fsR17Now: fsR17Now,
+  fsR17MedNorm: fsR17MedNorm,
+  fsR17MedIdentity: fsR17MedIdentity,
+  fsR17UniqueNames: fsR17UniqueNames,
+  fsR17MedId: fsR17MedId,
+  fsR17NormalizeMed: fsR17NormalizeMed,
+  fsR17NormalizeMeds: fsR17NormalizeMeds,
+  getMeds: getMeds,
+  setMeds: setMeds,
+  pushMed: pushMed,
+  updMed: updMed,
+  delMed: delMed,
+  fsR17SameMedicine: fsR17SameMedicine,
+  fsR17Hash: fsR17Hash,
+  fsR18ExpiryId: fsR18ExpiryId,
+  fsR17NormalizeExpiryRow: fsR17NormalizeExpiryRow,
+  fsR18NormalizeExpiryRows: fsR18NormalizeExpiryRows,
+  fsR18ExpiryComparable: fsR18ExpiryComparable,
+  getExpiry: getExpiry,
+  fsR18ReadExpiry: fsR18ReadExpiry,
+  setExpiry: setExpiry,
+  addExpBatch: addExpBatch,
+  delExpBatch: delExpBatch,
+  updExpBatch: updExpBatch,
+  getShelves: getShelves,
+  setShelves: setShelves,
+  addShelf: addShelf,
+  delShelf: delShelf,
+  updShelf: updShelf,
+  getAlertSettings: getAlertSettings,
+  setAlertSettings: setAlertSettings,
+  gd: gd,
+  repairDeletedDepartments: repairDeletedDepartments,
+  gu: gu,
+  gr: gr,
+  fmtDate: fmtDate,
+  fmtDateTime: fmtDateTime,
+  daysUntil: daysUntil,
+  todayISO: todayISO,
+  nowISO: nowISO,
+  uiDialog: uiDialog,
+  uiPrompt: uiPrompt,
+  uiConfirm: uiConfirm,
+  toast: toast,
+  bdg: bdg,
+  rowCls: rowCls,
+  OM: OM,
+  el: el,
+  esc: esc,
+  getAppUrl: getAppUrl,
+  getPublicExpiryUrl: getPublicExpiryUrl,
+  getMobileRequestUrl: getMobileRequestUrl,
+  toggleTheme: toggleTheme,
+  applyTheme: applyTheme,
+  autoDetectCat: autoDetectCat,
+  selRole: selRole,
+  fillDS: fillDS,
+  fsLoginTimeout: fsLoginTimeout,
+  fsLoginRestValue: fsLoginRestValue,
+  fsLoginDecodeRestDocument: fsLoginDecodeRestDocument,
+  fsLoginSnapshot: fsLoginSnapshot,
+  fsLoginFetchJson: fsLoginFetchJson,
+  fsLoadProfileViaRest: fsLoadProfileViaRest,
+  fsLoadProfileViaSdk: fsLoadProfileViaSdk,
+  fsLoadAuthenticatedProfile: fsLoadAuthenticatedProfile,
+  doLogin: doLogin,
+  doLogout: doLogout,
+  renderPageById: renderPageById,
+  refreshCurrentPage: refreshCurrentPage,
+  runBaseShowPg: runBaseShowPg,
+  getInvDept: getInvDept,
+  populateInvDeptSel: populateInvDeptSel,
+  renderDash: renderDash,
+  renderInv: renderInv,
+  openAddDrug: openAddDrug,
+  openEditDrug: openEditDrug,
+  delDrug: delDrug,
+  showDupPanel: showDupPanel,
+  toggleDupAll: toggleDupAll,
+  deleteSelected: deleteSelected,
+  filterR: filterR,
+  renderReqs: renderReqs,
+  rcard: rcard,
+  viewReq: viewReq,
+  openFulfill: openFulfill,
+  valQ: valQ,
+  cntItems: cntItems,
+  renderMyReqs: renderMyReqs,
+  ctlCatalog: ctlCatalog,
+  ctlSetCatalog: ctlSetCatalog,
+  ctlWarehouse: ctlWarehouse,
+  ctlSetWarehouse: ctlSetWarehouse,
+  ctlPharmacy: ctlPharmacy,
+  ctlSetPharmacy: ctlSetPharmacy,
+  ctlDeptList: ctlDeptList,
+  ctlSetDeptList: ctlSetDeptList,
+  ctlMoves: ctlMoves,
+  ctlSaveMovementLog: ctlSaveMovementLog,
+  ctlIsOfficer: ctlIsOfficer,
+  ctlIsWarehouse: ctlIsWarehouse,
+  ctlDate: ctlDate,
+  ctlNum: ctlNum,
+  ctlKey: ctlKey,
+  ctlMedicine: ctlMedicine,
+  ctlBatchText: ctlBatchText,
+  ctlCurrentDept: ctlCurrentDept,
+  renderCtlPending: renderCtlPending,
+  renderCtlLog: renderCtlLog,
+  ctlSendToPharmacy: ctlSendToPharmacy,
+  ctlReceiveDelivery: ctlReceiveDelivery,
+  ctlAssignMedicineToDept: ctlAssignMedicineToDept,
+  ctlRemoveDeptMedicine: ctlRemoveDeptMedicine,
+  ctlImportRows: ctlImportRows,
+  ctlImportMasterFile: ctlImportMasterFile,
+  ctlImportMasterText: ctlImportMasterText,
+  FIREBASE_CONFIG: globalThis.FIREBASE_CONFIG,
+  _lazyScripts: globalThis._lazyScripts,
+  renderInvDebounced: globalThis.renderInvDebounced,
+  renderReqFormDebounced: globalThis.renderReqFormDebounced,
+  renderControlledDebounced: globalThis.renderControlledDebounced,
+  _firebasePersistenceAttempted: globalThis._firebasePersistenceAttempted,
+  _firebaseReadyPromise: globalThis._firebaseReadyPromise,
+  _pendingWrites: globalThis._pendingWrites,
+  _trackedSaves: globalThis._trackedSaves,
+  _lastSaveFailure: globalThis._lastSaveFailure,
+  S: globalThis.S,
+  _publicSyncWarningAt: globalThis._publicSyncWarningAt,
+  FS_R17_MED_MIGRATION_PENDING: globalThis.FS_R17_MED_MIGRATION_PENDING,
+  FS_R18_EXPIRY_MIGRATION_PENDING: globalThis.FS_R18_EXPIRY_MIGRATION_PENDING,
+  _gdRawRef: globalThis._gdRawRef,
+  _gdDeletedRef: globalThis._gdDeletedRef,
+  _gdFiltered: globalThis._gdFiltered,
+  _deletedDeptRepairBusy: globalThis._deletedDeptRepairBusy,
+  MEDS: globalThis.MEDS,
+  CU: globalThis.CU,
+  RFS: globalThis.RFS,
+  EDID: globalThis.EDID,
+  FRID: globalThis.FRID,
+  IROWS: globalThis.IROWS,
+  SROLE: globalThis.SROLE,
+  CTL_VIEW: globalThis.CTL_VIEW
+};
+publishLegacy("03-core-application-firebase-state-auth.js", __asdhLegacyApi);
+export {
+  loadScriptOnce,
+  ensurePDFJS,
+  ensureZXing,
+  ensureFirebaseFunctions,
+  debounce,
+  initFirebase,
+  waitForFirebase,
+  _trackSave,
+  stateValueEqual,
+  fsStateRestEncode,
+  fsStateToken,
+  fsStateRestBase,
+  fsStateRestRequest,
+  fsStateRestListCollection,
+  fsStateLoadFloorstockViaRest,
+  fsStateLoadUsersViaRest,
+  fsStateLoadFloorstockViaSdk,
+  fsStateLoadUsersViaSdk,
+  fsStateFirstSuccess,
+  fsStateRestSetDocument,
+  fsStateRestDeleteDocument,
+  fsStateSdkSetDocument,
+  fsStateSdkDeleteDocument,
+  fsStateSetSmart,
+  fsStateDeleteSmart,
+  fsStateApplyCache,
+  warnPublicSync,
+  syncPublicExpiry,
+  fsR17Now,
+  fsR17MedNorm,
+  fsR17MedIdentity,
+  fsR17UniqueNames,
+  fsR17MedId,
+  fsR17NormalizeMed,
+  fsR17NormalizeMeds,
+  getMeds,
+  setMeds,
+  pushMed,
+  updMed,
+  delMed,
+  fsR17SameMedicine,
+  fsR17Hash,
+  fsR18ExpiryId,
+  fsR17NormalizeExpiryRow,
+  fsR18NormalizeExpiryRows,
+  fsR18ExpiryComparable,
+  getExpiry,
+  fsR18ReadExpiry,
+  setExpiry,
+  addExpBatch,
+  delExpBatch,
+  updExpBatch,
+  getShelves,
+  setShelves,
+  addShelf,
+  delShelf,
+  updShelf,
+  getAlertSettings,
+  setAlertSettings,
+  gd,
+  repairDeletedDepartments,
+  gu,
+  gr,
+  fmtDate,
+  fmtDateTime,
+  daysUntil,
+  todayISO,
+  nowISO,
+  uiDialog,
+  uiPrompt,
+  uiConfirm,
+  toast,
+  bdg,
+  rowCls,
+  OM,
+  el,
+  esc,
+  getAppUrl,
+  getPublicExpiryUrl,
+  getMobileRequestUrl,
+  toggleTheme,
+  applyTheme,
+  autoDetectCat,
+  selRole,
+  fillDS,
+  fsLoginTimeout,
+  fsLoginRestValue,
+  fsLoginDecodeRestDocument,
+  fsLoginSnapshot,
+  fsLoginFetchJson,
+  fsLoadProfileViaRest,
+  fsLoadProfileViaSdk,
+  fsLoadAuthenticatedProfile,
+  doLogin,
+  doLogout,
+  renderPageById,
+  refreshCurrentPage,
+  runBaseShowPg,
+  getInvDept,
+  populateInvDeptSel,
+  renderDash,
+  renderInv,
+  openAddDrug,
+  openEditDrug,
+  delDrug,
+  showDupPanel,
+  toggleDupAll,
+  deleteSelected,
+  filterR,
+  renderReqs,
+  rcard,
+  viewReq,
+  openFulfill,
+  valQ,
+  cntItems,
+  renderMyReqs,
+  ctlCatalog,
+  ctlSetCatalog,
+  ctlWarehouse,
+  ctlSetWarehouse,
+  ctlPharmacy,
+  ctlSetPharmacy,
+  ctlDeptList,
+  ctlSetDeptList,
+  ctlMoves,
+  ctlSaveMovementLog,
+  ctlIsOfficer,
+  ctlIsWarehouse,
+  ctlDate,
+  ctlNum,
+  ctlKey,
+  ctlMedicine,
+  ctlBatchText,
+  ctlCurrentDept,
+  renderCtlPending,
+  renderCtlLog,
+  ctlSendToPharmacy,
+  ctlReceiveDelivery,
+  ctlAssignMedicineToDept,
+  ctlRemoveDeptMedicine,
+  ctlImportRows,
+  ctlImportMasterFile,
+  ctlImportMasterText
+};
+export const legacyVariableNames = Object.freeze(["FIREBASE_CONFIG", "_lazyScripts", "renderInvDebounced", "renderReqFormDebounced", "renderControlledDebounced", "_firebasePersistenceAttempted", "_firebaseReadyPromise", "_pendingWrites", "_trackedSaves", "_lastSaveFailure", "S", "_publicSyncWarningAt", "FS_R17_MED_MIGRATION_PENDING", "FS_R18_EXPIRY_MIGRATION_PENDING", "_gdRawRef", "_gdDeletedRef", "_gdFiltered", "_deletedDeptRepairBusy", "MEDS", "CU", "RFS", "EDID", "FRID", "IROWS", "SROLE", "CTL_VIEW"]);
+export default __asdhLegacyApi;

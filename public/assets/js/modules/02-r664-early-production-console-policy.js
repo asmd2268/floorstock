@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 5
- * Original id: r664-early-production-console-policy
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   if(!window.console)return;
@@ -12,3 +7,12 @@
   try{console.warn=function(){nativeWarn('[ASDHealth] A recoverable warning occurred.');}}catch(ignore){}
   try{console.error=function(){nativeError('[ASDHealth] An operation failed. Review the in-app message or Firebase logs.');}}catch(ignore){}
 })();
+
+
+
+
+
+
+
+
+export {};

@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 20
- * Original id: system-health-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function isMasterHealthLocal(){return typeof window.isMaster==='function'?window.isMaster():!!(window.CU&&CU.master===true&&!window.MASTER_EFFECTIVE)}
@@ -23,3 +18,12 @@ window.runSystemHealthDiagnostics=async function(){
 function initial(){setStatus('health-network',navigator.onLine?'Online':'Offline',navigator.onLine?'health-ok':'health-bad')}
 initial();window.addEventListener('online',initial);window.addEventListener('offline',initial);
 })();
+
+
+
+
+
+
+
+
+export {};

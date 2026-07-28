@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 16
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 /* Pilot fixes: split controlled lists, master manual delete, compact order printing, public expiry routes. */
 (function(){
   function byId(id){return document.getElementById(id)}
@@ -41,3 +36,12 @@
   window.syncOfficialHeaderButton=syncOfficialHeaderButton;
   
 })();
+
+
+
+
+
+
+
+
+export {};

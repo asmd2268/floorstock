@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 56
- * Original id: r661-authoritative-inventory-safety
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 var VERSION='R6.64',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
@@ -177,3 +172,12 @@ new MutationObserver(function(mutations){
 }).observe(document.body,{childList:true,subtree:true});
 document.title='ASDHealth FloorStock R6.65 Modular Protected';
 })();
+
+
+
+
+
+
+
+
+export {};

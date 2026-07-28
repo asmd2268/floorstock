@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 21
- * Original id: wh-bulk-rx-dx-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
  function norm(v){return String(v==null?'':v).trim().replace(/[\s\-]/g,'').toLowerCase()}
  function catalog(){try{return ctlCatalog()||[]}catch(e){return []}}
@@ -56,3 +51,12 @@
  
  window.addWarehouseControlledBulkButtons=addButtons;
 })();
+
+
+
+
+
+
+
+
+export {};

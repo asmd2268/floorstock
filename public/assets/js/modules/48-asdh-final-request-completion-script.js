@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 51
- * Original id: asdh-final-request-completion-script
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -146,3 +141,12 @@ window.crashPrint=function(id){
 
 
 })();
+
+
+
+
+
+
+
+
+export {};

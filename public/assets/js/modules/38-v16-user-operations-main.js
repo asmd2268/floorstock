@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 41
- * Original id: v16-user-operations-main
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -150,3 +145,12 @@ function scheduleAfterRender(){if(afterRenderScheduled)return;afterRenderSchedul
 window.schedulePagePostRender=scheduleAfterRender;
 
 })();
+
+
+
+
+
+
+
+
+export {};

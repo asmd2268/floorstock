@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 49
- * Original id: r664-private-crash-cart-source-only
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   window.recoverCrashCartsFromPublicSnapshots=async function(){
@@ -13,3 +8,12 @@
     if(button)button.remove();
   };
 })();
+
+
+
+
+
+
+
+
+export {};

@@ -1,8 +1,5 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 54
- * Original id: asdhealth-canonical-r6-32-20260727
- * Compatibility mode: classic script, original execution order preserved.
- */
+import { publishLegacy } from '../core/legacy-registry.js';
+
 /* ASDHealth FloorStock — R6.32 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
 
@@ -21,14 +18,14 @@ function fsR5Norm(v){
     .replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي')
     .replace(/[^a-z0-9\u0600-\u06ff]+/g,'');
 }
-var FS_R5_DEPT_FALLBACKS={
+globalThis.FS_R5_DEPT_FALLBACKS = {
   icu:'INTENSIVE CARE UNIT',emergency:'EMERGENCY DEPARTMENT',er:'EMERGENCY DEPARTMENT',
   endoscopy_unit:'ENDOSCOPY UNIT',endoscopy:'ENDOSCOPY UNIT',ccu:'CORONARY CARE UNIT',
   obw:'OBSTETRICS AND GYNAECOLOGY',pedia:'PEDIATRIC',nursery:'NURSERY',
   fmw:'FEMALE MEDICAL WARD',mmw:'MALE MEDICAL WARD',msw:'MALE SURGICAL WARD',
   anesthesia:'ANESTHESIA',aku:'ARTIFICIAL KIDNEY UNIT',opd:'OUTPATIENT DEPARTMENT'
 };
-var FS_R5_DEPT_ALIASES={
+globalThis.FS_R5_DEPT_ALIASES = {
   intensivecareunit:'icu',intensivecare:'icu',icu:'icu',
   emergencydepartment:'emergency',emergency:'emergency',er:'emergency',
   endoscopyunit:'endoscopy_unit',endoscopy:'endoscopy_unit',
@@ -1611,10 +1608,10 @@ function fsR6EnsureStyles(){
 
 /* ---------- Crash Cart smart cross-cart replacement ---------- */
 
-var FS_R6_CRASH_SELECTED=new Map();
-var FS_R6_CRASH_WORKFLOW=null;
-var FS_R6_CRASH_FILTER='';
-var FS_R6_ORDER_NAMES=['Adrenaline (Epinephrine)','Amiodarone','Atropine','Calcium Chloride','Calcium Gluconate','Dextrose','Dobutamine','Dopamine','Lidocaine','Magnesium Sulfate','Naloxone','Norepinephrine','Sodium Bicarbonate'];
+globalThis.FS_R6_CRASH_SELECTED = new Map();
+globalThis.FS_R6_CRASH_WORKFLOW = null;
+globalThis.FS_R6_CRASH_FILTER = '';
+globalThis.FS_R6_ORDER_NAMES = ['Adrenaline (Epinephrine)','Amiodarone','Atropine','Calcium Chloride','Calcium Gluconate','Dextrose','Dobutamine','Dopamine','Lidocaine','Magnesium Sulfate','Naloxone','Norepinephrine','Sodium Bicarbonate'];
 
 function fsR6CrashCanBulk(){
   var role=String((window.CU&&CU.role)||'');
@@ -2351,3 +2348,208 @@ function fsR6InitializeCanonical(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',fsR6InitializeCanonical,{once:true});
 else setTimeout(fsR6InitializeCanonical,0);
+
+
+const __asdhLegacyApi = {
+  fsR5E: fsR5E,
+  fsR5S: fsR5S,
+  fsR5N: fsR5N,
+  fsR5Esc: fsR5Esc,
+  fsR5Toast: fsR5Toast,
+  fsR5Norm: fsR5Norm,
+  fsR5DepartmentRecords: fsR5DepartmentRecords,
+  fsR5DepartmentCandidates: fsR5DepartmentCandidates,
+  fsR5MedicineFlags: fsR5MedicineFlags,
+  fsR5SelectedOrders: fsR5SelectedOrders,
+  fsR5OrderRow: fsR5OrderRow,
+  fsR5OrdersHtml: fsR5OrdersHtml,
+  fsR5ControlledDept: fsR5ControlledDept,
+  fsR5ControlledMedicine: fsR5ControlledMedicine,
+  fsR5NormalizeControlled: fsR5NormalizeControlled,
+  fsR5ControlledRows: fsR5ControlledRows,
+  fsR5DMY: fsR5DMY,
+  fsR12DateOnly: fsR12DateOnly,
+  fsR12PrintDate: fsR12PrintDate,
+  fsR12ExpiryDays: fsR12ExpiryDays,
+  fsR12HasNearExpiry: fsR12HasNearExpiry,
+  fsR12BatchLotHtml: fsR12BatchLotHtml,
+  fsR12BatchExpiryHtml: fsR12BatchExpiryHtml,
+  fsR5BatchText: fsR5BatchText,
+  fsR5Class: fsR5Class,
+  fsR5ExpiryDays: fsR5ExpiryDays,
+  fsR5NearDays: fsR5NearDays,
+  fsR5PublicUrl: fsR5PublicUrl,
+  fsR5Logo: fsR5Logo,
+  fsR5PrintSettings: fsR5PrintSettings,
+  fsR5ControlledPrintHtml: fsR5ControlledPrintHtml,
+  fsR6E: fsR6E,
+  fsR6S: fsR6S,
+  fsR6N: fsR6N,
+  fsR6Esc: fsR6Esc,
+  fsR6Norm: fsR6Norm,
+  fsR6Toast: fsR6Toast,
+  fsR6Now: fsR6Now,
+  fsR6Actor: fsR6Actor,
+  fsR6Audit: fsR6Audit,
+  fsR6CloseModal: fsR6CloseModal,
+  fsR6OpenModal: fsR6OpenModal,
+  fsR6EnsureStyles: fsR6EnsureStyles,
+  fsR6CrashCanBulk: fsR6CrashCanBulk,
+  fsR6CrashCarts: fsR6CrashCarts,
+  fsR6CrashFilter: fsR6CrashFilter,
+  fsR6CrashRules: fsR6CrashRules,
+  fsR6CrashDays: fsR6CrashDays,
+  fsR6CrashBatchLevel: fsR6CrashBatchLevel,
+  fsR6CrashItemLevel: fsR6CrashItemLevel,
+  fsR6CrashItemName: fsR6CrashItemName,
+  fsR6CrashMedicineKey: fsR6CrashMedicineKey,
+  fsR6CrashSort: fsR6CrashSort,
+  fsR6CrashSelectionAllowed: fsR6CrashSelectionAllowed,
+  fsR6CrashKey: fsR6CrashKey,
+  fsR6CrashVisibleItems: fsR6CrashVisibleItems,
+  fsR6CrashExactInfo: fsR6CrashExactInfo,
+  fsR6CrashSeedTemplates: fsR6CrashSeedTemplates,
+  fsR6CrashEligibleGroups: fsR6CrashEligibleGroups,
+  fsR6CrashUpdateButton: fsR6CrashUpdateButton,
+  fsR6CrashSelectAllFiltered: fsR6CrashSelectAllFiltered,
+  fsR6CrashClearSelection: fsR6CrashClearSelection,
+  fsR6CrashCloseModal: fsR6CrashCloseModal,
+  fsR6CrashStatus: fsR6CrashStatus,
+  fsR6CrashUid: fsR6CrashUid,
+  fsR6CrashClone: fsR6CrashClone,
+  fsR6CrashFutureDate: fsR6CrashFutureDate,
+  fsR6CrashCreateAllocation: fsR6CrashCreateAllocation,
+  fsR6CrashCreateWorkflow: fsR6CrashCreateWorkflow,
+  fsR6CrashFindPlan: fsR6CrashFindPlan,
+  fsR6CrashFindCartPlan: fsR6CrashFindCartPlan,
+  fsR6CrashActiveAllocations: fsR6CrashActiveAllocations,
+  fsR6CrashAllocationTotal: fsR6CrashAllocationTotal,
+  fsR6CrashEnsureCustomAllocations: fsR6CrashEnsureCustomAllocations,
+  fsR6CrashAllocationRows: fsR6CrashAllocationRows,
+  fsR6CrashPlanHtml: fsR6CrashPlanHtml,
+  fsR6CrashRenderPlans: fsR6CrashRenderPlans,
+  fsR6CrashReviewData: fsR6CrashReviewData,
+  fsR6CrashRenderReview: fsR6CrashRenderReview,
+  fsR6CrashRenderWorkflow: fsR6CrashRenderWorkflow,
+  fsR6CrashAllocationByInput: fsR6CrashAllocationByInput,
+  fsR6CrashHandlePlanInput: fsR6CrashHandlePlanInput,
+  fsR6CrashHandlePlanAction: fsR6CrashHandlePlanAction,
+  fsR6CrashUsedSeals: fsR6CrashUsedSeals,
+  fsR6CrashValidateReview: fsR6CrashValidateReview,
+  fsR6CrashCompileWorkflow: fsR6CrashCompileWorkflow,
+  fsR6CrashNormalizeAllocations: fsR6CrashNormalizeAllocations,
+  fsR6ApplyExactReplacementAllocations: fsR6ApplyExactReplacementAllocations,
+  fsR6CrashBuildBulkResult: fsR6CrashBuildBulkResult,
+  fsR6CrashVerifyPersisted: fsR6CrashVerifyPersisted,
+  fsR6ActualMaster: fsR6ActualMaster,
+  fsR6MasterUsers: fsR6MasterUsers,
+  fsR6RoleLabel: fsR6RoleLabel,
+  fsR6EnsureMasterModal: fsR6EnsureMasterModal,
+  fsR6InitializeCanonical: fsR6InitializeCanonical,
+  FS_R5_DEPT_FALLBACKS: globalThis.FS_R5_DEPT_FALLBACKS,
+  FS_R5_DEPT_ALIASES: globalThis.FS_R5_DEPT_ALIASES,
+  FS_R6_CRASH_SELECTED: globalThis.FS_R6_CRASH_SELECTED,
+  FS_R6_CRASH_WORKFLOW: globalThis.FS_R6_CRASH_WORKFLOW,
+  FS_R6_CRASH_FILTER: globalThis.FS_R6_CRASH_FILTER,
+  FS_R6_ORDER_NAMES: globalThis.FS_R6_ORDER_NAMES
+};
+publishLegacy("51-asdhealth-canonical-r6-32-20260727.js", __asdhLegacyApi);
+export {
+  fsR5E,
+  fsR5S,
+  fsR5N,
+  fsR5Esc,
+  fsR5Toast,
+  fsR5Norm,
+  fsR5DepartmentRecords,
+  fsR5DepartmentCandidates,
+  fsR5MedicineFlags,
+  fsR5SelectedOrders,
+  fsR5OrderRow,
+  fsR5OrdersHtml,
+  fsR5ControlledDept,
+  fsR5ControlledMedicine,
+  fsR5NormalizeControlled,
+  fsR5ControlledRows,
+  fsR5DMY,
+  fsR12DateOnly,
+  fsR12PrintDate,
+  fsR12ExpiryDays,
+  fsR12HasNearExpiry,
+  fsR12BatchLotHtml,
+  fsR12BatchExpiryHtml,
+  fsR5BatchText,
+  fsR5Class,
+  fsR5ExpiryDays,
+  fsR5NearDays,
+  fsR5PublicUrl,
+  fsR5Logo,
+  fsR5PrintSettings,
+  fsR5ControlledPrintHtml,
+  fsR6E,
+  fsR6S,
+  fsR6N,
+  fsR6Esc,
+  fsR6Norm,
+  fsR6Toast,
+  fsR6Now,
+  fsR6Actor,
+  fsR6Audit,
+  fsR6CloseModal,
+  fsR6OpenModal,
+  fsR6EnsureStyles,
+  fsR6CrashCanBulk,
+  fsR6CrashCarts,
+  fsR6CrashFilter,
+  fsR6CrashRules,
+  fsR6CrashDays,
+  fsR6CrashBatchLevel,
+  fsR6CrashItemLevel,
+  fsR6CrashItemName,
+  fsR6CrashMedicineKey,
+  fsR6CrashSort,
+  fsR6CrashSelectionAllowed,
+  fsR6CrashKey,
+  fsR6CrashVisibleItems,
+  fsR6CrashExactInfo,
+  fsR6CrashSeedTemplates,
+  fsR6CrashEligibleGroups,
+  fsR6CrashUpdateButton,
+  fsR6CrashSelectAllFiltered,
+  fsR6CrashClearSelection,
+  fsR6CrashCloseModal,
+  fsR6CrashStatus,
+  fsR6CrashUid,
+  fsR6CrashClone,
+  fsR6CrashFutureDate,
+  fsR6CrashCreateAllocation,
+  fsR6CrashCreateWorkflow,
+  fsR6CrashFindPlan,
+  fsR6CrashFindCartPlan,
+  fsR6CrashActiveAllocations,
+  fsR6CrashAllocationTotal,
+  fsR6CrashEnsureCustomAllocations,
+  fsR6CrashAllocationRows,
+  fsR6CrashPlanHtml,
+  fsR6CrashRenderPlans,
+  fsR6CrashReviewData,
+  fsR6CrashRenderReview,
+  fsR6CrashRenderWorkflow,
+  fsR6CrashAllocationByInput,
+  fsR6CrashHandlePlanInput,
+  fsR6CrashHandlePlanAction,
+  fsR6CrashUsedSeals,
+  fsR6CrashValidateReview,
+  fsR6CrashCompileWorkflow,
+  fsR6CrashNormalizeAllocations,
+  fsR6ApplyExactReplacementAllocations,
+  fsR6CrashBuildBulkResult,
+  fsR6CrashVerifyPersisted,
+  fsR6ActualMaster,
+  fsR6MasterUsers,
+  fsR6RoleLabel,
+  fsR6EnsureMasterModal,
+  fsR6InitializeCanonical
+};
+export const legacyVariableNames = Object.freeze(["FS_R5_DEPT_FALLBACKS", "FS_R5_DEPT_ALIASES", "FS_R6_CRASH_SELECTED", "FS_R6_CRASH_WORKFLOW", "FS_R6_CRASH_FILTER", "FS_R6_ORDER_NAMES"]);
+export default __asdhLegacyApi;

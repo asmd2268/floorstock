@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 57
- * Original id: r662-accountability-draft-protection
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 'use strict';
 var dirty=false,saving=false;
@@ -39,3 +34,12 @@ var previousStart=window.startApp;
 if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(indicator,700);return result};
 window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDefault();e.returnValue=''});
 })();
+
+
+
+
+
+
+
+
+export {};

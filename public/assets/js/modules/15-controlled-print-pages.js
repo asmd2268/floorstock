@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 18
- * Original id: (none)
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
 
 
@@ -45,3 +40,12 @@
 
   
 })();
+
+
+
+
+
+
+
+
+export {};

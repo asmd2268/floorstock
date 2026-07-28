@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 24
- * Original id: r664-psychotropic-pharmacy-stock-import-20260728
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   var IMPORT_KEY='psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only';
@@ -122,3 +117,12 @@
   }
   window.applyPsychotropicPharmacyStockR664=applyPsychotropicPharmacyStockR664;
 })();
+
+
+
+
+
+
+
+
+export {};

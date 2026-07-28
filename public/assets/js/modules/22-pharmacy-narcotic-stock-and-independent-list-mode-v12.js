@@ -1,8 +1,3 @@
-/* ASDHealth R6.65 Modular
- * Original script position: 25
- * Original id: pharmacy-narcotic-stock-and-independent-list-mode-v12
- * Compatibility mode: classic script, original execution order preserved.
- */
 (function(){
   'use strict';
   var _narcoticSeedDone=false,_narcoticSeedBusy=false;
@@ -56,3 +51,12 @@
   window.ensureNarcoticSharedList=ensureNarcoticSharedList;
 
 })();
+
+
+
+
+
+
+
+
+export {};
