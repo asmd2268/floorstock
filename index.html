@@ -14803,6 +14803,70 @@ window.repairLatestInventoryMergeCollateral=async function(){
 })();
 </script>
 
+<script id="r657-inventory-global-premerge-restore">
+(function(){
+'use strict';
+var running=false;
+function copy(v){return JSON.parse(JSON.stringify(v==null?null:v))}
+function allowed(){var r=String((window.CU&&CU.role)||'');return !!(window.CU&&(CU.master===true||r==='master'||r==='pharmacy'||r==='inpatient_supervisor'))}
+function request(x){return new Promise(function(resolve,reject){x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error||new Error('Local backup request failed'))}})}
+async function localBackups(){
+  if(!window.indexedDB)return [];
+  var db=await new Promise(function(resolve,reject){var x=indexedDB.open('ASDHealthLocalBackups',1);x.onsuccess=function(){resolve(x.result)};x.onerror=function(){reject(x.error)}});
+  try{var tx=db.transaction('daily','readonly');return (await request(tx.objectStore('daily').getAll())||[]).sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))})}
+  finally{db.close()}
+}
+function backupState(rec){
+  var out={},docs=rec&&rec.payload&&rec.payload.collections&&rec.payload.collections.floorstock_state||[];
+  docs.forEach(function(d){out[d.id]=d&&d.data&&Object.prototype.hasOwnProperty.call(d.data,'value')?d.data.value:d.data});
+  return out
+}
+async function restoreAllDepartments(){
+  if(running||!allowed()||!window.S||!S.ready||typeof getMeds!=='function'||typeof setMeds!=='function')return {status:'unavailable'};
+  if(S.g('inventory_r657_global_restore_done'))return {status:'already-restored'};
+  var history=copy(S.g('manual_medicine_merge_history_v1')||[]),r656=S.g('inventory_r656_authoritative_done')||{},all=await localBackups(),source=null;
+  if(r656.sourceBackupAt)source=all.find(function(b){return String(b.createdAt)===String(r656.sourceBackupAt)});
+  if(!source){
+    var times=history.map(function(h){return Date.parse(h&&h.createdAt||'')}).filter(isFinite),first=times.length?Math.min.apply(null,times):0;
+    if(first)source=all.find(function(b){return Date.parse(b.createdAt)<first})
+  }
+  if(!source)return {status:'no-pre-merge-backup'};
+  var snapshot=backupState(source),depts=typeof gd==='function'?(gd()||[]):[],safety={id:'r657_'+Date.now().toString(36),at:new Date().toISOString(),sourceBackupAt:source.createdAt,departments:{},expiry:{}},restored=0,beforeTotal=0,afterTotal=0;
+  depts.forEach(function(d){beforeTotal+=(getMeds(d.id)||[]).length});
+  running=true;
+  try{
+    for(var i=0;i<depts.length;i++){
+      var deptId=String(depts[i].id),medKey='meds_'+deptId;
+      if(!Array.isArray(snapshot[medKey]))continue; /* Preserve departments created after the backup. */
+      safety.departments[deptId]=copy(getMeds(deptId)||[]);
+      safety.expiry[deptId]=typeof getExpiry==='function'?copy(getExpiry(deptId)||[]):[];
+      var exactMeds=copy(snapshot[medKey]||[]),expiryKey='expiry_'+deptId;
+      await setMeds(deptId,exactMeds);
+      if(typeof setExpiry==='function'&&Array.isArray(snapshot[expiryKey]))await setExpiry(deptId,copy(snapshot[expiryKey]));
+      restored++
+    }
+    depts.forEach(function(d){afterTotal+=(getMeds(d.id)||[]).length});
+    var backups=copy(S.g('inventory_r657_restore_backups_v1')||[]);backups.unshift(safety);await S.s('inventory_r657_restore_backups_v1',backups.slice(0,5));
+    var result={at:new Date().toISOString(),sourceBackupAt:source.createdAt,departments:restored,beforeTotal:beforeTotal,afterTotal:afterTotal,backupId:safety.id};
+    await S.s('inventory_r657_global_restore_done',result);
+    if(typeof auditAction==='function')auditAction('inventory_global_premerge_restore',result);
+    if(typeof renderInv==='function')renderInv();
+    return Object.assign({status:'restored'},result)
+  }finally{running=false}
+}
+window.repairLatestInventoryMergeCollateral=async function(){
+  var result;
+  try{result=await restoreAllDepartments()}catch(error){console.error('R6.57 global inventory restore failed',error);result={status:'failed',error:String(error&&error.message||error)}}
+  if(result.status==='restored'){
+    if(typeof toast==='function')toast('All department inventories restored: '+result.beforeTotal+' → '+result.afterTotal+' records ✓','succ')
+  }else if(result.status==='no-pre-merge-backup'){
+    if(typeof toast==='function')toast('No complete local inventory snapshot exists from before the merge.','err')
+  }else if(result.status==='failed'&&typeof toast==='function')toast('Global inventory restoration failed: '+result.error,'err');
+  return result
+};
+})();
+</script>
+
 <script id="r647-crash-cart-authoritative-boot">
 (function(){
 'use strict';
