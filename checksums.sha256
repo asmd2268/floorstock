@@ -7,7 +7,7 @@ c346ce7f90913533788bce65c19e51c0a71ad0b7a22664b998c4479f5aacfdc1  ./docs/build-r
 146a6e9b63a883d13f7cb5b35de627677c1c93ffa0f04dca833e1d462260a59b  ./docs/es-module-report.json
 c78eadb648fe8930ba3a0f5773d6aa80481af67e5d383f653a20fb7e5c8efa2c  ./docs/verification.txt
 6ff7cd7d879c8f64711b77762a62dfe06ac61631e55fd339d887c94f57d59f64  ./firebase.json
-d7ffc126864058720ee5550f2a384a9f4a85fdbb118e76f8d29fdafd52d2341f  ./firestore-debug.log
+91a7b2e9ea183a4671e0a9f098bb798122e7e3e26f70dc6f992946bdc2ea8a9f  ./firestore-debug.log
 5977849d78e58eba2db764191c770d3ae554fd732c166320367ae0f286d91df8  ./firestore.indexes.json
 fccb8860d350d32ac019a0e3c4970528eb0af926489afd91b5a9b00381b4b0ac  ./firestore.rules
 7618a223424438c73a9394ee607f44eb63fa664d506bcd82280be46869322fcf  ./functions/index.js
@@ -16,7 +16,7 @@ fccb8860d350d32ac019a0e3c4970528eb0af926489afd91b5a9b00381b4b0ac  ./firestore.ru
 99499a199e34a0aee6be2c1d1e5a1510fe1d1819c001b645b1f0338405b72c69  ./index.html
 1e91fc7e75632cfbece13cf9abc869a4f972e736c6903068cb40cb51cc541ca6  ./module-manifest.json
 57e4b680b221c58f420aa1984b987e2d78cf5e5a965c3b25e6cc2ad3f3264c77  ./package-lock.json
-4b1fb84f04760f8a3a28e80ecbbdcf14069922cbe78caeb1de59b2b32c3c4d1c  ./package.json
+1a9fe7aeefaa6364f0b8e57bdb410972205888560ee1a447c5abd8ab5f55efb4  ./package.json
 e72c0c6496c326cedbdfcf08174dcc293d457f7fa9bcf4d4474a39bd00c93583  ./public/assets/css/modules/01-styles-01-06.css
 311be5b9c1728017147fed9e472e766677746ffbf6305cadc210e24764a44a4c  ./public/assets/css/modules/02-styles-07-12.css
 a8023b99fb8246a1a1a8388e759f91b7a6096689f35c45b23df75b5e0600ffd7  ./public/assets/css/modules/03-styles-13-18.css
@@ -37,7 +37,7 @@ f53035711ec541b64b2d9b7fc9b844dec3b4f80913330dadb82d9462337e33fa  ./public/asset
 278072d49f68819ef224d44f6f6d294a13b641a67f32af0d07ab5b57374c2a4c  ./public/assets/js/modules/04-v13-complete-clean-fix-script.js
 593be3825e60d3993c86ec425ae5aa1a5f80071d842f64ddb378d94e0009949c  ./public/assets/js/modules/05-controlled-ui-compatibility-fixes.js
 6329ba584e9968dd553cfe26efac2059ce0160560ba9139d36ccf13276043157  ./public/assets/js/modules/06-zebra-label-printing.js
-2ccb9bd8ab9d33b72f13f63685bed805e09d1f9c1476253308c3b8b5e28f4484  ./public/assets/js/modules/07-expiry-requests-and-primary-features.js
+e56bf10684609239e354aa18ba954418fce0c79964808da35cbc34aa635a6ca6  ./public/assets/js/modules/07-expiry-requests-and-primary-features.js
 079677aea6ec6db7631dad1ba5f1462878620c669d2fc1ea262f17415078fb3e  ./public/assets/js/modules/08-controlled-shared-list-filters.js
 de210c6e06579d7070d6cc6c5efdf548cb47721b3d63ad75ef7754b94ec28b19  ./public/assets/js/modules/09-warehouse-batch-editor.js
 23a0b6296560abfd689b87826b625cc264ff59576aadc968b28adc5947427959  ./public/assets/js/modules/10-warehouse-receiving-workflow.js
@@ -81,9 +81,9 @@ fcb4851ff2f587afc3dd5c6a6c75b5a6b531b8337b792760fa03323ce63e3263  ./public/asset
 0cec443ca98e6ff6bae10bf7fa4d616b9b6ae4a29292ea3f339419d4cf8624ec  ./public/assets/js/modules/48-asdh-final-request-completion-script.js
 fd7d23461f010fcf02604cf496050a6ff28b414ac72b97371e831ee63e0b19c0  ./public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js
 8b9561e01e4fa1b18d872510ccfda6cdb1ef6673a851922b8332cfbeeb79d387  ./public/assets/js/modules/50-r617-integrated-operations.js
-91f699a0bd82e36ad1498f440c5f37de4e804eed2f50992ad68ddf0b92b75153  ./public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js
+e7b959e6f70747689aaf04459847bf5d2a3f59f7d17ecc1d7c7a83534e064cb1  ./public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js
 ac6a72e6850b28a53471d446e97ac372294e9a3a20f7530934e5ff7790a94731  ./public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js
-d498851f893c7a4885a5884693a8470923463476ed6e5094021adc79c478be29  ./public/assets/js/modules/53-r661-authoritative-inventory-safety.js
+631610d04288b6794db666ab9c2f8df6458ad35a402364fcc498c98047b8a7a4  ./public/assets/js/modules/53-r661-authoritative-inventory-safety.js
 4ad05263c41fd4dee6e4fda81713d0e9877adc56186f0ef0caa186243cab7259  ./public/assets/js/modules/54-r662-accountability-draft-protection.js
 6b8fe7d867ab4ac1ef484a81acd370537aa95dbf6cabcb092b8e3e5e7311a73b  ./public/assets/js/modules/55-r647-crash-cart-authoritative-boot.js
 a280219cfb82d0a7470900e27092c09581bf6e9cc08aa2210d1b787054aea9ea  ./public/assets/js/modules/56-r664-security-idle-timeout.js
@@ -94,6 +94,7 @@ c12e4203c3e6f6f9e74bca44658951b7bcd249d5e32ad13d7afc716a9ef16242  ./public/asset
 a2c2dd7c7fa37efbf8efe2ba2848d1397a6226b1eafab3a1eff392069b708588  ./tests/firestore-rules/README.md
 0b4e96e5fc9031eec04c2d52cdd14802f9aa7447c0f4aa038483e3e9f14c5f7f  ./tests/firestore-rules/application-state-keys.js
 5d4bf31d4c43a606653c3575489e1cbb08bd74fa7a47e3ab8c7b104d0ad50097  ./tests/firestore-rules/firestore.rules.test.js
+56893dfd5b6004a556763dadbea128c31c683b3146cff9ed423c678d199183d2  ./tests/ui-actions-regression.test.js
 3d8d7ae8ac0d168ec96ac1f6004c2b3d50b06fef4a90dc851c1e14ddc90736fa  ./tools/build_es_modules.py
 7428280466db81a5c9ac7306111be556211f816c67aa0adf228065969f129a4b  ./tools/transform_provider.mjs
 91eee963268e08e35207326c3735cebbb3cfae3ee4e5596bb5782ee416705b58  ./tools/update_checksums.py

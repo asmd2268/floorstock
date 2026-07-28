@@ -75,9 +75,16 @@ function wrapApproved(name){
 }
 ['confirmMergeInventoryNames','deleteSelected'].forEach(wrapApproved);
 function escSafe(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function masterAllowed(){return !!(window.CU&&(CU.master===true||String(CU.role)==='master'))}
+function masterAllowed(){
+  if(window.MASTER_EFFECTIVE)return false;
+  var profile=window.MASTER_ACTUAL||window.CU,role=String(profile&&profile.role||'');
+  return !!(profile&&profile.master===true&&(role==='pharmacy'||role==='pharmacy_director'))
+}
+function removeSnapshotManager(){
+  ['r662-snapshot-card','r663-dashboard-snapshot-card','r662-snapshot-modal'].forEach(function(id){var node=document.getElementById(id);if(node)node.remove()})
+}
 function ensureSnapshotManager(){
-  if(!masterAllowed())return;
+  if(!masterAllowed()){removeSnapshotManager();return}
   var backupPage=document.getElementById('pg-backup-restore'),dashboard=document.getElementById('pg-dash');
   if(backupPage&&!document.getElementById('r662-snapshot-card')){
     var card=document.createElement('div');card.className='card';card.id='r662-snapshot-card';
@@ -132,6 +139,7 @@ window.restoreSelectedInventorySafetySnapshot=async function(){
   finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent='Restore selected snapshot'}}
 };
 window.undoLatestInventorySafetySnapshot=async function(){
+  if(!masterAllowed())return typeof toast==='function'?toast('Master permission required.','err'):false;
   var deptId=typeof getInvDept==='function'?String(getInvDept()||''):'',index=deptId?clone(S.g('inventory_snapshot_index_'+deptId)||[]):[];
   if(!deptId||!index.length)return typeof toast==='function'?toast('No inventory safety snapshot is available for this department.','info'):false;
   var item=index[0],meds=clone(S.g(item.medsKey)||[]),expiry=clone(S.g(item.expiryKey)||[]);

@@ -6,9 +6,10 @@
     "build:modules": "python3 tools/build_es_modules.py",
     "verify:modules": "node tools/verify_modules.mjs",
     "verify": "python3 verify_repo.py && npm run verify:modules",
+    "test:ui": "node --test tests/ui-actions-regression.test.js",
     "test:rules:emulator": "node --test --test-concurrency=1 tests/firestore-rules/firestore.rules.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-floorstock-rules --config firebase.json \"npm run test:rules:emulator\"",
-    "test": "npm run verify && npm run test:rules"
+    "test": "npm run verify && npm run test:ui && npm run test:rules"
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.1",
