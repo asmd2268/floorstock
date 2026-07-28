@@ -3,12 +3,12 @@ import { publishLegacy } from '../core/legacy-registry.js';
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
 globalThis.FIREBASE_CONFIG = {apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
-FB_APP=window.FB_APP||null;FB_AUTH=window.FB_AUTH||null;FB_DB=window.FB_DB||null;FB_FUNCTIONS=window.FB_FUNCTIONS||null;
+FB_APP=window.FB_APP||null;FB_AUTH=window.FB_AUTH||null;FB_DB=window.FB_DB||null;FB_FUNCTIONS=window.FB_FUNCTIONS||null;FB_APPCHECK=window.FB_APPCHECK||null;
 // Global Firebase handles for injected modules and Safari/WebKit compatibility
 window.FB_APP=null;
 window.FB_AUTH=null;
 window.FB_DB=null;
-window.FB_FUNCTIONS=null;
+window.FB_FUNCTIONS=null; window.FB_APPCHECK=null;
 globalThis._lazyScripts = {};
 function loadScriptOnce(key,src,test){
   if(test&&test())return Promise.resolve();
@@ -32,6 +32,15 @@ globalThis._firebaseReadyPromise = null;
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
+if(firebase.appCheck&&typeof firebase.appCheck==='function'){
+  try{
+    FB_APPCHECK=firebase.appCheck();
+    window.FB_APPCHECK=FB_APPCHECK;
+    console.info('Firebase App Check SDK available (not activated).');
+  }catch(appCheckError){
+    console.warn('Firebase App Check unavailable:',appCheckError);
+  }
+}
   FB_AUTH=firebase.auth();
   FB_DB=firebase.firestore();
   try{
