@@ -40,7 +40,7 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   try{
     FB_APPCHECK=firebase.appCheck();
 
-    FB_APPCHECK.activate(
+    new firebase.appCheck.ReCaptchaEnterpriseProvider(
       '6LfYImotAAAAACo50nBNoL7EIb14ipF9NQYzrJfr',
       true
     );
