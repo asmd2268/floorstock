@@ -37,8 +37,8 @@ function renderUsers(){
       var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
       var actions='';
       if(CU&&CU.master===true&&u.id!==CU.id){
-        actions+='<button class="btn bg bxs" data-id="'+u.id+'" data-master="'+(u.master===true?'1':'0')+'" onclick="toggleMasterUser(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-master&#x27;)==&#x27;1&#x27;)">'+(u.master===true?'Remove Master':'Grant Master')+'</button> ';
-        actions+='<button class="btn bd2c bxs" data-id="'+u.id+'" onclick="delUser(this.getAttribute(&#x27;data-id&#x27;))">Delete permanently</button>';
+        actions+='<button class="btn bg bxs" data-user-action="toggle-master" data-id="'+esc(u.id)+'" data-master="'+(u.master===true?'1':'0')+'">'+(u.master===true?'Remove Master':'Grant Master')+'</button> ';
+        actions+='<button class="btn bd2c bxs" data-user-action="delete" data-id="'+esc(u.id)+'">Delete permanently</button>';
       }else if(u.id===CU.id){actions='<span style="font-size:11px;color:var(--tx2)">Current user</span>';}
       else{actions='<span style="font-size:11px;color:var(--tx2)">Master only</span>';}
       return '<tr><td style="font-family:var(--mono)">'+esc(u.email||'')+'</td>'
@@ -53,11 +53,43 @@ function renderUsers(){
       var userCount=us.filter(function(u){return u.deptId===d.id}).length;
       return '<div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;border-bottom:1px solid var(--bd);gap:10px">'
         +'<div style="flex:1"><div style="font-weight:600">'+esc(d.name)+'</div><div style="font-size:11px;color:var(--tx2);margin-top:2px"><span class="chip">'+medCount+' medications</span> <span class="chip">'+userCount+' users</span></div></div>'
-        +'<div style="display:flex;gap:6px;flex-shrink:0"><button class="btn bg bxs" data-id="'+d.id+'" data-name="'+esc(d.name)+'" onclick="renameDept(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-name&#x27;))">&#x270F; Rename</button><button class="btn bp bxs" onclick="showPg(&#x27;pg-inv&#x27;);document.getElementById(&#x27;inv-dept-sel&#x27;).value=&#x27;'+d.id+'&#x27;;renderInv()">&#x1F4CB; View Meds</button><button class="btn bd2c bxs" data-id="'+d.id+'" onclick="delDept(this.getAttribute(&#x27;data-id&#x27;))">&#x1F5D1; Delete</button></div></div>';
+        +'<div style="display:flex;gap:6px;flex-shrink:0"><button class="btn bg bxs" data-dept-action="rename" data-id="'+esc(d.id)+'" data-name="'+esc(d.name)+'">&#x270F; Rename</button><button class="btn bp bxs" data-dept-action="view-meds" data-id="'+esc(d.id)+'">&#x1F4CB; View Meds</button><button class="btn bd2c bxs" data-dept-action="delete" data-id="'+esc(d.id)+'">&#x1F5D1; Delete</button></div></div>';
     }).join(''):'<div style="text-align:center;padding:24px;color:var(--tx2)">No departments yet — add one above</div>';
   var ndcopy=el('ndcopy');
   if(ndcopy){var curVal=ndcopy.value;ndcopy.innerHTML='<option value="empty">Empty list — no medicines copied</option><option value="default">Default list (all medications)</option><optgroup label="Copy from existing dept:">'+ds.map(function(d){return '<option value="'+esc(d.id)+'">Copy from: '+esc(d.name)+' ('+getMeds(d.id).length+' meds)</option>'}).join('')+'</optgroup>';if(curVal)ndcopy.value=curVal;}
   el('nudept').innerHTML=ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+  bindUserPageActions();
+}
+function bindUserPageActions(){
+  var userTable=el('utbl');
+  if(userTable&&!userTable.dataset.actionsBound){
+    userTable.dataset.actionsBound='1';
+    userTable.addEventListener('click',function(event){
+      var button=event.target&&event.target.closest?event.target.closest('[data-user-action]'):null;
+      if(!button||!userTable.contains(button))return;
+      event.preventDefault();
+      var id=button.getAttribute('data-id')||'';
+      if(button.dataset.userAction==='delete')delUser(id);
+      else if(button.dataset.userAction==='toggle-master')toggleMasterUser(id,button.getAttribute('data-master')==='1');
+    });
+  }
+  var departmentList=el('dlst');
+  if(departmentList&&!departmentList.dataset.actionsBound){
+    departmentList.dataset.actionsBound='1';
+    departmentList.addEventListener('click',function(event){
+      var button=event.target&&event.target.closest?event.target.closest('[data-dept-action]'):null;
+      if(!button||!departmentList.contains(button))return;
+      event.preventDefault();
+      var id=button.getAttribute('data-id')||'',action=button.dataset.deptAction;
+      if(action==='rename')renameDept(id,button.getAttribute('data-name')||'');
+      else if(action==='delete')delDept(id);
+      else if(action==='view-meds'){
+        showPg('pg-inv');
+        var selector=el('inv-dept-sel');if(selector)selector.value=id;
+        renderInv();
+      }
+    });
+  }
 }
 function updateUserRoleFields(){
   var role=el('nurole').value;

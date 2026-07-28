@@ -2131,15 +2131,25 @@ function fsR6EnsureMasterModal(){
   var old=fsR6E('mmaster-role-r6');if(old)return old;
   document.body.insertAdjacentHTML('beforeend',
     '<div class="modal-bg" id="mmaster-role-r6"><div class="modal" style="width:720px;max-width:95vw">'+
-    '<div class="mh"><span class="mt">Master Test Mode / وضع اختبار الماستر</span><button class="xbtn" type="button" onclick="fsR6CloseModal(\'mmaster-role-r6\')">×</button></div>'+
+    '<div class="mh"><span class="mt">Master Test Mode / وضع اختبار الماستر</span><button class="xbtn" type="button" data-master-test-action="close">×</button></div>'+
     '<div class="fsr6-master-grid"><div class="fg"><label>Test source / مصدر الاختبار</label><select id="fsr6-master-mode"><option value="user">Managed user / مستخدم موجود</option><option value="role">Role only / دور فقط</option></select></div>'+
     '<div class="fg" id="fsr6-master-user-wrap"><label>User / المستخدم</label><select id="fsr6-master-user"></select></div>'+
     '<div class="fg" id="fsr6-master-role-wrap"><label>Role / الدور</label><select id="fsr6-master-role"><option value="pharmacy">Pharmacy Director</option><option value="inpatient_supervisor">Inpatient Supervisor</option><option value="pharmacy_staff">Pharmacy Staff</option><option value="controlled_pharmacy">Controlled Medicines Officer</option><option value="warehouse">Warehouse Custody Officer</option><option value="department">Department Employee</option></select></div>'+
     '<div class="fg" id="fsr6-master-dept-wrap"><label>Department / القسم</label><select id="fsr6-master-dept"></select></div></div>'+
     '<div class="fsr6-master-preview" id="fsr6-master-preview"></div>'+
-    '<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" type="button" onclick="fsR6CloseModal(\'mmaster-role-r6\')">Cancel</button>'+
-    '<button class="btn bd2c" type="button" id="fsr6-master-exit" onclick="masterResetRole()">Exit Test Mode</button>'+
-    '<button class="btn bp" type="button" onclick="masterApplyRole()">Start / Change Test</button></div></div></div>');
+    '<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" type="button" data-master-test-action="close">Cancel</button>'+
+    '<button class="btn bd2c" type="button" id="fsr6-master-exit" data-master-test-action="exit">Exit Test Mode</button>'+
+    '<button class="btn bp" type="button" data-master-test-action="apply">Start / Change Test</button></div></div></div>');
+  var modal=fsR6E('mmaster-role-r6');
+  modal.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('[data-master-test-action]'):null;
+    if(!button||!modal.contains(button))return;
+    event.preventDefault();
+    var action=button.dataset.masterTestAction;
+    if(action==='close')fsR6CloseModal('mmaster-role-r6');
+    else if(action==='exit')window.masterResetRole();
+    else if(action==='apply')window.masterApplyRole();
+  });
   fsR6E('fsr6-master-mode').onchange=window.masterPreviewUser;
   fsR6E('fsr6-master-user').onchange=window.masterPreviewUser;
   fsR6E('fsr6-master-role').onchange=window.masterPreviewUser;
