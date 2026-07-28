@@ -27,7 +27,7 @@ service cloud.firestore {
     }
 
     function masterUser() {
-      return activeUser() && profile().master == true;
+      return pharmacyDirector() && profile().master == true;
     }
 
     function pharmacyDirector() {
@@ -137,6 +137,7 @@ service cloud.firestore {
         masterUser()
         || pharmacyDirector()
         || inpatientSupervisor()
+        || (pharmacyStaff() && docId.matches('^crash_.*$'))
         || controlledOfficer()
         || warehouseOfficer()
         || (departmentUser() && docId == departmentId())
