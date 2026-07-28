@@ -1,0 +1,69 @@
+/* ASDHealth R6.65 Modular — ordered CSS bundle 9. */
+
+/* ===== 49: asdh-final-department-controlled-fix-style ===== */
+/* Department employee: one authoritative custody print action only. */
+body.role-department #ctl-main-print-btn,
+body.role-department #ctl-departments-view #aa-final-rules-btn-dept,
+body.role-department #ctl-departments-view button[onclick*="ctlChooseLogo"],
+body.role-department #ctl-departments-view button[onclick*="PrintNames"],
+body.role-department #ctl-departments-view button[onclick*="OpenPublic"],
+body.role-department #ctl-departments-view button[onclick*="ctlEditSignatures"]{display:none!important}
+body.role-department #ctl-dept-authoritative-print-btn{display:inline-flex!important}
+#v13x-stock-save-status{min-height:22px;margin:8px 0;font-size:12px;font-weight:700}
+#v13x-stock-save-status.err{color:var(--rdl)}
+#v13x-stock-save-status.succ{color:var(--gnl)}
+#v13x-stock-save-status.saving{color:var(--acl)}
+
+
+/* ===== 50: asdh-authoritative-final-fixes-style ===== */
+.ccx-stock-out{color:#fff!important;border-color:#b91c1c!important;background:#b91c1c!important}
+.ccx-row-stock-out td{background:rgba(218,54,51,.15)!important}
+body:not(.role-inpatient_supervisor):not(.role-pharmacy) #crash-add-btn{display:none!important}
+
+
+/* ===== 51: asdh-final-request-completion-style ===== */
+/* Final authoritative Crash Cart content editor and one-page print refinements. */
+#cc-final-editor .modal{width:min(1240px,98vw);max-width:98vw;max-height:94vh;padding:0;overflow:hidden;display:flex;flex-direction:column}
+#cc-final-editor .ccfe-head{padding:16px 18px;border-bottom:1px solid var(--bd);display:flex;align-items:flex-start;justify-content:space-between;gap:12px;background:linear-gradient(135deg,rgba(31,111,235,.15),rgba(46,160,67,.05))}
+#cc-final-editor .ccfe-body{padding:14px 18px;overflow:auto;flex:1;min-height:0}
+#cc-final-editor .ccfe-footer{padding:12px 18px;border-top:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;background:var(--s2)}
+#cc-final-editor .ccfe-table{min-width:1100px;table-layout:fixed}
+#cc-final-editor .ccfe-table th,#cc-final-editor .ccfe-table td{font-size:11px;padding:7px 6px;vertical-align:top}
+#cc-final-editor .ccfe-table input,#cc-final-editor .ccfe-table select{margin:0;padding:6px 7px;font-size:11px}
+#cc-final-editor .ccfe-name{width:20%}#cc-final-editor .ccfe-conc{width:12%}#cc-final-editor .ccfe-required{width:9%}#cc-final-editor .ccfe-available{width:9%}#cc-final-editor .ccfe-status{width:12%}#cc-final-editor .ccfe-batches{width:32%}#cc-final-editor .ccfe-delete{width:6%}
+#cc-final-editor .ccfe-batch{display:grid;grid-template-columns:minmax(125px,1fr) 80px minmax(80px,1fr) 34px;gap:5px;align-items:center;margin-bottom:5px}
+#cc-final-editor .ccfe-error{color:var(--rdl);font-weight:700;min-height:20px}
+#cc-final-editor .ccfe-help{border:1px solid var(--ac);background:rgba(31,111,235,.08);border-radius:9px;padding:10px 12px;margin-bottom:10px;font-size:12px;line-height:1.55}
+#pg-crashcart .cc-final-manage-btn{border-color:var(--gn);color:var(--gnl)}
+body:not(.role-pharmacy):not(.role-inpatient_supervisor) #pg-crashcart .cc-final-manage-btn{display:none!important}
+@media(max-width:760px){#cc-final-editor .modal{width:99vw;max-width:99vw}.ccfe-footer>*{width:100%}}
+
+#cc-bulk-med-modal .modal{width:min(760px,96vw)}
+#cc-bulk-med-modal .ccbm-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#cc-bulk-med-modal .ccbm-carts{max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:9px;padding:8px;margin-bottom:12px}
+#cc-bulk-med-modal .ccbm-cart{display:flex;align-items:center;gap:8px;padding:7px;margin:0;border-bottom:1px solid var(--bd)}
+#cc-bulk-med-modal .ccbm-cart:last-child{border-bottom:0}
+#cc-bulk-med-modal .ccbm-cart input{width:auto;margin:0}
+#cc-bulk-med-modal .ccbm-error{color:var(--rdl);font-size:12px;font-weight:700;min-height:20px}
+@media(max-width:650px){#cc-bulk-med-modal .ccbm-grid{grid-template-columns:1fr}}
+
+
+/* ===== 52: asdh-audit-authoritative-new-request-style ===== */
+/* One authoritative New Request visibility policy. */
+#pg-newreq{display:none!important}
+body.role-department #pg-newreq.on{display:block!important}
+body.role-pharmacy #pg-newreq.af-request-enabled,
+body.role-inpatient_supervisor #pg-newreq.af-request-enabled{display:block!important}
+body.role-pharmacy_staff #pg-newreq,
+body.role-controlled_pharmacy #pg-newreq,
+body.role-warehouse #pg-newreq{display:none!important}
+
+
+/* ===== 53: r635-master-destructive-actions ===== */
+.master-delete-only{display:none!important}
+body.master-mode .master-delete-only{display:inline-flex!important}
+
+
+/* ===== 54: r639-crash-cart-editor-fix-style ===== */
+#cc-final-editor .ccfe-item-name{font-weight:700}
+#cc-final-editor .ccfe-save-status{font-size:11px;color:var(--tx2);margin-inline-end:8px}

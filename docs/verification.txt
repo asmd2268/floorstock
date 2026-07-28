@@ -1,0 +1,1 @@
+PASS: assets exist, all JavaScript modules parse, and no embedded cart markers were found.

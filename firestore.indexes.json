@@ -1,0 +1,30 @@
+{
+  "indexes": [],
+  "fieldOverrides": [
+    {
+      "collectionGroup": "floorstock_state",
+      "fieldPath": "value",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "public_expiry",
+      "fieldPath": "batches",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "public_controlled_expiry",
+      "fieldPath": "items",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "public_controlled_expiry",
+      "fieldPath": "expiryRules",
+      "indexes": []
+    },
+    {
+      "collectionGroup": "public_controlled_expiry",
+      "fieldPath": "expiryTrackRules",
+      "indexes": []
+    }
+  ]
+}

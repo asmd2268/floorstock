@@ -1,0 +1,59 @@
+/* ASDHealth R6.65 Modular — ordered CSS bundle 4. */
+
+/* ===== 19: print-attribution-style ===== */
+@media print{body::after{content:"By Ali Abudahash";display:block;text-align:center;font-size:8pt;margin-top:8mm}}
+
+
+/* ===== 20: inline-style-20 ===== */
+.wh-stock-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.wh-batch-row{display:grid;grid-template-columns:1fr 1fr 1fr 40px;gap:8px;align-items:end;margin-bottom:8px}
+.wh-batch-row input{margin:0}
+.crash-section-label{font-weight:700;color:var(--acl);background:var(--s2)}
+@media(max-width:760px){.wh-stock-grid{grid-template-columns:1fr}.wh-batch-row{grid-template-columns:1fr 1fr}.wh-batch-row button{grid-column:2}}
+
+
+/* ===== 21: inline-style-21 ===== */
+#wh-receive-card{border:1px solid rgba(168,85,247,.55)}
+#wh-receive-card .ch{background:rgba(168,85,247,.08)}
+.wh-receive-grid{display:grid;grid-template-columns:minmax(220px,2fr) repeat(3,minmax(120px,1fr));gap:12px;align-items:end}
+.wh-receive-results{max-height:260px;overflow:auto;border:1px solid var(--bd);border-radius:8px;background:var(--s2)}
+.wh-receive-result{padding:9px 11px;border-bottom:1px solid var(--bd);cursor:pointer;display:flex;justify-content:space-between;gap:10px}
+.wh-receive-result:last-child{border-bottom:0}.wh-receive-result:hover{background:var(--s3)}
+.wh-receive-result.on{outline:1px solid var(--ac);background:rgba(31,111,235,.10)}
+.wh-receive-meta{font-size:11px;color:var(--tx2)}
+@media(max-width:850px){.wh-receive-grid{grid-template-columns:1fr 1fr}}
+
+
+/* ===== 22: inline-style-22 ===== */
+/* ===== Crash Cart UX + role/inventory enhancement (2026-07) ===== */
+.cc-med-choice{border:1px solid var(--bd);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:var(--s2)}
+.cc-med-choice.on{border-color:var(--ac);box-shadow:0 0 0 1px rgba(31,111,235,.22)}
+.cc-med-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cc-med-head label{margin:0;color:var(--tx);font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px}
+.cc-med-head input[type=checkbox]{width:16px;margin:0}
+.cc-med-qty{display:none;margin-top:10px}.cc-med-choice.on .cc-med-qty{display:block}
+.cc-report-meta{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.cc-badge{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;padding:0 6px;margin-inline-start:5px;border-radius:10px;background:var(--rd);color:#fff;font-size:10px;font-weight:700}
+@media(max-width:700px){.cc-report-meta{grid-template-columns:1fr}}
+
+
+/* ===== 23: inline-style-23 ===== */
+body.role-department #ctl-departments-view #ctl-assign-btn,
+body.role-department #ctl-departments-view #ctl-sign-btn,
+body.role-department #ctl-departments-view #ctl-bulk-shelf-btn,
+body.role-department #ctl-departments-view #ctl-dept-select-all,
+body.role-department #ctl-departments-view tbody input[type=checkbox],
+body.role-department #ctl-departments-view td:last-child,
+body.role-department #ctl-departments-view th:last-child{display:none!important}
+body.role-department #ctl-log{pointer-events:none}
+
+
+/* ===== 24: inline-style-24 ===== */
+#ctl-dept-public-panel{display:none}
+#ctl-dept-public-panel .ctl-rulebar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
+#ctl-dept-public-panel .ctl-rulebar .fg{margin:0;min-width:150px}
+#ctl-dept-public-panel .ctl-rulebar input{margin:0;width:120px}
+#ctl-dept-public-panel .ctl-summary{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+#ctl-dept-public-panel .expired td{background:rgba(218,54,51,.10)!important}
+#ctl-dept-public-panel .soon td{background:rgba(210,153,34,.10)!important}
+@media(max-width:700px){#ctl-dept-public-panel .ctl-summary{grid-template-columns:1fr}}

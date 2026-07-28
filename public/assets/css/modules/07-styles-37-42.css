@@ -1,0 +1,59 @@
+/* ASDHealth R6.65 Modular — ordered CSS bundle 7. */
+
+/* ===== 37: al-clean-authoritative-style ===== */
+body.role-inpatient_supervisor #pg-controlled,
+body.role-pharmacy_staff #pg-controlled,
+body.role-pharmacy #pg-controlled{display:none!important}
+body.role-department #ctl-dept{display:none!important}
+
+
+/* ===== 38: v13-ap-controlled-bulk-replacement-style ===== */
+#v13-ap-bulk-replacement-btn{display:inline-flex!important}
+
+
+/* ===== 39: v13-as-crash-opening-log-style ===== */
+#v13as-crash-tabs{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+#v13as-crash-tabs .v13as-tab{border:1px solid var(--bd);background:var(--s2);padding:9px 14px;border-radius:10px;font-weight:800;cursor:pointer}
+#v13as-crash-tabs .v13as-tab.active{background:var(--pri);color:#fff;border-color:var(--pri)}
+#v13as-opening-log{display:none}
+#v13as-opening-log.on{display:block}
+#v13as-opening-log .v13as-head{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:12px}
+#v13as-opening-log .v13as-title{font-size:18px;font-weight:900}
+#v13as-opening-log .v13as-sub{color:var(--mut);font-size:12px;margin-top:3px}
+#v13as-opening-log .v13as-filters{display:grid;grid-template-columns:minmax(180px,1fr) minmax(160px,220px) auto;gap:10px;align-items:end}
+#v13as-opening-log .v13as-summary{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}
+#v13as-opening-log .v13as-table-wrap{overflow:auto;border:1px solid var(--bd);border-radius:12px;background:var(--s1)}
+#v13as-opening-log table{width:100%;border-collapse:collapse;min-width:840px}
+#v13as-opening-log th,#v13as-opening-log td{padding:10px;border-bottom:1px solid var(--bd);vertical-align:top;text-align:start}
+#v13as-opening-log th{position:sticky;top:0;background:var(--s2);z-index:1;font-size:12px}
+#v13as-opening-log tr:last-child td{border-bottom:0}
+#v13as-opening-log .v13as-empty{padding:30px;text-align:center;color:var(--mut)}
+@media(max-width:760px){#v13as-opening-log .v13as-filters{grid-template-columns:1fr}.v13as-print-btn{width:100%}}
+
+
+/* ===== 40: v14nrse-style ===== */
+/* schedule date range card */
+/* request edit - add item row */
+.v14-add-med-row{background:var(--s2);border-top:1px dashed var(--bd)}
+.v14-add-med-row td{padding:6px 8px}
+
+
+/* ===== 41: v14dp-style ===== */
+/* Fulfilled group header */
+#v14-ptbl-fulfilled-head{background:var(--s2);font-weight:800;font-size:12px;color:var(--tx2)}
+#v14-ptbl-fulfilled-head td{padding:6px 10px;border-bottom:2px solid var(--ac)}
+/* Pending (not fulfilled) in print page - dimmed */
+tr.v14-ptbl-pending{opacity:.5}
+tr.v14-ptbl-pending td{font-style:italic}
+/* fulfilled row highlight */
+tr.v14-ptbl-done{background:color-mix(in srgb,var(--gnl) 8%,transparent)}
+/* filter buttons */
+#v14-print-filter{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+#v14-print-filter button.on{background:var(--pri);color:#fff}
+
+
+/* ===== 42: v16-fixes-style ===== */
+/* ── 4. Announcements: hide for all except the allowed roles ── */
+body.role-pharmacy_staff [data-pg="pg-announcements"],
+body.role-department [data-pg="pg-announcements"],
+body.role-warehouse [data-pg="pg-announcements"] { display: none !important; }

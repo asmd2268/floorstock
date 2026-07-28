@@ -1,0 +1,73 @@
+/* ASDHealth R6.65 Modular — ordered CSS bundle 6. */
+
+/* ===== 31: pharmacy-announcements-style ===== */
+#dept-announcement-host{max-width:1400px;margin:0 auto;padding:10px 18px 0}
+.dept-announcement{border:1px solid #9a6700;border-inline-start:5px solid #9a6700;background:rgba(210,153,34,.13);border-radius:10px;padding:12px 14px;margin-bottom:9px;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.dept-announcement.urgent{border-color:#b42318;border-inline-start-color:#b42318;background:rgba(218,54,51,.13)}
+.dept-announcement .ann-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px}
+.dept-announcement .ann-title{font-weight:800;font-size:14px}
+.dept-announcement .ann-ar{direction:rtl;text-align:right;font-weight:600;white-space:pre-wrap;line-height:1.65}
+.dept-announcement .ann-en{direction:ltr;text-align:left;color:var(--tx2);white-space:pre-wrap;line-height:1.55;margin-top:3px}
+.dept-announcement .ann-until{font-size:10px;color:var(--tx2);white-space:nowrap}
+.ann-card{border:1px solid var(--bd);border-radius:10px;padding:12px 14px;background:var(--s2);margin-bottom:9px}
+.ann-card.inactive{opacity:.62}
+.ann-card .ann-card-head{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.ann-card .ann-card-title{font-weight:700}
+.ann-targets{font-size:11px;color:var(--tx2);margin-top:5px}
+.ann-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.ann-dept-box{max-height:185px;overflow:auto;border:1px solid var(--bd);border-radius:8px;padding:8px;background:var(--s2)}
+.ann-dept-option{display:flex;align-items:center;gap:7px;padding:5px 4px;margin:0;border-bottom:1px solid var(--bd)}
+.ann-dept-option:last-child{border-bottom:none}
+.ann-dept-option input{width:auto;margin:0}
+@media(max-width:720px){.ann-form-grid{grid-template-columns:1fr}}
+@media print{#dept-announcement-host,#pg-announcements{display:none!important}}
+
+
+/* ===== 32: announcements-selection-persist-fix-style ===== */
+#dept-announcement-host{position:sticky;top:0;z-index:70;margin:0 0 12px 0;padding:8px;background:var(--bg);border-bottom:2px solid var(--ac);box-shadow:0 5px 14px rgba(0,0,0,.14)}
+#dept-announcement-host .dept-announcement{margin:0 0 8px;border-width:2px!important;border-radius:10px!important;padding:14px 16px!important;background:rgba(34,115,190,.17)!important;box-shadow:0 3px 10px rgba(0,0,0,.12)}
+#dept-announcement-host .dept-announcement:last-child{margin-bottom:0}
+#dept-announcement-host .dept-announcement.urgent{background:rgba(218,54,51,.20)!important;border-color:#d32f2f!important}
+#dept-announcement-host .ann-title{font-size:16px!important;font-weight:900!important}
+#dept-announcement-host .ann-ar{font-size:15px!important;font-weight:800!important}
+#dept-announcement-host .ann-en{font-size:14px!important;font-weight:650!important;color:var(--tx)!important}
+#dept-announcement-host .ann-until{font-size:12px!important;font-weight:700!important}
+
+
+/* ===== 33: v13-final-controlled-print-style ===== */
+/* Hide the redundant Class column in Inpatient Departments. */
+#ctl-departments-view table th:nth-child(6),
+#ctl-departments-view table td:nth-child(6){display:none!important}
+.v13-final-modal .modal{width:min(940px,96vw)}
+.v13-final-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.v13-final-scope{max-height:330px;overflow:auto;border:1px solid var(--bd);border-radius:9px;padding:8px}
+.v13-final-scope label{display:flex;align-items:center;gap:8px;margin:0;padding:8px;border-bottom:1px solid var(--bd)}
+.v13-final-scope label:last-child{border-bottom:0}.v13-final-scope input{width:16px;height:16px;margin:0}
+@media(max-width:700px){.v13-final-grid{grid-template-columns:1fr}}
+
+
+/* ===== 34: v13-post-i-consolidated-style ===== */
+.v13q-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px;border:1px solid var(--bd);border-radius:9px;background:var(--s2);margin-bottom:10px}
+.v13q-toolbar label{display:flex;align-items:center;gap:6px;margin:0;font-size:12px}.v13q-toolbar input[type=checkbox]{width:auto;margin:0}
+.v13q-modal{width:min(760px,96vw)!important}.v13q-flags{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:10px 0}.v13q-flags label{display:flex;align-items:center;gap:8px;border:1px solid var(--bd);border-radius:8px;padding:9px;margin:0}.v13q-flags input{width:auto;margin:0}
+.v13q-mismatch{display:inline-flex;padding:2px 7px;border-radius:10px;border:1px solid var(--yl);color:var(--yll);font-size:10px;font-weight:700;margin-top:4px}
+@media(max-width:700px){.v13q-flags{grid-template-columns:1fr}}
+
+
+/* ===== 35: v13-w-supervisor-inventory-style ===== */
+#all-inv-modal{align-items:flex-start!important;padding:18px 8px;overflow-y:auto!important}
+#all-inv-modal .all-inv-modal{width:min(1240px,98vw)!important;max-height:92vh!important;display:flex;flex-direction:column;overflow:hidden!important}
+#all-inv-modal .all-inv-wrap{overflow:auto;min-height:0;max-height:60vh}
+#all-inv-modal .all-inv-table{min-width:980px}
+#all-inv-modal .v13w-footer{display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:10px}
+
+
+/* ===== 36: v13-x-controlled-request-fix-style ===== */
+.v13x-modal .modal{width:min(980px,96vw)}
+.v13x-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.v13x-batches{border:1px solid var(--bd);border-radius:9px;overflow:hidden}
+.v13x-batch{display:grid;grid-template-columns:110px 1fr 1fr 40px;gap:8px;align-items:center;padding:8px;border-bottom:1px solid var(--bd)}
+.v13x-batch:last-child{border-bottom:0}.v13x-batch input{margin:0}
+.v13x-qty{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.v13x-toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+@media(max-width:700px){.v13x-grid,.v13x-qty{grid-template-columns:1fr}.v13x-batch{grid-template-columns:1fr 1fr}.v13x-batch button{grid-column:2}}

@@ -1,0 +1,10 @@
+{
+  "sourceBytes": 1195575,
+  "indexBytes": 103742,
+  "jsModuleCount": 59,
+  "cssBundleCount": 10,
+  "inlineScriptCount": 0,
+  "inlineStyleTagCount": 0,
+  "duplicateIds": [],
+  "verification": "PASS: assets exist, all JavaScript modules parse, and no embedded cart markers were found."
+}
