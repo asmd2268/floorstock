@@ -14503,7 +14503,7 @@ window.addEventListener('load',function(){decorate()});
 <script id="r661-authoritative-inventory-safety">
 (function(){
 'use strict';
-var VERSION='R6.62',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
+var VERSION='R6.63',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
 function clone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
 function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
 function actor(){return (window.CU&&(CU.username||CU.email))||'Unknown'}
@@ -14581,10 +14581,18 @@ function escSafe(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){r
 function masterAllowed(){return !!(window.CU&&(CU.master===true||String(CU.role)==='master'))}
 function ensureSnapshotManager(){
   if(!masterAllowed())return;
-  var page=document.getElementById('pg-backup-restore');if(!page||document.getElementById('r662-snapshot-card'))return;
-  var card=document.createElement('div');card.className='card';card.id='r662-snapshot-card';
-  card.innerHTML='<div class="ch"><div><span class="ct">🛡 Inventory Safety Snapshots / لقطات حماية المخزون</span><div class="fhint">Firebase snapshots created automatically before each explicit inventory change. Last '+SNAPSHOT_LIMIT+' snapshots are retained per department.</div></div><button type="button" class="btn bp" id="r662-open-snapshots">Open snapshots / فتح اللقطات</button></div>';
-  page.appendChild(card);document.getElementById('r662-open-snapshots').onclick=window.openInventorySafetySnapshots
+  var backupPage=document.getElementById('pg-backup-restore'),dashboard=document.getElementById('pg-dash');
+  if(backupPage&&!document.getElementById('r662-snapshot-card')){
+    var card=document.createElement('div');card.className='card';card.id='r662-snapshot-card';
+    card.innerHTML='<div class="ch"><div><span class="ct">🛡 Inventory Safety Snapshots / لقطات حماية المخزون</span><div class="fhint">Firebase snapshots created automatically before each explicit inventory change. Last '+SNAPSHOT_LIMIT+' snapshots are retained per department.</div></div><button type="button" class="btn bp r663-open-snapshots">Open snapshots / فتح اللقطات</button></div>';
+    backupPage.appendChild(card)
+  }
+  if(dashboard&&!document.getElementById('r663-dashboard-snapshot-card')){
+    var dashCard=document.createElement('div');dashCard.className='card';dashCard.id='r663-dashboard-snapshot-card';
+    dashCard.innerHTML='<div class="ch"><div><span class="ct">🛡 Inventory Protection / حماية المخزون</span><div class="fhint">Master-only access to the last '+SNAPSHOT_LIMIT+' pre-change snapshots for every department.</div></div><button type="button" class="btn bp r663-open-snapshots">Inventory Safety Snapshots</button></div>';
+    dashboard.insertBefore(dashCard,dashboard.firstChild)
+  }
+  document.querySelectorAll('.r663-open-snapshots').forEach(function(button){button.onclick=window.openInventorySafetySnapshots})
 }
 function snapshotDepartments(){
   return (typeof gd==='function'?(gd()||[]):[]).map(function(d){var list=clone(S.g('inventory_snapshot_index_'+d.id)||[]);return {id:String(d.id),name:d.name||d.id,list:list}}).filter(function(d){return d.list.length})
@@ -14662,7 +14670,7 @@ if(typeof previousStart==='function')window.startApp=function(){
   setTimeout(showSafety,500);setTimeout(verifyStartup,2600);return result
 };
 new MutationObserver(disableUnsafeMergeButtons).observe(document.documentElement,{childList:true,subtree:true});
-document.title='ASDHealth FloorStock R6.62 Protected';
+document.title='ASDHealth FloorStock R6.63 Protected';
 })();
 </script>
 
