@@ -187,7 +187,9 @@ def main() -> None:
             source = "import { publishLegacy } from '../core/legacy-registry.js';\n\n" + source
             source += provider_footer(path.name, functions, variables)
         elif not re.search(r"\bexport\s+", source):
-            source += "\nexport {};\n"
+            # Keep generated feature modules byte-for-byte stable across builds.
+            # The previous append preserved an extra trailing newline each run.
+            source = source.rstrip() + "\n\nexport {};\n"
         path.write_text(source, encoding="utf-8")
 
     index_path = PUBLIC / "index.html"

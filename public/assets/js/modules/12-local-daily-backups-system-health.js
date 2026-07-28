@@ -62,11 +62,4 @@
   window.refreshBackupRestorePage=function(){daily().catch(function(){});Promise.resolve(window.masterRefreshSystemHealth()).catch(function(){})};
 })();
 
-
-
-
-
-
-
-
 export {};

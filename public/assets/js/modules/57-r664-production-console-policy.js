@@ -4,11 +4,4 @@
   ['log','info','debug'].forEach(function(method){try{console[method]=function(){}}catch(ignore){}});
 })();
 
-
-
-
-
-
-
-
 export {};

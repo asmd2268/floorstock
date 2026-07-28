@@ -26,11 +26,4 @@ function printLog(){var rows=visibleReports();if(!rows.length)return window.toas
 window.refreshCrashOpeningLogUi=ensureUI;
 })();
 
-
-
-
-
-
-
-
 export {};

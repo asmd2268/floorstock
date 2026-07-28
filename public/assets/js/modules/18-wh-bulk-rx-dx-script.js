@@ -52,11 +52,4 @@
  window.addWarehouseControlledBulkButtons=addButtons;
 })();
 
-
-
-
-
-
-
-
 export {};

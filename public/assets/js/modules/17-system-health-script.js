@@ -19,11 +19,4 @@ function initial(){setStatus('health-network',navigator.onLine?'Online':'Offline
 initial();window.addEventListener('online',initial);window.addEventListener('offline',initial);
 })();
 
-
-
-
-
-
-
-
 export {};

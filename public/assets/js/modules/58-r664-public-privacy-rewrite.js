@@ -29,11 +29,4 @@
   if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(rewrite,1500);return result};
 })();
 
-
-
-
-
-
-
-
 export {};

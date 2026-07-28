@@ -246,11 +246,4 @@ var previousStart=window.startApp;
 if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(boot,900);return result};
 })();
 
-
-
-
-
-
-
-
 export {};

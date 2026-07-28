@@ -65,11 +65,4 @@ window.bindInventoryTools=bindTools;
 
 })();
 
-
-
-
-
-
-
-
 export {};

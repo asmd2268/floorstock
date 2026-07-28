@@ -8,11 +8,4 @@
   try{console.error=function(){nativeError('[ASDHealth] An operation failed. Review the in-app message or Firebase logs.');}}catch(ignore){}
 })();
 
-
-
-
-
-
-
-
 export {};

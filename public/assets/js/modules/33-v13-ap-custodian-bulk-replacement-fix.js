@@ -30,11 +30,4 @@ function addBulkReplacement(){
 window.ensureControlledBulkReplacementButton=addBulkReplacement;
 })();
 
-
-
-
-
-
-
-
 export {};

@@ -118,11 +118,4 @@
   window.applyPsychotropicPharmacyStockR664=applyPsychotropicPharmacyStockR664;
 })();
 
-
-
-
-
-
-
-
 export {};

@@ -46,11 +46,4 @@
   window.applyWarehouseControlledUi=applyWarehouseUI;
 })();
 
-
-
-
-
-
-
-
 export {};

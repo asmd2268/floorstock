@@ -66,11 +66,4 @@ window.ensureBulkReplacementButton=ensureBulkReplacementButtonW;
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&el('all-inv-modal'))window.closeAllDepartmentsInventory()});
 })();
 
-
-
-
-
-
-
-
 export {};

@@ -51,11 +51,4 @@
   window.ensurePsychotropicSharedList=ensurePsychotropicSharedList;
 })();
 
-
-
-
-
-
-
-
 export {};

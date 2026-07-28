@@ -17,11 +17,4 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 else setTimeout(run,300);
 })();
 
-
-
-
-
-
-
-
 export {};

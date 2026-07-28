@@ -100,11 +100,4 @@ function observeDeletionHosts(){
 window.addEventListener('load',observeDeletionHosts);
 })();
 
-
-
-
-
-
-
-
 export {};

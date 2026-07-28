@@ -659,11 +659,4 @@ function boot(){if(E('pg-schedule'))window.renderRequestHourGridUI();if(window.C
 boot();
 })();
 
-
-
-
-
-
-
-
 export {};

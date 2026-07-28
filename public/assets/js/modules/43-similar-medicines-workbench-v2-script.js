@@ -174,11 +174,4 @@ async function mergeGroup(groupId){
 window.openSimilarMedicinesAllDepartments=function(){if(!canManage())return typeof toast==='function'?toast('Not authorized.','err'):null;renderModal()};
 })();
 
-
-
-
-
-
-
-
 export {};

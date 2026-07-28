@@ -35,11 +35,4 @@ if(typeof previousStart==='function')window.startApp=function(){var result=previ
 window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDefault();e.returnValue=''});
 })();
 
-
-
-
-
-
-
-
 export {};
