@@ -14494,7 +14494,7 @@ window.addEventListener('load',function(){decorate()});
 
 
 <style id="r661-inventory-safety-style">
-#r661-inventory-safety{position:fixed;right:14px;bottom:14px;z-index:9000;display:flex;align-items:center;gap:8px;max-width:min(620px,calc(100vw - 28px));padding:8px 10px;border:1px solid #238636;border-radius:9px;background:#161b22;color:#fff;box-shadow:0 6px 22px rgba(0,0,0,.32);font:700 11px Arial}
+#r661-inventory-safety{display:none!important}
 #r661-inventory-safety.is-error{border-color:#f85149}
 #r661-inventory-safety button{border:1px solid #8b949e;border-radius:6px;background:#21262d;color:#fff;padding:5px 8px;font-weight:700;cursor:pointer}
 #r661-inventory-safety .r661-text{flex:1;min-width:0}
@@ -14503,7 +14503,7 @@ window.addEventListener('load',function(){decorate()});
 <script id="r661-authoritative-inventory-safety">
 (function(){
 'use strict';
-var VERSION='R6.61',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null;
+var VERSION='R6.62',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
 function clone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
 function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
 function actor(){return (window.CU&&(CU.username||CU.email))||'Unknown'}
@@ -14517,7 +14517,8 @@ function totalAndHash(){
   rows.sort(function(a,b){return a.join('|').localeCompare(b.join('|'))});return {count:rows.length,hash:hash(rows)}
 }
 function setSafety(message,error){
-  var bar=document.getElementById('r661-inventory-safety');if(!bar)return;
+  var bar=document.getElementById('r661-inventory-safety');
+  if(!bar){if(error&&message!==lastSafetyError){lastSafetyError=message;if(typeof toast==='function')toast(message,'err')}else if(!error)console.info(message);return}
   var text=bar.querySelector('.r661-text');if(text)text.textContent=message;
   bar.classList.toggle('is-error',!!error)
 }
@@ -14576,6 +14577,55 @@ function wrapApproved(name){
   var wrapped=async function(){var self=this,args=arguments;return window.inventorySafetyApprovedBulk(name,function(){return original.apply(self,args)})};wrapped.__r661=true;window[name]=wrapped
 }
 ['confirmMergeInventoryNames','deleteSelected'].forEach(wrapApproved);
+function escSafe(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function masterAllowed(){return !!(window.CU&&(CU.master===true||String(CU.role)==='master'))}
+function ensureSnapshotManager(){
+  if(!masterAllowed())return;
+  var page=document.getElementById('pg-backup-restore');if(!page||document.getElementById('r662-snapshot-card'))return;
+  var card=document.createElement('div');card.className='card';card.id='r662-snapshot-card';
+  card.innerHTML='<div class="ch"><div><span class="ct">🛡 Inventory Safety Snapshots / لقطات حماية المخزون</span><div class="fhint">Firebase snapshots created automatically before each explicit inventory change. Last '+SNAPSHOT_LIMIT+' snapshots are retained per department.</div></div><button type="button" class="btn bp" id="r662-open-snapshots">Open snapshots / فتح اللقطات</button></div>';
+  page.appendChild(card);document.getElementById('r662-open-snapshots').onclick=window.openInventorySafetySnapshots
+}
+function snapshotDepartments(){
+  return (typeof gd==='function'?(gd()||[]):[]).map(function(d){var list=clone(S.g('inventory_snapshot_index_'+d.id)||[]);return {id:String(d.id),name:d.name||d.id,list:list}}).filter(function(d){return d.list.length})
+}
+function renderSnapshotChoices(){
+  var deptId=String((document.getElementById('r662-snapshot-dept')||{}).value||''),host=document.getElementById('r662-snapshot-list'),dept=snapshotDepartments().find(function(d){return d.id===deptId});
+  if(!host)return;
+  host.innerHTML=dept&&dept.list.length?dept.list.map(function(item,index){
+    return '<label style="display:flex;align-items:flex-start;gap:9px;border:1px solid var(--bd);border-radius:8px;padding:9px;margin-bottom:7px"><input type="radio" name="r662-snapshot-choice" value="'+escSafe(item.id)+'" '+(index===0?'checked':'')+' style="width:auto;margin-top:3px"><span><b>'+escSafe(new Date(item.at).toLocaleString())+'</b><small style="display:block;color:var(--tx2);margin-top:3px">'+escSafe(item.medCount)+' medications · '+escSafe(item.expiryCount)+' expiry records · '+escSafe(item.actor||'Unknown')+'</small><small style="display:block;color:var(--tx2)">'+escSafe(item.reason||'inventory change')+'</small></span></label>'
+  }).join(''):'<div class="fhint">No snapshots for this department.</div>'
+}
+window.openInventorySafetySnapshots=function(){
+  if(!masterAllowed())return typeof toast==='function'?toast('Master permission required.','err'):false;
+  var depts=snapshotDepartments(),old=document.getElementById('r662-snapshot-modal');if(old)old.remove();
+  var html='<div class="modal-bg on" id="r662-snapshot-modal"><div class="modal" style="width:min(720px,96vw)"><div class="mh"><div><div class="mt">Inventory Safety Snapshots</div><div class="fhint">Choose a department and an exact pre-change snapshot. Restoring also creates a new snapshot of the current state.</div></div><button type="button" class="xbtn" data-close>×</button></div>';
+  if(!depts.length)html+='<div class="alert-banner-y">No inventory snapshots exist yet. A snapshot is created automatically before the next inventory change.</div>';
+  else html+='<label>Department / القسم<select id="r662-snapshot-dept">'+depts.map(function(d){return '<option value="'+escSafe(d.id)+'">'+escSafe(d.name)+' — '+d.list.length+' snapshot(s)</option>'}).join('')+'</select></label><div id="r662-snapshot-list" style="max-height:360px;overflow:auto;margin-top:10px"></div>';
+  html+='<div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button type="button" class="btn bg" data-close>Close</button>'+(depts.length?'<button type="button" class="btn bd2c" id="r662-restore-snapshot">Restore selected snapshot</button>':'')+'</div></div></div>';
+  document.body.insertAdjacentHTML('beforeend',html);var modal=document.getElementById('r662-snapshot-modal');
+  modal.addEventListener('click',function(e){if(e.target===modal||e.target.closest('[data-close]'))modal.remove()});
+  var select=document.getElementById('r662-snapshot-dept');if(select){select.onchange=renderSnapshotChoices;renderSnapshotChoices()}
+  var restore=document.getElementById('r662-restore-snapshot');if(restore)restore.onclick=window.restoreSelectedInventorySafetySnapshot;
+  return true
+};
+window.restoreSelectedInventorySafetySnapshot=async function(){
+  if(!masterAllowed())return false;
+  var deptId=String((document.getElementById('r662-snapshot-dept')||{}).value||''),choice=document.querySelector('input[name="r662-snapshot-choice"]:checked'),list=clone(S.g('inventory_snapshot_index_'+deptId)||[]),item=choice&&list.find(function(x){return String(x.id)===String(choice.value)});
+  if(!item)return typeof toast==='function'?toast('Choose a snapshot first.','err'):false;
+  var meds=clone(S.g(item.medsKey)||[]),expiry=clone(S.g(item.expiryKey)||[]);
+  var yes=typeof uiConfirm==='function'?await uiConfirm('Restore '+deptName(deptId)+' to '+new Date(item.at).toLocaleString()+'?\\n\\nCurrent medications: '+medsRaw(deptId).length+'\\nSnapshot medications: '+meds.length+'\\n\\nA safety snapshot of the current state will be created first.'):window.confirm('Restore selected inventory snapshot?');
+  if(!yes)return false;
+  var button=document.getElementById('r662-restore-snapshot');if(button){button.disabled=true;button.textContent='Restoring…'}
+  try{
+    await window.inventorySafetyApprovedBulk('master_snapshot_restore',function(){return setMeds(deptId,meds)});
+    if(typeof setExpiry==='function')await setExpiry(deptId,expiry);
+    if(typeof auditAction==='function')auditAction('inventory_snapshot_restored',{deptId:deptId,snapshotId:item.id,snapshotAt:item.at,medCount:meds.length,expiryCount:expiry.length});
+    var modal=document.getElementById('r662-snapshot-modal');if(modal)modal.remove();
+    if(typeof renderInv==='function')renderInv();if(typeof toast==='function')toast('Inventory snapshot restored ✓','succ');return true
+  }catch(error){console.error(error);if(typeof toast==='function')toast('Snapshot restore failed: '+String(error&&error.message||error),'err');return false}
+  finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent='Restore selected snapshot'}}
+};
 window.undoLatestInventorySafetySnapshot=async function(){
   var deptId=typeof getInvDept==='function'?String(getInvDept()||''):'',index=deptId?clone(S.g('inventory_snapshot_index_'+deptId)||[]):[];
   if(!deptId||!index.length)return typeof toast==='function'?toast('No inventory safety snapshot is available for this department.','info'):false;
@@ -14597,9 +14647,7 @@ function disableUnsafeMergeButtons(){
 }
 function showSafety(){
   if(!window.CU)return;
-  var bar=document.getElementById('r661-inventory-safety');
-  if(!bar){bar=document.createElement('div');bar.id='r661-inventory-safety';bar.innerHTML='<span class="r661-text"></span><button type="button" onclick="undoLatestInventorySafetySnapshot()">Undo latest department change</button>';document.body.appendChild(bar)}
-  var f=totalAndHash();setSafety(VERSION+' protected · '+f.count+' medications · fingerprint '+f.hash,false);disableUnsafeMergeButtons()
+  var f=totalAndHash();console.info(VERSION+' protected · '+f.count+' medications · fingerprint '+f.hash);disableUnsafeMergeButtons();ensureSnapshotManager()
 }
 function verifyStartup(){
   var current=totalAndHash();
@@ -14614,7 +14662,50 @@ if(typeof previousStart==='function')window.startApp=function(){
   setTimeout(showSafety,500);setTimeout(verifyStartup,2600);return result
 };
 new MutationObserver(disableUnsafeMergeButtons).observe(document.documentElement,{childList:true,subtree:true});
-document.title='ASDHealth FloorStock R6.61 Protected';
+document.title='ASDHealth FloorStock R6.62 Protected';
+})();
+</script>
+
+<style id="r662-accountability-draft-style">
+#r662-accountability-draft{display:none;margin:0 0 10px;padding:8px 10px;border:1px solid #d29922;border-radius:8px;background:rgba(210,153,34,.12);color:var(--tx);font-size:11px;font-weight:700}
+#r662-accountability-draft.on{display:block}
+</style>
+<script id="r662-accountability-draft-protection">
+(function(){
+'use strict';
+var dirty=false,saving=false;
+function root(){return document.getElementById('r17-accountability-root')}
+function active(){var page=document.getElementById('pg-med-accountability');return !!(page&&page.classList.contains('on'))}
+function dataHash(){
+  if(!window.S||!S.g)return '';
+  var keys=['accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2','accountability_regimens_v2'];
+  try{return JSON.stringify(keys.map(function(k){return S.g(k)||[]}))}catch(e){return ''}
+}
+function indicator(){
+  var r=root();if(!r)return null;var el=document.getElementById('r662-accountability-draft');
+  if(!el){el=document.createElement('div');el.id='r662-accountability-draft';el.textContent='Unsaved form protected — background refresh is paused / النموذج غير محفوظ — تم إيقاف التحديث التلقائي';r.parentNode.insertBefore(el,r)}
+  el.classList.toggle('on',dirty);return el
+}
+function markDirty(){if(!active()||saving)return;dirty=true;indicator()}
+document.addEventListener('input',function(e){if(e.target&&e.target.closest&&e.target.closest('#r17-accountability-root'))markDirty()},true);
+document.addEventListener('change',function(e){if(e.target&&e.target.closest&&e.target.closest('#r17-accountability-root'))markDirty()},true);
+var originalRefresh=window.refreshCurrentPage;
+if(typeof originalRefresh==='function')window.refreshCurrentPage=refreshCurrentPage=function(){
+  if(active()&&dirty&&!saving){indicator();return false}
+  return originalRefresh.apply(this,arguments)
+};
+function wrapSave(name){
+  var original=window[name];if(typeof original!=='function'||original.__r662)return;
+  var wrapped=async function(){
+    var before=dataHash();saving=true;
+    try{var result=await original.apply(this,arguments),after=dataHash();if(after!==before){dirty=false;setTimeout(indicator,0)}return result}
+    finally{saving=false}
+  };wrapped.__r662=true;window[name]=wrapped
+}
+['acc2SaveAssignment','acc2SaveRegimenVersion','acc2SubmitUsage','acc2CreateReceipt','acc2Decision'].forEach(wrapSave);
+var previousStart=window.startApp;
+if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(indicator,700);return result};
+window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDefault();e.returnValue=''});
 })();
 </script>
 
