@@ -14549,6 +14549,57 @@ if(typeof previousStart==='function')window.startApp=function(){var result=previ
 
 
 
+<script id="r654-inventory-authoritative-rollback">
+(function(){
+'use strict';
+var busy=false;
+function copy(v){return JSON.parse(JSON.stringify(v==null?null:v))}
+function timeOf(v){var t=Date.parse(v||'');return isFinite(t)?t:0}
+function roleAllowed(){var role=String((window.CU&&CU.role)||'');return !!(window.CU&&(CU.master===true||role==='pharmacy'||role==='inpatient_supervisor'))}
+/*
+  The merge history contains the exact pre-change medicine and expiry
+  snapshots. They are authoritative; a fuzzy name matcher is not.
+*/
+window.repairLatestInventoryMergeCollateral=async function(){
+  if(busy||!window.S||!S.ready||typeof getMeds!=='function'||typeof setMeds!=='function')return {status:'unavailable'};
+  if(!roleAllowed())return {status:'not-authorized'};
+  var history=copy(S.g('inventory_name_merge_history')||[]);
+  var index=history.findIndex(function(h){return h&&h.matchMode!=='exact-selected-names'&&!h.authoritativeRollbackAt&&h.departments&&Object.keys(h.departments).length});
+  if(index<0)return {status:'nothing-to-repair'};
+  var entry=history[index],mergeAt=timeOf(entry.at),backup={id:'r654_'+Date.now().toString(36),at:new Date().toISOString(),mergeId:entry.id||'',departments:{},expiry:{}},restoredDepartments=0,restoredMedicines=0;
+  busy=true;
+  try{
+    var deptIds=Object.keys(entry.departments||{});
+    for(var i=0;i<deptIds.length;i++){
+      var deptId=deptIds[i],before=copy(entry.departments[deptId]||[]),current=copy(getMeds(deptId)||[]);
+      var expiryBefore=copy((entry.expiry||{})[deptId]||[]),expiryCurrent=typeof getExpiry==='function'?copy(getExpiry(deptId)||[]):[];
+      backup.departments[deptId]=current;backup.expiry[deptId]=expiryCurrent;
+      var beforeIds={};before.forEach(function(m){beforeIds[String(m&&m.id||'')]=1});
+      /* Preserve only records provably created after the faulty merge. */
+      var newMeds=current.filter(function(m){var id=String(m&&m.id||'');return !beforeIds[id]&&mergeAt&&timeOf(m&&(m.createdAt||m.created))>mergeAt});
+      await setMeds(deptId,before.concat(newMeds));
+      if(typeof setExpiry==='function'){
+        var oldExpiryIds={};expiryBefore.forEach(function(e){oldExpiryIds[String(e&&e.id||'')]=1});
+        var newExpiry=expiryCurrent.filter(function(e){var id=String(e&&e.id||'');return !oldExpiryIds[id]&&mergeAt&&timeOf(e&&(e.createdAt||e.created))>mergeAt});
+        await setExpiry(deptId,expiryBefore.concat(newExpiry))
+      }
+      restoredDepartments++;restoredMedicines+=before.length
+    }
+    var backups=copy(S.g('inventory_authoritative_rollback_backups_v1')||[]);backups.unshift(backup);await S.s('inventory_authoritative_rollback_backups_v1',backups.slice(0,10));
+    entry.authoritativeRollbackAt=new Date().toISOString();entry.authoritativeRollbackStatus='exact-pre-merge-snapshot-restored';entry.authoritativeRollbackBackupId=backup.id;history[index]=entry;await S.s('inventory_name_merge_history',history);
+    if(typeof auditAction==='function')auditAction('inventory_names_authoritative_rollback',{mergeId:entry.id||'',departments:deptIds,restoredMedicines:restoredMedicines,backupId:backup.id});
+    if(typeof renderInv==='function')renderInv();
+    if(typeof toast==='function')toast('Original inventory names restored from the exact pre-change snapshot ✓','succ');
+    return {status:'restored',departments:restoredDepartments,medicines:restoredMedicines,backupId:backup.id}
+  }catch(error){
+    console.error('Authoritative inventory rollback failed',error);
+    if(typeof toast==='function')toast('Inventory restoration failed: '+String(error&&error.message||error),'err');
+    return {status:'failed',error:String(error&&error.message||error)}
+  }finally{busy=false}
+};
+})();
+</script>
+
 <script id="r647-crash-cart-authoritative-boot">
 (function(){
 'use strict';
