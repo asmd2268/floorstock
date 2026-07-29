@@ -164,14 +164,29 @@ describe('users and system/master', () => {
 });
 
 describe('floorstock_state reads, shapes, keys, and deletes', () => {
-  test('all active roles can read shared state, anonymous and inactive cannot', async () => {
+  test('all active roles can read shared state, but department sessions cannot list the collection', async () => {
     await seed('floorstock_state/theme', statePayload('dark'));
     for (const role of activeRoles) {
       await assertSucceeds(getDoc(doc(dbFor(role), 'floorstock_state', 'theme')));
-      await assertSucceeds(getDocs(collection(dbFor(role), 'floorstock_state')));
+      const listing = getDocs(collection(dbFor(role), 'floorstock_state'));
+      if (role === 'department' || role === 'custodian') await assertFails(listing);
+      else await assertSucceeds(listing);
     }
     await assertFails(getDoc(doc(dbFor('anonymous'), 'floorstock_state', 'theme')));
     await assertFails(getDoc(doc(dbFor('inactive'), 'floorstock_state', 'theme')));
+  });
+
+  test('department reads exclude global controlled data while a custodian can read only their department controlled keys', async () => {
+    await seed('floorstock_state/controlled_catalog', statePayload([{ id: 'restricted' }]));
+    await seed(`floorstock_state/controlled_dept_list_${DEPARTMENT_ID}`, statePayload([{ id: 'own' }]));
+    await seed(`floorstock_state/controlled_dept_list_${OTHER_DEPARTMENT_ID}`, statePayload([{ id: 'other' }]));
+    for (const role of ['department', 'custodian']) {
+      const db = dbFor(role);
+      await assertFails(getDoc(doc(db, 'floorstock_state', 'controlled_catalog')));
+      await assertFails(getDoc(doc(db, 'floorstock_state', `controlled_dept_list_${OTHER_DEPARTMENT_ID}`)));
+    }
+    await assertFails(getDoc(doc(dbFor('department'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
+    await assertSucceeds(getDoc(doc(dbFor('custodian'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
   });
 
   for (const role of activeRoles) {
@@ -188,8 +203,14 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
   test('department and custodian are limited to their assigned department key families', async () => {
     for (const role of ['department', 'custodian']) {
       const db = dbFor(role);
-      for (const prefix of ['meds_', 'expiry_', 'shelves_', 'controlled_dept_list_', 'controlled_dept_shelves_', 'controlled_settings_']) {
+      for (const prefix of ['meds_', 'expiry_', 'shelves_']) {
         await assertSucceeds(setDoc(doc(db, 'floorstock_state', `${prefix}${DEPARTMENT_ID}`), statePayload([])));
+        await assertFails(setDoc(doc(db, 'floorstock_state', `${prefix}${OTHER_DEPARTMENT_ID}`), statePayload([])));
+      }
+      for (const prefix of ['controlled_dept_list_', 'controlled_dept_shelves_', 'controlled_settings_']) {
+        const ownWrite = setDoc(doc(db, 'floorstock_state', `${prefix}${DEPARTMENT_ID}`), statePayload([]));
+        if (role === 'custodian') await assertSucceeds(ownWrite);
+        else await assertFails(ownWrite);
         await assertFails(setDoc(doc(db, 'floorstock_state', `${prefix}${OTHER_DEPARTMENT_ID}`), statePayload([])));
       }
     }

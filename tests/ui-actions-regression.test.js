@@ -58,3 +58,21 @@ test('Requests page actions use CSP-safe delegated event bindings', () => {
   assert.match(requestEnhancementSource, /control\.addEventListener\(control\.tagName==='INPUT'\?'input':'change',window\.v16FilterRequests\)/);
   assert.match(requestEnhancementSource, /\[data-request-action="master-delete"\],\[data-request-action="edit-fulfillment"\]/);
 });
+
+test('department login hydrates its directory before assignment validation and scopes local cache per account', () => {
+  const hydrateAt = requestSource.indexOf('await fsHydrateDepartmentDirectoryForLogin(profile)');
+  const validateAt = requestSource.indexOf("if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.')");
+  assert.ok(hydrateAt > 0);
+  assert.ok(validateAt > hydrateAt);
+  assert.match(requestSource, /floorstock_last_cache_v2_['"]?\+cacheUid/);
+  assert.match(requestSource, /localStorage\.removeItem\('floorstock_last_cache_v1'\)/);
+  assert.doesNotMatch(requestSource, /localStorage\.setItem\(\s*['"]floorstock_last_cache_v1/);
+  assert.match(requestSource, /fsStateLoadFloorstockForProfileViaRest\(profileHint\)/);
+});
+
+test('Firebase App Check activates the Enterprise provider with token auto-refresh', () => {
+  assert.match(
+    requestSource,
+    /FB_APPCHECK\.activate\(\s*new firebase\.appCheck\.ReCaptchaEnterpriseProvider\([^)]+\),\s*true\s*\)/,
+  );
+});

@@ -18,6 +18,10 @@ covers the current `floorstock_state` key inventory plus `users`,
 `system/master`, `audit_logs`, public QR collections, legacy crash-cart QR data,
 cloud backups, and the default-deny fallback.
 
+Department and controlled-custodian reads are tested separately. Both are
+denied collection listing and global controlled state; only the custodian may
+read and write its assigned department's controlled key family.
+
 ## Crash-cart seal correction boundary
 
 The application exposes the correction action only through two independent

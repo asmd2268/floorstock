@@ -8,6 +8,12 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 initializeApp();
 const db = getFirestore();
 const auth = getAuth();
+const CALLABLE_OPTIONS = {
+  region: 'us-central1',
+  // Keep monitoring-only until every supported production client is observed
+  // sending valid App Check tokens, then deploy with ENFORCE_APP_CHECK=true.
+  enforceAppCheck: process.env.ENFORCE_APP_CHECK === 'true'
+};
 
 // Keep this list synchronized with the role selector and login validation in R6.65.
 const ALLOWED_ROLES = new Set([
@@ -65,7 +71,7 @@ async function countActiveMasters(excludeUid = null) {
   return snap.docs.filter((doc) => doc.id !== excludeUid && doc.data().active !== false).length;
 }
 
-exports.createManagedUser = onCall({ region: 'us-central1' }, async (request) => {
+exports.createManagedUser = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requirePharmacy(caller);
 
@@ -119,7 +125,7 @@ exports.createManagedUser = onCall({ region: 'us-central1' }, async (request) =>
   }
 });
 
-exports.deleteManagedUser = onCall({ region: 'us-central1' }, async (request) => {
+exports.deleteManagedUser = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requireMaster(caller);
   const uid = String((request.data || {}).uid || '');
@@ -146,7 +152,7 @@ exports.deleteManagedUser = onCall({ region: 'us-central1' }, async (request) =>
   return { ok: true };
 });
 
-exports.setMasterAccess = onCall({ region: 'us-central1' }, async (request) => {
+exports.setMasterAccess = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requireMaster(caller);
   const uid = String((request.data || {}).uid || '');

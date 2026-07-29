@@ -12,7 +12,8 @@ var FB_APPCHECK=window.FB_APPCHECK||null;
 window.FB_APP=null;
 window.FB_AUTH=null;
 window.FB_DB=null;
-window.FB_FUNCTIONS=null; window.FB_APPCHECK=null;
+window.FB_FUNCTIONS=null;
+window.FB_APPCHECK=null;
 globalThis._lazyScripts = {};
 function loadScriptOnce(key,src,test){
   if(test&&test())return Promise.resolve();
@@ -39,12 +40,10 @@ function initFirebase(){
 if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   try{
     FB_APPCHECK=firebase.appCheck();
-
-    new firebase.appCheck.ReCaptchaEnterpriseProvider(
-      '6LfYImotAAAAACo50nBNoL7EIb14ipF9NQYzrJfr',
+    FB_APPCHECK.activate(
+      new firebase.appCheck.ReCaptchaEnterpriseProvider('6LfYImotAAAAACo50nBNoL7EIb14ipF9NQYzrJfr'),
       true
     );
-
     window.FB_APPCHECK=FB_APPCHECK;
     console.info('Firebase App Check activated.');
   }catch(appCheckError){
@@ -186,6 +185,52 @@ async function fsStateLoadFloorstockViaRest(){
   });
   return {cache:cache,source:'rest'};
 }
+var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
+  'departments','deleted_departments','custom_categories','daily_limits_v2',
+  'weekly_limits_v2','monthly_limits','rate_limits_v2','req_windows','disp_slots',
+  'request_count_limits_v1','request_hour_grids_v1','requests','dept_notes','notes',
+  'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
+  'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
+]);
+function fsStateKeysForProfile(profile){
+  if(!profile||profile.role!=='department')return null;
+  var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
+  if(deptId){
+    ['meds_','expiry_','shelves_','alerts_'].forEach(function(prefix){keys.push(prefix+deptId)});
+    if(profile.controlledCustodian===true){
+      ['controlled_dept_list_','controlled_dept_shelves_','controlled_settings_'].forEach(function(prefix){keys.push(prefix+deptId)});
+    }
+  }
+  return keys;
+}
+async function fsStateLoadDocumentViaRest(key){
+  var url=fsStateRestBase()+'/floorstock_state/'+encodeURIComponent(key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  var response=await fsStateRestRequest(url,{method:'GET'},10000);
+  if(response.status===404||!response.payload)return null;
+  var data=fsLoginDecodeRestDocument(response.payload)||{};
+  return data.value;
+}
+async function fsStateLoadDocumentViaSdk(key){
+  var snapshot=await fsLoginTimeout(
+    FB_DB.collection('floorstock_state').doc(key).get({source:'server'}),
+    7000,
+    'Firestore SDK state document timed out.'
+  );
+  return snapshot&&snapshot.exists?snapshot.data().value:null;
+}
+async function fsStateLoadScoped(keys,loader,source){
+  var values=await Promise.all(keys.map(function(key){return loader(key)})),cache={};
+  keys.forEach(function(key,index){if(values[index]!==null&&values[index]!==undefined)cache[key]=values[index]});
+  return {cache:cache,source:source};
+}
+function fsStateLoadFloorstockForProfileViaRest(profile){
+  var keys=fsStateKeysForProfile(profile);
+  return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped'):fsStateLoadFloorstockViaRest();
+}
+function fsStateLoadFloorstockForProfileViaSdk(profile){
+  var keys=fsStateKeysForProfile(profile);
+  return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-scoped'):fsStateLoadFloorstockViaSdk();
+}
 async function fsStateLoadUsersViaRest(){
   var documents=await fsStateRestListCollection('users');
   return documents.map(function(documentValue){
@@ -203,6 +248,23 @@ async function fsStateLoadFloorstockViaSdk(){
   var cache={};
   snapshot.forEach(function(doc){if(doc.id!=='users')cache[doc.id]=doc.data().value;});
   return {cache:cache,source:'sdk'};
+}
+async function fsHydrateDepartmentDirectoryForLogin(profile){
+  if(!profile||profile.role!=='department')return;
+  var keys=['departments','deleted_departments'];
+  var result=await fsLoginTimeout(
+    fsStateFirstSuccess([
+      fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-login'),
+      fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-login')
+    ],'Department directory'),
+    8000,
+    'Department directory timed out.'
+  );
+  var directory=result.cache||{};
+  S.cache=Object.assign({},S.cache||{},directory,{
+    departments:Array.isArray(directory.departments)?directory.departments:[],
+    deleted_departments:Array.isArray(directory.deleted_departments)?directory.deleted_departments:[]
+  });
 }
 async function fsStateLoadUsersViaSdk(){
   var snapshot=await fsLoginTimeout(
@@ -295,33 +357,48 @@ function fsStateApplyCache(nextCache){
 }
 
 globalThis.S = {
-  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',
+  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',scopeProfile:null,
   init:async function(statusCallback,profileHint){
     S.stopRealtime();
-// Fast startup cache: show last known state immediately
-try{
-  var cached=localStorage.getItem('floorstock_last_cache_v1');
-  if(cached){
-    S.cache=JSON.parse(cached);
-    S.cache.users=S.cache.users||[];
-    S.ready=true;
-  }
-}catch(e){
-  console.warn('Local Floor Stock cache unavailable.',e);
-}
+    S.scopeProfile=profileHint||null;
+    var cacheUid=String(profileHint&&profileHint.uid||FB_AUTH&&FB_AUTH.currentUser&&FB_AUTH.currentUser.uid||'').trim();
+    var cacheKey=cacheUid?'floorstock_last_cache_v2_'+cacheUid:'';
+    // The v1 key was shared across accounts and could expose a previous session's state.
+    try{
+      localStorage.removeItem('floorstock_last_cache_v1');
+      Object.keys(localStorage).forEach(function(key){
+        if(key.indexOf('floorstock_last_cache_v2_')===0&&key!==cacheKey)localStorage.removeItem(key);
+      });
+    }catch(removeError){}
+    try{
+      var cached=cacheKey?localStorage.getItem(cacheKey):null;
+      if(cached){
+        var parsed=JSON.parse(cached),allowed=fsStateKeysForProfile(profileHint);
+        if(allowed){
+          var allowedSet=new Set(allowed),scoped={};
+          Object.keys(parsed||{}).forEach(function(key){if(allowedSet.has(key))scoped[key]=parsed[key]});
+          parsed=scoped;
+        }
+        S.cache=parsed||{};
+        S.cache.users=[];
+        S.ready=true;
+      }
+    }catch(e){
+      console.warn('Local Floor Stock cache unavailable.',e);
+    }
     if(statusCallback)statusCallback('Loading Floor Stock data…');
 
     var result;
     try{
       result=await fsLoginTimeout(
-        fsStateLoadFloorstockViaRest(),
+        fsStateLoadFloorstockForProfileViaRest(profileHint),
         9000,
         'Floor Stock REST data request timed out.'
       );
     }catch(restError){
       console.warn('Primary Floor Stock REST load failed; trying Firestore SDK.',restError);
       result=await fsLoginTimeout(
-        fsStateLoadFloorstockViaSdk(),
+        fsStateLoadFloorstockForProfileViaSdk(profileHint),
         9000,
         'Floor Stock SDK data request timed out.'
       );
@@ -334,15 +411,12 @@ S.transport=result.source||'rest';
 S.cache.users=S.cache.users||[];
 S.ready=true;
 
-// Save latest successful state for instant next login
-try{
-  localStorage.setItem(
-    'floorstock_last_cache_v1',
-    JSON.stringify(freshCache)
-  );
-}catch(e){
-  console.warn('Could not save Floor Stock cache.',e);
-}
+    // Save only this authenticated account's already permission-scoped state.
+    try{
+      if(cacheKey)localStorage.setItem(cacheKey,JSON.stringify(freshCache));
+    }catch(e){
+      console.warn('Could not save Floor Stock cache.',e);
+    }
     S.startRealtime();setTimeout(function(){
   if(typeof S.pollRest==='function'){
     S.pollRest();
@@ -425,7 +499,7 @@ try{
     if(S.pollBusy||!S.ready||document.visibilityState==='hidden')return;
     S.pollBusy=true;
     try{
-      var state=await fsStateLoadFloorstockViaRest();
+      var state=await fsStateLoadFloorstockForProfileViaRest(S.scopeProfile);
       var changed=fsStateApplyCache(state.cache||{});
       if(changed)S.scheduleRefresh();
       if(CU&&(CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>=0)){
@@ -1189,7 +1263,7 @@ async function fsLoadAuthenticatedProfile(user,statusCallback){
 }
 async function doLogin(){
   var email=el('lgu').value.trim(),password=el('lgp').value;
-  var loginBtn=document.querySelector('#auth button[onclick*="doLogin"]');
+  var loginBtn=document.querySelector('#auth button[data-asdh-binding],#auth button.btn.bp.bw');
   var oldLoginText=loginBtn?loginBtn.innerHTML:'',credential=null;
   function setLoginError(message){var box=el('aerr');if(box){box.textContent=message;box.style.display='block';}}
   function setLoginStage(message){if(loginBtn)loginBtn.textContent=message;}
@@ -1209,6 +1283,10 @@ async function doLogin(){
     var profile=profileSnapshot.data()||{};
     if(profile.active===false)throw new Error('This account is inactive.');
     if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
+    if(profile.role==='department'){
+      setLoginStage('Verifying department…');
+      await fsHydrateDepartmentDirectoryForLogin(profile);
+    }
     var deptId=profile.deptId||profile.departmentId||null;
     var dept=deptId?gd().find(function(d){return String(d.id)===String(deptId)}):null;
     if(profile.role==='department'&&!dept){
@@ -1218,6 +1296,7 @@ async function doLogin(){
     }
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
     CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:(profile.deptName||profile.departmentName||''),controlledCustodian:!!profile.controlledCustodian};
+    var stateProfile=Object.assign({},profile,{uid:credential.user.uid,deptId:deptId});
     if(typeof window.startApp!=='function'){
       throw new Error('Application startup is unavailable. Reload the file and try again.');
     }
@@ -1227,7 +1306,7 @@ setTimeout(function(){
   Promise.resolve().then(async function(){
     console.time('S.init background');
 
-await S.init(function(){},profile);
+await S.init(function(){},stateProfile);
 
 console.timeEnd('S.init background');
  

@@ -76,7 +76,7 @@ export function mayWriteState(role, key) {
     return /^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|audit_log|theme)$/.test(key);
   }
   if (role === 'department' || role === 'custodian') {
-    return new Set([
+    const allowed = new Set([
       'requests',
       'dept_notes',
       'notes',
@@ -87,11 +87,14 @@ export function mayWriteState(role, key) {
       'theme',
       `meds_${DEPARTMENT_ID}`,
       `expiry_${DEPARTMENT_ID}`,
-      `shelves_${DEPARTMENT_ID}`,
-      `controlled_dept_list_${DEPARTMENT_ID}`,
-      `controlled_dept_shelves_${DEPARTMENT_ID}`,
-      `controlled_settings_${DEPARTMENT_ID}`
-    ]).has(key);
+      `shelves_${DEPARTMENT_ID}`
+    ]);
+    if (role === 'custodian') {
+      allowed.add(`controlled_dept_list_${DEPARTMENT_ID}`);
+      allowed.add(`controlled_dept_shelves_${DEPARTMENT_ID}`);
+      allowed.add(`controlled_settings_${DEPARTMENT_ID}`);
+    }
+    return allowed.has(key);
   }
   return false;
 }

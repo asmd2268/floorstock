@@ -16,7 +16,7 @@ for path in INDEXES:
     if not path.is_file():
         errors.append(f"missing {path.relative_to(ROOT)}")
 
-for json_path in [ROOT / "firebase.json", ROOT / "firestore.indexes.json", ROOT / ".firebaserc", ROOT / "module-manifest.json"]:
+for json_path in [ROOT / "firebase.json", ROOT / "vercel.json", ROOT / "firestore.indexes.json", ROOT / ".firebaserc", ROOT / "module-manifest.json"]:
     try:
         json.loads(json_path.read_text(encoding="utf-8"))
     except Exception as exc:
@@ -24,6 +24,11 @@ for json_path in [ROOT / "firebase.json", ROOT / "firestore.indexes.json", ROOT 
 
 public_html = (PUBLIC / "index.html").read_text(encoding="utf-8") if (PUBLIC / "index.html").exists() else ""
 root_html = (ROOT / "index.html").read_text(encoding="utf-8") if (ROOT / "index.html").exists() else ""
+
+expected_root_html = public_html.replace('./assets/', './public/assets/')
+normalize_html = lambda value: re.sub(r"\s*;\s*", ";", re.sub(r"\s+", " ", value)).strip()
+if normalize_html(root_html) != normalize_html(expected_root_html):
+    errors.append("index.html must remain a generated root-path mirror of public/index.html")
 
 if 'name="asdhealth-architecture"' not in public_html or 'content="es-modules-v2"' not in public_html:
     errors.append("public/index.html is not marked as the ES-module architecture")
@@ -93,6 +98,28 @@ rules = (ROOT / "firestore.rules").read_text(encoding="utf-8")
 for role in ["pharmacy_staff", "inpatient_supervisor"]:
     if role not in rules:
         errors.append(f"Firestore Rules missing role {role}")
+
+firebase_config = json.loads((ROOT / "firebase.json").read_text(encoding="utf-8"))
+firebase_headers = {
+    header.get("key")
+    for entry in firebase_config.get("hosting", {}).get("headers", [])
+    for header in entry.get("headers", [])
+}
+for required_header in ["Strict-Transport-Security", "X-Frame-Options", "Content-Security-Policy"]:
+    if required_header not in firebase_headers:
+        errors.append(f"Firebase Hosting missing security header {required_header}")
+
+auth_module = (PUBLIC / "assets" / "js" / "modules" / "03-core-application-firebase-state-auth.js").read_text(encoding="utf-8")
+for required in [
+    "FB_APPCHECK.activate(",
+    "floorstock_last_cache_v2_",
+    "fsHydrateDepartmentDirectoryForLogin(profile)",
+    "fsStateLoadFloorstockForProfileViaRest(profileHint)",
+]:
+    if required not in auth_module:
+        errors.append(f"Firebase authentication bootstrap missing {required}")
+if "localStorage.setItem('floorstock_last_cache_v1'" in auth_module:
+    errors.append("legacy cross-account Floor Stock cache write remains enabled")
 
 modules_check = subprocess.run(["node", str(ROOT / "tools" / "verify_modules.mjs")], capture_output=True, text=True)
 if modules_check.returncode:
