@@ -34,3 +34,40 @@ test('App Check Enterprise provider is activated before Firebase services are us
     refresh: true
   });
 });
+
+test('dynamic legacy controls are rebound safely under CSP', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-asdh-csp-bridge', 'ready');
+
+  await page.evaluate(() => {
+    window.__legacyCalls = [];
+    window.crashPrint = (id) => window.__legacyCalls.push(['print', id]);
+    window.crashReportOpen = (id) => window.__legacyCalls.push(['report', id]);
+    window.ctlConfirmDepartmentPrint = (event) => window.__legacyCalls.push(['custody-print', event.type]);
+    window.openAddExpiryForMed = (id) => window.__legacyCalls.push(['expiry', id]);
+    const host = document.createElement('div');
+    host.id = 'legacy-test-host';
+    host.innerHTML = `
+      <button id="legacy-print" onclick="crashPrint('cart-a')">Print</button>
+      <button id="legacy-report" onclick="crashReportOpen('cart-a')">Report</button>
+      <button id="legacy-custody" onclick="ctlConfirmDepartmentPrint(event)">Custody</button>
+      <button id="legacy-expiry" data-mid="med-a" onclick="openAddExpiryForMed(this.dataset.mid)">Expiry</button>
+      <div id="legacy-remove"><button id="legacy-remove-button" onclick="this.parentElement.remove()">Remove</button></div>`;
+    document.body.appendChild(host);
+  });
+
+  await expect(page.locator('#legacy-print')).not.toHaveAttribute('onclick');
+  await page.locator('#legacy-print').click();
+  await page.locator('#legacy-report').click();
+  await page.locator('#legacy-custody').click();
+  await page.locator('#legacy-expiry').click();
+  await page.locator('#legacy-remove-button').click();
+
+  await expect(page.locator('#legacy-remove')).toHaveCount(0);
+  await expect.poll(() => page.evaluate(() => window.__legacyCalls)).toEqual([
+    ['print', 'cart-a'],
+    ['report', 'cart-a'],
+    ['custody-print', 'click'],
+    ['expiry', 'med-a']
+  ]);
+});

@@ -22,6 +22,18 @@ const requestEnhancementSource = fs.readFileSync(
   new URL('../public/assets/js/modules/38-v16-user-operations-main.js', import.meta.url),
   'utf8',
 );
+const cspBridgeSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/60-csp-legacy-event-bridge.js', import.meta.url),
+  'utf8',
+);
+const crashBootSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/55-r647-crash-cart-authoritative-boot.js', import.meta.url),
+  'utf8',
+);
+const controlledCustodySource = fs.readFileSync(
+  new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
+  'utf8',
+);
 
 test('Users page actions use CSP-safe delegated event bindings', () => {
   assert.doesNotMatch(usersSource, /onclick=["'][^"']*delUser/);
@@ -88,4 +100,52 @@ test('Firebase App Check activates the Enterprise provider with token auto-refre
     requestSource,
     /FB_APPCHECK\.activate\(\s*new firebase\.appCheck\.ReCaptchaEnterpriseProvider\([^)]+\),\s*true\s*\)/,
   );
+});
+
+test('legacy dynamic controls use a CSP-safe allowlisted bridge without eval', () => {
+  assert.match(cspBridgeSource, /var ALLOWED=new Set/);
+  assert.match(cspBridgeSource, /element\.removeAttribute\(attribute\)/);
+  assert.match(cspBridgeSource, /new MutationObserver/);
+  assert.doesNotMatch(cspBridgeSource, /\beval\s*\(|new Function\s*\(|['"]unsafe-inline['"]/);
+});
+
+test('every legacy inline action name in the module set is covered by the CSP bridge', () => {
+  const modulesDir = new URL('../public/assets/js/modules/', import.meta.url);
+  const ignored = new Set([
+    'if',
+    'setTimeout',
+    'clearTimeout',
+    'Math',
+    'min',
+    'max',
+    'getElementById',
+    'getAttribute',
+    'closest',
+    'remove',
+    'toggle',
+    'blur',
+    'esc',
+    'escA',
+    'escx',
+    'stringify',
+  ]);
+  const names = new Set();
+  for (const file of fs.readdirSync(modulesDir)) {
+    if (!file.endsWith('.js') || file === '60-csp-legacy-event-bridge.js') continue;
+    const source = fs.readFileSync(new URL(file, modulesDir), 'utf8');
+    for (const handler of source.matchAll(/on(?:click|change|input|submit|keydown|keyup)=(["'])([\s\S]*?)\1/g)) {
+      for (const call of handler[2].matchAll(/(?:window\.)?([A-Za-z_$][\w$]*)\s*\(/g)) {
+        if (!ignored.has(call[1])) names.add(call[1]);
+      }
+    }
+  }
+  const missing = [...names].filter((name) => !new RegExp(`\\b${name}\\b`).test(cspBridgeSource));
+  assert.deepEqual(missing, []);
+});
+
+test('department Crash Cart boot is read-only and controlled custody loading is deduplicated', () => {
+  assert.match(crashBootSource, /canReconcile=.*\['pharmacy','inpatient_supervisor','pharmacy_staff'\]/);
+  assert.match(crashBootSource, /if\(window\.CU&&!canReconcile\)\{done=true;return\}/);
+  assert.match(controlledCustodySource, /if\(host\.dataset\.controlledLoading==='1'\)return false/);
+  assert.match(controlledCustodySource, /delete host\.dataset\.controlledLoading/);
 });

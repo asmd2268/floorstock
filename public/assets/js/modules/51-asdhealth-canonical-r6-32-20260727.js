@@ -1007,6 +1007,8 @@ window.renderDepartmentControlledPanel=async function(){
   if(String(effective.role||'')!=='department')return false;
   var host=fsR5E('ctl-departments-view');
   if(!host)return false;
+  if(host.dataset.controlledLoading==='1')return false;
+  host.dataset.controlledLoading='1';
 
   window.CTL_VIEW='departments';
   var overview=fsR5E('ctl-overview-view');
@@ -1109,6 +1111,7 @@ window.renderDepartmentControlledPanel=async function(){
       '</div>';
 
     host.style.display='block';
+    delete host.dataset.controlledLoading;
     return true;
   }catch(error){
     console.error('Department controlled custody render failed.',error);
@@ -1118,6 +1121,7 @@ window.renderDepartmentControlledPanel=async function(){
       '<p style="margin-top:10px">'+fsR5Esc(error&&error.message||error)+'</p>'+
       '<button class="btn bp" type="button" onclick="renderDepartmentControlledPanel()">'+
         'Retry / إعادة المحاولة</button></div></div>';
+    delete host.dataset.controlledLoading;
     return false;
   }
 };

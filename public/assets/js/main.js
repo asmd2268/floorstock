@@ -59,6 +59,7 @@ import './modules/56-r664-security-idle-timeout.js';
 import './modules/57-r664-production-console-policy.js';
 import './modules/58-r664-public-privacy-rewrite.js';
 import './modules/59-r664-security-complete-runtime.js';
+import './modules/60-csp-legacy-event-bridge.js';
 import { installDomBindings } from './core/dom-bindings.js';
 const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];
 const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');
