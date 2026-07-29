@@ -80,14 +80,32 @@ test('My Requests exposes and saves edit only while ordering is open and request
     window.CU = { role: 'department', deptId: 'dept-a', deptName: 'Ward A', username: 'ward-a' };
     window.MASTER_EFFECTIVE = null;
     window.S.cache.departments = [{ id: 'dept-a', name: 'Ward A' }];
-    window.S.cache['meds_dept-a'] = [{ id: 'med-a', name: 'Medication A', max: 20 }];
+    window.S.cache['meds_dept-a'] = [
+      { id: 'med-a', name: 'Medication A', category: 'Tablets', classification: 'Regular', min: 1, max: 20 },
+      { id: 'med-b', name: 'Medication B', category: 'Tablets', classification: 'Critical', min: 2, max: 8 },
+      { id: 'med-hidden-old', name: 'Hidden Previous', category: 'Injections', min: 1, max: 10 },
+      { id: 'med-hidden-new', name: 'Hidden New', category: 'Injections', min: 1, max: 10 },
+      { id: 'med-frozen', name: 'Frozen Previous', category: 'Injections', min: 1, max: 10 }
+    ];
+    window.S.cache.medication_visibility_rules_v3 = {
+      'med:med-hidden-old': { medId: 'med-hidden-old', departmentIds: ['dept-a'], reason: 'Temporarily hidden' },
+      'med:med-hidden-new': { medId: 'med-hidden-new', departmentIds: ['dept-a'], reason: 'Temporarily hidden' }
+    };
+    window.S.cache.medication_freeze_rules_v3 = {
+      'med:med-frozen': { medId: 'med-frozen', departmentIds: ['dept-a'], reason: 'Stock review' }
+    };
     window.S.cache.requests = [{
       id: 'req-a',
       deptId: 'dept-a',
       status: 'pending',
       created: new Date().toISOString(),
       editUntil: '2020-01-01T00:00:00.000Z',
-      items: [{ medId: 'med-a', qty: 2 }]
+      items: [
+        { medId: 'med-a', medName: 'Medication A', qty: 2 },
+        { medId: 'med-hidden-old', medName: 'Hidden Previous', qty: 3 },
+        { medId: 'med-frozen', medName: 'Frozen Previous', qty: 4 },
+        { medId: 'med-orphan', medName: 'Removed Previous', qty: 6 }
+      ]
     }];
     window.isRequestAllowed = () => ({ allowed: true });
     document.getElementById('auth').style.display = 'none';
@@ -99,9 +117,20 @@ test('My Requests exposes and saves edit only while ordering is open and request
 
   const edit = page.locator('#mrlst [data-request-action="v16-edit"]');
   await expect(edit).toBeVisible();
+  await expect(page.locator('#mrlst [data-v16-edit-window]')).toContainText('fulfillment');
   await edit.click();
   await expect(page.locator('#v16-edit-request')).toBeVisible();
-  await page.locator('#v16-edit-request .v16-edit-qty').fill('5');
+  await expect(page.locator('#v16-edit-request thead').first()).toContainText('Min');
+  await expect(page.locator('#v16-edit-request thead').first()).toContainText('Max');
+  await expect(page.locator('#v16-edit-request [data-med="med-a"]')).toHaveValue('2');
+  await expect(page.locator('#v16-edit-request [data-med="med-a"]')).toHaveCSS('font-weight', '700');
+  await expect(page.locator('#v16-edit-request [data-med="med-b"]')).toHaveValue('0');
+  await expect(page.locator('#v16-edit-request [data-med="med-hidden-new"]')).toHaveCount(0);
+  await expect(page.locator('#v16-edit-request [data-med="med-hidden-old"]')).toBeDisabled();
+  await expect(page.locator('#v16-edit-request [data-med="med-frozen"]')).toBeDisabled();
+  await expect(page.locator('#v16-edit-request [data-med="med-orphan"]')).toBeDisabled();
+  await page.locator('#v16-edit-request [data-med="med-a"]').fill('5');
+  await page.locator('#v16-edit-request [data-med="med-b"]').fill('2');
 
   await page.evaluate(() => {
     window.__savedRequestEdit = null;
@@ -113,10 +142,20 @@ test('My Requests exposes and saves edit only while ordering is open and request
     };
   });
   await page.locator('#v16-edit-request [data-request-action="v16-save-edit"]').click();
-  await expect.poll(() => page.evaluate(() => window.__savedRequestEdit)).toMatchObject({
+  await expect.poll(() => page.evaluate(() => {
+    const saved = window.__savedRequestEdit;
+    if (!saved) return null;
+    return { ...saved, changes: { ...saved.changes, items: [...saved.changes.items].sort((a, b) => a.medId.localeCompare(b.medId)) } };
+  })).toMatchObject({
     key: 'requests',
     id: 'req-a',
-    changes: { items: [{ medId: 'med-a', qty: 5 }] }
+    changes: { items: [
+      { medId: 'med-a', qty: 5 },
+      { medId: 'med-b', qty: 2 },
+      { medId: 'med-frozen', qty: 4 },
+      { medId: 'med-hidden-old', qty: 3 },
+      { medId: 'med-orphan', qty: 6 }
+    ] }
   });
   await expect(page.locator('#v16-edit-request')).toHaveCount(0);
 

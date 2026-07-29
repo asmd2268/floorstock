@@ -211,6 +211,11 @@ test('request editing follows the department current open window and stops after
 
   assert.doesNotMatch(requestEnhancementSource, /7200000|Edit \(2h\)|Edit fulfilled/);
   assert.match(requestEnhancementSource, /canEditRequestBySchedule/);
+  assert.match(requestEnhancementSource, /requestEditRestriction/);
+  assert.match(requestEnhancementSource, /data-edit-locked/);
+  assert.match(requestEnhancementSource, /data-v16-edit-window/);
+  assert.match(requestEnhancementSource, /<th>Min<\/th><th>Max<\/th>/);
+  assert.match(requestScheduleSource, /getCurrentRequestEditDeadline/);
   assert.match(requestSource, /data-request-id=/);
   assert.match(requestEnhancementSource, /data-request-actions/);
   assert.match(requestEnhancementSource, /S\.upd\('requests',id/);
