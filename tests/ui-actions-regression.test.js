@@ -70,6 +70,15 @@ test('department login hydrates its directory before assignment validation and s
   assert.match(requestSource, /fsStateLoadFloorstockForProfileViaRest\(profileHint\)/);
 });
 
+test('login waits for Floor Stock state before opening the application shell', () => {
+  const initAt = requestSource.indexOf('await S.init(setLoginStage,stateProfile)');
+  const startAt = requestSource.indexOf('window.startApp();', initAt);
+  assert.ok(initAt > 0);
+  assert.ok(startAt > initAt);
+  assert.match(requestSource, /Loading data… \/ جاري تحميل البيانات…/);
+  assert.doesNotMatch(requestSource, /S\.init background|Background Floor Stock initialization failed/);
+});
+
 test('Firebase App Check activates the Enterprise provider with token auto-refresh', () => {
   assert.match(
     requestSource,

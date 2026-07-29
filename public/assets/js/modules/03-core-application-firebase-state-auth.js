@@ -386,7 +386,7 @@ globalThis.S = {
     }catch(e){
       console.warn('Local Floor Stock cache unavailable.',e);
     }
-    if(statusCallback)statusCallback('Loading Floor Stock data…');
+    if(statusCallback)statusCallback('Loading data… / جاري تحميل البيانات…');
 
     var result;
     try{
@@ -1300,23 +1300,10 @@ async function doLogin(){
     if(typeof window.startApp!=='function'){
       throw new Error('Application startup is unavailable. Reload the file and try again.');
     }
+    // Keep the login screen visible until the authenticated user's state is ready.
+    // Opening the shell before this finishes makes valid pages look empty or broken.
+    await S.init(setLoginStage,stateProfile);
     window.startApp();
-
-setTimeout(function(){
-  Promise.resolve().then(async function(){
-    console.time('S.init background');
-
-await S.init(function(){},stateProfile);
-
-console.timeEnd('S.init background');
- 
-if(window.FS_CURRENT_PAGE&&typeof window.showPg==='function'){
-  window.showPg(window.FS_CURRENT_PAGE);
-}
- }).catch(function(error){
-    console.error('Background Floor Stock initialization failed.',error);
-  });
-},0);
 
 setTimeout(function(){
   Promise.resolve().then(async function(){
