@@ -298,6 +298,17 @@ globalThis.S = {
   cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',
   init:async function(statusCallback,profileHint){
     S.stopRealtime();
+// Fast startup cache: show last known state immediately
+try{
+  var cached=localStorage.getItem('floorstock_last_cache_v1');
+  if(cached){
+    S.cache=JSON.parse(cached);
+    S.cache.users=S.cache.users||[];
+    S.ready=true;
+  }
+}catch(e){
+  console.warn('Local Floor Stock cache unavailable.',e);
+}
     if(statusCallback)statusCallback('Loading Floor Stock data…');
 
     var result;
@@ -316,11 +327,27 @@ globalThis.S = {
       );
     }
 
-    S.cache=result.cache||{};
-    S.transport=result.source||'rest';
-    S.cache.users=S.cache.users||[];
-    S.ready=true;
-    S.startRealtime();
+    var freshCache=result.cache||{};
+
+S.cache=freshCache;
+S.transport=result.source||'rest';
+S.cache.users=S.cache.users||[];
+S.ready=true;
+
+// Save latest successful state for instant next login
+try{
+  localStorage.setItem(
+    'floorstock_last_cache_v1',
+    JSON.stringify(freshCache)
+  );
+}catch(e){
+  console.warn('Could not save Floor Stock cache.',e);
+}
+    S.startRealtime();setTimeout(function(){
+  if(typeof S.pollRest==='function'){
+    S.pollRest();
+  }
+},1000);
 
     setTimeout(function(){
       if(typeof window.renderRequestHourGridUI==='function'){
@@ -1198,8 +1225,16 @@ async function doLogin(){
 
 setTimeout(function(){
   Promise.resolve().then(async function(){
-    await S.init(function(){},profile);
-  }).catch(function(error){
+    console.time('S.init background');
+
+await S.init(function(){},profile);
+
+console.timeEnd('S.init background');
+ 
+if(window.FS_CURRENT_PAGE&&typeof window.showPg==='function'){
+  window.showPg(window.FS_CURRENT_PAGE);
+}
+ }).catch(function(error){
     console.error('Background Floor Stock initialization failed.',error);
   });
 },0);
