@@ -1683,8 +1683,8 @@ installRequestActionBindings();
 function rcard(r,isp){
   var d=gd().find(function(x){return x.id===r.deptId});
   var sm={pending:'byl',fulfilled:'bgn',partial:'bbl'};
-  return '<div class="card"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
-    +'<div class="fl g8 ic"><span style="font-size:12px;color:var(--tx2)">'+fmtDateTime(r.created)+'</span>'
+  return '<div class="card" data-request-id="'+esc(r.id)+'"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
+    +'<div class="fl g8 ic" data-request-actions><span style="font-size:12px;color:var(--tx2)">'+fmtDateTime(r.created)+'</span>'
     +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button>':'')
     +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">&#x270F; Edit</button>':'')
     +(isp&&window.CU&&CU.master===true?'<button class="btn bd2c bsm" data-request-action="master-delete" data-id="'+r.id+'">Delete</button>':'')

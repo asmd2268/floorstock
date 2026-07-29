@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 import {
   canEditRequestBeforeDeadline,
+  canEditRequestWhileWindowIsOpen,
   requestWindowDeadlineFromGrid,
 } from '../public/assets/js/core/request-edit-policy.js';
 
@@ -175,7 +176,7 @@ test('Hide and Frozen controls remain visible to inpatient supervisor, pharmacy 
   assert.match(inventoryStatusSource, /f\.onclick=window\.openFreeze/);
 });
 
-test('request editing ends at the schedule deadline or fulfillment, whichever occurs first', () => {
+test('request editing follows the department current open window and stops after fulfillment', () => {
   const grid = Array.from({ length: 7 }, () => Array(24).fill(false));
   grid[4][6] = true;
   grid[4][7] = true;
@@ -186,6 +187,11 @@ test('request editing ends at the schedule deadline or fulfillment, whichever oc
   assert.equal(canEditRequestBeforeDeadline({ status: 'pending' }, '2026-07-30T04:59:59.999Z', deadline), true);
   assert.equal(canEditRequestBeforeDeadline({ status: 'pending' }, '2026-07-30T05:00:00.000Z', deadline), false);
   assert.equal(canEditRequestBeforeDeadline({ status: 'pending', fulfilledAt: '2026-07-30T04:30:00.000Z' }, '2026-07-30T04:40:00.000Z', deadline), false);
+  assert.equal(canEditRequestWhileWindowIsOpen({ status: 'pending' }, true), true);
+  assert.equal(canEditRequestWhileWindowIsOpen({ status: 'pending', editUntil: '2020-01-01T00:00:00.000Z' }, true), true);
+  assert.equal(canEditRequestWhileWindowIsOpen({ status: 'pending' }, false), false);
+  assert.equal(canEditRequestWhileWindowIsOpen({ status: 'fulfilled' }, true), false);
+  assert.equal(canEditRequestWhileWindowIsOpen({ status: 'pending', fulfilledAt: '2026-07-30T04:30:00.000Z' }, true), false);
   assert.equal(requestWindowDeadlineFromGrid(grid, '2026-07-30T05:01:00.000Z'), 0);
 
   const alwaysOpen = Array.from({ length: 7 }, () => Array(24).fill(true));
@@ -194,7 +200,10 @@ test('request editing ends at the schedule deadline or fulfillment, whichever oc
 
   assert.doesNotMatch(requestEnhancementSource, /7200000|Edit \(2h\)|Edit fulfilled/);
   assert.match(requestEnhancementSource, /canEditRequestBySchedule/);
+  assert.match(requestSource, /data-request-id=/);
+  assert.match(requestEnhancementSource, /data-request-actions/);
+  assert.match(requestEnhancementSource, /S\.upd\('requests',id/);
   assert.match(requestScheduleSource, /window\.getRequestEditDeadline/);
-  assert.match(requestScheduleSource, /hasOwnProperty\.call\(request,'editUntil'\)/);
+  assert.match(requestScheduleSource, /canEditRequestWhileWindowIsOpen/);
   assert.match(persistenceSource, /editUntil:Number\.isFinite\(deadline\)/);
 });

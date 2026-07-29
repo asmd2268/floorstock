@@ -71,3 +71,66 @@ test('dynamic legacy controls are rebound safely under CSP', async ({ page }) =>
     ['expiry', 'med-a']
   ]);
 });
+
+test('My Requests exposes and saves edit only while ordering is open and request is pending', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-asdh-modules', 'ready');
+
+  await page.evaluate(() => {
+    window.CU = { role: 'department', deptId: 'dept-a', deptName: 'Ward A', username: 'ward-a' };
+    window.MASTER_EFFECTIVE = null;
+    window.S.cache.departments = [{ id: 'dept-a', name: 'Ward A' }];
+    window.S.cache['meds_dept-a'] = [{ id: 'med-a', name: 'Medication A', max: 20 }];
+    window.S.cache.requests = [{
+      id: 'req-a',
+      deptId: 'dept-a',
+      status: 'pending',
+      created: new Date().toISOString(),
+      editUntil: '2020-01-01T00:00:00.000Z',
+      items: [{ medId: 'med-a', qty: 2 }]
+    }];
+    window.isRequestAllowed = () => ({ allowed: true });
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.querySelectorAll('.pg').forEach((node) => node.classList.remove('on'));
+    document.getElementById('pg-myreqs').classList.add('on');
+    window.renderMyReqs();
+  });
+
+  const edit = page.locator('#mrlst [data-request-action="v16-edit"]');
+  await expect(edit).toBeVisible();
+  await edit.click();
+  await expect(page.locator('#v16-edit-request')).toBeVisible();
+  await page.locator('#v16-edit-request .v16-edit-qty').fill('5');
+
+  await page.evaluate(() => {
+    window.__savedRequestEdit = null;
+    window.S.upd = async (key, id, changes) => {
+      window.__savedRequestEdit = { key, id, changes };
+      const request = window.S.cache.requests.find((item) => item.id === id);
+      Object.assign(request, changes);
+      return true;
+    };
+  });
+  await page.locator('#v16-edit-request [data-request-action="v16-save-edit"]').click();
+  await expect.poll(() => page.evaluate(() => window.__savedRequestEdit)).toMatchObject({
+    key: 'requests',
+    id: 'req-a',
+    changes: { items: [{ medId: 'med-a', qty: 5 }] }
+  });
+  await expect(page.locator('#v16-edit-request')).toHaveCount(0);
+
+  await page.evaluate(() => {
+    window.isRequestAllowed = () => ({ allowed: false });
+    window.renderMyReqs();
+  });
+  await expect(edit).toHaveCount(0);
+
+  await page.evaluate(() => {
+    window.isRequestAllowed = () => ({ allowed: true });
+    window.S.cache.requests[0].status = 'fulfilled';
+    window.S.cache.requests[0].fulfilledAt = new Date().toISOString();
+    window.renderMyReqs();
+  });
+  await expect(edit).toHaveCount(0);
+});

@@ -49,3 +49,9 @@ export function canEditRequestBeforeDeadline(request, nowValue, deadline) {
   const now = new Date(nowValue).getTime();
   return Number.isFinite(now) && Number.isFinite(deadline) && deadline > 0 && now < deadline;
 }
+
+export function canEditRequestWhileWindowIsOpen(request, requestWindowAllowed) {
+  if (!request || request.status !== 'pending') return false;
+  if (request.fulfilledAt || request.fulfilled === true || typeof request.fulfilled === 'string') return false;
+  return requestWindowAllowed === true;
+}
