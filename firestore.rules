@@ -95,7 +95,7 @@ service cloud.firestore {
         || pharmacyDirector()
         || (
           inpatientSupervisor()
-          && docId.matches('^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2|request_.*|pharmacy_.*|audit_log|theme)$')
+          && docId.matches('^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2|request_.*|pharmacy_.*|medication_(visibility|freeze)_rules_v3|audit_log|theme)$')
         )
         || (
           pharmacyStaff()

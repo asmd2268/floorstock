@@ -134,3 +134,38 @@ test('My Requests exposes and saves edit only while ordering is open and request
   });
   await expect(edit).toHaveCount(0);
 });
+
+test('inpatient supervisor can manage Hide rules without unauthorized login-time writes', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-asdh-modules', 'ready');
+
+  const result = await page.evaluate(async () => {
+    window.CU = { role: 'inpatient_supervisor', username: 'inpatient-supervisor', active: true };
+    window.FB_AUTH = { currentUser: { uid: 'supervisor-a' } };
+    window.S.cache.departments = [{ id: 'dept-a', name: 'Ward A' }];
+    window.S.cache.deleted_departments = ['old-dept'];
+    window.S.cache.requests = [];
+    window.S.cache.crash_carts = [];
+    const writes = [];
+    window.S.s = async (key) => { writes.push(['set', key]); return true; };
+    window.S.rm = async (key) => { writes.push(['remove', key]); return true; };
+
+    await window.repairDeletedDepartments();
+    window.finalizePreviewStart();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    return {
+      hideAllowed: window.fsCanWriteStateKey('medication_visibility_rules_v3'),
+      freezeAllowed: window.fsCanWriteStateKey('medication_freeze_rules_v3'),
+      migrationAllowed: window.fsCanWriteStateKey('migration_crash_cart_norepinephrine_v3'),
+      writes
+    };
+  });
+
+  expect(result).toEqual({
+    hideAllowed: true,
+    freezeAllowed: true,
+    migrationAllowed: false,
+    writes: []
+  });
+});

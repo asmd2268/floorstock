@@ -164,6 +164,12 @@ describe('users and system/master', () => {
 });
 
 describe('floorstock_state reads, shapes, keys, and deletes', () => {
+  test('inpatient supervisor may save Hide and Freeze rules', async () => {
+    const db = dbFor('inpatient_supervisor');
+    await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'medication_visibility_rules_v3'), statePayload({})));
+    await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'medication_freeze_rules_v3'), statePayload({})));
+  });
+
   test('all active roles can read shared state, but department sessions cannot list the collection', async () => {
     await seed('floorstock_state/theme', statePayload('dark'));
     for (const role of activeRoles) {

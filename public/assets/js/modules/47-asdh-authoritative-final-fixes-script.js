@@ -83,6 +83,8 @@ function isWrongNorepiZ(it){
 }
 async function repairNorepinephrineZ(force,silent){
   if(repairBusyZ||repairDoneZ||typeof crashCarts!=='function'||typeof setCrashCarts!=='function'||!window.S||typeof S.g!=='function'||typeof S.s!=='function')return;
+  /* This is a database migration, not a login task for operational roles. */
+  if(typeof window.fsCanWriteStateKey==='function'&&!window.fsCanWriteStateKey(NOREPI_MIGRATION_KEY_Z)){repairDoneZ=true;return}
   var previous=S.g(NOREPI_MIGRATION_KEY_Z)||null;
   var carts=(crashCarts()||[]).slice(),changed=0;repairBusyZ=true;
   carts.forEach(function(c){(c.items||[]).forEach(function(it){if(!isWrongNorepiZ(it))return;it.name='Norepinephrine';it.genericName='Norepinephrine';it.strength='1:1,000';it.concentration='1:1,000';it.updatedAt=typeof nowISO==='function'?nowISO():new Date().toISOString();changed++})});

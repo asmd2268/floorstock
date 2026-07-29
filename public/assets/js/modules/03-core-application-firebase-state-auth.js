@@ -783,6 +783,10 @@ globalThis._deletedDeptRepairBusy = false;
 function gd(){var raw=S.g('departments')||[],deleted=S.g('deleted_departments')||[];if(raw!==_gdRawRef||deleted!==_gdDeletedRef){_gdRawRef=raw;_gdDeletedRef=deleted;var blocked=new Set((Array.isArray(deleted)?deleted:[]).map(function(x){return String(x)}));_gdFiltered=(Array.isArray(raw)?raw:[]).filter(function(d){return !blocked.has(String(d&&d.id))})}return _gdFiltered.slice()}
 async function repairDeletedDepartments(){
   if(_deletedDeptRepairBusy)return;
+  /* Tombstone cleanup rewrites the global department directory and deletes a state key.
+     Only the pharmacy director / actual master may perform it; never attempt it on
+     supervisor sign-in and then surface a misleading authorization toast. */
+  if(!window.CU||!(CU.master===true||String(CU.role||'')==='pharmacy'))return;
   var tombs=S.g('deleted_departments')||[];
   if(!Array.isArray(tombs)||!tombs.length)return;
   _deletedDeptRepairBusy=true;

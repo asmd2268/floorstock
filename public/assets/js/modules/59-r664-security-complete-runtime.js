@@ -21,7 +21,7 @@ function stateKeyAllowed(key){
   if(actualMaster()||director())return true;
   if(key==='theme'||key==='audit_log')return true;
   if(role()==='inpatient_supervisor'){
-    return /^(crash_|accountability_|requests$|notes$|dept_notes$|meds_|expiry_|shelves_|req_windows$|disp_slots$|daily_limits_v2$|weekly_limits_v2$|monthly_limits$|rate_limits_v2$|request_|pharmacy_)/.test(key);
+    return /^(crash_|accountability_|requests$|notes$|dept_notes$|meds_|expiry_|shelves_|req_windows$|disp_slots$|daily_limits_v2$|weekly_limits_v2$|monthly_limits$|rate_limits_v2$|request_|pharmacy_|medication_(visibility|freeze)_rules_v3$)/.test(key);
   }
   if(role()==='pharmacy_staff'){
     return /^(crash_carts$|crash_cart_reports$|accountability_|requests$|notes$|dept_notes$|request_analytics_archive$)/.test(key);

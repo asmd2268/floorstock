@@ -43,6 +43,14 @@ const inventoryStatusSource = fs.readFileSync(
   new URL('../public/assets/js/modules/41-v16-inventory-status-merge-clean-script.js', import.meta.url),
   'utf8',
 );
+const securityRuntimeSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/59-r664-security-complete-runtime.js', import.meta.url),
+  'utf8',
+);
+const startupRepairSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/47-asdh-authoritative-final-fixes-script.js', import.meta.url),
+  'utf8',
+);
 const requestScheduleSource = fs.readFileSync(
   new URL('../public/assets/js/modules/42-weekly-request-grid-bulk-classification-clean-script.js', import.meta.url),
   'utf8',
@@ -174,6 +182,9 @@ test('Hide and Frozen controls remain visible to inpatient supervisor, pharmacy 
   assert.match(inventoryStatusSource, /v16-freeze-head/);
   assert.match(inventoryStatusSource, /h\.onclick=window\.openHide/);
   assert.match(inventoryStatusSource, /f\.onclick=window\.openFreeze/);
+  assert.match(securityRuntimeSource, /medication_\(visibility\|freeze\)_rules_v3/);
+  assert.match(requestSource, /CU\.master===true\|\|String\(CU\.role\|\|''\)==='pharmacy'/);
+  assert.match(startupRepairSource, /!window\.fsCanWriteStateKey\(NOREPI_MIGRATION_KEY_Z\)/);
 });
 
 test('request editing follows the department current open window and stops after fulfillment', () => {
