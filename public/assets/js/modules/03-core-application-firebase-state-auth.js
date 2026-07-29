@@ -1182,8 +1182,6 @@ async function doLogin(){
     var profile=profileSnapshot.data()||{};
     if(profile.active===false)throw new Error('This account is inactive.');
     if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
-    setLoginStage('Loading Floor Stock data…');
-    await S.init(setLoginStage,profile);
     var deptId=profile.deptId||profile.departmentId||null;
     var dept=deptId?gd().find(function(d){return String(d.id)===String(deptId)}):null;
     if(profile.role==='department'&&!dept){
@@ -1197,14 +1195,25 @@ async function doLogin(){
       throw new Error('Application startup is unavailable. Reload the file and try again.');
     }
     window.startApp();
-    setTimeout(function(){
-      Promise.resolve().then(async function(){
-        if(CU&&(CU.master===true||CU.role==='pharmacy')){
-          if(typeof window.repairImportedDepartmentAliases==='function')await window.repairImportedDepartmentAliases();
-          if(typeof window.seed==='function')await window.seed();
-        }
-      }).catch(function(error){console.warn('Background startup maintenance was skipped.',error);});
-    },500);
+
+setTimeout(function(){
+  Promise.resolve().then(async function(){
+    await S.init(function(){},profile);
+  }).catch(function(error){
+    console.error('Background Floor Stock initialization failed.',error);
+  });
+},0);
+
+setTimeout(function(){
+  Promise.resolve().then(async function(){
+    if(CU&&(CU.master===true||CU.role==='pharmacy')){
+      if(typeof window.repairImportedDepartmentAliases==='function')await window.repairImportedDepartmentAliases();
+      if(typeof window.seed==='function')await window.seed();
+    }
+  }).catch(function(error){
+    console.warn('Background startup maintenance was skipped.',error);
+  });
+},500);
   }catch(err){
     console.error(err);
     var message=(err&&err.message)||'Unable to sign in';
