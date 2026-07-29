@@ -1,3 +1,5 @@
+import { canEditRequestBeforeDeadline, requestWindowDeadlineFromGrid } from '../core/request-edit-policy.js';
+
 (function(){
 'use strict';
 function E(id){return document.getElementById(id)}
@@ -56,6 +58,8 @@ function splitRange(r){var p=String(r||'').split(/\s*[–-]\s*/);return{from:p[0
 function weeklyAllowedRows(g){var rows=[],order=[6,0,1,2,3,4,5];order.forEach(function(d){var rs=rowRanges(g[d]||[]);if(rs.length)rows.push({dayIndex:d,ar:DAYS_AR[d],en:DAYS_EN[d],ranges:rs})});return rows}
 function weeklyRowsHtml(rows){if(!rows||!rows.length)return '<div class="fhint">لا توجد أوقات طلب مفعلة خلال الأسبوع / No request hours are enabled this week.</div>';return '<ul>'+rows.map(function(row){var arParts=row.ranges.map(function(r){var p=splitRange(r);return p.from==='00:00'&&p.to==='24:00'?'متاح طوال اليوم (24 ساعة)':'من '+p.from+' إلى '+p.to}),enParts=row.ranges.map(function(r){var p=splitRange(r);return p.from==='00:00'&&p.to==='24:00'?'Open 24 hours':p.from+'–'+p.to});return '<li><span class="ar">يوم '+escH(row.ar)+': '+escH(arParts.join('، ثم '))+'</span><span class="en">'+escH(row.en)+': '+escH(enParts.join(', '))+'</span></li>'}).join('')+'</ul>'}
 window.isRequestAllowed=function(deptId){var g=gridFor(deptId),p=riyadhParts(),allowed=!!(g[p.dow]&&g[p.dow][p.hour]),base={scheduleGrid:cloneGrid(g),scheduleSource:mappedGrid(deptId)?'weekly-grid':'legacy'};if(allowed)return Object.assign(base,{allowed:true,reason:'',window:{to:currentClose(g,p.dow,p.hour)},grid:true});return Object.assign(base,{allowed:false,reason:'Outside request hours',next:nextAllowed(g,p),grid:true})}
+window.getRequestEditDeadline=function(deptId,submittedAt){return requestWindowDeadlineFromGrid(gridFor(deptId),submittedAt)};
+window.canEditRequestBySchedule=function(request,nowValue){var captured=!!(request&&Object.prototype.hasOwnProperty.call(request,'editUntil')),stored=captured&&request.editUntil?new Date(request.editUntil).getTime():NaN,deadline=captured?(request.editUntil===null?null:(Number.isFinite(stored)?stored:0)):window.getRequestEditDeadline(request&&request.deptId,request&&(request.created||request.createdAt));return canEditRequestBeforeDeadline(request,nowValue==null?Date.now():nowValue,deadline)};
 var requestGridRetryCount=0,requestGridRetryTimer=null;
 
 function requestGridDepartments(){

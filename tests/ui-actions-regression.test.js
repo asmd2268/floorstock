@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import test from 'node:test';
+import {
+  canEditRequestBeforeDeadline,
+  requestWindowDeadlineFromGrid,
+} from '../public/assets/js/core/request-edit-policy.js';
 
 const usersSource = fs.readFileSync(
   new URL('../public/assets/js/modules/07-expiry-requests-and-primary-features.js', import.meta.url),
@@ -32,6 +36,18 @@ const crashBootSource = fs.readFileSync(
 );
 const controlledCustodySource = fs.readFileSync(
   new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
+  'utf8',
+);
+const inventoryStatusSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/41-v16-inventory-status-merge-clean-script.js', import.meta.url),
+  'utf8',
+);
+const requestScheduleSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/42-weekly-request-grid-bulk-classification-clean-script.js', import.meta.url),
+  'utf8',
+);
+const persistenceSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url),
   'utf8',
 );
 
@@ -148,4 +164,37 @@ test('department Crash Cart boot is read-only and controlled custody loading is 
   assert.match(crashBootSource, /if\(window\.CU&&!canReconcile\)\{done=true;return\}/);
   assert.match(controlledCustodySource, /if\(host\.dataset\.controlledLoading==='1'\)return false/);
   assert.match(controlledCustodySource, /delete host\.dataset\.controlledLoading/);
+});
+
+test('Hide and Frozen controls remain visible to inpatient supervisor, pharmacy director, and master', () => {
+  assert.match(inventoryStatusSource, /\['pharmacy','inpatient_supervisor'\]\.indexOf\(R\(\)\)>-1/);
+  assert.match(inventoryStatusSource, /CU\.master===true/);
+  assert.match(inventoryStatusSource, /v16-hide-head/);
+  assert.match(inventoryStatusSource, /v16-freeze-head/);
+  assert.match(inventoryStatusSource, /h\.onclick=window\.openHide/);
+  assert.match(inventoryStatusSource, /f\.onclick=window\.openFreeze/);
+});
+
+test('request editing ends at the schedule deadline or fulfillment, whichever occurs first', () => {
+  const grid = Array.from({ length: 7 }, () => Array(24).fill(false));
+  grid[4][6] = true;
+  grid[4][7] = true;
+  const submittedAt = '2026-07-30T04:15:00.000Z'; // Thursday 07:15 in Riyadh.
+  const deadline = requestWindowDeadlineFromGrid(grid, submittedAt);
+
+  assert.equal(deadline, Date.parse('2026-07-30T05:00:00.000Z'));
+  assert.equal(canEditRequestBeforeDeadline({ status: 'pending' }, '2026-07-30T04:59:59.999Z', deadline), true);
+  assert.equal(canEditRequestBeforeDeadline({ status: 'pending' }, '2026-07-30T05:00:00.000Z', deadline), false);
+  assert.equal(canEditRequestBeforeDeadline({ status: 'pending', fulfilledAt: '2026-07-30T04:30:00.000Z' }, '2026-07-30T04:40:00.000Z', deadline), false);
+  assert.equal(requestWindowDeadlineFromGrid(grid, '2026-07-30T05:01:00.000Z'), 0);
+
+  const alwaysOpen = Array.from({ length: 7 }, () => Array(24).fill(true));
+  assert.equal(requestWindowDeadlineFromGrid(alwaysOpen, submittedAt), null);
+  assert.equal(canEditRequestBeforeDeadline({ status: 'pending' }, '2027-07-30T05:00:00.000Z', null), true);
+
+  assert.doesNotMatch(requestEnhancementSource, /7200000|Edit \(2h\)|Edit fulfilled/);
+  assert.match(requestEnhancementSource, /canEditRequestBySchedule/);
+  assert.match(requestScheduleSource, /window\.getRequestEditDeadline/);
+  assert.match(requestScheduleSource, /hasOwnProperty\.call\(request,'editUntil'\)/);
+  assert.match(persistenceSource, /editUntil:Number\.isFinite\(deadline\)/);
 });
