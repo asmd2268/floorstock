@@ -68,6 +68,10 @@ test('department login hydrates its directory before assignment validation and s
   assert.match(requestSource, /localStorage\.removeItem\('floorstock_last_cache_v1'\)/);
   assert.doesNotMatch(requestSource, /localStorage\.setItem\(\s*['"]floorstock_last_cache_v1/);
   assert.match(requestSource, /fsStateLoadFloorstockForProfileViaRest\(profileHint\)/);
+  assert.match(requestSource, /'crash_carts','crash_cart_reports'/);
+  assert.match(requestSource, /function fsStateScopeCacheForProfile\(cache,profile\)/);
+  assert.match(requestSource, /String\(cart&&cart\.deptId\|\|''\)===deptId/);
+  assert.match(requestSource, /ownCartIds\.has\(String\(report&&report\.cartId\|\|''\)\)/);
 });
 
 test('login waits for Floor Stock state before opening the application shell', () => {

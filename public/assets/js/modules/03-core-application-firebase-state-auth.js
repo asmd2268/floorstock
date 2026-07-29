@@ -189,6 +189,7 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
   'departments','deleted_departments','custom_categories','daily_limits_v2',
   'weekly_limits_v2','monthly_limits','rate_limits_v2','req_windows','disp_slots',
   'request_count_limits_v1','request_hour_grids_v1','requests','dept_notes','notes',
+  'crash_carts','crash_cart_reports',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
 ]);
@@ -218,18 +219,33 @@ async function fsStateLoadDocumentViaSdk(key){
   );
   return snapshot&&snapshot.exists?snapshot.data().value:null;
 }
-async function fsStateLoadScoped(keys,loader,source){
+function fsStateScopeCacheForProfile(cache,profile){
+  if(!profile||profile.role!=='department')return cache;
+  var deptId=String(profile.deptId||profile.departmentId||'').trim();
+  if(!deptId)return cache;
+  var carts=Array.isArray(cache.crash_carts)?cache.crash_carts:[];
+  var ownCarts=carts.filter(function(cart){return String(cart&&cart.deptId||'')===deptId});
+  var ownCartIds=new Set(ownCarts.map(function(cart){return String(cart&&cart.id||'')}));
+  cache.crash_carts=ownCarts;
+  if(Array.isArray(cache.crash_cart_reports)){
+    cache.crash_cart_reports=cache.crash_cart_reports.filter(function(report){
+      return String(report&&report.deptId||'')===deptId||ownCartIds.has(String(report&&report.cartId||''));
+    });
+  }
+  return cache;
+}
+async function fsStateLoadScoped(keys,loader,source,profile){
   var values=await Promise.all(keys.map(function(key){return loader(key)})),cache={};
   keys.forEach(function(key,index){if(values[index]!==null&&values[index]!==undefined)cache[key]=values[index]});
-  return {cache:cache,source:source};
+  return {cache:fsStateScopeCacheForProfile(cache,profile),source:source};
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){
   var keys=fsStateKeysForProfile(profile);
-  return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped'):fsStateLoadFloorstockViaRest();
+  return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped',profile):fsStateLoadFloorstockViaRest();
 }
 function fsStateLoadFloorstockForProfileViaSdk(profile){
   var keys=fsStateKeysForProfile(profile);
-  return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-scoped'):fsStateLoadFloorstockViaSdk();
+  return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-scoped',profile):fsStateLoadFloorstockViaSdk();
 }
 async function fsStateLoadUsersViaRest(){
   var documents=await fsStateRestListCollection('users');
@@ -379,7 +395,7 @@ globalThis.S = {
           Object.keys(parsed||{}).forEach(function(key){if(allowedSet.has(key))scoped[key]=parsed[key]});
           parsed=scoped;
         }
-        S.cache=parsed||{};
+        S.cache=fsStateScopeCacheForProfile(parsed||{},profileHint);
         S.cache.users=[];
         S.ready=true;
       }
