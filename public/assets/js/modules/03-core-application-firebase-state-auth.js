@@ -1368,7 +1368,7 @@ function renderDash(){
   if(soon.length)alertHtml+='<div class="alert-banner-y">&#x1F514; <b>'+soon.length+' expiring soon:</b> '+soon.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
   el('exp-alerts').innerHTML=alertHtml;
   el('dptbl').innerHTML=pend.length
-    ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">Fulfill</button></td></tr>'}).join('')
+    ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button></td></tr>'}).join('')
     :'<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:20px">No pending requests &#x2713;</td></tr>';
   // Notes alert on dashboard
 var openNotes=getNotes().filter(function(n){return n.status==='open'||n.status==='urgent'});
@@ -1573,16 +1573,41 @@ function renderReqs(){
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
 }
+function installRequestActionBindings(){
+  if(globalThis._requestActionBindingsInstalled)return;
+  globalThis._requestActionBindingsInstalled=true;
+  document.addEventListener('click',function(event){
+    var button=event.target&&event.target.closest?event.target.closest('[data-request-action]'):null;
+    if(!button)return;
+    var action=button.dataset.requestAction||'',id=button.dataset.id||'';
+    event.preventDefault();
+    if(action==='fulfill'||action==='edit-fulfillment')return openFulfill(id);
+    if(action==='view')return viewReq(id);
+    if(action==='master-delete'&&typeof window.masterDeleteRequestNow==='function')return window.masterDeleteRequestNow(id);
+    if(action==='receive'&&typeof window.receiveFulfilledRequest==='function')return window.receiveFulfilledRequest(id);
+    if(action==='v16-edit'&&typeof window.v16EditRequest==='function')return window.v16EditRequest(id);
+    if(action==='v16-delete'&&typeof window.v16DeleteRequest==='function')return window.v16DeleteRequest(id);
+    if(action==='v16-confirm-delete'&&typeof window.v16ConfirmDelete==='function')return window.v16ConfirmDelete(id);
+    if(action==='v16-save-edit'&&typeof window.v16SaveEdit==='function')return window.v16SaveEdit(id);
+    if(action==='close-request-modal'){
+      var modal=button.closest('.modal-bg');
+      if(modal)modal.remove();
+      return;
+    }
+    console.warn('Request action is unavailable:',action);
+  });
+}
+installRequestActionBindings();
 function rcard(r,isp){
   var d=gd().find(function(x){return x.id===r.deptId});
   var sm={pending:'byl',fulfilled:'bgn',partial:'bbl'};
   return '<div class="card"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
     +'<div class="fl g8 ic"><span style="font-size:12px;color:var(--tx2)">'+fmtDateTime(r.created)+'</span>'
-    +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">Fulfill</button>':'')
-    +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-id="'+r.id+'" onclick="openFulfill(this.getAttribute(\'data-id\'))">&#x270F; Edit</button>':'')
-    +(isp&&window.CU&&CU.master===true?'<button class="btn bd2c bsm" data-id="'+r.id+'" onclick="masterDeleteRequestNow(this.dataset.id)">Delete</button>':'')
-    +(!isp&&r.status==='fulfilled'&&!r.receivedAt?'<button class="btn bs bsm" data-id="'+r.id+'" onclick="receiveFulfilledRequest(this.dataset.id)">Receive & add expiry</button>':'')
-    +'<button class="btn bg bsm" data-id="'+r.id+'" onclick="viewReq(this.getAttribute(\'data-id\'))">View</button></div></div>'
+    +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button>':'')
+    +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">&#x270F; Edit</button>':'')
+    +(isp&&window.CU&&CU.master===true?'<button class="btn bd2c bsm" data-request-action="master-delete" data-id="'+r.id+'">Delete</button>':'')
+    +(!isp&&r.status==='fulfilled'&&!r.receivedAt?'<button class="btn bs bsm" data-request-action="receive" data-id="'+r.id+'">Receive & add expiry</button>':'')
+    +'<button class="btn bg bsm" data-request-action="view" data-id="'+r.id+'">View</button></div></div>'
     +'<div style="padding:9px 18px;font-size:12px;color:var(--tx2)">'+(r.items||[]).length+' items'
     +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDateTime(r.fulfilledAt):' &middot; Awaiting fulfillment')
     +(r.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">&#x1F4C5; Scheduled dispense: '+fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' &middot; '+r.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">&#x1F4C5; Dispense time: Not scheduled yet</div>')

@@ -14,6 +14,14 @@ const inventorySafetySource = fs.readFileSync(
   new URL('../public/assets/js/modules/53-r661-authoritative-inventory-safety.js', import.meta.url),
   'utf8',
 );
+const requestSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url),
+  'utf8',
+);
+const requestEnhancementSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/38-v16-user-operations-main.js', import.meta.url),
+  'utf8',
+);
 
 test('Users page actions use CSP-safe delegated event bindings', () => {
   assert.doesNotMatch(usersSource, /onclick=["'][^"']*delUser/);
@@ -36,4 +44,17 @@ test('Inventory snapshots are removed and denied outside the actual Master sessi
   assert.match(inventorySafetySource, /function removeSnapshotManager\(\)/);
   assert.match(inventorySafetySource, /if\(!masterAllowed\(\)\)\{removeSnapshotManager\(\);return\}/);
   assert.match(inventorySafetySource, /window\.undoLatestInventorySafetySnapshot=async function\(\)\{\s*if\(!masterAllowed\(\)\)/);
+});
+
+test('Requests page actions use CSP-safe delegated event bindings', () => {
+  assert.doesNotMatch(requestSource, /onclick=["'][^"']*(?:openFulfill|viewReq|masterDeleteRequestNow|receiveFulfilledRequest)/);
+  assert.match(requestSource, /data-request-action="fulfill"/);
+  assert.match(requestSource, /data-request-action="view"/);
+  assert.match(requestSource, /document\.addEventListener\('click'/);
+  assert.doesNotMatch(requestEnhancementSource, /onclick=["'][^"']*(?:v16EditRequest|v16DeleteRequest|v16ConfirmDelete|v16SaveEdit)/);
+  assert.doesNotMatch(requestEnhancementSource, /on(?:change|input)=["'][^"']*v16FilterRequests/);
+  assert.match(requestEnhancementSource, /requestAction='v16-edit'/);
+  assert.match(requestEnhancementSource, /requestAction='v16-delete'/);
+  assert.match(requestEnhancementSource, /control\.addEventListener\(control\.tagName==='INPUT'\?'input':'change',window\.v16FilterRequests\)/);
+  assert.match(requestEnhancementSource, /\[data-request-action="master-delete"\],\[data-request-action="edit-fulfillment"\]/);
 });
