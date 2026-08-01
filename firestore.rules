@@ -61,7 +61,11 @@ service cloud.firestore {
     }
 
     function tenantId() {
-      return activeUser() ? profile().get('tenantId', '') : '';
+      // Older profiles may contain tenantId: null. The client correctly treats
+      // that as a legacy (non-tenant) account, so rules must normalize it too.
+      return activeUser() && profile().get('tenantId', '') is string
+        ? profile().get('tenantId', '')
+        : '';
     }
 
     function sameTenant(id) {
@@ -69,7 +73,11 @@ service cloud.firestore {
     }
 
     function sameUserTenant(userData) {
-      return activeUser() && userData.get('tenantId', '') == tenantId();
+      return activeUser() && (
+        userData.get('tenantId', '') is string
+          ? userData.get('tenantId', '')
+          : ''
+      ) == tenantId();
     }
 
     function platformAdmin() {

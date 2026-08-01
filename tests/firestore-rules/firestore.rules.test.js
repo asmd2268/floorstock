@@ -46,6 +46,7 @@ const profiles = {
   warehouse: { active: true, role: 'warehouse', master: false },
   pharmacy: { active: true, role: 'pharmacy', master: false },
   master: { active: true, role: 'pharmacy', master: true },
+  legacy_null_master: { active: true, role: 'pharmacy', master: true, tenantId: null },
   forged_master: { active: true, role: 'department', master: true, deptId: DEPARTMENT_ID },
   tenant_master: { active: true, role: 'pharmacy', master: true, tenantId: 'tenant-a', tenantName: 'Tenant A' },
   tenant_department: { active: true, role: 'department', master: false, deptId: DEPARTMENT_ID, tenantId: 'tenant-a', tenantName: 'Tenant A' },
@@ -175,6 +176,13 @@ describe('users and system/master', () => {
 });
 
 describe('floorstock_state reads, shapes, keys, and deletes', () => {
+  test('legacy accounts with tenantId null can still save to legacy state', async () => {
+    const db = dbFor('legacy_null_master');
+    await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'requests'), statePayload([])));
+    await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'requests')));
+    await assertSucceeds(getDocs(collection(db, 'floorstock_state')));
+  });
+
   test('inpatient supervisor may save Hide and Freeze rules', async () => {
     const db = dbFor('inpatient_supervisor');
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'medication_visibility_rules_v3'), statePayload({})));
@@ -513,4 +521,3 @@ describe('temporary Accountability handover sessions', () => {
     }
   });
 });
-

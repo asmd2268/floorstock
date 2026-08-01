@@ -18,9 +18,9 @@ c346ce7f90913533788bce65c19e51c0a71ad0b7a22664b998c4479f5aacfdc1  ./docs/build-r
 146a6e9b63a883d13f7cb5b35de627677c1c93ffa0f04dca833e1d462260a59b  ./docs/es-module-report.json
 0c846e2a5e55051577a48a9750a7886afdd303982515a9f3a3a28ab2c1fee82d  ./docs/verification.txt
 dce8ee6058ad4b0ad356ab90dbda59e60edc1d28e0b674955422fd8694693ca9  ./firebase.json
-7064a32a533e4979b227553e1e3e8af2eec976ab2666955f82f721ae0fe0327f  ./firestore-debug.log
+c145f6d65c89184b75068deab8fa77b4f0feeac195f30e4558405c15da1a119d  ./firestore-debug.log
 5977849d78e58eba2db764191c770d3ae554fd732c166320367ae0f286d91df8  ./firestore.indexes.json
-0ee0a724283b2f6a16b99229bbc02f60306f62a36e85633898a75e47e6b1ec42  ./firestore.rules
+d38c2bf01e1102547a48be44b310d16c2aebeff67f7f82f57253f42815142fb9  ./firestore.rules
 0f150d1dd305574173fb391e53bc8b159a50b310da8d0a2ca253a3d499b0867e  ./functions/accountability-handover-core.js
 5879b675419d6b610fd755dfac31184ae60436f898cb7e0e55990acd0f86e622  ./functions/accountability-handover-core.test.js
 8632157191763f0a9c12c94f17580a84646d97d252dc7e11cbf656fe4ee9d0d5  ./functions/index.js
@@ -127,7 +127,7 @@ fb289876c05a03e06887a15e4aa2d300413f4d0395ca24a2fc19d8ff84379cdc  ./public/index
 be6779eafd0af62cf6b32aecad681ad36303b5c8814413ec7a035322497f8229  ./tests/browser/login-smoke.spec.js
 d7899a5390a046d002a638d342e7b7385f73f945796740de62e737296f83c4a9  ./tests/firestore-rules/README.md
 1e1ddd3e4b037bd78250657ee2255207ee3002580a79f114e56cf5fec8b8fe45  ./tests/firestore-rules/application-state-keys.js
-7e488b0f2f164aa159719c862cb12b71568a2df77b11e9dee3c24744e9e953d6  ./tests/firestore-rules/firestore.rules.test.js
+7941de6898799f9f596c31a38ee370ed13c94ef90d9e5088aee7fbada5843132  ./tests/firestore-rules/firestore.rules.test.js
 50b5e931561ae5373b6cf34c8e45a0e6c5f6d24fc4b26734845ad130db79d612  ./tests/ui-actions-regression.test.js
 3d8d7ae8ac0d168ec96ac1f6004c2b3d50b06fef4a90dc851c1e14ddc90736fa  ./tools/build_es_modules.py
 7428280466db81a5c9ac7306111be556211f816c67aa0adf228065969f129a4b  ./tools/transform_provider.mjs
