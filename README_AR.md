@@ -1,4 +1,4 @@
-# ASDHealth FloorStock R6.72.1 Modular Protected
+# ASDHealth FloorStock R6.75.0 SaaS Protected
 
 هذه الحزمة مجهزة لمستودع `asmd2268/floorstock` مع الحفاظ على Cloud Functions الحالية وإضافة دعم الأدوار الجديدة.
 

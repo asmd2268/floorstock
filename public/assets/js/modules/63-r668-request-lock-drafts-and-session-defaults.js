@@ -1,8 +1,8 @@
-import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=R6.74.0';
+import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=R6.75.0';
 
 (function(){
 'use strict';
-var VERSION='R6.74.0';
+var VERSION='R6.75.0';
 function E(id){return document.getElementById(id)}
 function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
 function isDepartment(){return !!(window.CU&&role()==='department')}

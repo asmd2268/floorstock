@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js';
-import { normalizeRole, hasCapability } from '../core/role-capabilities.js?v=R6.74.0';
+import { normalizeRole, hasCapability } from '../core/role-capabilities.js?v=R6.75.0';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.

@@ -398,7 +398,7 @@ test('Print Orders uses a CSP-safe external runtime and creates a PDF matching t
   assert.doesNotMatch(masterTestSource, /popup\.document\.write\(fsR5OrdersHtml\(orders\)\)/);
   assert.doesNotMatch(masterTestSource, /Preparing Landscape PDF/);
 
-  assert.match(printOrdersPageSource, /src="\.\/assets\/js\/print-orders-runtime\.js\?v=R6\.74\.0"/);
+  assert.match(printOrdersPageSource, /src="\.\/assets\/js\/print-orders-runtime\.js\?v=R6\.75\.0"/);
   assert.doesNotMatch(printOrdersPageSource, /<script>(?!\s*<\/script>)/);
 
   assert.match(printOrdersRuntimeSource, /function readPrintRows\(\)/);
