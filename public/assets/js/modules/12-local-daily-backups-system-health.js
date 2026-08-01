@@ -1,6 +1,6 @@
 /* ASDHealth pilot protection: free daily IndexedDB backups + System Health. */
 (function(){
-  var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365;
+  var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365,AH_TRANSIENT=null;
   /* Automatic/local operational backups intentionally exclude the users collection (PII). */
   var AH_COLLECTIONS=['floorstock_state','public_expiry','public_controlled_expiry'];
   function masterOnly(){
@@ -16,16 +16,20 @@
   async function readCol(name){var snap=await FB_DB.collection(name).get();return snap.docs.map(function(d){return{id:d.id,data:enc(d.data())}})}
   async function payload(){var cols={};for(var i=0;i<AH_COLLECTIONS.length;i++)cols[AH_COLLECTIONS[i]]=await readCol(AH_COLLECTIONS[i]);return{format:'ASDHealth-Firestore-Backup',product:'ASDHealth',module:'Pharmacy Operations',version:2,projectId:(window.FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId)||'',exportedAt:new Date().toISOString(),collections:cols}}
   function sizeLabel(n){if(!n&&n!==0)return'—';if(n<1024)return n+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';return(n/1048576).toFixed(2)+' MB'}
-  async function allBackups(){try{var db=await ahOpen();var tx=db.transaction(AH_STORE,'readonly');var a=await ahReq(tx.objectStore(AH_STORE).getAll());db.close();return(a||[]).sort(function(x,y){return String(y.createdAt).localeCompare(String(x.createdAt))})}catch(e){return []}}
-  async function saveBackup(obj){var txt=JSON.stringify(obj),rec={id:String(obj.exportedAt).slice(0,10),createdAt:obj.exportedAt,size:txt.length,payload:obj};var db=await ahOpen();var tx=db.transaction(AH_STORE,'readwrite'),st=tx.objectStore(AH_STORE);await ahReq(st.put(rec));var all=await ahReq(st.getAll());all.sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))});for(var i=AH_MAX;i<all.length;i++)await ahReq(st.delete(all[i].id));db.close();return rec}
-  async function saveWithQuota(obj){try{return await saveBackup(obj)}catch(e){if(e&&(/quota/i.test(e.name||'')||/quota/i.test(e.message||''))){var db=await ahOpen(),tx=db.transaction(AH_STORE,'readwrite'),st=tx.objectStore(AH_STORE),all=await ahReq(st.getAll());all.sort(function(a,b){return String(a.createdAt).localeCompare(String(b.createdAt))});for(var i=0;i<Math.max(1,Math.ceil(all.length/4));i++)await ahReq(st.delete(all[i].id));db.close();return await saveBackup(obj)}throw e}}
+  function ahClose(db){try{if(db)db.close()}catch(ignore){}}
+  async function allBackups(){try{var db=await ahOpen(),a;try{a=await ahReq(db.transaction(AH_STORE,'readonly').objectStore(AH_STORE).getAll())}finally{ahClose(db)}return(a||[]).sort(function(x,y){return String(y.createdAt).localeCompare(String(x.createdAt))})}catch(e){return AH_TRANSIENT?[AH_TRANSIENT]:[]}}
+  function ahWriteAndPrune(db,rec){return new Promise(function(resolve,reject){var tx,st,getAll;try{tx=db.transaction(AH_STORE,'readwrite');st=tx.objectStore(AH_STORE);st.put(rec);getAll=st.getAll()}catch(error){reject(error);return}getAll.onsuccess=function(){var all=(getAll.result||[]).sort(function(a,b){return String(b.createdAt).localeCompare(String(a.createdAt))});for(var i=AH_MAX;i<all.length;i++)st.delete(all[i].id)};getAll.onerror=function(){try{tx.abort()}catch(ignore){}reject(getAll.error||new Error('IndexedDB backup listing failed'))};tx.oncomplete=function(){resolve(rec)};tx.onabort=tx.onerror=function(){reject(tx.error||new Error('IndexedDB backup transaction failed'))}})}
+  async function saveBackup(obj){var txt=JSON.stringify(obj),rec={id:String(obj.exportedAt).slice(0,10),createdAt:obj.exportedAt,size:txt.length,payload:obj};AH_TRANSIENT=rec;var db=await ahOpen();try{return await ahWriteAndPrune(db,rec)}finally{ahClose(db)}}
+  async function releaseOldestQuarter(){var db=await ahOpen();try{return await new Promise(function(resolve,reject){var tx=db.transaction(AH_STORE,'readwrite'),st=tx.objectStore(AH_STORE),r=st.getAll();r.onsuccess=function(){var all=(r.result||[]).sort(function(a,b){return String(a.createdAt).localeCompare(String(b.createdAt))}),remove=Math.max(1,Math.ceil(all.length/4));for(var i=0;i<remove&&i<all.length;i++)st.delete(all[i].id)};r.onerror=function(){reject(r.error||new Error('IndexedDB cleanup failed'))};tx.oncomplete=function(){resolve(true)};tx.onabort=tx.onerror=function(){reject(tx.error||new Error('IndexedDB cleanup transaction failed'))}})}finally{ahClose(db)}}
+  async function saveWithQuota(obj){try{return await saveBackup(obj)}catch(e){if(e&&(/quota/i.test(e.name||'')||/quota/i.test(e.message||''))){await releaseOldestQuarter();return await saveBackup(obj)}throw e}}
   window.masterCreateLocalBackup=async function(manual){
     if(!masterOnly()||!window.FB_DB){if(manual&&window.toast)toast('Master permission required','err');return null}
     var msg=document.getElementById('auto-backup-message');
     if(msg)msg.textContent='Creating protected local snapshot…';
     try{
-      var p=await payload(),r=await saveWithQuota(p);
-      localStorage.setItem('abhealth_last_auto_backup',r.createdAt);
+      var p=await payload(),r;AH_TRANSIENT={id:String(p.exportedAt).slice(0,10),createdAt:p.exportedAt,size:JSON.stringify(p).length,payload:p};
+      try{r=await saveWithQuota(p)}catch(storageError){console.warn('Backup generated but could not be persisted in IndexedDB; device download remains available.',storageError);r=AH_TRANSIENT}
+      try{localStorage.setItem('abhealth_last_auto_backup',r.createdAt)}catch(storageMetaError){console.warn('Backup was created, but its local status marker could not be saved.',storageMetaError)}
       if(msg)msg.textContent='Local backup saved: '+new Date(r.createdAt).toLocaleString();
       if(manual&&window.toast)toast('Local backup saved ✓','succ');
       await window.masterRefreshSystemHealth();
@@ -39,9 +43,9 @@
   };
   window.masterDownloadLatestLocalBackup=async function(){
     if(!masterOnly()){if(window.toast)toast('Master permission required','err');return false}
-    var a=await allBackups();
-    if(!a.length){if(window.toast)toast('No local backup is available yet.','info');return false}
-    var obj=a[0].payload,blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),x=document.createElement('a');
+    var a=await allBackups(),latest=AH_TRANSIENT&&(!a.length||String(AH_TRANSIENT.createdAt)>String(a[0].createdAt))?AH_TRANSIENT:a[0];
+    if(!latest){if(window.toast)toast('No local backup is available yet.','info');return false}
+    var obj=latest.payload,blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),x=document.createElement('a');
     x.href=url;x.download='ASDHealth_Pharmacy_Backup_'+String(obj.exportedAt).replace(/[:.]/g,'-')+'.json';document.body.appendChild(x);x.click();x.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000);
     return true;
   };

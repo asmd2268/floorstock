@@ -2,7 +2,7 @@
   'use strict';
   function uniq(a){return (a||[]).filter(function(v,i,x){return v&&x.indexOf(v)===i});}
   function canManageCategoryNames(){
-    try{return !!(window.CU&&(CU.master===true||CU.role==='pharmacy'||CU.role==='inpatient_supervisor')||(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||(typeof window.isMasterActual==='function'&&window.isMasterActual()));}catch(e){return false;}
+    try{return window.fsHasCapability?window.fsHasCapability('inventory.manage'):!!(window.CU&&(CU.master===true||CU.role==='pharmacy'||CU.role==='inpatient_supervisor')||(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||(typeof window.isMasterActual==='function'&&window.isMasterActual()));}catch(e){return false;}
   }
   function allCats(){
     var a=typeof getCategories==='function'?getCategories().slice():[];

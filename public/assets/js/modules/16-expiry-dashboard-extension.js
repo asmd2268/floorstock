@@ -4,7 +4,6 @@
   function n2(v){v=Number(v);return isFinite(v)?v:0}
   function dateTime(v){try{var d=v&&v.toDate?v.toDate():new Date(v||Date.now());return d.toLocaleString('en-GB',{calendar:'gregory',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}catch(e){return '—'}}
   function dateOnly(v){try{var d=new Date(v);return isNaN(d)?esc2(v):d.toLocaleDateString('en-GB',{calendar:'gregory',year:'numeric',month:'2-digit',day:'2-digit'})}catch(e){return esc2(v)}}
-  window.makeReadableQR=function(url){return 'https://api.qrserver.com/v1/create-qr-code/?size=600x600&format=png&color=000000&bgcolor=ffffff&qzone=4&ecc=H&data='+encodeURIComponent(url)};
   function publicRoot(){
     E('auth')&&(E('auth').style.display='none');E('app')&&(E('app').style.display='none');
     document.body.style.cssText='margin:0;background:#fff;color:#111';

@@ -6,7 +6,7 @@ async function run(){
   attempts++;
   try{
     var role=String((window.fsEffectiveRole&&window.fsEffectiveRole())||(window.CU&&window.CU.role)||'');
-    var canReconcile=!!(window.CU&&(window.CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(role)>=0));
+    var canReconcile=window.fsHasCapability?window.fsHasCapability('crashCart.operate'):!!(window.CU&&(window.CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(role)>=0));
     if(canReconcile&&typeof window.fsReconcileCrashCartData==='function'&&typeof window.crashCarts==='function'&&(window.crashCarts()||[]).length){
       done=true;
       await window.fsReconcileCrashCartData();

@@ -26,3 +26,9 @@
 #r664-seal-current{font-family:var(--mono);font-weight:800}
 .r664-security-note{padding:9px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:11px;color:var(--tx2);margin-bottom:12px}
 #r664-cloud-backup-card .r664-cloud-status{font-size:12px;color:var(--tx2);margin-top:8px;white-space:pre-wrap}
+
+/* R6.68 request-limit lock: same visual behavior as schedule lock without hiding the medicine list. */
+#pg-newreq.request-limit-locked .rqi{cursor:not-allowed!important;opacity:.48!important;background:var(--s3)!important}
+#pg-newreq.request-limit-locked button[onclick*="submitReq"]{cursor:not-allowed!important;opacity:.5!important;filter:grayscale(.5)}
+/* R6.71 temporary dual-QR accountability handover */
+.r671-qr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}.r671-qr-grid section{border:1px solid var(--bd);border-radius:14px;padding:14px;text-align:center;background:var(--bg2)}.r671-qr-grid img{display:block;width:min(100%,300px);aspect-ratio:1;margin:10px auto;border-radius:10px;background:#fff;padding:8px}.r671-qr-grid textarea{width:100%;min-height:74px;resize:none;font-size:11px;direction:ltr}.acc2-qr-dept-card{margin-top:12px}@media(max-width:760px){.r671-qr-grid{grid-template-columns:1fr}}

@@ -7,7 +7,7 @@ function normW(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/
 function variantW(v){return normW(v).replace(/\b(tablet|tablets|tab|tabs|capsule|capsules|cap|caps|injection|injections|inj|ampoule|ampoules|amp|vial|vials)\b/g,'').replace(/\s+/g,' ').trim()}
 function flagsW(m){return {high_alert:!!(m.high_alert||m.highAlert),lasa:!!(m.lasa||m.LASA),refrigerated:!!(m.refrigerated||m.fridge||m.cold_chain),hazard:!!(m.hazard||m.hazardous)}}
 function sigW(m){var f=flagsW(m);return ['high_alert','lasa','refrigerated','hazard'].filter(function(k){return f[k]}).join('|')||'none'}
-function canManageW(){return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
+function canManageW(){return window.fsHasCapability?window.fsHasCapability('inventory.manage'):!!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
 function canBulkReplaceW(){return canManageW()}
 function rowIdW(x){return String(x.deptId)+'::'+String(x.med.id)}
 function buildRowsW(){

@@ -1,6 +1,6 @@
 export const DEPARTMENT_ID = 'dept-a';
 
-// Every floorstock_state key currently referenced by the R6.65 application.
+// Every floorstock_state key currently referenced by the R6.66 application.
 // Dynamic key families use DEPARTMENT_ID (or a stable sample suffix) so the
 // rules tests cover both matching and cross-department denial.
 export const APPLICATION_STATE_KEYS = [
@@ -26,6 +26,8 @@ export const APPLICATION_STATE_KEYS = [
   'crash_cart_medication_names_v1',
   'crash_cart_reports',
   'crash_carts',
+  'deleted_request_audit_v4',
+  'department_request_notifications_v1',
   'custom_categories',
   'daily_limits_v2',
   'deleted_departments',
@@ -34,9 +36,12 @@ export const APPLICATION_STATE_KEYS = [
   'disp_slots',
   `expiry_${DEPARTMENT_ID}`,
   'facility_logo',
+  'global_request_freeze_v2',
+  'hidden_request_categories_v1',
   `inventory_integrity_${DEPARTMENT_ID}`,
   'inventory_name_merge_history',
   `inventory_snapshot_index_${DEPARTMENT_ID}`,
+  `inventory_snapshot_${DEPARTMENT_ID}_sample_meds`,
   'manual_medicine_merge_history_v1',
   'medication_freeze_rules_v3',
   'medication_visibility_rules_v3',
@@ -64,7 +69,7 @@ export function mayWriteState(role, key) {
   if (role === 'master' || role === 'pharmacy') return true;
   if (key === 'theme' || key === 'audit_log') return true;
   if (role === 'inpatient_supervisor') {
-    return /^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2|request_.*|pharmacy_.*|medication_(visibility|freeze)_rules_v3|audit_log|theme)$/.test(key);
+    return /^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|audit_log|theme)$/.test(key);
   }
   if (role === 'pharmacy_staff') {
     return /^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
@@ -77,17 +82,11 @@ export function mayWriteState(role, key) {
   }
   if (role === 'department' || role === 'custodian') {
     const allowed = new Set([
-      'requests',
-      'dept_notes',
-      'notes',
-      'crash_cart_reports',
-      'accountability_usage_v2',
-      'accountability_receipts_v2',
-      'audit_log',
-      'theme',
-      `meds_${DEPARTMENT_ID}`,
-      `expiry_${DEPARTMENT_ID}`,
-      `shelves_${DEPARTMENT_ID}`
+      'requests', 'dept_notes', 'notes', 'crash_cart_reports',
+      'accountability_usage_v2', 'accountability_receipts_v2',
+      'audit_log', 'theme', `meds_${DEPARTMENT_ID}`, `expiry_${DEPARTMENT_ID}`, `shelves_${DEPARTMENT_ID}`,
+      `inventory_integrity_${DEPARTMENT_ID}`, `inventory_snapshot_index_${DEPARTMENT_ID}`,
+      `inventory_snapshot_${DEPARTMENT_ID}_sample_meds`
     ]);
     if (role === 'custodian') {
       allowed.add(`controlled_dept_list_${DEPARTMENT_ID}`);

@@ -226,6 +226,22 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     }
   });
 
+  test('department inventory edits can create only their own safety snapshot metadata', async () => {
+    for (const role of ['department', 'custodian']) {
+      const db = dbFor(role);
+      const ownSnapshot = `inventory_snapshot_${DEPARTMENT_ID}_change_meds`;
+      const otherSnapshot = `inventory_snapshot_${OTHER_DEPARTMENT_ID}_change_meds`;
+      await assertSucceeds(setDoc(doc(db, 'floorstock_state', `inventory_integrity_${DEPARTMENT_ID}`), statePayload({ count: 1 })));
+      await assertSucceeds(setDoc(doc(db, 'floorstock_state', `inventory_snapshot_index_${DEPARTMENT_ID}`), statePayload([])));
+      await assertSucceeds(setDoc(doc(db, 'floorstock_state', ownSnapshot), statePayload([])));
+      await assertFails(setDoc(doc(db, 'floorstock_state', `inventory_integrity_${OTHER_DEPARTMENT_ID}`), statePayload({ count: 1 })));
+      await assertFails(setDoc(doc(db, 'floorstock_state', `inventory_snapshot_index_${OTHER_DEPARTMENT_ID}`), statePayload([])));
+      await assertFails(setDoc(doc(db, 'floorstock_state', otherSnapshot), statePayload([])));
+      await assertSucceeds(deleteDoc(doc(db, 'floorstock_state', ownSnapshot)));
+      await assertFails(deleteDoc(doc(db, 'floorstock_state', otherSnapshot)));
+    }
+  });
+
   test('allowed writers must preserve the exact state document shape', async () => {
     const db = dbFor('master');
     await assertFails(setDoc(doc(db, 'floorstock_state', 'theme'), { value: 'dark' }));
@@ -234,7 +250,7 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'theme'), statePayload('dark')));
   });
 
-  test('only pharmacy director and master may delete state documents', async () => {
+  test('only pharmacy director and master may delete ordinary state documents', async () => {
     for (const role of activeRoles) {
       const key = `delete-${role}`;
       await seed(`floorstock_state/${key}`, statePayload([]));
@@ -242,6 +258,17 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
       if (role === 'pharmacy' || role === 'master') await assertSucceeds(operation);
       else await assertFails(operation);
     }
+  });
+
+  test('inpatient supervisor may write inventory safety metadata and prune old snapshot documents', async () => {
+    const db = dbFor('inpatient_supervisor');
+    await assertSucceeds(setDoc(doc(db, 'floorstock_state', `inventory_integrity_${DEPARTMENT_ID}`), statePayload({ count: 1 })));
+    await assertSucceeds(setDoc(doc(db, 'floorstock_state', `inventory_snapshot_index_${DEPARTMENT_ID}`), statePayload([])));
+    const snapshotKey = `inventory_snapshot_${DEPARTMENT_ID}_old_meds`;
+    await assertSucceeds(setDoc(doc(db, 'floorstock_state', snapshotKey), statePayload([])));
+    await assertSucceeds(deleteDoc(doc(db, 'floorstock_state', snapshotKey)));
+    await seed('floorstock_state/requests', statePayload([]));
+    await assertFails(deleteDoc(doc(db, 'floorstock_state', 'requests')));
   });
 });
 
@@ -413,3 +440,22 @@ describe('default deny for unused or accidental collections', () => {
     });
   }
 });
+
+describe('temporary Accountability handover sessions', () => {
+  test('session token hashes remain server-only for every client role', async () => {
+    await seed('accountability_handover_sessions/session-a', {
+      pharmacyTokenHash: 'hash-a',
+      departmentTokenHash: 'hash-b',
+      status: 'waiting_both_confirmations',
+      expiresAt: Timestamp.now()
+    });
+    for (const role of ['anonymous', 'inactive', ...activeRoles]) {
+      const db = dbFor(role);
+      await assertFails(getDoc(doc(db, 'accountability_handover_sessions', 'session-a')));
+      await assertFails(setDoc(doc(db, 'accountability_handover_sessions', 'session-b'), { token: role }));
+      await assertFails(updateDoc(doc(db, 'accountability_handover_sessions', 'session-a'), { status: 'completed' }));
+      await assertFails(deleteDoc(doc(db, 'accountability_handover_sessions', 'session-a')));
+    }
+  });
+});
+

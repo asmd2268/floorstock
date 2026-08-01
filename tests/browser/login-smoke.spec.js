@@ -208,3 +208,59 @@ test('inpatient supervisor can manage Hide rules without unauthorized login-time
     writes: []
   });
 });
+
+test('temporary Accountability QR page records one party and completes after the second confirmation response', async ({ page }) => {
+  let confirmed = false;
+  await page.route('https://us-central1-floorstock-6ac2d.cloudfunctions.net/getAccountabilityHandover**', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        ok: true,
+        session: {
+          id: 'session-a',
+          party: 'department',
+          partyLabel: 'Department receipt / استلام القسم',
+          departmentName: 'NICU',
+          medicineTotals: [{ medName: 'Independent Medicine', units: 2 }],
+          totalUnits: 2,
+          expiresAt: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+          expired: false,
+          status: 'pharmacy_confirmed',
+          alreadyConfirmed: false,
+          pharmacyConfirmed: true,
+          departmentConfirmed: false,
+        },
+      }),
+    });
+  });
+  await page.route('https://us-central1-floorstock-6ac2d.cloudfunctions.net/confirmAccountabilityHandover', async (route) => {
+    confirmed = true;
+    const body = JSON.parse(route.request().postData() || '{}');
+    expect(body).toMatchObject({
+      session: 'session-a',
+      party: 'department',
+      token: 'department-secret',
+      name: 'NICU Nurse',
+      employeeId: 'N-100',
+    });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true, completed: true, status: 'completed', receiptId: 'receipt-a' }),
+    });
+  });
+
+  await page.goto('/public/accountability-handover.html#session=session-a&party=department&token=department-secret');
+  await expect(page).toHaveURL(/accountability-handover\.html$/);
+  await expect(page.locator('#handover-department')).toHaveText('NICU');
+  await expect(page.locator('#handover-items')).toContainText('Independent Medicine');
+  await expect(page.locator('#handover-status')).toContainText('Enter your name');
+  await page.locator('#handover-name').fill('NICU Nurse');
+  await page.locator('#handover-employee').fill('N-100');
+  await page.locator('#handover-submit').click();
+  await expect.poll(() => confirmed).toBe(true);
+  await expect(page.locator('#handover-status')).toContainText('Handover completed');
+  await expect(page.locator('#handover-form')).toHaveClass(/handover-hidden/);
+});
+

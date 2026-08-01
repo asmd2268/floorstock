@@ -4,7 +4,7 @@ function E(id){return document.getElementById(id)}
 function escA(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function numA(v){v=Number(v);return isFinite(v)?v:0}
 function roleA(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
-function canManageA(){try{return !!(window.CU&&(CU.master===true||['pharmacy','controlled_pharmacy','inpatient_supervisor'].indexOf(roleA())>=0)||(typeof isMasterActual==='function'&&isMasterActual()))}catch(e){return false}}
+function canManageA(){try{return !!(window.CU&&(CU.master===true||['pharmacy','controlled_pharmacy'].indexOf(roleA())>=0)||(typeof isMasterActual==='function'&&isMasterActual()))}catch(e){return false}}
 function rulesA(){var s=(typeof ctlSettingsGlobal==='function'?ctlSettingsGlobal():{})||{};return {soon:Math.max(1,numA(s.expirySoonDays||60)),near:Math.max(0,numA(s.expiryUrgentDays||30)),critical:Math.max(0,numA(s.expiryCriticalDays||7))}}
 
 

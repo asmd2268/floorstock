@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js';
+import { normalizeRole, hasCapability } from '../core/role-capabilities.js?v=R6.74.0';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
@@ -55,7 +56,8 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   try{
     if(FB_DB&&typeof FB_DB.settings==='function'){
       FB_DB.settings({
-        experimentalForceLongPolling:true,
+        experimentalAutoDetectLongPolling:true,
+        useFetchStreams:false,
         ignoreUndefinedProperties:true
       });
     }
@@ -197,7 +199,7 @@ function fsStateKeysForProfile(profile){
   if(!profile||profile.role!=='department')return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
-    ['meds_','expiry_','shelves_','alerts_'].forEach(function(prefix){keys.push(prefix+deptId)});
+    ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
     if(profile.controlledCustodian===true){
       ['controlled_dept_list_','controlled_dept_shelves_','controlled_settings_'].forEach(function(prefix){keys.push(prefix+deptId)});
     }
@@ -223,14 +225,19 @@ function fsStateScopeCacheForProfile(cache,profile){
   if(!profile||profile.role!=='department')return cache;
   var deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(!deptId)return cache;
+  function scopeNorm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
+  var departments=Array.isArray(cache.departments)?cache.departments:[],dept=departments.find(function(item){return String(item&&item.id||'')===deptId})||{};
+  var candidates=[deptId,profile.deptName,profile.departmentName,profile.department,dept.id,dept.name,dept.code];
+  var seed=candidates.map(scopeNorm).join(' ');
+  if(/(^| )nicu( |$)|neonatal|حديثي الولادة|المواليد/.test(seed))candidates=candidates.concat(['NICU','Neonatal Intensive Care Unit','Neonatal ICU','Newborn Intensive Care Unit','العناية المركزة لحديثي الولادة','العناية المركزة للمواليد']);
+  var allowed=new Set(candidates.map(scopeNorm).filter(Boolean));
+  function belongs(row){return [row&&row.deptId,row&&row.departmentId,row&&row.deptName,row&&row.departmentName,row&&row.department].some(function(value){return allowed.has(scopeNorm(value))})}
   var carts=Array.isArray(cache.crash_carts)?cache.crash_carts:[];
-  var ownCarts=carts.filter(function(cart){return String(cart&&cart.deptId||'')===deptId});
+  var ownCarts=carts.filter(belongs).map(function(cart){return Object.assign({},cart,{deptId:deptId,deptName:cart.deptName||dept.name||profile.deptName||''})});
   var ownCartIds=new Set(ownCarts.map(function(cart){return String(cart&&cart.id||'')}));
   cache.crash_carts=ownCarts;
   if(Array.isArray(cache.crash_cart_reports)){
-    cache.crash_cart_reports=cache.crash_cart_reports.filter(function(report){
-      return String(report&&report.deptId||'')===deptId||ownCartIds.has(String(report&&report.cartId||''));
-    });
+    cache.crash_cart_reports=cache.crash_cart_reports.filter(function(report){return belongs(report)||ownCartIds.has(String(report&&report.cartId||''))}).map(function(report){return Object.assign({},report,{deptId:deptId})});
   }
   return cache;
 }
@@ -340,22 +347,22 @@ async function fsStateSdkDeleteDocument(key){
   );
 }
 async function fsStateSetSmart(key,value){
-  if(S.transport==='rest')return fsStateRestSetDocument(key,value);
+  if(S.writeTransport==='rest'||!window.FB_DB)return fsStateRestSetDocument(key,value);
   try{
     return await fsStateSdkSetDocument(key,value);
   }catch(error){
-    console.warn('Firestore SDK save failed; switching the Floor Stock state layer to REST.',error);
-    S.transport='rest';S.startRealtime();
+    console.warn('Firestore SDK save failed; using REST for subsequent writes.',error);
+    S.writeTransport='rest';
     return fsStateRestSetDocument(key,value);
   }
 }
 async function fsStateDeleteSmart(key){
-  if(S.transport==='rest')return fsStateRestDeleteDocument(key);
+  if(S.writeTransport==='rest'||!window.FB_DB)return fsStateRestDeleteDocument(key);
   try{
     return await fsStateSdkDeleteDocument(key);
   }catch(error){
-    console.warn('Firestore SDK delete failed; switching the Floor Stock state layer to REST.',error);
-    S.transport='rest';S.startRealtime();
+    console.warn('Firestore SDK delete failed; using REST for subsequent writes.',error);
+    S.writeTransport='rest';
     return fsStateRestDeleteDocument(key);
   }
 }
@@ -373,7 +380,7 @@ function fsStateApplyCache(nextCache){
 }
 
 globalThis.S = {
-  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',scopeProfile:null,
+  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,
   init:async function(statusCallback,profileHint){
     S.stopRealtime();
     S.scopeProfile=profileHint||null;
@@ -424,6 +431,7 @@ globalThis.S = {
 
 S.cache=freshCache;
 S.transport=result.source||'rest';
+S.writeTransport=window.FB_DB?'sdk':'rest';
 S.cache.users=S.cache.users||[];
 S.ready=true;
 
@@ -446,8 +454,8 @@ S.ready=true;
     },0);
 
     var role=profileHint&&profileHint.role||'';
-    var shouldLoadUsers=!!(profileHint&&profileHint.master===true)||role==='pharmacy';
-    setTimeout(function(){
+    var shouldLoadUsers=!!(profileHint&&profileHint.master===true)||role==='pharmacy'||role==='pharmacy_director';
+    if(shouldLoadUsers)setTimeout(function(){
       if(!S.ready)return;
       S.loadUsers().then(function(users){
         S.cache.users=users||[];
@@ -456,7 +464,7 @@ S.ready=true;
       }).catch(function(error){
         console.warn('Background user-list load was unavailable.',error);
       });
-    },shouldLoadUsers?0:1200);
+    },0);
 
     if(statusCallback)statusCallback('Opening Floor Stock…');
     return true;
@@ -518,7 +526,7 @@ S.ready=true;
       var state=await fsStateLoadFloorstockForProfileViaRest(S.scopeProfile);
       var changed=fsStateApplyCache(state.cache||{});
       if(changed)S.scheduleRefresh();
-      if(CU&&(CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>=0)){
+      if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
         try{
           var users=await fsStateLoadUsersViaRest();
           var usersChanged=!stateValueEqual(S.cache.users||[],users);
@@ -650,7 +658,7 @@ function fsR17NormalizeMed(m,index){m=Object.assign({},m||{});m.id=String(m.id||
 function fsR17NormalizeMeds(arr){var ids={},changed=false;var out=(Array.isArray(arr)?arr:[]).map(function(m,i){var before=JSON.stringify(m||{}),n=fsR17NormalizeMed(m,i);while(ids[n.id])n.id=n.medId=fsR17MedId();ids[n.id]=1;if(JSON.stringify(n)!==before)changed=true;return n});return {rows:out,changed:changed}}
 function getMeds(deptId){var raw=S.g('meds_'+deptId)||[],n=fsR17NormalizeMeds(raw);if(n.changed&&!FS_R17_MED_MIGRATION_PENDING[deptId]){FS_R17_MED_MIGRATION_PENDING[deptId]=1;setTimeout(function(){S.s('meds_'+deptId,n.rows).catch(function(e){console.warn('Medication identity migration failed',deptId,e)}).finally(function(){delete FS_R17_MED_MIGRATION_PENDING[deptId]})},0)}return n.rows}
 /* Fail closed until the authoritative R6.64 inventory safety gateway is installed. */
-function setMeds(){return Promise.reject(new Error('Inventory safety gateway is not initialized.'))}
+function setMeds(deptId,rows){var gateway=globalThis.inventorySafetySetMeds;if(typeof gateway==='function')return gateway(deptId,rows);return Promise.reject(new Error('Inventory safety gateway is not initialized.'))}
 function pushMed(deptId,v){var arr=getMeds(deptId).slice(),max=arr.reduce(function(a,m){return Math.max(a,Number(m.sortOrder)||0)},0);v=fsR17NormalizeMed(Object.assign({},v||{},{id:(v&&v.id)||fsR17MedId(),sortOrder:(v&&isFinite(Number(v.sortOrder)))?Number(v.sortOrder):max+100,createdAt:(v&&v.createdAt)||fsR17Now()}),arr.length);arr.push(v);return setMeds(deptId,arr).then(function(){return v})}
 function updMed(deptId,id,d){var arr=getMeds(deptId).slice(),i=arr.findIndex(function(x){return String(x.id)===String(id)});if(i<0)return Promise.resolve(false);var old=arr[i],next=Object.assign({},old,d||{},{id:old.id,medId:old.id,sortOrder:old.sortOrder,updatedAt:fsR17Now()});if(d&&d.name&&fsR17MedNorm(d.name)!==fsR17MedNorm(old.name))next.aliases=fsR17UniqueNames((old.aliases||[]).concat([old.name]));arr[i]=fsR17NormalizeMed(next,i);return setMeds(deptId,arr).then(function(){return true})}
 function delMed(deptId,id){return setMeds(deptId,getMeds(deptId).filter(function(x){return String(x.id)!==String(id)}))}
@@ -996,7 +1004,7 @@ function uiDialog(opts){
     var box=document.createElement('div');box.className='modal';box.style.width=opts.width||'520px';
     var title=document.createElement('div');title.className='mh';title.innerHTML='<div class="mt">'+esc(opts.title||'ASDHealth')+'</div>';
     var close=document.createElement('button');close.className='xbtn';close.type='button';close.innerHTML='&times;';title.appendChild(close);box.appendChild(title);
-    var msg=document.createElement('div');msg.style.cssText='font-size:13px;line-height:1.75;white-space:pre-wrap;margin-bottom:14px;color:var(--tx2)';msg.textContent=opts.message||'';box.appendChild(msg);
+    var msg=document.createElement('div');msg.style.cssText='font-size:13px;line-height:1.75;white-space:pre-wrap;unicode-bidi:plaintext;margin-bottom:14px;color:var(--tx2)';var dialogMessage=opts.message||'';if(typeof globalThis.formatBilingualText==='function')dialogMessage=globalThis.formatBilingualText(dialogMessage);msg.textContent=dialogMessage;box.appendChild(msg);
     var input=null;
     if(opts.type==='prompt'){
       input=opts.multiline?document.createElement('textarea'):document.createElement('input');
@@ -1020,18 +1028,19 @@ function uiPrompt(message,value,options){options=options||{};return uiDialog(Obj
 function uiConfirm(message,options){options=options||{};return uiDialog(Object.assign({type:'confirm',title:options.title||'Please confirm',message:message||'',danger:!!options.danger,okText:options.okText||'Confirm'},options))}
 
 function toast(msg,type){
-  var t=document.getElementById('toast');
-  t.textContent=String(msg==null?'':msg);t.className='on t'+type;
+  var t=document.getElementById('toast'),value=String(msg==null?'':msg);
+  if(typeof globalThis.formatBilingualText==='function')value=globalThis.formatBilingualText(value);
+  t.textContent=value;t.style.whiteSpace='pre-line';t.style.unicodeBidi='plaintext';t.className='on t'+type;
   clearTimeout(window._tt);
   window._tt=setTimeout(function(){t.className=''},3200);
 }
 function bdg(m){
   if(!m)return '';
   var b='';
-  if(m.high_alert)b+='<span class="badge brd">&#x1F534; High Alert</span> ';
-  if(m.hazard)b+='<span class="badge byl">&#x26A0; Hazard</span> ';
-  if(m.lasa)b+='<span class="badge bpu">&#x1F535; LASA</span> ';
-  if(m.refrigerated)b+='<span class="badge bfr">&#x2744; Refrigerated</span> ';
+  if(m.high_alert)b+='<span class="badge brd">🔴 High Alert</span> ';
+  if(m.hazard)b+='<span class="badge byl">⚠ Hazard</span> ';
+  if(m.lasa)b+='<span class="badge bpu">🔵 LASA</span> ';
+  if(m.refrigerated)b+='<span class="badge bfr">❄ Refrigerated</span> ';
   return b||'<span class="badge bgr">Std</span>';
 }
 function rowCls(m){
@@ -1082,11 +1091,12 @@ window.fsPrepareImageDataUrl=async function(file,options){
   throw new Error('The processed logo is still larger than 500 KB. Choose a smaller image.');
 };
 window.fsEffectiveUser=function(){return (window.MASTER_EFFECTIVE&&Object.assign({},window.CU||{},window.MASTER_EFFECTIVE))||(window.CU||{})};
-window.fsEffectiveRole=function(){var u=window.fsEffectiveUser();return String(u.role||'')};
+window.fsEffectiveRole=function(){var u=window.fsEffectiveUser();return normalizeRole(u.role)};
 window.fsActualUser=function(){return (window.MASTER_ACTUAL||window.CU||{})};
 window.fsActor=function(){var u=window.fsActualUser(),name=(typeof window.actualActorName==='function'?window.actualActorName():(u.name||u.fullName||u.displayName||u.username||u.email||'Unknown'));return {name:name,user:u.email||u.username||u.id||u.uid||'Unknown',id:u.id||u.uid||''}};
-window.fsCanManage=function(){var u=window.fsEffectiveUser(),r=String(u.role||'');return !!(u.master===true||['pharmacy','pharmacy_director','inpatient_supervisor','pharmacy_staff','controlled_pharmacy'].indexOf(r)>-1)};
-window.fsCanManageCrashCart=function(){var u=window.fsEffectiveUser(),r=String(u.role||'');return !!(u.master===true||['pharmacy','pharmacy_director','inpatient_supervisor','pharmacy_staff'].indexOf(r)>-1)};
+window.fsHasCapability=function(capability){return hasCapability(window.fsEffectiveUser(),capability)};
+window.fsCanManage=function(){return window.fsHasCapability('inventory.manage')};
+window.fsCanManageCrashCart=function(){return window.fsHasCapability('crashCart.operate')};
 window.fsDeptName=function(id){try{var list=typeof window.gd==='function'?(window.gd()||[]):[],d=list.find(function(x){return String(x.id)===String(id)});return d?(d.name||d.nameEn||d.nameAr||String(id||'—')):String(id||'—')}catch(e){return String(id||'—')}};
 window.fsDaysUntil=function(value){if(!value)return null;var raw=String(value).slice(0,10),parts=raw.split('-'),d=parts.length===3?new Date(Number(parts[0]),Number(parts[1])-1,Number(parts[2])):new Date(value);if(isNaN(d.getTime()))return null;var n=new Date(),today=new Date(n.getFullYear(),n.getMonth(),n.getDate());return Math.floor((d.getTime()-today.getTime())/86400000)};
 window.fsNowISO=function(){return new Date().toISOString()};
@@ -1121,13 +1131,13 @@ function getMobileRequestUrl(requestId){
 // ── THEME ────────────────────────────────────────────────
 async function toggleTheme(){
   var wasLight=document.body.classList.contains('light'),l=!wasLight,btn=el('themeBtn');
-  document.body.classList.toggle('light',l);if(btn)btn.innerHTML=l?'&#x2600;&#xFE0F;':'&#x1F319;';
-  try{await S.s('theme',l?'light':'dark');return true}catch(e){document.body.classList.toggle('light',wasLight);if(btn)btn.innerHTML=wasLight?'&#x2600;&#xFE0F;':'&#x1F319;';return false}
+  document.body.classList.toggle('light',l);if(btn)btn.innerHTML=l?'☀️':'🌙';
+  try{await S.s('theme',l?'light':'dark');return true}catch(e){document.body.classList.toggle('light',wasLight);if(btn)btn.innerHTML=wasLight?'☀️':'🌙';return false}
 }
 function applyTheme(){
   var t=S.g('theme')||'dark';
   if(t==='light')document.body.classList.add('light');
-  var btn=el('themeBtn');if(btn)btn.innerHTML=t==='light'?'&#x2600;&#xFE0F;':'&#x1F319;';
+  var btn=el('themeBtn');if(btn)btn.innerHTML=t==='light'?'☀️':'🌙';
 }
 
 // ── AUTO-DETECT CATEGORY ─────────────────────────────────
@@ -1301,6 +1311,7 @@ async function doLogin(){
     var profileSnapshot=await fsLoadAuthenticatedProfile(credential.user,setLoginStage);
     if(!profileSnapshot||!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
     var profile=profileSnapshot.data()||{};
+    profile.role=normalizeRole(profile.role);
     if(profile.active===false)throw new Error('This account is inactive.');
     if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
     if(profile.role==='department'){
@@ -1346,22 +1357,21 @@ setTimeout(function(){
     if(loginBtn){loginBtn.disabled=false;loginBtn.innerHTML=oldLoginText||'Sign In / دخول';}
   }
 }
+var logoutBusy=false;
 async function doLogout(){
-  try{if(typeof window.asdhWaitForAllSaves==='function')await window.asdhWaitForAllSaves(20000)}catch(e){if(!await (typeof uiConfirm==='function'?uiConfirm('Some data could not be confirmed as saved. Sign out anyway?'):Promise.resolve(false)))return}
-  if(typeof previewClear==='function')previewClear();
-  // Wait for any pending Firestore writes before signing out
+  if(logoutBusy)return;logoutBusy=true;
+  var logoutButtons=Array.from(document.querySelectorAll('[onclick*="doLogout"],#logout-btn,.logout-btn'));logoutButtons.forEach(function(button){button.disabled=true});
+  function timeout(promise,ms,label){return Promise.race([Promise.resolve(promise),new Promise(function(_,reject){setTimeout(function(){reject(new Error(label||'Operation timed out'))},ms)})])}
   try{
-    if(FB_DB){
-      toast('جاري حفظ البيانات...','info');
-      await FB_DB.waitForPendingWrites();
-    }
-  }catch(err){
-    console.error('Pending writes failed before logout:',err);
-    if(!await uiConfirm('تحذير: بعض التغييرات قد لا تكون محفوظة. هل تريد تسجيل الخروج على أي حال؟'))return;
-  }
-  S.stopRealtime();
-  try{await FB_AUTH.signOut();}catch(err){console.error(err);}
-  CU=null;MASTER_ACTUAL=null;MASTER_EFFECTIVE=null;S.cache={};S.ready=false;el('app').style.display='none';el('auth').style.display='flex';el('lgp').value='';
+    if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
+    try{if(typeof window.asdhWaitForAllSaves==='function')await timeout(window.asdhWaitForAllSaves(12000),13000,'Save confirmation timed out')}catch(e){if(!await (typeof uiConfirm==='function'?uiConfirm('Some data could not be confirmed as saved. Sign out anyway? / تعذر تأكيد حفظ بعض البيانات. هل تريد تسجيل الخروج؟'):Promise.resolve(false)))return}
+    if(typeof previewClear==='function')previewClear();
+    try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.error('Pending writes failed before logout:',err);if(!await uiConfirm('تحذير: تعذر تأكيد بعض التغييرات. هل تريد تسجيل الخروج على أي حال؟\nWarning: Some changes could not be confirmed. Do you want to sign out anyway?'))return}
+    S.stopRealtime();
+    if(FB_AUTH&&FB_AUTH.currentUser)await timeout(FB_AUTH.signOut(),8000,'Sign out timed out');
+    CU=null;MASTER_ACTUAL=null;MASTER_EFFECTIVE=null;S.cache={};S.ready=false;var app=el('app'),auth=el('auth'),pass=el('lgp');if(app)app.style.display='none';if(auth)auth.style.display='flex';if(pass)pass.value='';
+  }catch(err){console.error(err);if(typeof toast==='function')toast('Sign out failed: '+String(err&&err.message||err),'err')}
+  finally{logoutBusy=false;logoutButtons.forEach(function(button){button.disabled=false})}
 }
 function renderPageById(id){
   var renderer={
@@ -1379,6 +1389,11 @@ function refreshCurrentPage(){
   if(typeof window.floorstockResetInvalidDepartmentSelectors==='function')window.floorstockResetInvalidDepartmentSelectors();
   var active=document.querySelector('.pg.on');
   if(!active)return;
+  if(typeof window.floorstockShouldProtectAutoRefresh==='function'&&window.floorstockShouldProtectAutoRefresh(active.id)){
+    if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
+    return;
+  }
+  if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
   if(active.id==='pg-zebra-labels'){
     if(typeof window.renderZebraPageUi==='function')window.renderZebraPageUi();
     if(typeof window.refreshAnnouncementsUi==='function')window.refreshAnnouncementsUi(active.id);
@@ -1388,6 +1403,7 @@ function refreshCurrentPage(){
   renderPageById(active.id);
   updateNotesBadge();
   window.refreshAnnouncementsUi(active.id);
+  if(typeof window.restorePageTransientUi==='function')window.restorePageTransientUi(active.id);
 }
 
 function runBaseShowPg(id){
@@ -1449,19 +1465,19 @@ function renderDash(){
   var expired=expAlerts.filter(function(e){return e.days<=0});
   var urgent=expAlerts.filter(function(e){return e.days>0&&e.days<=7});
   var soon=expAlerts.filter(function(e){return e.days>7});
-  if(expired.length)alertHtml+='<div class="alert-banner">&#x1F6A8; <b>'+expired.length+' medications EXPIRED:</b> '+expired.map(function(e){return e.dept+': '+e.name}).join(', ')+'</div>';
-  if(urgent.length)alertHtml+='<div class="alert-banner">&#x26A0; <b>'+urgent.length+' expiring within 7 days:</b> '+urgent.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
-  if(soon.length)alertHtml+='<div class="alert-banner-y">&#x1F514; <b>'+soon.length+' expiring soon:</b> '+soon.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
+  if(expired.length)alertHtml+='<div class="alert-banner">🚨 <b>'+expired.length+' medications EXPIRED:</b> '+expired.map(function(e){return e.dept+': '+e.name}).join(', ')+'</div>';
+  if(urgent.length)alertHtml+='<div class="alert-banner">⚠ <b>'+urgent.length+' expiring within 7 days:</b> '+urgent.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
+  if(soon.length)alertHtml+='<div class="alert-banner-y">🔔 <b>'+soon.length+' expiring soon:</b> '+soon.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
   el('exp-alerts').innerHTML=alertHtml;
   el('dptbl').innerHTML=pend.length
     ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button></td></tr>'}).join('')
-    :'<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:20px">No pending requests &#x2713;</td></tr>';
+    :'<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:20px">No pending requests ✓</td></tr>';
   // Notes alert on dashboard
 var openNotes=getNotes().filter(function(n){return n.status==='open'||n.status==='urgent'});
 var urgentNotes=getNotes().filter(function(n){return n.status==='urgent'});
 var notesHtml='';
-if(urgentNotes.length)notesHtml+='<div class="alert-banner" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">&#x1F6A8; <b>'+urgentNotes.length+' urgent note(s)</b> from departments — click to review</div>';
-else if(openNotes.length)notesHtml+='<div class="alert-banner-y" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">&#x1F4DD; <b>'+openNotes.length+' open note(s)</b> from departments — click to review</div>';
+if(urgentNotes.length)notesHtml+='<div class="alert-banner" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">🚨 <b>'+urgentNotes.length+' urgent note(s)</b> from departments — click to review</div>';
+else if(openNotes.length)notesHtml+='<div class="alert-banner-y" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">📝 <b>'+openNotes.length+' open note(s)</b> from departments — click to review</div>';
 el('exp-alerts').innerHTML=alertHtml+notesHtml;
 el('dact').innerHTML=rs.slice().reverse().slice(0,20).map(function(r){
     var d=ds.find(function(x){return x.id===r.deptId});
@@ -1515,8 +1531,8 @@ function renderInv(){
   if(!deptId){
     var ds=gd();
     el('itbl').innerHTML=!ds.length
-      ?'<tr><td colspan="9" style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">&#x1F3E2;</div><div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div><button class="btn bp" onclick="showPg(&#x27;pg-users&#x27;)">&#x2B; Add Department</button></td></tr>'
-      :'<tr><td colspan="9" style="text-align:center;color:var(--tx2);padding:24px">&#x2190; Select a department</td></tr>';
+      ?'<tr><td colspan="9" style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">🏢</div><div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div><button class="btn bp" onclick="showPg(&#x27;pg-users&#x27;)">&#x2B; Add Department</button></td></tr>'
+      :'<tr><td colspan="9" style="text-align:center;color:var(--tx2);padding:24px">← Select a department</td></tr>';
     el('dup-banner').style.display='none';
     el('bulk-bar').style.display='none';
     if(typeof window.refreshInventoryRetirementUi==='function')window.refreshInventoryRetirementUi();
@@ -1535,7 +1551,7 @@ function renderInv(){
   var names=ms.map(function(m){return m.name.toLowerCase().trim()});
   var dups=ms.filter(function(m){var n=m.name.toLowerCase().trim();return names.indexOf(n)!==names.lastIndexOf(n)});
   el('dup-banner').style.display=dups.length?'':'none';
-  if(dups.length) el('dup-count-txt').innerHTML='&#x26A0; <b>'+dups.length+'</b> possible duplicates';
+  if(dups.length) el('dup-count-txt').innerHTML='⚠ <b>'+dups.length+'</b> possible duplicates';
 
   var grp={};
   fil.forEach(function(m){if(!grp[m.category])grp[m.category]=[];grp[m.category].push(m)});
@@ -1543,7 +1559,7 @@ function renderInv(){
   if(!fil.length) html='<tr><td colspan="9" style="text-align:center;color:var(--tx2);padding:22px">No medications found</td></tr>';
   var medNumber=0;
   sortDeptInventoryCategories(deptId,Object.keys(grp)).forEach(function(cat){
-    html+='<tr><td colspan="9" class="cath">&#x1F4C1; '+cat+' <span style="color:var(--tx3);font-size:10px">('+grp[cat].length+')</span></td></tr>';
+    html+='<tr><td colspan="9" class="cath">📁 '+cat+' <span style="color:var(--tx3);font-size:10px">('+grp[cat].length+')</span></td></tr>';
     var items = grp[cat] || [];
     items.sort(function(a,b){return Number(a.sortOrder||0)-Number(b.sortOrder||0)});
     items.forEach(function(m){
@@ -1655,7 +1671,7 @@ function renderReqs(){
   var rs=gr().slice().reverse();
   if(RFS!=='all')rs=rs.filter(function(r){return r.status===RFS});
   el('rlist').innerHTML=rs.length?rs.map(function(r){return rcard(r,true)}).join('')
-    :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">&#x1F4CB;</div><div style="margin-top:10px">No requests</div></div>';
+    :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin-top:10px">No requests</div></div>';
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
 }
@@ -1690,13 +1706,13 @@ function rcard(r,isp){
   return '<div class="card" data-request-id="'+esc(r.id)+'"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
     +'<div class="fl g8 ic" data-request-actions><span style="font-size:12px;color:var(--tx2)">'+fmtDateTime(r.created)+'</span>'
     +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button>':'')
-    +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">&#x270F; Edit</button>':'')
+    +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">✏ Edit</button>':'')
     +(isp&&window.CU&&CU.master===true?'<button class="btn bd2c bsm" data-request-action="master-delete" data-id="'+r.id+'">Delete</button>':'')
     +(!isp&&r.status==='fulfilled'&&!r.receivedAt?'<button class="btn bs bsm" data-request-action="receive" data-id="'+r.id+'">Receive & add expiry</button>':'')
     +'<button class="btn bg bsm" data-request-action="view" data-id="'+r.id+'">View</button></div></div>'
     +'<div style="padding:9px 18px;font-size:12px;color:var(--tx2)">'+(r.items||[]).length+' items'
     +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDateTime(r.fulfilledAt):' &middot; Awaiting fulfillment')
-    +(r.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">&#x1F4C5; Scheduled dispense: '+fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' &middot; '+r.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">&#x1F4C5; Dispense time: Not scheduled yet</div>')
+    +(r.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">📅 Scheduled dispense: '+fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' &middot; '+r.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">📅 Dispense time: Not scheduled yet</div>')
     +'</div></div>';
 }
 function viewReq(id){
@@ -1767,7 +1783,7 @@ function cntItems(){
 function renderMyReqs(){
   var rs=gr().filter(function(r){return r.deptId===CU.deptId}).slice().reverse();
   el('mrlst').innerHTML=rs.length?rs.map(function(r){return rcard(r,false)}).join('')
-    :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">&#x1F4CB;</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests yet</div></div>';
+    :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests yet</div></div>';
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
 }

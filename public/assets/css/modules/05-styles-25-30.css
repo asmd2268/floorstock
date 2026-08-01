@@ -14,9 +14,9 @@
   .public-live-page .status-out{font-weight:700;color:#b00020}
   .public-live-page .status-low{font-weight:700;color:#8a5700}
   .public-live-page .status-ok{font-weight:700;color:#087f23}
-  img[src*="api.qrserver.com"]{background:#fff!important;border:3px solid #000!important;padding:10px!important;image-rendering:pixelated;filter:contrast(1.35)!important;opacity:1!important}
+  .asd-qr-image{background:#fff!important;border:3px solid #000!important;padding:10px!important;image-rendering:pixelated;filter:contrast(1.35)!important;opacity:1!important}
   @media(max-width:700px){.public-live-page{padding:10px}.public-live-page h1{font-size:22px}.public-live-page h2{font-size:17px}.public-live-page th,.public-live-page td{padding:7px;font-size:13px}}
-  @media print{img[src*="api.qrserver.com"]{filter:contrast(1.5)!important;opacity:1!important;background:#fff!important;border:2px solid #000!important;padding:4px!important}}
+  @media print{.asd-qr-image{filter:contrast(1.5)!important;opacity:1!important;background:#fff!important;border:2px solid #000!important;padding:4px!important}}
 
 
 /* ===== 26: system-health-style ===== */

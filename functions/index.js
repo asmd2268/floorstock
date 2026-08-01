@@ -1,9 +1,10 @@
 'use strict';
 
-const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
-const { getFirestore, FieldValue } = require('firebase-admin/firestore');
+const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
+const { canCreateHandover, createToken, hashToken, tokenMatches, cleanIdentity, applyPartyConfirmation, completeHandoverState } = require('./accountability-handover-core');
 
 initializeApp();
 const db = getFirestore();
@@ -176,4 +177,259 @@ exports.setMasterAccess = onCall(CALLABLE_OPTIONS, async (request) => {
   await ref.update({ master, updatedAt: FieldValue.serverTimestamp(), updatedBy: caller.uid });
   await audit(master ? 'master.grant' : 'master.revoke', caller, uid, { email: target.email || null });
   return { ok: true, master };
+});
+
+
+const PUBLIC_HTTP_OPTIONS = { region: 'us-central1', cors: true };
+const HANDOVER_COLLECTION = 'accountability_handover_sessions';
+const HANDOVER_MINUTES_DEFAULT = 30;
+
+function stateRef(key) {
+  return db.collection('floorstock_state').doc(key);
+}
+
+function stateArray(snapshot) {
+  const data = snapshot.exists ? snapshot.data() : {};
+  return Array.isArray(data.value) ? data.value : [];
+}
+
+function writeState(transaction, reference, value) {
+  transaction.set(reference, { value, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
+}
+
+function requestValue(request, name) {
+  if (request.method === 'GET') return request.query[name];
+  return request.body && request.body[name];
+}
+
+function sendJson(response, status, body) {
+  response.set('Cache-Control', 'no-store, max-age=0');
+  response.status(status).json(body);
+}
+
+function publicError(response, error) {
+  console.error('Accountability handover public endpoint failed', error);
+  const message = error && error.publicMessage ? error.publicMessage : 'The handover request could not be completed.';
+  sendJson(response, error && error.statusCode || 400, { ok: false, error: message });
+}
+
+function asPublicError(message, statusCode = 400) {
+  const error = new Error(message);
+  error.publicMessage = message;
+  error.statusCode = statusCode;
+  return error;
+}
+
+exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  if (!canCreateHandover(caller)) {
+    throw new HttpsError('permission-denied', 'This role cannot create accountability handovers.');
+  }
+  const requestedIds = Array.isArray(request.data && request.data.usageIds) ? request.data.usageIds : [];
+  const usageIds = [...new Set(requestedIds.map((value) => String(value || '').trim()).filter(Boolean))];
+  if (!usageIds.length || usageIds.length > 100) {
+    throw new HttpsError('invalid-argument', 'Select between 1 and 100 approved accountability records.');
+  }
+  const requestedMinutes = Number(request.data && request.data.expiresInMinutes);
+  const minutes = Math.max(5, Math.min(60, Number.isFinite(requestedMinutes) ? requestedMinutes : HANDOVER_MINUTES_DEFAULT));
+  const pharmacyToken = createToken();
+  const departmentToken = createToken();
+  const sessionRef = db.collection(HANDOVER_COLLECTION).doc();
+  const usageRef = stateRef('accountability_usage_v2');
+  const departmentsRef = stateRef('departments');
+  const expiresAt = Timestamp.fromMillis(Date.now() + minutes * 60 * 1000);
+
+  let responsePayload;
+  await db.runTransaction(async (transaction) => {
+    const [usageSnap, departmentsSnap] = await Promise.all([
+      transaction.get(usageRef),
+      transaction.get(departmentsRef)
+    ]);
+    const usage = stateArray(usageSnap).map((row) => ({ ...row }));
+    const selected = usage.filter((row) => usageIds.includes(String(row.id)));
+    if (selected.length !== usageIds.length) {
+      throw new HttpsError('failed-precondition', 'One or more selected accountability records no longer exist.');
+    }
+    if (selected.some((row) => row.status !== 'approved_waiting_receipt')) {
+      throw new HttpsError('failed-precondition', 'Only approved records waiting for receipt can be handed over.');
+    }
+    const deptIds = [...new Set(selected.map((row) => String(row.deptId || '')))].filter(Boolean);
+    if (deptIds.length !== 1) {
+      throw new HttpsError('failed-precondition', 'All selected records must belong to the same department.');
+    }
+
+    const existingSessionIds = [...new Set(selected.map((row) => row.handoverSessionId).filter(Boolean))];
+    for (const existingId of existingSessionIds) {
+      const existingSnap = await transaction.get(db.collection(HANDOVER_COLLECTION).doc(String(existingId)));
+      if (existingSnap.exists) {
+        const existing = existingSnap.data();
+        const active = existing.status !== 'completed' && existing.expiresAt && existing.expiresAt.toMillis() > Date.now();
+        if (active) throw new HttpsError('already-exists', 'A valid QR handover already exists for one or more selected records.');
+      }
+    }
+
+    const deptId = deptIds[0];
+    const departments = stateArray(departmentsSnap);
+    const department = departments.find((row) => String(row.id) === deptId) || {};
+    const medicineMap = new Map();
+    for (const row of selected) {
+      const key = String(row.assignmentId || row.medName || 'medicine');
+      const item = medicineMap.get(key) || { assignmentId: String(row.assignmentId || ''), medName: row.medName || 'Medicine', units: 0 };
+      item.units += Number(row.units) || 0;
+      medicineMap.set(key, item);
+      row.handoverSessionId = sessionRef.id;
+      row.handoverStatus = 'waiting_both_confirmations';
+      row.handoverExpiresAt = expiresAt.toDate().toISOString();
+    }
+    const nowIso = new Date().toISOString();
+    const session = {
+      id: sessionRef.id,
+      deptId,
+      departmentName: department.name || department.nameEn || department.nameAr || deptId,
+      usageIds,
+      medicineTotals: [...medicineMap.values()],
+      totalUnits: selected.reduce((sum, row) => sum + (Number(row.units) || 0), 0),
+      pharmacyTokenHash: hashToken(pharmacyToken),
+      departmentTokenHash: hashToken(departmentToken),
+      status: 'waiting_both_confirmations',
+      createdAt: FieldValue.serverTimestamp(),
+      createdAtIso: nowIso,
+      createdByUid: caller.uid,
+      createdByName: caller.displayName || caller.email || caller.uid,
+      createdByRole: caller.role || '',
+      expiresAt,
+      pharmacyConfirmation: null,
+      departmentConfirmation: null
+    };
+    writeState(transaction, usageRef, usage);
+    transaction.set(sessionRef, session, { merge: false });
+    responsePayload = {
+      sessionId: sessionRef.id,
+      pharmacyToken,
+      departmentToken,
+      deptId,
+      departmentName: session.departmentName,
+      medicineTotals: session.medicineTotals,
+      totalUnits: session.totalUnits,
+      expiresAt: expiresAt.toDate().toISOString()
+    };
+  });
+
+  await audit('accountability.handover.create', caller, null, {
+    sessionId: responsePayload.sessionId,
+    deptId: responsePayload.deptId,
+    usageIds,
+    expiresAt: responsePayload.expiresAt
+  }).catch((error) => console.warn('Handover audit warning', error));
+  return responsePayload;
+});
+
+exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (request, response) => {
+  if (request.method === 'OPTIONS') return response.status(204).send('');
+  if (request.method !== 'GET') return sendJson(response, 405, { ok: false, error: 'Method not allowed.' });
+  try {
+    const sessionId = cleanIdentity(requestValue(request, 'session'), 100);
+    const party = cleanIdentity(requestValue(request, 'party'), 20);
+    const token = String(requestValue(request, 'token') || '');
+    if (!sessionId || !['pharmacy', 'department'].includes(party) || !token) throw asPublicError('Invalid or incomplete handover link.');
+    const snap = await db.collection(HANDOVER_COLLECTION).doc(sessionId).get();
+    if (!snap.exists) throw asPublicError('This handover link does not exist.', 404);
+    const session = snap.data();
+    const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
+    if (!tokenMatches(token, expected)) throw asPublicError('This handover link is invalid.', 403);
+    const expired = !session.expiresAt || session.expiresAt.toMillis() <= Date.now();
+    const confirmation = party === 'pharmacy' ? session.pharmacyConfirmation : session.departmentConfirmation;
+    sendJson(response, 200, {
+      ok: true,
+      session: {
+        id: sessionId,
+        party,
+        partyLabel: party === 'pharmacy' ? 'Pharmacy delivery / تسليم الصيدلية' : 'Department receipt / استلام القسم',
+        departmentName: session.departmentName || session.deptId || '',
+        medicineTotals: session.medicineTotals || [],
+        totalUnits: session.totalUnits || 0,
+        expiresAt: session.expiresAt ? session.expiresAt.toDate().toISOString() : null,
+        expired,
+        status: session.status || 'waiting_both_confirmations',
+        alreadyConfirmed: !!confirmation,
+        confirmation: confirmation ? { name: confirmation.name, employeeId: confirmation.employeeId, confirmedAt: confirmation.confirmedAt } : null,
+        pharmacyConfirmed: !!session.pharmacyConfirmation,
+        departmentConfirmed: !!session.departmentConfirmation
+      }
+    });
+  } catch (error) {
+    publicError(response, error);
+  }
+});
+
+exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (request, response) => {
+  if (request.method === 'OPTIONS') return response.status(204).send('');
+  if (request.method !== 'POST') return sendJson(response, 405, { ok: false, error: 'Method not allowed.' });
+  try {
+    const sessionId = cleanIdentity(requestValue(request, 'session'), 100);
+    const party = cleanIdentity(requestValue(request, 'party'), 20);
+    const token = String(requestValue(request, 'token') || '');
+    const name = cleanIdentity(requestValue(request, 'name'), 120);
+    const employeeId = cleanIdentity(requestValue(request, 'employeeId'), 60);
+    if (!sessionId || !['pharmacy', 'department'].includes(party) || !token) throw asPublicError('Invalid or incomplete handover link.');
+    if (name.length < 2 || employeeId.length < 2) throw asPublicError('Enter the employee name and employee number.');
+
+    const sessionRef = db.collection(HANDOVER_COLLECTION).doc(sessionId);
+    const usageRef = stateRef('accountability_usage_v2');
+    const assignmentsRef = stateRef('accountability_assignments_v2');
+    const receiptsRef = stateRef('accountability_receipts_v2');
+    let result;
+    await db.runTransaction(async (transaction) => {
+      const [sessionSnap, usageSnap, assignmentsSnap, receiptsSnap] = await Promise.all([
+        transaction.get(sessionRef),
+        transaction.get(usageRef),
+        transaction.get(assignmentsRef),
+        transaction.get(receiptsRef)
+      ]);
+      if (!sessionSnap.exists) throw asPublicError('This handover link does not exist.', 404);
+      const session = { id: sessionId, ...sessionSnap.data() };
+      const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
+      if (!tokenMatches(token, expected)) throw asPublicError('This handover link is invalid.', 403);
+      if (!session.expiresAt || session.expiresAt.toMillis() <= Date.now()) throw asPublicError('This handover link has expired.', 410);
+      const nowIso = new Date().toISOString();
+      const confirmation = applyPartyConfirmation(session, party, { name, employeeId }, nowIso);
+      Object.assign(session, confirmation.session);
+      if (confirmation.alreadyConfirmed) {
+        result = { completed: session.status === 'completed', alreadyConfirmed: true, status: session.status };
+        return;
+      }
+      if (!confirmation.complete) {
+        transaction.set(sessionRef, { ...session, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
+        result = { completed: false, alreadyConfirmed: false, status: session.status };
+        return;
+      }
+
+      const completed = completeHandoverState({
+        assignments: stateArray(assignmentsSnap),
+        usage: stateArray(usageSnap),
+        receipts: stateArray(receiptsSnap),
+        session,
+        nowIso
+      });
+      session.status = 'completed';
+      session.completedAt = nowIso;
+      session.receiptId = completed.receipt.id;
+      writeState(transaction, assignmentsRef, completed.assignments);
+      writeState(transaction, usageRef, completed.usage);
+      writeState(transaction, receiptsRef, completed.receipts);
+      transaction.set(sessionRef, { ...session, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
+      result = { completed: true, alreadyConfirmed: false, status: 'completed', receiptId: completed.receipt.id };
+    });
+    await db.collection('audit_logs').add({
+      action: 'accountability.handover.public-confirm',
+      actorUid: null,
+      actorEmail: null,
+      targetUid: null,
+      details: { sessionId, party, employeeId, completed: result.completed === true },
+      createdAt: FieldValue.serverTimestamp()
+    }).catch((error) => console.warn('Public handover audit warning', error));
+    sendJson(response, 200, { ok: true, ...result });
+  } catch (error) {
+    publicError(response, error);
+  }
 });

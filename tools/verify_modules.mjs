@@ -31,10 +31,16 @@ function inspect(file) {
 
 inspect(entry);
 const html = read(path.join(publicDir, 'index.html'));
-const appScripts = [...html.matchAll(/<script\b([^>]*)\bsrc=["']([^"']+)["'][^>]*><\/script>/gi)]
+const assetScripts = [...html.matchAll(/<script\b([^>]*)\bsrc=["']([^"']+)["'][^>]*><\/script>/gi)]
   .filter((match) => match[2].includes('assets/js/'));
-if (appScripts.length !== 1 || !/\btype=["']module["']/.test(appScripts[0]?.[1] || '')) {
-  errors.push('public/index.html must load exactly one application script with type="module".');
+const appScripts = assetScripts.filter((match) => /\btype=["']module["']/.test(match[1] || ''));
+if (appScripts.length !== 1 || !/assets\/js\/main\.js/.test(appScripts[0]?.[2] || '')) {
+  errors.push('public/index.html must load exactly one ES-module application entrypoint.');
+}
+const qrVendorIndex = assetScripts.findIndex((match) => /assets\/js\/vendor\/qrcode-generator\.js/.test(match[2]));
+const mainIndex = assetScripts.findIndex((match) => /assets\/js\/main\.js/.test(match[2]));
+if (qrVendorIndex < 0 || mainIndex < 0 || qrVendorIndex > mainIndex) {
+  errors.push('The local QR vendor must load before the ES-module application entrypoint.');
 }
 if (/\son[a-z]+\s*=/.test(html)) errors.push('Static inline event handlers remain in public/index.html.');
 if (!/name=["']asdhealth-architecture["'][^>]*content=["']es-modules-v2["']|content=["']es-modules-v2["'][^>]*name=["']asdhealth-architecture["']/.test(html)) {

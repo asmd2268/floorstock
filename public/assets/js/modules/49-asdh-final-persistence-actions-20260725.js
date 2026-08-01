@@ -39,14 +39,19 @@ var requestSaving=false;
 window.submitReq=async function(){
   if(requestSaving)return;
   if(!window.CU||String(CU.role)!=='department')return;
+  if(typeof window.getNewRequestGateState==='function'){
+    var gate=window.getNewRequestGateState(CU.deptId);
+    if(gate&&gate.blocked)return toast((gate.reasonAr||'')+'\n'+(gate.reasonEn||''),'err');
+  }else{
+    var windowCheck=typeof isRequestAllowed==='function'?isRequestAllowed(CU.deptId):{allowed:true};if(!windowCheck.allowed){var next=windowCheck.next?(windowCheck.next.day+' '+windowCheck.next.time):'';return toast('Ordering is currently unavailable.'+(next?' Next: '+next:''),'err')}
+    var monthly=typeof getMonthlyLimit==='function'?getMonthlyLimit(CU.deptId):null;if(monthly!==null&&typeof getMonthlyReqCount==='function'&&getMonthlyReqCount(CU.deptId)>=monthly)return toast('Monthly request limit reached ('+monthly+'/month). Contact pharmacy.','err');
+    if(typeof window.checkRequestCountLimits==='function'){var countLimit=window.checkRequestCountLimits(CU.deptId);if(countLimit&&countLimit.blocked)return toast(countLimit.reason,'err')}
+  }
   var items=Array.from(document.querySelectorAll('.rqi')).filter(function(i){return Number(i.value)>0}).map(function(i){return {medId:i.dataset.mid,qty:Number(i.value)}});
   if(!items.length)return toast('Enter at least one quantity','err');
-  var windowCheck=typeof isRequestAllowed==='function'?isRequestAllowed(CU.deptId):{allowed:true};if(!windowCheck.allowed){var next=windowCheck.next?(windowCheck.next.day+' '+windowCheck.next.time):'';return toast('Ordering is currently unavailable.'+(next?' Next: '+next:''),'err')}
-  var monthly=typeof getMonthlyLimit==='function'?getMonthlyLimit(CU.deptId):null;if(monthly!==null&&typeof getMonthlyReqCount==='function'&&getMonthlyReqCount(CU.deptId)>=monthly)return toast('Monthly request limit reached ('+monthly+'/month). Contact pharmacy.','err');
-  if(typeof window.checkRequestCountLimits==='function'){var countLimit=window.checkRequestCountLimits(CU.deptId);if(countLimit&&countLimit.blocked)return toast(countLimit.reason,'err')}
   var nextDispense=typeof getNextDispSlot==='function'?getNextDispSlot(CU.deptId):null,btn=document.querySelector('#pg-newreq button[onclick*="submitReq"]');
   requestSaving=true;if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='Saving… / جاري الحفظ'}
-  try{var created=typeof nowISO==='function'?nowISO():new Date().toISOString(),deadline=typeof window.getRequestEditDeadline==='function'?window.getRequestEditDeadline(CU.deptId,created):null,payload={deptId:CU.deptId,deptName:CU.deptName,items:items,status:'pending',created:created,editUntil:Number.isFinite(deadline)?new Date(deadline).toISOString():null,scheduledFor:nextDispense?nextDispense.scheduledAt:null,scheduledLabel:nextDispense&&nextDispense.slot?nextDispense.slot.label:''};await S.push('requests',payload);await auditAction('request_submitted',{deptId:CU.deptId,itemCount:items.length,editUntil:payload.editUntil});toast('Request submitted and saved — '+items.length+' items ✓','succ');if(typeof renderReqForm==='function')renderReqForm();if(typeof renderMyReqs==='function')renderMyReqs()}catch(err){console.error(err);toast('Request was not saved. Check the connection and retry.','err')}finally{requestSaving=false;if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'Submit';delete btn.dataset.oldText}}
+  try{var created=typeof nowISO==='function'?nowISO():new Date().toISOString(),deadline=typeof window.getRequestEditDeadline==='function'?window.getRequestEditDeadline(CU.deptId,created):null,payload={deptId:CU.deptId,deptName:CU.deptName,items:items,status:'pending',created:created,editUntil:Number.isFinite(deadline)?new Date(deadline).toISOString():null,scheduledFor:nextDispense?nextDispense.scheduledAt:null,scheduledLabel:nextDispense&&nextDispense.slot?nextDispense.slot.label:''};await S.push('requests',payload);await auditAction('request_submitted',{deptId:CU.deptId,itemCount:items.length,editUntil:payload.editUntil});toast('Request submitted and saved — '+items.length+' items ✓','succ');if(typeof renderReqForm==='function')renderReqForm();if(typeof renderMyReqs==='function')renderMyReqs()}catch(err){console.error(err);toast('Request was not saved. Check the connection and retry.','err')}finally{requestSaving=false;if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'Submit';delete btn.dataset.oldText}if(typeof window.refreshNewRequestGate==='function')window.refreshNewRequestGate()}
 };
 var fulfillSaving=false;
 window.submitFulfill=async function(){

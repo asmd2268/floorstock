@@ -17,6 +17,7 @@ window.seed=async function(){
 };
 
 var SEED_ALIASES={
+  'NICU':['nicu','neonatal intensive care unit','neonatal icu','newborn intensive care unit','العناية المركزة لحديثي الولادة','العناية المركزة للمواليد'],
  'Emergency':['emergency','emergency dept','emergency department','ed','er'],
  'ICU':['icu','intensive care','intensive care unit'],
  'ANESTHESIA':['anesthesia','anaesthesia','anesthesiology','operating room anesthesia'],

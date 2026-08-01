@@ -1,6 +1,6 @@
 (function(){
   function normMerge(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
-  function canMergeNames(){return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
+  function canMergeNames(){return window.fsHasCapability?window.fsHasCapability('inventory.manage'):!!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(CU.role)>-1))}
   function selectedMergeNames(){
     var names=[];document.querySelectorAll('#all-inv-body .all-inv-name-check:checked').forEach(function(c){var n=c.dataset.name||'';if(n&&!names.some(function(x){return normMerge(x)===normMerge(n)}))names.push(n)});return names;
   }

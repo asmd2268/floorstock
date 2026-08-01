@@ -1,44 +1,28 @@
+import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=R6.74.0';
 (function(){
 'use strict';
 
 function E(id){return document.getElementById(id)}
 function safe(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function currentUser(){return window.CU||{}}
+function actualUser(){return (window.fsActualUser&&window.fsActualUser())||window.MASTER_ACTUAL||currentUser()}
+function effectiveUser(){return (window.fsEffectiveUser&&window.fsEffectiveUser())||currentUser()}
 function actualMaster(){
   try{if(typeof window.isMasterActual==='function')return !!window.isMasterActual()}catch(ignore){}
-  return !!((window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||(window.CU&&CU.master===true));
+  var u=actualUser();return !!(u&&u.master===true);
 }
-function role(){var u=currentUser();return String((window.fsEffectiveRole&&window.fsEffectiveRole())||u.role||'')}
-function deptId(){var u=currentUser();return String(u.deptId||u.departmentId||'')}
-function active(){return !!(window.FB_AUTH&&FB_AUTH.currentUser&&currentUser().active!==false)}
+function permissionProfile(){return resolvePermissionProfile({currentUser:currentUser(),effectiveUser:effectiveUser(),actualUser:actualUser(),previewUser:window.MASTER_EFFECTIVE||null})}
+function role(){return permissionProfile().role||''}
+function deptId(){return permissionProfile().deptId||''}
+function active(){var u=permissionProfile();return !!(u&&(u.id||u.uid||u.email||u.username||u.role)&&u.active!==false)}
+window.fsPermissionProfile=permissionProfile;
 function director(){return actualMaster()||['pharmacy','pharmacy_director'].indexOf(role())>=0}
 function pharmacyOperations(){return director()||['inpatient_supervisor','pharmacy_staff'].indexOf(role())>=0}
 function controlledOfficer(){return director()||['controlled_pharmacy'].indexOf(role())>=0}
 function warehouseOfficer(){return director()||role()==='warehouse'}
 function stateKeyAllowed(key){
-  key=String(key||'');
-  if(!active())return false;
-  if(actualMaster()||director())return true;
-  if(key==='theme'||key==='audit_log')return true;
-  if(role()==='inpatient_supervisor'){
-    return /^(crash_|accountability_|requests$|notes$|dept_notes$|meds_|expiry_|shelves_|req_windows$|disp_slots$|daily_limits_v2$|weekly_limits_v2$|monthly_limits$|rate_limits_v2$|request_|pharmacy_|medication_(visibility|freeze)_rules_v3$)/.test(key);
-  }
-  if(role()==='pharmacy_staff'){
-    return /^(crash_carts$|crash_cart_reports$|accountability_|requests$|notes$|dept_notes$|request_analytics_archive$)/.test(key);
-  }
-  if(role()==='controlled_pharmacy'){
-    return /^(controlled_|accountability_)/.test(key);
-  }
-  if(role()==='warehouse'){
-    return /^(controlled_warehouse$|controlled_moves$|controlled_pdf_receipts$)/.test(key);
-  }
-  if(role()==='department'){
-    var d=deptId();
-    return key==='requests'||key==='dept_notes'||key==='notes'||key==='crash_cart_reports'||
-      key==='accountability_usage_v2'||key==='accountability_receipts_v2'||
-      (!!d&&(key==='meds_'+d||key==='expiry_'+d||key==='shelves_'+d||key==='controlled_dept_list_'+d||key==='controlled_dept_shelves_'+d||key==='controlled_settings_'+d));
-  }
-  return false;
+  var user=permissionProfile();
+  return active()&&canWriteStateKey(user,key);
 }
 window.fsCanWriteStateKey=stateKeyAllowed;
 
@@ -48,7 +32,7 @@ function installStateGate(){
   var gatedSet=function(key,value){
     if(!stateKeyAllowed(key)){
       var error=new Error('This account is not authorized to modify '+String(key)+'.');
-      if(typeof window.toast==='function')toast('Not authorized for this operation. / غير مصرح بهذه العملية','err');
+      if(typeof window.toast==='function')toast('Not authorized to modify '+String(key)+'. / لا يملك هذا الدور صلاحية تعديل '+String(key)+'.','err');
       return Promise.reject(error);
     }
     return originalSet(key,value);
@@ -56,8 +40,9 @@ function installStateGate(){
   gatedSet.__r664SecurityGate=true;
   S.s=gatedSet;
   if(originalRemove)S.rm=function(key){
-    if(!stateKeyAllowed(key)){
-      if(typeof window.toast==='function')toast('Not authorized for this deletion. / غير مصرح بالحذف','err');
+    var user=permissionProfile();
+    if(!active()||!canDeleteStateKey(user,key)){
+      if(typeof window.toast==='function')toast('Not authorized to delete '+String(key)+'. / لا يملك هذا الدور صلاحية حذف '+String(key)+'.','err');
       return Promise.reject(new Error('Not authorized to delete '+String(key)));
     }
     return originalRemove(key);
