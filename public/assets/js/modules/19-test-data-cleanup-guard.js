@@ -43,7 +43,7 @@
     return v;
   }
   async function deletePublicCrashDoc(id){
-    if(window.FB_DB)await FB_DB.collection('public_controlled_expiry').doc('crash_'+String(id)).delete();
+    if(window.FB_DB){var collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');await collection.doc('crash_'+String(id)).delete();}
     return true
   }
   window.masterPurgeAllTestData=async function(){

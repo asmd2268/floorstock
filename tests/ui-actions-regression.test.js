@@ -6,6 +6,10 @@ import {
   canEditRequestWhileWindowIsOpen,
   requestWindowDeadlineFromGrid,
 } from '../public/assets/js/core/request-edit-policy.js';
+import {
+  planFor,
+  subscriptionIsWritable,
+} from '../public/assets/js/core/subscription-plans.js';
 
 const usersSource = fs.readFileSync(
   new URL('../public/assets/js/modules/07-expiry-requests-and-primary-features.js', import.meta.url),
@@ -222,4 +226,16 @@ test('request editing follows the department current open window and stops after
   assert.match(requestScheduleSource, /window\.getRequestEditDeadline/);
   assert.match(requestScheduleSource, /canEditRequestWhileWindowIsOpen/);
   assert.match(persistenceSource, /editUntil:Number\.isFinite\(deadline\)/);
+});
+
+test('subscription plans expose selected features and enforce read-only expiry', () => {
+  assert.equal(planFor('starter').features.includes('requests'), true);
+  assert.equal(planFor('starter').features.includes('crash_cart'), false);
+  assert.equal(planFor('professional').features.includes('crash_cart'), true);
+  assert.equal(planFor('professional').features.includes('branding'), false);
+  assert.equal(planFor('enterprise').features.includes('branding'), true);
+  assert.equal(planFor('starter').maxDepartments, 10);
+  assert.equal(subscriptionIsWritable({ status: 'active', currentPeriodEnd: '2099-01-01T00:00:00Z' }), true);
+  assert.equal(subscriptionIsWritable({ status: 'trialing', currentPeriodEnd: '2020-01-01T00:00:00Z' }), false);
+  assert.equal(subscriptionIsWritable({ status: 'past_due', currentPeriodEnd: '2099-01-01T00:00:00Z' }), false);
 });

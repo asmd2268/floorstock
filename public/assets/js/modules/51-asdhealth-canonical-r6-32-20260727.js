@@ -838,7 +838,8 @@ async function fsR5ControlledRows(dept){
   }
   async function readStateRest(id){
     if(typeof fsStateRestRequest!=='function'||typeof fsStateRestBase!=='function')return [];
-    var url=fsStateRestBase()+'/floorstock_state/'+encodeURIComponent('controlled_dept_list_'+id)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+    var tenant=window.fsTenantId&&fsTenantId(),statePath=tenant?'tenants/'+tenant+'/state':'floorstock_state';
+    var url=fsStateRestBase()+'/'+statePath.split('/').map(encodeURIComponent).join('/')+'/'+encodeURIComponent('controlled_dept_list_'+id)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
     var response=await fsStateRestRequest(url,{method:'GET'},8000);
     if(response.status===404||!response.payload)return [];
     var decoded=fsLoginDecodeRestDocument(response.payload)||{};
@@ -846,7 +847,8 @@ async function fsR5ControlledRows(dept){
   }
   async function readPublicRest(id){
     if(typeof fsStateRestRequest!=='function'||typeof fsStateRestBase!=='function')return [];
-    var url=fsStateRestBase()+'/public_controlled_expiry/'+encodeURIComponent(id)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+    var tenant=window.fsTenantId&&fsTenantId(),path=tenant?'tenants/'+tenant+'/public_controlled_expiry':'public_controlled_expiry';
+    var url=fsStateRestBase()+'/'+path.split('/').map(encodeURIComponent).join('/')+'/'+encodeURIComponent(id)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
     var response=await fsStateRestRequest(url,{method:'GET'},8000);
     if(response.status===404||!response.payload)return [];
     var decoded=fsLoginDecodeRestDocument(response.payload)||{};
@@ -887,7 +889,7 @@ async function fsR5ControlledRows(dept){
   if(window.FB_DB){
     for(var n=0;n<candidates.length;n++){
       try{
-        var ref=FB_DB.collection('public_controlled_expiry').doc(String(candidates[n]));
+        var ref=(window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry')).doc(String(candidates[n]));
         var snap=await fsLoginTimeout(ref.get({source:'server'}),5000,'Controlled custody SDK request timed out.');
         if(snap&&snap.exists){
           var data=snap.data()||{},sdkRows=fsR5NormalizeControlled(data.items||data.medicines||[],'public-sdk');
@@ -1127,7 +1129,7 @@ window.renderDepartmentControlledPanel=async function(){
 };
 function fsR5PublicUrl(dept){
   try{if(typeof window.ctlPublicUrl==='function')return window.ctlPublicUrl(dept)}catch(e){}
-  return location.origin+location.pathname+'?view=controlled-expiry&dept='+encodeURIComponent(dept);
+  var url=new URL(location.origin+location.pathname);url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var tenant=window.fsTenantId&&fsTenantId();if(tenant)url.searchParams.set('tenant',tenant);return url.toString();
 }
 function fsR5Logo(){try{if(typeof window.ctlLogo==='function')return window.ctlLogo()||''}catch(e){}return ''}
 function fsR5PrintSettings(dept){try{if(typeof window.ctlPrintSettings==='function')return window.ctlPrintSettings(dept)||{}}catch(e){}return {}}

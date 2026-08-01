@@ -13,9 +13,11 @@ import {
   doc,
   getDoc,
   getDocs,
+  query,
   setLogLevel,
   setDoc,
-  updateDoc
+  updateDoc,
+  where
 } from 'firebase/firestore';
 import {
   APPLICATION_STATE_KEYS,
@@ -44,7 +46,11 @@ const profiles = {
   warehouse: { active: true, role: 'warehouse', master: false },
   pharmacy: { active: true, role: 'pharmacy', master: false },
   master: { active: true, role: 'pharmacy', master: true },
-  forged_master: { active: true, role: 'department', master: true, deptId: DEPARTMENT_ID }
+  forged_master: { active: true, role: 'department', master: true, deptId: DEPARTMENT_ID },
+  tenant_master: { active: true, role: 'pharmacy', master: true, tenantId: 'tenant-a', tenantName: 'Tenant A' },
+  tenant_department: { active: true, role: 'department', master: false, deptId: DEPARTMENT_ID, tenantId: 'tenant-a', tenantName: 'Tenant A' },
+  tenant_other_master: { active: true, role: 'pharmacy', master: true, tenantId: 'tenant-b', tenantName: 'Tenant B' },
+  tenant_expired_master: { active: true, role: 'pharmacy', master: true, tenantId: 'tenant-expired', tenantName: 'Expired Tenant' }
 };
 
 const activeRoles = [
@@ -88,6 +94,11 @@ beforeEach(async () => {
       setDoc(doc(admin, 'users', uid), { uid, email: `${uid}@example.test`, ...profile })
     ));
     await setDoc(doc(admin, 'system', 'master'), { uid: 'master', updatedAt: Timestamp.now() });
+    const future = Timestamp.fromMillis(Date.now() + 86400000);
+    const past = Timestamp.fromMillis(Date.now() - 86400000);
+    await setDoc(doc(admin, 'tenants', 'tenant-a'), { name: 'Tenant A', plan: 'starter', status: 'active', features: ['inventory', 'requests', 'expiry', 'printing'], currentPeriodEnd: future });
+    await setDoc(doc(admin, 'tenants', 'tenant-b'), { name: 'Tenant B', plan: 'professional', status: 'active', features: ['inventory', 'requests', 'expiry', 'printing', 'analytics', 'crash_cart', 'controlled', 'labels'], currentPeriodEnd: future });
+    await setDoc(doc(admin, 'tenants', 'tenant-expired'), { name: 'Expired Tenant', plan: 'professional', status: 'past_due', features: ['inventory', 'requests', 'expiry', 'printing', 'analytics', 'crash_cart', 'controlled', 'labels'], currentPeriodEnd: past });
   });
 });
 
@@ -242,6 +253,50 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
       if (role === 'pharmacy' || role === 'master') await assertSucceeds(operation);
       else await assertFails(operation);
     }
+  });
+});
+
+describe('tenant subscriptions and data isolation', () => {
+  test('tenant managers see only users in their organization', async () => {
+    const db = dbFor('tenant_master');
+    await assertSucceeds(getDoc(doc(db, 'users', 'tenant_department')));
+    await assertFails(getDoc(doc(db, 'users', 'tenant_other_master')));
+    await assertSucceeds(getDocs(query(collection(db, 'users'), where('tenantId', '==', 'tenant-a'))));
+    await assertFails(getDocs(collection(db, 'users')));
+  });
+
+  test('tenant state cannot cross organization boundaries', async () => {
+    await seed('tenants/tenant-a/state/theme', statePayload('dark'));
+    await assertSucceeds(getDoc(doc(dbFor('tenant_master'), 'tenants', 'tenant-a', 'state', 'theme')));
+    await assertFails(getDoc(doc(dbFor('tenant_other_master'), 'tenants', 'tenant-a', 'state', 'theme')));
+    await assertFails(getDoc(doc(dbFor('tenant_master'), 'floorstock_state', 'theme')));
+  });
+
+  test('plan features are enforced by the database', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('tenant_master'), 'tenants', 'tenant-a', 'state', 'requests'), statePayload([])));
+    await assertFails(setDoc(doc(dbFor('tenant_master'), 'tenants', 'tenant-a', 'state', 'crash_carts'), statePayload([])));
+    await assertSucceeds(setDoc(doc(dbFor('tenant_other_master'), 'tenants', 'tenant-b', 'state', 'crash_carts'), statePayload([])));
+  });
+
+  test('starter department limit is enforced by the database', async () => {
+    const db = dbFor('tenant_master');
+    const departments = Array.from({ length: 10 }, (_, index) => ({ id: `dept-${index}`, name: `Department ${index}` }));
+    await assertSucceeds(setDoc(doc(db, 'tenants', 'tenant-a', 'state', 'departments'), statePayload(departments)));
+    await assertFails(setDoc(doc(db, 'tenants', 'tenant-a', 'state', 'departments'), statePayload([...departments, { id: 'dept-10', name: 'Department 10' }])));
+  });
+
+  test('expired subscriptions stay readable but all operational writes stop', async () => {
+    await seed('tenants/tenant-expired/state/theme', statePayload('dark'));
+    const db = dbFor('tenant_expired_master');
+    await assertSucceeds(getDoc(doc(db, 'tenants', 'tenant-expired', 'state', 'theme')));
+    await assertFails(setDoc(doc(db, 'tenants', 'tenant-expired', 'state', 'theme'), statePayload('light')));
+    await assertFails(setDoc(doc(db, 'tenants', 'tenant-expired', 'public_expiry', DEPARTMENT_ID), { updatedAt: Timestamp.now() }));
+  });
+
+  test('tenant QR documents remain publicly readable without exposing collection lists', async () => {
+    const db = dbFor('anonymous');
+    await assertSucceeds(getDoc(doc(db, 'tenants', 'tenant-a', 'public_expiry', DEPARTMENT_ID)));
+    await assertFails(getDocs(collection(db, 'tenants', 'tenant-a', 'public_expiry')));
   });
 });
 

@@ -650,7 +650,8 @@ async function publishStorage(unit,medicines){
   var updatedAt=window.firebase&&firebase.firestore&&firebase.firestore.FieldValue
     ?firebase.firestore.FieldValue.serverTimestamp()
     :new Date().toISOString();
-  await FB_DB.collection('public_controlled_expiry')
+  var collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');
+  await collection
     .doc('storage_pharmacy_'+unit.id)
     .set({
       scope:'controlled_pharmacy',
@@ -689,10 +690,11 @@ window.controlledStoragePrint=async function(id,mode){
     var base=new URL(location.href);
     base.search='';
     base.hash='';
-    var publicUrl=
-      base.toString()+
-      '?view=controlled-storage-public&scope=pharmacy&unit='+
-      encodeURIComponent(id);
+    base.searchParams.set('view','controlled-storage-public');
+    base.searchParams.set('scope','pharmacy');
+    base.searchParams.set('unit',id);
+    var tenant=window.fsTenantId&&fsTenantId();if(tenant)base.searchParams.set('tenant',tenant);
+    var publicUrl=base.toString();
     var qr=
       'https://api.qrserver.com/v1/create-qr-code/'+
       '?size=500x500&format=png&color=000000&bgcolor=ffffff'+
@@ -936,7 +938,8 @@ async function publicStorageView(){
   var host=document.createElement('div');host.style.cssText='font-family:Arial;padding:20px;max-width:1100px;margin:auto';host.innerHTML='<h2>Loading controlled-pharmacy storage…</h2>';document.body.appendChild(host);
   try{
     initFirebase();
-    var doc=await FB_DB.collection('public_controlled_expiry').doc('storage_pharmacy_'+query.get('unit')).get();
+    var collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');
+    var doc=await collection.doc('storage_pharmacy_'+query.get('unit')).get();
     if(!doc.exists)throw new Error('Public controlled-pharmacy storage record not found');
     var data=doc.data(),rows=data.rows||[];
     host.innerHTML=
