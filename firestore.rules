@@ -60,6 +60,57 @@ service cloud.firestore {
         : profile().departmentId;
     }
 
+    function tenantId() {
+      return activeUser() ? profile().get('tenantId', '') : '';
+    }
+
+    function sameTenant(id) {
+      return activeUser() && tenantId() != '' && tenantId() == id;
+    }
+
+    function sameUserTenant(userData) {
+      return activeUser() && userData.get('tenantId', '') == tenantId();
+    }
+
+    function platformAdmin() {
+      return signedIn() && request.auth.token.get('platformAdmin', false) == true;
+    }
+
+    function tenantWritable(id) {
+      return exists(/databases/$(database)/documents/tenants/$(id))
+        && get(/databases/$(database)/documents/tenants/$(id)).data.status in ['active', 'trialing']
+        && (
+          get(/databases/$(database)/documents/tenants/$(id)).data.get('currentPeriodEnd', null) == null
+          || get(/databases/$(database)/documents/tenants/$(id)).data.get('currentPeriodEnd', null) > request.time
+        );
+    }
+
+    function tenantFeature(id, feature) {
+      return feature in get(/databases/$(database)/documents/tenants/$(id)).data.features;
+    }
+
+    function stateFeatureAllowed(id, docId) {
+      return (docId.matches('^crash_.*$') && tenantFeature(id, 'crash_cart'))
+        || (docId.matches('^(controlled_.*|accountability_.*)$') && tenantFeature(id, 'controlled'))
+        || (docId.matches('^(requests|request_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$') && tenantFeature(id, 'requests'))
+        || (
+          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|requests|request_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
+          && tenantFeature(id, 'inventory')
+        );
+    }
+
+    function departmentLimitAllowed(id, docId) {
+      return docId != 'departments'
+        || get(/databases/$(database)/documents/tenants/$(id)).data.plan == 'enterprise'
+        || (
+          request.resource.data.value is list
+          && (
+            (get(/databases/$(database)/documents/tenants/$(id)).data.plan == 'starter' && request.resource.data.value.size() <= 10)
+            || (get(/databases/$(database)/documents/tenants/$(id)).data.plan == 'professional' && request.resource.data.value.size() <= 50)
+          )
+        );
+    }
+
     function validStateShape() {
       return request.resource.data.keys().hasOnly(['value', 'updatedAt'])
         && request.resource.data.updatedAt is timestamp;
@@ -148,44 +199,87 @@ service cloud.firestore {
     match /users/{uid} {
       allow get: if signedIn() && (
         request.auth.uid == uid
-        || masterUser()
-        || pharmacyDirector()
+        || ((masterUser() || pharmacyDirector()) && sameUserTenant(resource.data))
+        || platformAdmin()
       );
-      allow list: if masterUser() || pharmacyDirector();
+      allow list: if platformAdmin() || ((masterUser() || pharmacyDirector()) && sameUserTenant(resource.data));
       allow create, update, delete: if false;
+    }
+
+    match /tenants/{tenant}/state/{docId} {
+      allow get: if sameTenant(tenant) && (!departmentUser() || canReadDepartmentState(docId));
+      allow list: if sameTenant(tenant) && !departmentUser();
+      allow create, update: if sameTenant(tenant)
+        && tenantWritable(tenant)
+        && stateFeatureAllowed(tenant, docId)
+        && departmentLimitAllowed(tenant, docId)
+        && canWriteState(docId)
+        && validStateShape();
+      allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (
+        masterUser() || pharmacyDirector()
+        || (inpatientSupervisor() && docId.matches('^inventory_snapshot_.*$'))
+        || (departmentUser() && docId.matches('^inventory_snapshot_' + departmentId() + '_.*$'))
+      );
+    }
+
+    match /tenants/{tenant} {
+      allow get: if sameTenant(tenant) || platformAdmin();
+      allow list: if platformAdmin();
+      allow create, update, delete: if false;
+
+      match /public_expiry/{docId} {
+        allow get: if true;
+        allow list: if sameTenant(tenant) && masterUser();
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && tenantFeature(tenant, 'expiry') && (
+          masterUser() || pharmacyDirector() || inpatientSupervisor() || (departmentUser() && docId == departmentId())
+        );
+        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
+      }
+
+      match /public_controlled_expiry/{docId} {
+        allow get: if true;
+        allow list: if sameTenant(tenant) && masterUser();
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && tenantFeature(tenant, 'controlled') && (
+          masterUser() || pharmacyDirector() || inpatientSupervisor()
+          || (pharmacyStaff() && docId.matches('^crash_.*$'))
+          || controlledOfficer() || warehouseOfficer()
+          || (departmentUser() && docId == departmentId())
+        );
+        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
+      }
     }
 
     // Department sessions use explicit document reads. Crash Cart state is read so
     // the client can retain only the authenticated department's carts and reports.
     match /floorstock_state/{docId} {
-      allow get: if activeUser() && (
+      allow get: if activeUser() && tenantId() == '' && (
         !departmentUser() || canReadDepartmentState(docId)
       );
-      allow list: if activeUser() && !departmentUser();
-      allow create, update: if activeUser()
+      allow list: if activeUser() && tenantId() == '' && !departmentUser();
+      allow create, update: if activeUser() && tenantId() == ''
         && canWriteState(docId)
         && validStateShape();
-      allow delete: if masterUser() || pharmacyDirector()
+      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector()
         || (inpatientSupervisor() && docId.matches('^inventory_snapshot_.*$'))
-        || (departmentUser() && docId.matches('^inventory_snapshot_' + departmentId() + '_.*$'));
+        || (departmentUser() && docId.matches('^inventory_snapshot_' + departmentId() + '_.*$')));
     }
 
     match /public_expiry/{docId} {
       allow get: if true;
-      allow list: if masterUser();
-      allow create, update: if activeUser() && (
+      allow list: if tenantId() == '' && masterUser();
+      allow create, update: if activeUser() && tenantId() == '' && (
         masterUser()
         || pharmacyDirector()
         || inpatientSupervisor()
         || (departmentUser() && docId == departmentId())
       );
-      allow delete: if masterUser() || pharmacyDirector();
+      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector());
     }
 
     match /public_controlled_expiry/{docId} {
       allow get: if true;
-      allow list: if masterUser();
-      allow create, update: if activeUser() && (
+      allow list: if tenantId() == '' && masterUser();
+      allow create, update: if activeUser() && tenantId() == '' && (
         masterUser()
         || pharmacyDirector()
         || inpatientSupervisor()
@@ -194,12 +288,12 @@ service cloud.firestore {
         || warehouseOfficer()
         || (departmentUser() && docId == departmentId())
       );
-      allow delete: if masterUser() || pharmacyDirector();
+      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector());
     }
 
     match /public_crash_carts/{docId} {
       allow read: if false;
-      allow create, update, delete: if masterUser();
+      allow create, update, delete: if tenantId() == '' && masterUser();
     }
 
     match /floorstock_backups/{uid}/snapshots/{snapshotId} {
@@ -219,7 +313,7 @@ service cloud.firestore {
     }
 
     match /audit_logs/{logId} {
-      allow read: if masterUser() || pharmacyDirector();
+      allow read: if tenantId() == '' && (masterUser() || pharmacyDirector());
       allow write: if false;
     }
 

@@ -30,7 +30,7 @@ async function typedConfirm(label){
 async function removePublicCart(id){
   if(!window.FB_DB)return;
   var jobs=[
-    FB_DB.collection('public_controlled_expiry').doc('crash_'+id).delete(),
+    (window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry')).doc('crash_'+id).delete(),
     FB_DB.collection('public_crash_carts').doc(String(id)).delete()
   ];
   await Promise.allSettled(jobs);

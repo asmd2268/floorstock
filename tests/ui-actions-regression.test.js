@@ -22,6 +22,7 @@ import {
   canWriteStateKey,
   canDeleteStateKey,
 } from '../public/assets/js/core/role-capabilities.js';
+import { planFor, subscriptionIsWritable } from '../public/assets/js/core/subscription-plans.js';
 import { APPLICATION_STATE_KEYS, mayWriteState } from './firestore-rules/application-state-keys.js';
 
 const indexSource = fs.readFileSync(
@@ -657,3 +658,13 @@ test('controlled inpatient-department editing is restricted to controlled office
   assert.match(controlledRuntimeSource, /effectiveRole==='controlled_pharmacy'/);
 });
 
+test('subscription plans expose selected features and enforce read-only expiry', () => {
+  assert.equal(planFor('starter').features.includes('requests'), true);
+  assert.equal(planFor('starter').features.includes('crash_cart'), false);
+  assert.equal(planFor('professional').features.includes('crash_cart'), true);
+  assert.equal(planFor('enterprise').features.includes('branding'), true);
+  assert.equal(planFor('starter').maxDepartments, 10);
+  assert.equal(subscriptionIsWritable({ status: 'active', currentPeriodEnd: '2099-01-01T00:00:00Z' }), true);
+  assert.equal(subscriptionIsWritable({ status: 'trialing', currentPeriodEnd: '2020-01-01T00:00:00Z' }), false);
+  assert.equal(subscriptionIsWritable({ status: 'past_due', currentPeriodEnd: '2099-01-01T00:00:00Z' }), false);
+});

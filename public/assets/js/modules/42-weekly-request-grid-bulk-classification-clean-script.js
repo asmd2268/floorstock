@@ -405,13 +405,13 @@ async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
       publicJobs.push({
         name:'public_expiry/'+alias,
         run:function(){
-          return FB_DB.collection('public_expiry').doc(alias).delete();
+          return (window.fsTenantCollection?fsTenantCollection('public_expiry'):FB_DB.collection('public_expiry')).doc(alias).delete();
         }
       });
       publicJobs.push({
         name:'public_controlled_expiry/'+alias,
         run:function(){
-          return FB_DB.collection('public_controlled_expiry').doc(alias).delete();
+          return (window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry')).doc(alias).delete();
         }
       });
     });

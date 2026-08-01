@@ -37,6 +37,7 @@ function scheduleV16Refresh(id){
 ──────────────────────────────────────────────────────────────── */
 window.showPg = function(id){
   id=String(id||'');
+  window.FS_CURRENT_PAGE=id;
   if(id==='pg-controlled'&&window.CU&&['pharmacy','inpatient_supervisor'].indexOf(CU.role)>-1){if(typeof window.toast==='function')toast('Controlled Custody is not available for this role.','info');id='pg-dash'}
   if(typeof window.resolveAllowedPageTarget==='function')id=window.resolveAllowedPageTarget(id);
   if(id!=='pg-newreq'&&typeof window.clearRequestIdleTimer==='function')window.clearRequestIdleTimer();

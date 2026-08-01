@@ -155,6 +155,12 @@ function fsStateRestBase(){
     encodeURIComponent(FIREBASE_CONFIG.projectId)+
     '/databases/(default)/documents';
 }
+function fsTenantId(profile){return String(profile&&profile.tenantId||'').trim()}
+function fsStateCollectionPath(profile){var tenantId=fsTenantId(profile||(globalThis.S&&S.scopeProfile));return tenantId?'tenants/'+tenantId+'/state':'floorstock_state'}
+function fsRestPath(path){return String(path||'').split('/').filter(Boolean).map(encodeURIComponent).join('/')}
+function fsStateSdkCollection(profile){var tenantId=fsTenantId(profile||(globalThis.S&&S.scopeProfile));return tenantId?FB_DB.collection('tenants').doc(tenantId).collection('state'):FB_DB.collection('floorstock_state')}
+window.fsTenantId=function(){var profileId=fsTenantId(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
+window.fsTenantCollection=function(name){var tenantId=window.fsTenantId();return tenantId?FB_DB.collection('tenants').doc(tenantId).collection(name):FB_DB.collection(name)};
 async function fsStateRestRequest(url,options,timeoutMs){
   var token=await fsStateToken(false);
   options=options||{};
@@ -167,7 +173,7 @@ async function fsStateRestRequest(url,options,timeoutMs){
 async function fsStateRestListCollection(collectionId){
   var documents=[],pageToken='',guard=0;
   do{
-    var url=fsStateRestBase()+'/'+encodeURIComponent(collectionId)+'?pageSize=300&key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+    var url=fsStateRestBase()+'/'+fsRestPath(collectionId)+'?pageSize=300&key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
     if(pageToken)url+='&pageToken='+encodeURIComponent(pageToken);
     var response=await fsStateRestRequest(url,{method:'GET'},12000);
     var payload=response.payload||{};
@@ -179,7 +185,7 @@ async function fsStateRestListCollection(collectionId){
   return documents;
 }
 async function fsStateLoadFloorstockViaRest(){
-  var documents=await fsStateRestListCollection('floorstock_state'),cache={};
+  var documents=await fsStateRestListCollection(fsStateCollectionPath()),cache={};
   documents.forEach(function(documentValue){
     var data=fsLoginDecodeRestDocument(documentValue)||{};
     var id=String(documentValue.name||'').split('/').pop();
@@ -207,7 +213,7 @@ function fsStateKeysForProfile(profile){
   return keys;
 }
 async function fsStateLoadDocumentViaRest(key){
-  var url=fsStateRestBase()+'/floorstock_state/'+encodeURIComponent(key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  var url=fsStateRestBase()+'/'+fsRestPath(fsStateCollectionPath()+'/'+key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
   var response=await fsStateRestRequest(url,{method:'GET'},10000);
   if(response.status===404||!response.payload)return null;
   var data=fsLoginDecodeRestDocument(response.payload)||{};
@@ -215,7 +221,7 @@ async function fsStateLoadDocumentViaRest(key){
 }
 async function fsStateLoadDocumentViaSdk(key){
   var snapshot=await fsLoginTimeout(
-    FB_DB.collection('floorstock_state').doc(key).get({source:'server'}),
+    fsStateSdkCollection().doc(key).get({source:'server'}),
     7000,
     'Firestore SDK state document timed out.'
   );
@@ -264,7 +270,7 @@ async function fsStateLoadUsersViaRest(){
 }
 async function fsStateLoadFloorstockViaSdk(){
   var snapshot=await fsLoginTimeout(
-    FB_DB.collection('floorstock_state').get(),
+    fsStateSdkCollection().get(),
     7000,
     'Firestore SDK state request timed out.'
   );
@@ -290,12 +296,19 @@ async function fsHydrateDepartmentDirectoryForLogin(profile){
   });
 }
 async function fsStateLoadUsersViaSdk(){
+  var usersQuery=FB_DB.collection('users'),tenantId=fsTenantId(globalThis.S&&S.scopeProfile);
+  if(tenantId)usersQuery=usersQuery.where('tenantId','==',tenantId);
   var snapshot=await fsLoginTimeout(
-    FB_DB.collection('users').get(),
+    usersQuery.get(),
     7000,
     'Firestore SDK users request timed out.'
   );
   return snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
+}
+async function fsStateLoadUsersViaCallable(){
+  var functionsService=await ensureFirebaseFunctions();
+  var result=await fsLoginTimeout(functionsService.httpsCallable('listManagedUsers')({}),10000,'User service timed out.');
+  return result&&result.data&&Array.isArray(result.data.users)?result.data.users:[];
 }
 function fsStateFirstSuccess(tasks,label){
   return new Promise(function(resolve,reject){
@@ -316,7 +329,7 @@ function fsStateFirstSuccess(tasks,label){
   });
 }
 async function fsStateRestSetDocument(key,value){
-  var url=fsStateRestBase()+'/floorstock_state/'+encodeURIComponent(key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  var url=fsStateRestBase()+'/'+fsRestPath(fsStateCollectionPath()+'/'+key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
   var body={fields:{
     value:fsStateRestEncode(value),
     updatedAt:{timestampValue:new Date().toISOString()}
@@ -325,13 +338,13 @@ async function fsStateRestSetDocument(key,value){
   return true;
 }
 async function fsStateRestDeleteDocument(key){
-  var url=fsStateRestBase()+'/floorstock_state/'+encodeURIComponent(key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
+  var url=fsStateRestBase()+'/'+fsRestPath(fsStateCollectionPath()+'/'+key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
   await fsStateRestRequest(url,{method:'DELETE'},12000);
   return true;
 }
 async function fsStateSdkSetDocument(key,value){
   return fsLoginTimeout(
-    FB_DB.collection('floorstock_state').doc(key).set({
+    fsStateSdkCollection().doc(key).set({
       value:value,
       updatedAt:firebase.firestore.FieldValue.serverTimestamp()
     }),
@@ -341,7 +354,7 @@ async function fsStateSdkSetDocument(key,value){
 }
 async function fsStateSdkDeleteDocument(key){
   return fsLoginTimeout(
-    FB_DB.collection('floorstock_state').doc(key).delete(),
+    fsStateSdkCollection().doc(key).delete(),
     8000,
     'Firestore SDK delete timed out.'
   );
@@ -380,7 +393,7 @@ function fsStateApplyCache(nextCache){
 }
 
 globalThis.S = {
-  cache:{},ready:false,stateUnsub:null,usersUnsub:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,
+  cache:{},ready:false,stateUnsub:null,usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,
   init:async function(statusCallback,profileHint){
     S.stopRealtime();
     S.scopeProfile=profileHint||null;
@@ -471,6 +484,7 @@ S.ready=true;
   },
   loadUsers:async function(){
     var users=await fsStateFirstSuccess([
+      fsStateLoadUsersViaCallable(),
       fsStateLoadUsersViaRest(),
       fsStateLoadUsersViaSdk()
     ],'Loading users');
@@ -483,7 +497,7 @@ S.ready=true;
 
     if(S.transport==='sdk'){
       try{
-        S.stateUnsub=FB_DB.collection('floorstock_state').onSnapshot(function(snapshot){
+        S.stateUnsub=fsStateSdkCollection().onSnapshot(function(snapshot){
           var changed=false;
           snapshot.docChanges().forEach(function(change){
             if(change.doc.id==='users')return;
@@ -501,15 +515,16 @@ S.ready=true;
           console.error('floorstock_state realtime error; switching to REST polling.',error);
           S.transport='rest';S.startRealtime();
         });
-        S.usersUnsub=FB_DB.collection('users').onSnapshot(function(snapshot){
-          var nextUsers=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
-          var changed=!stateValueEqual(S.cache.users||[],nextUsers);
-          S.cache.users=nextUsers;
-          var active=document.querySelector('.pg.on');
-          if(changed&&active&&active.id==='pg-users')S.scheduleRefresh();
-        },function(error){
-          console.warn('users realtime error; the state listener remains active.',error);
-        });
+        var tenantId=fsTenantId(S.scopeProfile),canManageUsers=!!(S.scopeProfile&&(S.scopeProfile.master===true||['pharmacy','pharmacy_director'].indexOf(S.scopeProfile.role)>=0));
+        if(canManageUsers&&tenantId){
+          S.usersUnsub=FB_DB.collection('users').where('tenantId','==',tenantId).onSnapshot(function(snapshot){
+            var nextUsers=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
+            var changed=!stateValueEqual(S.cache.users||[],nextUsers);S.cache.users=nextUsers;
+            var active=document.querySelector('.pg.on');if(changed&&active&&active.id==='pg-users')S.scheduleRefresh();
+          },function(error){console.warn('users realtime error; the state listener remains active.',error);});
+        }else if(canManageUsers){
+          S.usersPollTimer=setInterval(function(){S.loadUsers().catch(function(error){console.warn('User-list refresh was unavailable.',error)})},30000);
+        }
         return;
       }catch(error){
         console.error('Firestore realtime setup failed; switching to REST polling.',error);
@@ -528,7 +543,7 @@ S.ready=true;
       if(changed)S.scheduleRefresh();
       if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
         try{
-          var users=await fsStateLoadUsersViaRest();
+          var users=await fsStateLoadUsersViaCallable();
           var usersChanged=!stateValueEqual(S.cache.users||[],users);
           S.cache.users=users;
           var active=document.querySelector('.pg.on');
@@ -546,6 +561,7 @@ S.ready=true;
   stopRealtime:function(){
     if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
     if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
+    if(S.usersPollTimer){clearInterval(S.usersPollTimer);S.usersPollTimer=null;}
     if(S.refreshTimer){clearTimeout(S.refreshTimer);S.refreshTimer=null;}
     if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}
     S.pollBusy=false;
@@ -636,7 +652,7 @@ async function syncPublicExpiry(deptId,rows){
     ?firebase.firestore.FieldValue.serverTimestamp()
     :new Date().toISOString();
 
-  await FB_DB.collection('public_expiry').doc(deptId).set({
+  await (window.fsTenantCollection?fsTenantCollection('public_expiry'):FB_DB.collection('public_expiry')).doc(deptId).set({
     departmentId:deptId,
     departmentName:department.name||
       (window.CU&&String(CU.deptId)===deptId?CU.deptName:'')||
@@ -1119,6 +1135,7 @@ function getPublicExpiryUrl(deptId){
   var url=new URL(getAppUrl());
   url.searchParams.set('view','expiry');
   url.searchParams.set('dept',deptId);
+  var tenant=window.fsTenantId&&fsTenantId();if(tenant)url.searchParams.set('tenant',tenant);
   return url.toString();
 }
 function getMobileRequestUrl(requestId){
