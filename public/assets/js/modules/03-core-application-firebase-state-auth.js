@@ -28,7 +28,28 @@ function loadScriptOnce(key,src,test){
 }
 function ensurePDFJS(){return loadScriptOnce('PDF','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',function(){return typeof pdfjsLib!=='undefined'}).then(function(){if(pdfjsLib&&pdfjsLib.GlobalWorkerOptions)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';return pdfjsLib})}
 function ensureZXing(){return loadScriptOnce('Barcode scanner','https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js',function(){return typeof ZXing!=='undefined'})}
-function ensureFirebaseFunctions(){return loadScriptOnce('Firebase Functions','https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js',function(){return !!(window.firebase&&firebase.functions)}).then(function(){FB_FUNCTIONS=firebase.functions();return FB_FUNCTIONS})}
+function ensureFirebaseFunctions(){
+  if(FB_FUNCTIONS&&typeof FB_FUNCTIONS.httpsCallable==='function'){
+    window.FB_FUNCTIONS=FB_FUNCTIONS;
+    return Promise.resolve(FB_FUNCTIONS);
+  }
+  if(window.FB_FUNCTIONS&&typeof window.FB_FUNCTIONS.httpsCallable==='function'){
+    FB_FUNCTIONS=window.FB_FUNCTIONS;
+    return Promise.resolve(FB_FUNCTIONS);
+  }
+  return loadScriptOnce(
+    'Firebase Functions',
+    'https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js',
+    function(){return !!(window.firebase&&typeof firebase.functions==='function')}
+  ).then(function(){
+    if(!window.firebase||typeof firebase.functions!=='function'){
+      throw new Error('Firebase Functions SDK failed to initialize.');
+    }
+    FB_FUNCTIONS=firebase.functions();
+    window.FB_FUNCTIONS=FB_FUNCTIONS;
+    return FB_FUNCTIONS;
+  });
+}
 function debounce(fn,wait){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},wait)}}
 globalThis.renderInvDebounced = debounce(function(){renderInv()},220);
 globalThis.renderReqFormDebounced = debounce(function(){renderReqForm()},220);
