@@ -75,3 +75,4 @@ export const architecture = 'es-modules-v2';
 
 import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.75.0';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.75.0';
+import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.75.1';
