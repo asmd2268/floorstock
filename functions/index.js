@@ -148,7 +148,7 @@ exports.createManagedUser = onCall(CALLABLE_OPTIONS, async (request) => {
   if (!email || !email.includes('@')) throw new HttpsError('invalid-argument', 'Enter a valid email address.');
   if (password.length < 8) throw new HttpsError('invalid-argument', 'Password must be at least 8 characters.');
   if (!ALLOWED_ROLES.has(requestedRole)) throw new HttpsError('invalid-argument', 'Invalid role.');
-  if ((requestedRole === 'department' || requestedRole === 'custodian') && !deptId) {
+  if ((requestedRole === 'department' || requestedRole === 'custodian' || requestedRole === 'outpatient_pharmacy_supervisor') && !deptId) {
     throw new HttpsError('invalid-argument', 'Department is required for this role.');
   }
   if (grantMaster && (caller.master !== true || !['pharmacy', 'pharmacy_director'].includes(requestedRole))) {
@@ -176,7 +176,7 @@ exports.createManagedUser = onCall(CALLABLE_OPTIONS, async (request) => {
       email,
       displayName: email,
       role: requestedRole === 'custodian' ? 'department' : requestedRole,
-      deptId: (requestedRole === 'department' || requestedRole === 'custodian') ? deptId : null,
+      deptId: (requestedRole === 'department' || requestedRole === 'custodian' || requestedRole === 'outpatient_pharmacy_supervisor') ? deptId : null,
       controlledCustodian: requestedRole === 'custodian',
       active: true,
       master: grantMaster,

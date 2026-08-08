@@ -96,6 +96,12 @@ function updateUserRoleFields(){
   el('nudept-wrap').style.display=(role==='department'||role==='outpatient_pharmacy_supervisor')?'block':'none';
   el('numaster-wrap').style.display=(isMasterActual()&&role==='pharmacy')?'block':'none';
   if(role!=='pharmacy')el('numaster').checked=false;
+  var deptSelect=el('nudept');
+  if(deptSelect&&role==='outpatient_pharmacy_supervisor'){
+    var out=gd().filter(function(d){return /outpatient\s+department/i.test(String(d.name||d.nameEn||''))||String(d.id||'').toLowerCase()==='outpatient'});
+    deptSelect.innerHTML=out.length?out.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join(''):'<option value="">OUTPATIENT DEPARTMENT not found</option>';
+    deptSelect.disabled=!out.length;
+  } else if(deptSelect){var allDepartments=gd();deptSelect.innerHTML=allDepartments.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');deptSelect.disabled=!allDepartments.length;}
 }
 function openAddUser(){
   try{
