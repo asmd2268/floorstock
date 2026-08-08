@@ -33,7 +33,7 @@ function renderUsers(){
   el('utbl').innerHTML=us.length
     ?us.map(function(u){
       var d=ds.find(function(x){return x.id===u.deptId});
-      var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department'))));
+      var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='external_pharmacy_supervisor'?'External Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department')))));
       var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
       var actions='';
       if(CU&&CU.master===true&&u.id!==CU.id){
@@ -2160,6 +2160,7 @@ function canManageUsers(){return isPharmacyDirector()&&!MASTER_EFFECTIVE}
 function masterRoleLabel(role){
   return role==='pharmacy'?'Pharmacy Director / مدير الصيدلية'
     :role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم'
+    :role==='external_pharmacy_supervisor'?'External Pharmacy Supervisor / مشرف الصيدلية الخارجية'
     :role==='pharmacy_staff'?'Pharmacy Employee / موظف صيدلية'
     :role==='controlled_pharmacy'?'Controlled Medicines Pharmacy Officer / مسؤول الأدوية الخاضعة للرقابة'
     :role==='warehouse'?'Warehouse Custody Officer / مسؤول عهدة المستودع'
@@ -2194,6 +2195,7 @@ function startApp(){
       :CU.role==='controlled_pharmacy'?'🔒 Controlled Medicines Pharmacy Officer'
       :CU.role==='warehouse'?'📦 Warehouse Custody Officer'
       :CU.role==='inpatient_supervisor'?'🏥 Inpatient Pharmacy Supervisor'
+      :CU.role==='external_pharmacy_supervisor'?'🏥 External Pharmacy Supervisor'
       :CU.role==='pharmacy_staff'?'💊 Pharmacy Staff'
       :'🏢 '+CU.deptName;
     rb.className='trole '+(['pharmacy','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>=0?'rph':'rdp');
