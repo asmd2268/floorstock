@@ -1140,7 +1140,8 @@ function openNoteReply(id){
 
 // ── Badge on nav button ──────────────────────────────────
 function updateNotesBadge(){
-  var openCount=getNotes().filter(function(n){return n.status==='open'||n.status==='urgent'}).length;
+  var badgeRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''),badgeDept=badgeRole==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId?window.fsOutpatientDeptId():'';
+  var openCount=getNotes().filter(function(n){return (n.status==='open'||n.status==='urgent')&&(!badgeDept||String(n.deptId)===String(badgeDept))}).length;
   document.querySelectorAll('.nb').forEach(function(btn){
     if(btn.getAttribute('data-pg')==='pg-notes-ph'){
       btn.innerHTML='📝 Notes'+(openCount>0?' <span style="background:var(--rd);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">'+openCount+'</span>':'');
