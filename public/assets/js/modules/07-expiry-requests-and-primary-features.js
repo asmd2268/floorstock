@@ -2185,7 +2185,7 @@ function canManageUsers(){return isPharmacyDirector()&&!MASTER_EFFECTIVE}
 
 function masterRoleLabel(role){
   return role==='pharmacy'?'Pharmacy Director / مدير الصيدلية'
-    :role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم'
+    :role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor / مشرف الصيدلية الداخلية'
     :role==='outpatient_pharmacy_supervisor'?'Outpatient Pharmacy Supervisor / مشرف الصيدلية الخارجية'
     :role==='pharmacy_staff'?'Pharmacy Employee / موظف صيدلية'
     :role==='controlled_pharmacy'?'Controlled Medicines Pharmacy Officer / مسؤول الأدوية الخاضعة للرقابة'
@@ -2220,7 +2220,7 @@ function startApp(){
     rb.innerHTML=CU.role==='pharmacy'?'🏥 Pharmacy'+(CU.master===true?' · Master':'')
       :CU.role==='controlled_pharmacy'?'🔒 Controlled Medicines Pharmacy Officer'
       :CU.role==='warehouse'?'📦 Warehouse Custody Officer'
-      :CU.role==='inpatient_supervisor'?'🏥 Inpatient Pharmacy Supervisor'
+      :CU.role==='inpatient_supervisor'?'🏥 Inpatient Pharmacy Supervisor / مشرف الصيدلية الداخلية'
       :CU.role==='outpatient_pharmacy_supervisor'?'🏥 Outpatient Pharmacy Supervisor'
       :CU.role==='pharmacy_staff'?'💊 Pharmacy Staff'
       :'🏢 '+CU.deptName;
