@@ -1731,6 +1731,16 @@ window.openMasterRoleSwitch=function(){
   }).join(''):'<option value="">No active managed users</option>';
   var deps=typeof window.gd==='function'?(window.gd()||[]):[];
   deptSelect.innerHTML=deps.map(function(d){return '<option value="'+fsR6Esc(d.id)+'">'+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(d):d.name||d.id)+'</option>'}).join('');
+  var outpatientDept=deps.find(function(d){return /outpatient\s+department/i.test(String(d.name||d.nameEn||''))||String(d.id||'').toLowerCase()==='outpatient'});
+  var roleSelect=fsR6E('fsr6-master-role');
+  function constrainOutpatientDepartment(){
+    var outpatient=roleSelect&&roleSelect.value==='outpatient_pharmacy_supervisor';
+    if(outpatient&&outpatientDept){deptSelect.innerHTML='<option value="'+fsR6Esc(outpatientDept.id)+'">'+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(outpatientDept):outpatientDept.name||outpatientDept.id)+'</option>';deptSelect.value=String(outpatientDept.id)}
+    else if(!outpatient){deptSelect.innerHTML=deps.map(function(d){return '<option value="'+fsR6Esc(d.id)+'">'+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(d):d.name||d.id)+'</option>'}).join('')}
+    window.masterPreviewUser();
+  }
+  if(roleSelect&&!roleSelect.dataset.outpatientScopeBound){roleSelect.dataset.outpatientScopeBound='1';roleSelect.addEventListener('change',constrainOutpatientDepartment)}
+  constrainOutpatientDepartment();
   fsR6E('fsr6-master-exit').style.display=window.MASTER_EFFECTIVE?'inline-flex':'none';
   window.masterPreviewUser();fsR6OpenModal('mmaster-role-r6');
 };
