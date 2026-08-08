@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  var ROLE_CLASSES=['role-pharmacy','role-inpatient_supervisor','role-external_pharmacy_supervisor','role-pharmacy_staff','role-controlled_pharmacy','role-warehouse','role-department'];
+  var ROLE_CLASSES=['role-pharmacy','role-inpatient_supervisor','role-outpatient_pharmacy_supervisor','role-pharmacy_staff','role-controlled_pharmacy','role-warehouse','role-department'];
   var RESTRICTED={
     controlled_pharmacy:[
       ['pg-controlled','🔒 Controlled & psychotropic medicines'],

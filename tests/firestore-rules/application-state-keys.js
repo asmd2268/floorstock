@@ -76,7 +76,7 @@ export function mayWriteState(role, key) {
   if (role === 'pharmacy_staff') {
     return /^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
   }
-  if (role === 'external_pharmacy_supervisor') {
+  if (role === 'outpatient_pharmacy_supervisor') {
     return /^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
   }
   if (role === 'controlled_pharmacy') {

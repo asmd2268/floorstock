@@ -350,10 +350,10 @@ test('fulfilled dispensing edits use the permanent 24-hour policy and exact role
 });
 
 test('external pharmacy supervisor is a distinct assignable role with scoped fulfillment access', () => {
-  assert.equal(normalizeRole('external pharmacy supervisor'), 'external_pharmacy_supervisor');
-  assert.equal(hasCapability({ role: 'external_pharmacy_supervisor' }, 'requests.manage'), true);
-  assert.equal(canEditFulfillment({ status: 'fulfilled', fulfilledAt: '2026-08-02T10:00:00.000Z', deptId: 'outpatient' }, { role: 'external_pharmacy_supervisor', deptId: 'outpatient' }, { hours: 24 }, '2026-08-02T11:00:00.000Z'), true);
-  assert.equal(canEditFulfillment({ status: 'fulfilled', fulfilledAt: '2026-08-02T10:00:00.000Z', deptId: 'other' }, { role: 'external_pharmacy_supervisor', deptId: 'outpatient' }, { hours: 24 }, '2026-08-02T11:00:00.000Z'), false);
+  assert.equal(normalizeRole('external pharmacy supervisor'), 'outpatient_pharmacy_supervisor');
+  assert.equal(hasCapability({ role: 'outpatient_pharmacy_supervisor' }, 'requests.manage'), true);
+  assert.equal(canEditFulfillment({ status: 'fulfilled', fulfilledAt: '2026-08-02T10:00:00.000Z', deptId: 'outpatient' }, { role: 'outpatient_pharmacy_supervisor', deptId: 'outpatient' }, { hours: 24 }, '2026-08-02T11:00:00.000Z'), true);
+  assert.equal(canEditFulfillment({ status: 'fulfilled', fulfilledAt: '2026-08-02T10:00:00.000Z', deptId: 'other' }, { role: 'outpatient_pharmacy_supervisor', deptId: 'outpatient' }, { hours: 24 }, '2026-08-02T11:00:00.000Z'), false);
 });
 
 

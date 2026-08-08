@@ -21,7 +21,7 @@ const ALLOWED_ROLES = new Set([
   'pharmacy',
   'pharmacy_director',
   'pharmacy_staff',
-  'external_pharmacy_supervisor',
+  'outpatient_pharmacy_supervisor',
   'inpatient_supervisor',
   'department',
   'custodian',

@@ -41,9 +41,9 @@ export function fulfillmentEditRoleAllowed(request, profile) {
   if (role === 'department') {
     return !!requestDept && requestDept === String(profile.deptId || profile.departmentId || '');
   }
-  if (!['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'external_pharmacy_supervisor'].includes(role)) return false;
+  if (!['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor'].includes(role)) return false;
   const scope = explicitDepartmentScope(profile);
-  if (role === 'external_pharmacy_supervisor' && !scope) {
+  if (role === 'outpatient_pharmacy_supervisor' && !scope) {
     const assigned = String(profile.deptId || profile.departmentId || '');
     return !!assigned && assigned === requestDept;
   }
