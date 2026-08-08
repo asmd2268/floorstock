@@ -906,13 +906,20 @@ th{font-weight:900}
   var runtime=`(function(){
 function imagesReady(){
   return Promise.all(Array.from(document.images).map(function(image){
-    if(image.complete)return Promise.resolve();
-    return new Promise(function(resolve){
+    var qr=image.classList.contains('asd-qr-image');
+    if(qr&&/^data:image\/svg\+xml/i.test(image.getAttribute('src')||''))return Promise.reject(new Error('QR generator returned a placeholder'));
+    if(image.complete)return image.naturalWidth>0?Promise.resolve():(qr?Promise.reject(new Error('QR image failed to decode')):Promise.resolve());
+    return new Promise(function(resolve,reject){
       image.onload=resolve;
-      image.onerror=resolve;
-      setTimeout(resolve,1800);
+      image.onerror=function(){qr?reject(new Error('QR image failed to load')):resolve()};
+      setTimeout(function(){qr?reject(new Error('QR image load timed out')):resolve()},5000);
     });
   }));
+}
+function showQrFailure(error){
+  document.body.dataset.qrPrint='failed';
+  document.querySelectorAll('img.asd-qr-image').forEach(function(image){if(/^data:image\/svg\+xml/i.test(image.getAttribute('src')||''))image.style.display='none'});
+  var box=document.createElement('div');box.className='print-error';box.innerHTML='<h2>QR generation failed / تعذر إنشاء رمز QR</h2><p>Automatic printing stopped because the QR would not be scannable.<br>تم إيقاف الطباعة التلقائية لأن الرمز لن يكون قابلاً للمسح.</p><button type="button">Print without QR / طباعة بدون QR</button>';box.querySelector('button').onclick=function(){window.focus();window.print()};document.body.insertBefore(box,document.body.firstChild);console.error(error);
 }
 function over(layout,fit){
   return fit.scrollHeight>layout.clientHeight+1||
@@ -1000,7 +1007,7 @@ function start(){
         setTimeout(function(){window.focus();window.print()},180);
       }
     }
-  });
+  }).catch(showQrFailure);
 }
 window.addEventListener('load',start,{once:true});
 })();`;

@@ -656,6 +656,7 @@ async function doDeptPrint(){
     var userName=CU.username;
     var qrUrl=window.makeReadableQR(getAppUrl());
     var qrExpUrl=window.makeReadableQR(getPublicExpiryUrl(deptId));
+    var qrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript({closeAfter:true}):'';
     var expiryPrintBlock='<div style="text-align:center;max-width:260px;margin:18px auto 8px;padding:10px;border:1px solid #bbb;border-radius:6px;page-break-inside:avoid"><div style="font-size:8pt;font-weight:700;margin-bottom:5px">Expiry Monitor / متابعة الصلاحية</div><img class="asd-qr-image" src="'+qrExpUrl+'" width="110" height="110" alt="Expiry monitor QR code"><div style="font-size:7pt;color:#555;margin-top:3px">Scan to open the public expiry monitor</div></div>';
 
     var grp={};
@@ -777,7 +778,7 @@ async function doDeptPrint(){
       +'@page{counter-increment:page;} @media print{'
       +'#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}'
       +'}";document.head.appendChild(s);}'
-      +'setTimeout(function(){window.print();window.close();},600);'
+      +qrPrintRuntime
       +'<\/script></body></html>'
     );
     pw.document.close();
@@ -885,6 +886,7 @@ function printShelfList(){
   });
   var qrUrl=window.makeReadableQR(getPublicExpiryUrl(deptId));
   var qrSiteUrl=window.makeReadableQR(getAppUrl());
+  var shelfQrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript():'';
   var rows='';
   Object.keys(byShelf).sort().forEach(function(sid){
     var shelf=sid==='__none__'?{name:'Unassigned / &#x63A;&#x64A;&#x631; &#x645;&#x639;&#x64A;&#x646;'}:shelves.find(function(s){return s.id===sid});
@@ -951,9 +953,8 @@ function printShelfList(){
     +'<span>'+deptName+' — Floor Stock — '+today+' — By Ali Abudahash</span>'
     +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76">'
     +'</div>'
-    +'</body></html>');
+    +'<script>'+shelfQrPrintRuntime+'<\/script></body></html>');
   pw.document.close();
-  setTimeout(function(){try{if(!pw.closed){pw.focus();pw.print()}}catch(error){console.error('Shelf print failed',error);toast('Unable to open the shelf print dialog. / تعذر فتح نافذة طباعة الأرفف.','err')}},650);
   return true;
 }
 

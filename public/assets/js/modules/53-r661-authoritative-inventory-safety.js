@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-var VERSION='R6.75.0',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
+var VERSION='R6.76.0',SNAPSHOT_LIMIT=10,saving={},bulkDepth=0,startFingerprint=null,lastSafetyError='';
 function clone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
 function norm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
 function actor(){return (window.CU&&(CU.username||CU.email))||'Unknown'}
@@ -159,7 +159,7 @@ window.repairImportedDepartmentAliases=async function(){return {status:'disabled
 window.fsR17MigrateMedicationIdentity=async function(){return {status:'disabled-on-login'}};
 window.repairLatestInventoryMergeCollateral=async function(){return {status:'removed-in-r661'}};
 function disableUnsafeMergeButtons(){
-  document.querySelectorAll('.sim-manual-merge-btn,.sim-merge-btn').forEach(function(b){b.disabled=true;b.classList.add('r661-merge-disabled');b.title='Disabled by R6.75.0 inventory safety. Use exact selected-name merge with preview.'})
+  document.querySelectorAll('.sim-manual-merge-btn,.sim-merge-btn').forEach(function(b){b.disabled=true;b.classList.add('r661-merge-disabled');b.title='Disabled by R6.76.0 inventory safety. Use exact selected-name merge with preview.'})
 }
 function showSafety(){
   if(!window.CU)return;
@@ -190,7 +190,7 @@ new MutationObserver(function(mutations){
   var relevant=mutations.some(function(m){return Array.from(m.addedNodes||[]).some(function(node){return node.nodeType===1&&(node.matches&&node.matches('.sim-manual-merge-btn,.sim-merge-btn,#similar-medicines-modal-v2')||node.querySelector&&node.querySelector('.sim-manual-merge-btn,.sim-merge-btn'))})});
   if(relevant)disableUnsafeMergeButtons()
 }).observe(document.body,{childList:true,subtree:true});
-document.title='ASDHealth FloorStock R6.75.0 SaaS Protected';
+document.title='ASDHealth FloorStock R6.76.0 SaaS Protected';
 })();
 
 export {};

@@ -696,6 +696,7 @@ window.controlledStoragePrint=async function(id,mode){
     var tenant=window.fsTenantId&&fsTenantId();if(tenant)base.searchParams.set('tenant',tenant);
     var publicUrl=base.toString();
     var qr=window.makeReadableQR(publicUrl);
+    var qrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript():'';
     var date=new Date().toLocaleDateString('en-GB');
     var content='';
 
@@ -834,12 +835,7 @@ window.controlledStoragePrint=async function(id,mode){
       'This list is electronically approved and certified and does not require a stamp.'+
       '</div>'+
       '<div class="public-url">'+esc(publicUrl)+'</div>'+
-      '<script>(function(){'+
-      'var printed=false;'+
-      'function run(){if(printed)return;printed=true;setTimeout(function(){window.print()},120)}'+
-      'var image=document.getElementById("controlled-expiry-qr");'+
-      'if(image&&!image.complete){image.onload=run;image.onerror=run;setTimeout(run,2500)}else{run()}'+
-      '})();<\/script>'+
+      '<script>'+qrPrintRuntime+'<\/script>'+
       '</body></html>';
 
     popup.document.open();

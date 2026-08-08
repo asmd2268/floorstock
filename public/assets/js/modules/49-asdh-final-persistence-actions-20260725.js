@@ -55,12 +55,25 @@ window.submitReq=async function(){
 };
 var fulfillSaving=false;
 window.submitFulfill=async function(){
-  if(fulfillSaving)return;if(typeof canManageRequests==='function'&&!canManageRequests())return toast('No request edit permission','err');
+  if(fulfillSaving)return;
+  var current=(typeof gr==='function'?gr():[]).find(function(request){return String(request.id)===String(window.FRID)});
+  var editing=!!(current&&current.status==='fulfilled');
+  if(editing){
+    if(typeof window.canEditFulfillmentRequest!=='function'||!window.canEditFulfillmentRequest(current))return toast('The fulfillment editing window has expired or this account is outside the permitted scope.','err');
+  }else if(typeof canManageRequests==='function'&&!canManageRequests())return toast('No request edit permission','err');
   var inputs=Array.from((document.getElementById('ftbl')||document).querySelectorAll('input[data-med]'));inputs.forEach(function(x){x.style.borderColor='';x.style.boxShadow=''});
   var missing=inputs.find(function(x){return String(x.value).trim()===''});if(missing){missing.style.borderColor='var(--rd)';missing.focus();return toast('Enter the dispensed quantity for every item. Enter 0 if not dispensed.','err')}
   var bad=inputs.find(function(x){var q=Number(x.value);return !isFinite(q)||q<0});if(bad){bad.style.borderColor='var(--rd)';bad.focus();return toast('Dispensed quantity must be zero or a positive number.','err')}
   var dispensed=inputs.map(function(x){return {medId:x.dataset.med,qty:Number(x.value)}}),id=window.FRID,btn=document.getElementById('fulfill-btn');fulfillSaving=true;if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='Saving…'}
-  try{await S.upd('requests',id,{dispensed:dispensed,status:'fulfilled',fulfilledAt:typeof nowISO==='function'?nowISO():new Date().toISOString(),fulfilledBy:typeof actualActorName==='function'?actualActorName():'',fulfilledById:typeof actualUser==='function'?(actualUser()||{}).id||'':'',fulfilledEffectiveRole:(window.CU&&CU.role)||''});await auditAction('request_fulfilled',{requestId:id});CM('mfulfill');renderReqs();if(typeof renderDash==='function')renderDash();toast('Fulfillment saved permanently ✓','succ')}catch(err){console.error(err);toast('Fulfillment was not saved. Please retry.','err')}finally{fulfillSaving=false;if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'Confirm';delete btn.dataset.oldText}}
+  try{
+    var stamp=typeof nowISO==='function'?nowISO():new Date().toISOString(),actor=typeof actualUser==='function'?(actualUser()||{}):(window.CU||{}),actorName=typeof actualActorName==='function'?actualActorName():(actor.username||actor.email||'');
+    var beforeDispensed=editing?(current.dispensed||[]).map(function(x){return {medId:x.medId,qty:Number(x.qty)||0}}):[];
+    var changes=editing?{dispensed:dispensed,fulfillmentEditedAt:stamp,fulfillmentEditedBy:actorName,fulfillmentEditedById:actor.id||'',fulfillmentEditedEffectiveRole:(window.CU&&CU.role)||'',fulfillmentEditRevision:Number(current.fulfillmentEditRevision||0)+1}:{dispensed:dispensed,status:'fulfilled',fulfilledAt:stamp,fulfilledBy:actorName,fulfilledById:actor.id||'',fulfilledEffectiveRole:(window.CU&&CU.role)||''};
+    await S.upd('requests',id,changes);
+    if(editing){await auditAction('request_fulfillment_edited',{requestId:id,deptId:current.deptId||'',fulfilledAt:current.fulfilledAt||'',revision:changes.fulfillmentEditRevision,before:beforeDispensed,after:dispensed})}
+    else await auditAction('request_fulfilled',{requestId:id,deptId:current&&current.deptId||''});
+    CM('mfulfill');renderReqs();if(typeof renderMyReqs==='function'&&window.CU&&CU.role==='department')renderMyReqs();if(typeof renderDash==='function')renderDash();toast(editing?'Fulfillment update saved and audited ✓':'Fulfillment saved permanently ✓','succ')
+  }catch(err){console.error(err);toast('Fulfillment was not saved. Please retry.','err')}finally{fulfillSaving=false;if(btn){btn.disabled=false;btn.textContent=btn.dataset.oldText||'Confirm';delete btn.dataset.oldText}}
 };
 
 /* Expiry and department receipt saves are batched into one Firestore write. */

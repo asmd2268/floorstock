@@ -69,6 +69,7 @@ export function canWriteStateKey(profile, key) {
   const role = normalizeRole(user.role);
   const value = String(key || '');
   const master = user.master === true;
+  if (value === 'fulfillment_edit_settings_v1') return master;
   if (master || role === 'pharmacy') return true;
   if (value === 'theme' || value === 'audit_log') return true;
 
@@ -109,4 +110,3 @@ export function canDeleteStateKey(profile, key) {
   }
   return false;
 }
-
