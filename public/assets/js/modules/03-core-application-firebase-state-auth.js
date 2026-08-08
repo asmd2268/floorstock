@@ -1535,6 +1535,7 @@ el('dact').innerHTML=rs.slice().reverse().slice(0,20).map(function(r){
 
 // ── INVENTORY (per dept) ──────────────────────────────────
 function renderInv(){
+  var specialControl=el('inv-special-filter');if(specialControl&&!specialControl.dataset.bound){specialControl.dataset.bound='1';specialControl.addEventListener('change',renderInv)}
   populateInvDeptSel();
   // Auto-select first valid dept
   var sel=el('inv-dept-sel');
@@ -1551,6 +1552,11 @@ function renderInv(){
   var srch=(el('isrch')||{value:''}).value.toLowerCase();
   var catf=(el('icatf')||{value:''}).value;
   var clsf=(el('iclsf')||{value:''}).value;
+  var special=(el('inv-special-filter')||{value:''}).value;
+  var requests=gr().concat(S.g('request_analytics_archive')||[]),nowMs=Date.now(),sixMonths=nowMs-183*24*60*60*1000;
+  function wasRequested(med){return requests.some(function(r){return String(r.deptId)===String(deptId)&&(r.items||[]).some(function(i){return String(i.medId)===String(med.id)})})}
+  function hasExpiry(med){return (getExpiry(deptId)||[]).some(function(x){return String(x.medId)===String(med.id)&&String(x.date||x.expiry||'')})}
+  function lastDispense(med){var dates=requests.filter(function(r){return String(r.deptId)===String(deptId)&&(r.dispensed||[]).some(function(i){return String(i.medId)===String(med.id)&&Number(i.qty)>0})}).map(function(r){return new Date(r.fulfilledAt||r.updatedAt||r.created||0).getTime()}).filter(isFinite);return dates.length?Math.max.apply(Math,dates):0}
 
   // Populate category filter from both global cats + meds in dept
   var csel=el('icatf');
@@ -1589,7 +1595,9 @@ function renderInv(){
   }
 
   var fil=ms.filter(function(m){
-    return(!srch||m.name.toLowerCase().indexOf(srch)>-1)&&(!catf||m.category===catf)&&(!clsf||m[clsf]);
+    var zero6=Number(m.stockQty!=null?m.stockQty:(m.currentStock!=null?m.currentStock:(m.availableQty!=null?m.availableQty:0)))<=0&&(!lastDispense(m)||lastDispense(m)<=sixMonths);
+    var neverExpiry=hasExpiry(m)&&!wasRequested(m);
+    return(!srch||m.name.toLowerCase().indexOf(srch)>-1)&&(!catf||m.category===catf)&&(!clsf||m[clsf])&&(!special||special==='__zero_6m__'&&zero6||special==='__expiry_never_requested__'&&neverExpiry);
   });
 
   // Duplicate detection
