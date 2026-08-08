@@ -2177,9 +2177,9 @@ function isMasterActual(){return !!(MASTER_ACTUAL&&MASTER_ACTUAL.master===true)|
 function isPharmacyDirector(){return (window.fsEffectiveRole?window.fsEffectiveRole():String(CU&&CU.role||''))==='pharmacy'}
 function isInpatientSupervisor(){return (window.fsEffectiveRole?window.fsEffectiveRole():String(CU&&CU.role||''))==='inpatient_supervisor'}
 function isPharmacyStaff(){return (window.fsEffectiveRole?window.fsEffectiveRole():String(CU&&CU.role||''))==='pharmacy_staff'}
-function canManageRequests(){return window.fsHasCapability?window.fsHasCapability('requests.manage'):(isPharmacyDirector()||isInpatientSupervisor()||isPharmacyStaff())}
-function canManageCrashCart(){return window.fsCanManageCrashCart?window.fsCanManageCrashCart():(isPharmacyDirector()||isInpatientSupervisor()||isPharmacyStaff())}
-function canConfigureCrashCart(){return window.fsHasCapability?window.fsHasCapability('crashCart.configure'):(isPharmacyDirector()||isInpatientSupervisor())}
+function canManageRequests(){return window.fsHasCapability?window.fsHasCapability('requests.manage'):(isPharmacyDirector()||isInpatientSupervisor()||isPharmacyStaff()||role()==='outpatient_pharmacy_supervisor')}
+function canManageCrashCart(){return window.fsCanManageCrashCart?window.fsCanManageCrashCart():(isPharmacyDirector()||isInpatientSupervisor()||isPharmacyStaff()||role()==='outpatient_pharmacy_supervisor')}
+function canConfigureCrashCart(){return window.fsHasCapability?window.fsHasCapability('crashCart.configure'):(isPharmacyDirector()||isInpatientSupervisor()||role()==='outpatient_pharmacy_supervisor')}
 function requireCrashCartConfigurationPermission(){if(canConfigureCrashCart())return true;toast('Only the Pharmacy Director or Inpatient Pharmacy Supervisor can change Crash Cart medicines and quantities. / التعديل متاح فقط لمدير الصيدلية أو مشرف الصيدلية الداخلية','err');return false}
 function canManageUsers(){return isPharmacyDirector()&&!MASTER_EFFECTIVE}
 
