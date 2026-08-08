@@ -216,6 +216,7 @@ var ACC2_UI={adminTab:'custody',filters:{dept:'',status:'',medicine:''},receiptD
 
 function acc2Array(key){var value=S.g(key);return Array.isArray(value)?value:[]}
 function acc2ScopeDept(){return role()==='outpatient_pharmacy_supervisor'?(window.fsOutpatientDeptId?window.fsOutpatientDeptId():String(CU&&CU.deptId||'')):''}
+function acc2LockOutpatientSelectors(){var d=acc2ScopeDept();if(!d)return;['acc2-assignment-dept','acc2-regimen-dept'].forEach(function(id){var s=E(id);if(s){s.innerHTML='<option value="'+esc(d)+'">'+esc(deptName(d))+'</option>';s.value=d;s.disabled=true}});document.querySelectorAll('#r17-accountability-root select').forEach(function(s){if(s.id==='acc2-assignment-dept'||s.id==='acc2-regimen-dept')return;var opts=Array.from(s.options);if(opts.some(function(o){return o.value===d})){s.innerHTML='<option value="'+esc(d)+'">'+esc(deptName(d))+'</option>';s.value=d;s.disabled=true}})}
 function acc2Assignments(){var a=acc2Array(ACC2_ASSIGNMENTS_KEY),d=acc2ScopeDept();return d?a.filter(function(x){return String(x.deptId)===d}):a}
 function acc2Usage(){var a=acc2Array(ACC2_USAGE_KEY),d=acc2ScopeDept();return d?a.filter(function(x){return String(x.deptId)===d}):a}
 function acc2Receipts(){return acc2Array(ACC2_RECEIPTS_KEY)}
@@ -968,4 +969,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    manually, while the existing temporary dual-QR workflow remains available. */
 function ensureManualReceiptOption(){var checks=document.querySelectorAll('.acc2-receipt-check');if(!checks.length||document.getElementById('acc2-manual-receipt-btn'))return;var host=checks[0].closest('.card');if(!host)return;var b=document.createElement('button');b.id='acc2-manual-receipt-btn';b.type='button';b.className='btn bp bsm';b.textContent='✍ Manual receipt / استلام يدوي';b.onclick=function(){if(typeof acc2CreateReceipt==='function')acc2CreateReceipt()};var row=host.querySelector('.fl')||host.querySelector('.ch');if(row)row.appendChild(b)}
 if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',function(){setInterval(ensureManualReceiptOption,1000)});
+if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',function(){setInterval(acc2LockOutpatientSelectors,700)});
 export {};
