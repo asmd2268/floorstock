@@ -1728,6 +1728,7 @@ function filterR(s,btn){
 function renderReqs(){
   var purgeReqBtn=el('purge-old-requests-btn');if(purgeReqBtn)purgeReqBtn.style.display=(CU&&CU.master===true)?'inline-flex':'none';
   var rs=gr().slice().reverse();
+  if((window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''))==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var opd=window.fsOutpatientDeptId();rs=rs.filter(function(r){return String(r.deptId)===String(opd)})}
   if(RFS!=='all')rs=rs.filter(function(r){return r.status===RFS});
   el('rlist').innerHTML=rs.length?rs.map(function(r){return rcard(r,true)}).join('')
     :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin-top:10px">No requests</div></div>';
