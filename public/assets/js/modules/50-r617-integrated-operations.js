@@ -219,8 +219,8 @@ function acc2Usage(){return acc2Array(ACC2_USAGE_KEY)}
 function acc2Receipts(){return acc2Array(ACC2_RECEIPTS_KEY)}
 function acc2Regimens(){return acc2Array(ACC2_REGIMENS_KEY)}
 function acc2EffectiveMaster(){return master()&&!window.MASTER_EFFECTIVE}
-function canAccManage(){return window.fsHasCapability?window.fsHasCapability('accountability.manage'):(acc2EffectiveMaster()||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(role())>=0)}
-function acc2DepartmentRole(){return role()==='department'}
+function canAccManage(){return window.fsHasCapability?window.fsHasCapability('accountability.manage'):(acc2EffectiveMaster()||['pharmacy','inpatient_supervisor','pharmacy_staff','outpatient_pharmacy_supervisor'].indexOf(role())>=0)}
+function acc2DepartmentRole(){return role()==='department'||role()==='outpatient_pharmacy_supervisor'}
 function acc2StatusLabel(status){return {pending_pharmacy:'Pending pharmacy review / بانتظار مراجعة الصيدلية',approved_waiting_receipt:'Approved — waiting nursing receipt / معتمد وبانتظار الاستلام',received_locked:'Received and locked / تم الاستلام والإقفال',rejected:'Rejected / مرفوض'}[status]||status}
 function acc2StatusClass(status){return status==='received_locked'?'bgn':status==='approved_waiting_receipt'?'bbl':status==='rejected'?'brd':'byl'}
 function acc2Assignment(id,list){return (list||acc2Assignments()).find(function(x){return String(x.id)===String(id)})||null}
@@ -962,4 +962,8 @@ async function publicStorageView(){
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
 })();
 
+/* Receipt method choice: departments may complete the same audited receipt
+   manually, while the existing temporary dual-QR workflow remains available. */
+function ensureManualReceiptOption(){var checks=document.querySelectorAll('.acc2-receipt-check');if(!checks.length||document.getElementById('acc2-manual-receipt-btn'))return;var host=checks[0].closest('.card');if(!host)return;var b=document.createElement('button');b.id='acc2-manual-receipt-btn';b.type='button';b.className='btn bp bsm';b.textContent='✍ Manual receipt / استلام يدوي';b.onclick=function(){if(typeof acc2CreateReceipt==='function')acc2CreateReceipt()};var row=host.querySelector('.fl')||host.querySelector('.ch');if(row)row.appendChild(b)}
+if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',function(){setInterval(ensureManualReceiptOption,1000)});
 export {};
