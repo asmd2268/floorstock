@@ -1076,7 +1076,7 @@ function renderPharmNotes(){
   var deptF=(el('notes-filter-dept')||{value:''}).value||'';
   var typeF=(el('notes-filter-type')||{value:''}).value||'';
   var statusF=(el('notes-filter-status')||{value:''}).value||'';
-  var outpatientScope=window.fsEffectiveRole&&window.fsEffectiveRole()==='outpatient_pharmacy_supervisor'?String(CU&&CU.deptId||''):'';
+  var outpatientScope=window.fsEffectiveRole&&window.fsEffectiveRole()==='outpatient_pharmacy_supervisor'?(window.fsOutpatientDeptId?window.fsOutpatientDeptId():String(CU&&CU.deptId||'')):'';
 
   var notes=getNotes().slice().reverse().filter(function(n){
     return (!outpatientScope&&(!deptF||n.deptId===deptF)||outpatientScope&&String(n.deptId)===outpatientScope)&&(!typeF||n.type===typeF)&&(!statusF||n.status===statusF);
