@@ -27,11 +27,12 @@ service cloud.firestore {
     }
 
     function masterUser() {
-      return pharmacyDirector() && profile().master == true;
+      return activeUser() && profile().master == true
+        && role() in ['master', 'pharmacy', 'pharmacy_director'];
     }
 
     function pharmacyDirector() {
-      return activeUser() && role() in ['pharmacy', 'pharmacy_director'];
+      return activeUser() && role() in ['master', 'pharmacy', 'pharmacy_director'];
     }
 
     function inpatientSupervisor() {
