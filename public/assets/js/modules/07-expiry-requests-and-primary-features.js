@@ -93,7 +93,7 @@ function bindUserPageActions(){
 }
 function updateUserRoleFields(){
   var role=el('nurole').value;
-  el('nudept-wrap').style.display=(role==='department')?'block':'none';
+  el('nudept-wrap').style.display=(role==='department'||role==='external_pharmacy_supervisor')?'block':'none';
   el('numaster-wrap').style.display=(isMasterActual()&&role==='pharmacy')?'block':'none';
   if(role!=='pharmacy')el('numaster').checked=false;
 }
@@ -137,11 +137,11 @@ async function saveUser(){
   if(grantMaster&&gu().some(function(u){return u.master===true}))return toast('Only one Master user is allowed.','err');
   if(!email||!password)return toast('Fill all fields','err');
   if(password.length<8)return toast('Password must be at least 8 characters','err');
-  if((requestedRole==='department')&&!did)return toast('Create a department first, then choose it for this user.','err');
+  if((requestedRole==='department'||requestedRole==='external_pharmacy_supervisor')&&!did)return toast('Choose the supervisor department before creating this user.','err');
   if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
   try{
     var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('createManagedUser');
-    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department')?did:null,master:grantMaster});
+    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='external_pharmacy_supervisor')?did:null,master:grantMaster});
     toast('Firebase user created securely ✓','succ');CM('muser');
     await S.loadUsers();renderUsers();
   }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}

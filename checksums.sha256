@@ -18,7 +18,7 @@ c346ce7f90913533788bce65c19e51c0a71ad0b7a22664b998c4479f5aacfdc1  ./docs/build-r
 146a6e9b63a883d13f7cb5b35de627677c1c93ffa0f04dca833e1d462260a59b  ./docs/es-module-report.json
 0c846e2a5e55051577a48a9750a7886afdd303982515a9f3a3a28ab2c1fee82d  ./docs/verification.txt
 dce8ee6058ad4b0ad356ab90dbda59e60edc1d28e0b674955422fd8694693ca9  ./firebase.json
-44fb6da00172890a9f0486419e8eb22198a7cbe00f897de5b36f0b43e894c880  ./firestore-debug.log
+4ee8f7f36d0a1a91fe19ffdeb197921432b148a15cbbf8b249ee672206da2c09  ./firestore-debug.log
 5977849d78e58eba2db764191c770d3ae554fd732c166320367ae0f286d91df8  ./firestore.indexes.json
 ec83183e76139bc45d7c25e60df53e2c2eebd20adbad40cb3b6318a440aa6f31  ./firestore.rules
 0f150d1dd305574173fb391e53bc8b159a50b310da8d0a2ca253a3d499b0867e  ./functions/accountability-handover-core.js
@@ -65,7 +65,7 @@ f53035711ec541b64b2d9b7fc9b844dec3b4f80913330dadb82d9462337e33fa  ./public/asset
 278072d49f68819ef224d44f6f6d294a13b641a67f32af0d07ab5b57374c2a4c  ./public/assets/js/modules/04-v13-complete-clean-fix-script.js
 593be3825e60d3993c86ec425ae5aa1a5f80071d842f64ddb378d94e0009949c  ./public/assets/js/modules/05-controlled-ui-compatibility-fixes.js
 6329ba584e9968dd553cfe26efac2059ce0160560ba9139d36ccf13276043157  ./public/assets/js/modules/06-zebra-label-printing.js
-ac6e8ef56a63138d92b5192243c33deb43e3537aaeb490d74953515bd0be6fef  ./public/assets/js/modules/07-expiry-requests-and-primary-features.js
+a16020120b8d96da51de1079267af59ce1713b91d5eefd627394a96fc380f186  ./public/assets/js/modules/07-expiry-requests-and-primary-features.js
 079677aea6ec6db7631dad1ba5f1462878620c669d2fc1ea262f17415078fb3e  ./public/assets/js/modules/08-controlled-shared-list-filters.js
 de210c6e06579d7070d6cc6c5efdf548cb47721b3d63ad75ef7754b94ec28b19  ./public/assets/js/modules/09-warehouse-batch-editor.js
 23a0b6296560abfd689b87826b625cc264ff59576aadc968b28adc5947427959  ./public/assets/js/modules/10-warehouse-receiving-workflow.js
