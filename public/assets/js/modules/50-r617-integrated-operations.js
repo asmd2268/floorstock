@@ -34,13 +34,14 @@ window.renderCrashOperations=function(){
     page.innerHTML='<div class="alert-banner">Not authorized / غير مصرح</div>';
     return;
   }
+  var externalScope=role()==='outpatient_pharmacy_supervisor'?(window.fsOutpatientDeptId?window.fsOutpatientDeptId():String(CU&&CU.deptId||'')):'';
   var options=uniqueCrashItems();
   E('r17-cr-source-med').innerHTML='<option value="">Select medicine...</option>'+options.map(function(item){
     return '<option value="'+esc(item.key)+'">'+esc(item.name+(item.concentration?' — '+item.concentration:''))+'</option>';
   }).join('');
   var allowCorrection=canMasterDirectCrashCorrection();
   var list=E('r17-crash-admin-list');
-  list.innerHTML=cartList().map(function(cart){
+  list.innerHTML=cartList().filter(function(cart){return !externalScope||String(cart.deptId)===externalScope}).map(function(cart){
     return '<div class="r17-admin-row" data-cart="'+esc(cart.id)+'">'+
       '<div class="fg"><label>Name</label><input class="r17-ca-name" value="'+esc(cart.name||'')+'"></div>'+
       '<div class="fg"><label>Number</label><input class="r17-ca-number" value="'+esc(cart.number||'')+'"></div>'+
@@ -214,13 +215,14 @@ var ACC2_REGIMENS_KEY='accountability_regimens_v2';
 var ACC2_UI={adminTab:'custody',filters:{dept:'',status:'',medicine:''},receiptDept:'',regimenDept:'',editAssignmentId:'',editRegimenId:''};
 
 function acc2Array(key){var value=S.g(key);return Array.isArray(value)?value:[]}
-function acc2Assignments(){return acc2Array(ACC2_ASSIGNMENTS_KEY)}
-function acc2Usage(){return acc2Array(ACC2_USAGE_KEY)}
+function acc2ScopeDept(){return role()==='outpatient_pharmacy_supervisor'?(window.fsOutpatientDeptId?window.fsOutpatientDeptId():String(CU&&CU.deptId||'')):''}
+function acc2Assignments(){var a=acc2Array(ACC2_ASSIGNMENTS_KEY),d=acc2ScopeDept();return d?a.filter(function(x){return String(x.deptId)===d}):a}
+function acc2Usage(){var a=acc2Array(ACC2_USAGE_KEY),d=acc2ScopeDept();return d?a.filter(function(x){return String(x.deptId)===d}):a}
 function acc2Receipts(){return acc2Array(ACC2_RECEIPTS_KEY)}
 function acc2Regimens(){return acc2Array(ACC2_REGIMENS_KEY)}
 function acc2EffectiveMaster(){return master()&&!window.MASTER_EFFECTIVE}
 function canAccManage(){return window.fsHasCapability?window.fsHasCapability('accountability.manage'):(acc2EffectiveMaster()||['pharmacy','inpatient_supervisor','pharmacy_staff','outpatient_pharmacy_supervisor'].indexOf(role())>=0)}
-function acc2DepartmentRole(){return role()==='department'||role()==='outpatient_pharmacy_supervisor'}
+function acc2DepartmentRole(){return role()==='department'}
 function acc2StatusLabel(status){return {pending_pharmacy:'Pending pharmacy review / بانتظار مراجعة الصيدلية',approved_waiting_receipt:'Approved — waiting nursing receipt / معتمد وبانتظار الاستلام',received_locked:'Received and locked / تم الاستلام والإقفال',rejected:'Rejected / مرفوض'}[status]||status}
 function acc2StatusClass(status){return status==='received_locked'?'bgn':status==='approved_waiting_receipt'?'bbl':status==='rejected'?'brd':'byl'}
 function acc2Assignment(id,list){return (list||acc2Assignments()).find(function(x){return String(x.id)===String(id)})||null}
