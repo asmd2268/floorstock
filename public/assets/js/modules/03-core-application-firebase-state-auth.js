@@ -1463,6 +1463,7 @@ function getInvDept(){
   var sel=el('inv-dept-sel');
   return sel?sel.value:'';
 }
+window.fsOutpatientDeptId=function(){var ds=typeof gd==='function'?(gd()||[]):[],d=ds.find(function(x){return /outpatient\s+department/i.test(String(x.name||x.nameEn||''))||String(x.id||'').toLowerCase()==='outpatient'});return d?String(d.id):''};
 function populateInvDeptSel(){
   var sel=el('inv-dept-sel');if(!sel)return;
   var cur=sel.value;
