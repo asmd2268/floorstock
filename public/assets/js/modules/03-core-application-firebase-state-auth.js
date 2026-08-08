@@ -1072,6 +1072,8 @@ function uiConfirm(message,options){options=options||{};return uiDialog(Object.a
 
 function toast(msg,type){
   var t=document.getElementById('toast'),value=String(msg==null?'':msg);
+  var toastRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+  if(['pharmacy','pharmacy_manager','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(toastRole)>=0&&/(medications?\s+(expired|expiring)|expired\s+medications|expiring\s+soon)/i.test(value))return;
   if(typeof globalThis.formatBilingualText==='function')value=globalThis.formatBilingualText(value);
   t.textContent=value;t.style.whiteSpace='pre-line';t.style.unicodeBidi='plaintext';t.className='on t'+type;
   clearTimeout(window._tt);
@@ -1728,6 +1730,7 @@ function filterR(s,btn){
 function renderReqs(){
   var purgeReqBtn=el('purge-old-requests-btn');if(purgeReqBtn)purgeReqBtn.style.display=(CU&&CU.master===true)?'inline-flex':'none';
   var rs=gr().slice().reverse();
+  if((window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''))==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var opd=window.fsOutpatientDeptId();rs=rs.filter(function(r){return String(r.deptId)===String(opd)})}
   if(RFS!=='all')rs=rs.filter(function(r){return r.status===RFS});
   el('rlist').innerHTML=rs.length?rs.map(function(r){return rcard(r,true)}).join('')
     :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin-top:10px">No requests</div></div>';
