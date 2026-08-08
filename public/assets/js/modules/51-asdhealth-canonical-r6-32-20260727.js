@@ -906,13 +906,20 @@ th{font-weight:900}
   var runtime=`(function(){
 function imagesReady(){
   return Promise.all(Array.from(document.images).map(function(image){
-    if(image.complete)return Promise.resolve();
-    return new Promise(function(resolve){
+    var qr=image.classList.contains('asd-qr-image');
+    if(qr&&/^data:image\/svg\+xml/i.test(image.getAttribute('src')||''))return Promise.reject(new Error('QR generator returned a placeholder'));
+    if(image.complete)return image.naturalWidth>0?Promise.resolve():(qr?Promise.reject(new Error('QR image failed to decode')):Promise.resolve());
+    return new Promise(function(resolve,reject){
       image.onload=resolve;
-      image.onerror=resolve;
-      setTimeout(resolve,1800);
+      image.onerror=function(){qr?reject(new Error('QR image failed to load')):resolve()};
+      setTimeout(function(){qr?reject(new Error('QR image load timed out')):resolve()},5000);
     });
   }));
+}
+function showQrFailure(error){
+  document.body.dataset.qrPrint='failed';
+  document.querySelectorAll('img.asd-qr-image').forEach(function(image){if(/^data:image\/svg\+xml/i.test(image.getAttribute('src')||''))image.style.display='none'});
+  var box=document.createElement('div');box.className='print-error';box.innerHTML='<h2>QR generation failed / تعذر إنشاء رمز QR</h2><p>Automatic printing stopped because the QR would not be scannable.<br>تم إيقاف الطباعة التلقائية لأن الرمز لن يكون قابلاً للمسح.</p><button type="button">Print without QR / طباعة بدون QR</button>';box.querySelector('button').onclick=function(){window.focus();window.print()};document.body.insertBefore(box,document.body.firstChild);console.error(error);
 }
 function over(layout,fit){
   return fit.scrollHeight>layout.clientHeight+1||
@@ -1000,7 +1007,7 @@ function start(){
         setTimeout(function(){window.focus();window.print()},180);
       }
     }
-  });
+  }).catch(showQrFailure);
 }
 window.addEventListener('load',start,{once:true});
 })();`;
@@ -1661,7 +1668,7 @@ function fsR6MasterUsers(){
   try{return typeof window.gu==='function'?(window.gu()||[]).filter(function(u){return u&&u.active!==false&&u.master!==true}):[]}catch(e){return []}
 }
 function fsR6RoleLabel(role){
-  var labels={pharmacy:'Pharmacy Director / مدير الصيدلية',inpatient_supervisor:'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم',pharmacy_staff:'Pharmacy Staff / موظف صيدلية',controlled_pharmacy:'Controlled Medicines Officer / مسؤول الأدوية المخدرة',warehouse:'Warehouse Custody Officer / مسؤول عهدة المستودع',department:'Department Employee / موظف قسم'};
+  var labels={pharmacy:'Pharmacy Director / مدير الصيدلية',inpatient_supervisor:'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم',outpatient_pharmacy_supervisor:'Outpatient Pharmacy Supervisor / مشرف الصيدلية الخارجية',pharmacy_staff:'Pharmacy Staff / موظف صيدلية',controlled_pharmacy:'Controlled Medicines Officer / مسؤول الأدوية المخدرة',warehouse:'Warehouse Custody Officer / مسؤول عهدة المستودع',department:'Department Employee / موظف قسم'};
   if(typeof window.masterRoleLabel==='function'){try{return window.masterRoleLabel(role)}catch(e){}}
   return labels[role]||role||'Unknown role';
 }
@@ -1672,7 +1679,7 @@ function fsR6EnsureMasterModal(){
     '<div class="mh"><span class="mt">Master Test Mode / وضع اختبار الماستر</span><button class="xbtn" type="button" data-master-test-action="close">×</button></div>'+
     '<div class="fsr6-master-grid"><div class="fg"><label>Test source / مصدر الاختبار</label><select id="fsr6-master-mode"><option value="user">Managed user / مستخدم موجود</option><option value="role">Role only / دور فقط</option></select></div>'+
     '<div class="fg" id="fsr6-master-user-wrap"><label>User / المستخدم</label><select id="fsr6-master-user"></select></div>'+
-    '<div class="fg" id="fsr6-master-role-wrap"><label>Role / الدور</label><select id="fsr6-master-role"><option value="pharmacy">Pharmacy Director</option><option value="inpatient_supervisor">Inpatient Supervisor</option><option value="pharmacy_staff">Pharmacy Staff</option><option value="controlled_pharmacy">Controlled Medicines Officer</option><option value="warehouse">Warehouse Custody Officer</option><option value="department">Department Employee</option></select></div>'+
+    '<div class="fg" id="fsr6-master-role-wrap"><label>Role / الدور</label><select id="fsr6-master-role"><option value="pharmacy">Pharmacy Director</option><option value="inpatient_supervisor">Inpatient Supervisor</option><option value="outpatient_pharmacy_supervisor">Outpatient Pharmacy Supervisor / مشرف الصيدلية الخارجية</option><option value="pharmacy_staff">Pharmacy Staff</option><option value="controlled_pharmacy">Controlled Medicines Officer</option><option value="warehouse">Warehouse Custody Officer</option><option value="department">Department Employee</option></select></div>'+
     '<div class="fg" id="fsr6-master-dept-wrap"><label>Department / القسم</label><select id="fsr6-master-dept"></select></div></div>'+
     '<div class="fsr6-master-preview" id="fsr6-master-preview"></div>'+
     '<div class="fl g8" style="justify-content:flex-end;margin-top:16px"><button class="btn bg" type="button" data-master-test-action="close">Cancel</button>'+
@@ -1705,12 +1712,12 @@ window.masterPreviewUser=function(){
     profile={role:fsR6E('fsr6-master-role').value,deptId:fsR6E('fsr6-master-dept').value,username:'Role preview'};
   }
   var deptWrap=fsR6E('fsr6-master-dept-wrap'),role=profile&&profile.role||'';
-  deptWrap.style.display=role==='department'?'block':'none';
+  deptWrap.style.display=(role==='department'||role==='outpatient_pharmacy_supervisor')?'block':'none';
   var actual=fsR6ActualMaster()||{};
   fsR6E('fsr6-master-preview').innerHTML=profile?
     '<b>Effective role:</b> '+fsR6Esc(fsR6RoleLabel(role))+
     '<br><b>Tested user:</b> '+fsR6Esc(profile.email||profile.username||profile.displayName||profile.id||'Role preview')+
-    (role==='department'?'<br><b>Department:</b> '+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(profile.deptId||fsR6E('fsr6-master-dept').value):profile.deptId):'')+
+    ((role==='department'||role==='outpatient_pharmacy_supervisor')?'<br><b>Department:</b> '+fsR6Esc(window.floorstockDepartmentName?window.floorstockDepartmentName(profile.deptId||fsR6E('fsr6-master-dept').value):profile.deptId):'')+
     '<br><b>Actual authenticated master:</b> '+fsR6Esc(actual.email||actual.username||actual.id||'Master'):
     'No test target is available.';
 };
@@ -1732,7 +1739,7 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
   if(!actual)throw new Error('Actual Master profile is unavailable.');
   if(!window.MASTER_ACTUAL)window.MASTER_ACTUAL=Object.assign({},actual);
   var role=fsR6S(profile.role,''),deptId=fsR6S(profile.deptId||profile.departmentId,'');
-  if(role==='department'&&!deptId)throw new Error('A department is required for the department role.');
+  if((role==='department'||role==='outpatient_pharmacy_supervisor')&&!deptId)throw new Error('A department is required for this role.');
   window.MASTER_EFFECTIVE={
     mode:meta&&meta.mode||'user',testedUserId:profile.id||profile.uid||meta&&meta.testedUserId||'role:'+role,
     email:profile.email||profile.username||profile.displayName||'',role:role,deptId:deptId||null,
@@ -1761,7 +1768,7 @@ window.masterApplyRole=function(){
     profile=fsR6MasterUsers().find(function(u){return String(u.id||u.uid)===String(id)});
     if(!profile)return fsR6Toast('Choose an active managed user.','err');
   }else{
-    var role=fsR6E('fsr6-master-role').value,dept=role==='department'?fsR6E('fsr6-master-dept').value:'';
+    var role=fsR6E('fsr6-master-role').value,dept=(role==='department'||role==='outpatient_pharmacy_supervisor')?fsR6E('fsr6-master-dept').value:'';
     profile={id:'role:'+role,role:role,deptId:dept,username:'Role preview — '+fsR6RoleLabel(role),email:''};
   }
   try{return window.fsR6ApplyMasterTestProfile(profile,{mode:mode})}

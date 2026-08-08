@@ -1,5 +1,10 @@
 import { publishLegacy } from '../core/legacy-registry.js';
 import { normalizeRole, hasCapability } from '../core/role-capabilities.js?v=R6.75.0';
+import {
+  FULFILLMENT_EDIT_SETTINGS_KEY,
+  canEditFulfillment,
+  fulfillmentEditReason,
+} from '../core/fulfillment-edit-policy.js?v=R6.76.0';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
@@ -218,6 +223,7 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
   'departments','deleted_departments','custom_categories','daily_limits_v2',
   'weekly_limits_v2','monthly_limits','rate_limits_v2','req_windows','disp_slots',
   'request_count_limits_v1','request_hour_grids_v1','requests','dept_notes','notes',
+  'fulfillment_edit_settings_v1',
   'crash_carts','crash_cart_reports',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
@@ -1351,7 +1357,7 @@ async function doLogin(){
     var profile=profileSnapshot.data()||{};
     profile.role=normalizeRole(profile.role);
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
+    if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
     if(profile.role==='department'){
       setLoginStage('Verifying department…');
       await fsHydrateDepartmentDirectoryForLogin(profile);
@@ -1402,9 +1408,9 @@ async function doLogout(){
   function timeout(promise,ms,label){return Promise.race([Promise.resolve(promise),new Promise(function(_,reject){setTimeout(function(){reject(new Error(label||'Operation timed out'))},ms)})])}
   try{
     if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
-    try{if(typeof window.asdhWaitForAllSaves==='function')await timeout(window.asdhWaitForAllSaves(12000),13000,'Save confirmation timed out')}catch(e){if(!await (typeof uiConfirm==='function'?uiConfirm('Some data could not be confirmed as saved. Sign out anyway? / تعذر تأكيد حفظ بعض البيانات. هل تريد تسجيل الخروج؟'):Promise.resolve(false)))return}
+    try{if(typeof window.asdhWaitForAllSaves==='function')await timeout(window.asdhWaitForAllSaves(12000),13000,'Save confirmation timed out')}catch(e){console.warn('Save confirmation failed before logout; continuing sign out.',e)}
     if(typeof previewClear==='function')previewClear();
-    try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.error('Pending writes failed before logout:',err);if(!await uiConfirm('تحذير: تعذر تأكيد بعض التغييرات. هل تريد تسجيل الخروج على أي حال؟\nWarning: Some changes could not be confirmed. Do you want to sign out anyway?'))return}
+    try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.warn('Pending writes failed before logout; continuing sign out.',err)}
     S.stopRealtime();
     if(FB_AUTH&&FB_AUTH.currentUser)await timeout(FB_AUTH.signOut(),8000,'Sign out timed out');
     CU=null;MASTER_ACTUAL=null;MASTER_EFFECTIVE=null;S.cache={};S.ready=false;var app=el('app'),auth=el('auth'),pass=el('lgp');if(app)app.style.display='none';if(auth)auth.style.display='flex';if(pass)pass.value='';
@@ -1503,9 +1509,10 @@ function renderDash(){
   var expired=expAlerts.filter(function(e){return e.days<=0});
   var urgent=expAlerts.filter(function(e){return e.days>0&&e.days<=7});
   var soon=expAlerts.filter(function(e){return e.days>7});
-  if(expired.length)alertHtml+='<div class="alert-banner">🚨 <b>'+expired.length+' medications EXPIRED:</b> '+expired.map(function(e){return e.dept+': '+e.name}).join(', ')+'</div>';
-  if(urgent.length)alertHtml+='<div class="alert-banner">⚠ <b>'+urgent.length+' expiring within 7 days:</b> '+urgent.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
-  if(soon.length)alertHtml+='<div class="alert-banner-y">🔔 <b>'+soon.length+' expiring soon:</b> '+soon.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
+  function groupedExpiry(items,withDays){var groups={};items.forEach(function(e){(groups[e.dept]||(groups[e.dept]=[])).push(e)});return Object.keys(groups).map(function(dept){var names=groups[dept].map(function(e){return e.name+(withDays?' ('+e.days+'d)':'')});return '<span style="display:block;margin-top:3px"><b>'+dept+':</b> '+names.join(', ')+'</span>'}).join('')}
+  if(expired.length)alertHtml+='<div class="alert-banner">🚨 <b>'+expired.length+' medications EXPIRED:</b>'+groupedExpiry(expired,false)+'</div>';
+  if(urgent.length)alertHtml+='<div class="alert-banner">⚠ <b>'+urgent.length+' expiring within 7 days:</b>'+groupedExpiry(urgent,true)+'</div>';
+  if(soon.length)alertHtml+='<div class="alert-banner-y">🔔 <b>'+soon.length+' expiring soon:</b>'+groupedExpiry(soon,true)+'</div>';
   el('exp-alerts').innerHTML=alertHtml;
   el('dptbl').innerHTML=pend.length
     ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button></td></tr>'}).join('')
@@ -1712,6 +1719,7 @@ function renderReqs(){
     :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin-top:10px">No requests</div></div>';
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
+  if(typeof window.renderFulfillmentEditSettings==='function')window.renderFulfillmentEditSettings();
 }
 function installRequestActionBindings(){
   if(globalThis._requestActionBindingsInstalled)return;
@@ -1741,10 +1749,11 @@ installRequestActionBindings();
 function rcard(r,isp){
   var d=gd().find(function(x){return x.id===r.deptId});
   var sm={pending:'byl',fulfilled:'bgn',partial:'bbl'};
+  var mayEditFulfillment=typeof window.canEditFulfillmentRequest==='function'&&window.canEditFulfillmentRequest(r);
   return '<div class="card" data-request-id="'+esc(r.id)+'"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
     +'<div class="fl g8 ic" data-request-actions><span style="font-size:12px;color:var(--tx2)">'+fmtDateTime(r.created)+'</span>'
     +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button>':'')
-    +(isp&&r.status==='fulfilled'?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">✏ Edit</button>':'')
+    +(mayEditFulfillment?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">✏ Edit Fulfillment</button>':'')
     +(isp&&window.CU&&CU.master===true?'<button class="btn bd2c bsm" data-request-action="master-delete" data-id="'+r.id+'">Delete</button>':'')
     +(!isp&&r.status==='fulfilled'&&!r.receivedAt?'<button class="btn bs bsm" data-request-action="receive" data-id="'+r.id+'">Receive & add expiry</button>':'')
     +'<button class="btn bg bsm" data-request-action="view" data-id="'+r.id+'">View</button></div></div>'
@@ -1768,25 +1777,32 @@ function viewReq(id){
   OM('mview');
 }
 function openFulfill(id){
-  if(!canManageRequests())return toast('No request edit permission','err');
   FRID=id;
   var r=gr().find(function(x){return x.id===id});if(!r)return;
-  var d=gd().find(function(x){return x.id===r.deptId});
   var isEdit=r.status==='fulfilled';
+  if(isEdit){
+    var profile=typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():(window.CU||{});
+    var settings=S.g(FULFILLMENT_EDIT_SETTINGS_KEY);
+    var reason=fulfillmentEditReason(r,profile,settings,Date.now());
+    if(reason)return toast(reason,'err');
+  }else if(!canManageRequests())return toast('No request edit permission','err');
+  var d=gd().find(function(x){return x.id===r.deptId});
   el('fulfill-title').textContent=(isEdit?'Edit Fulfillment':'Fulfill Request')+' — '+((d&&d.name)||r.deptId);
   el('fulfill-hint').textContent=isEdit?'Previous dispensed quantities are loaded. Change only the item you need, then save.':'Enter the dispensed quantity for every item. Enter 0 if not dispensed. Quantities may exceed Requested and departmental Max.';
   el('fulfill-btn').textContent=isEdit?'Update ✓':'Confirm ✓';
   var ms=getMeds(r.deptId||'');
   var thirtyDayCutoff=Date.now()-(30*24*60*60*1000);
   function dispensedLast30Days(medId){
-    return gr().reduce(function(total,req){
+    var result=gr().reduce(function(total,req){
       if(!req||req.id===r.id||req.deptId!==r.deptId)return total;
       if(req.status!=='fulfilled'&&req.status!=='partial')return total;
       var dt=new Date(req.fulfilledAt||req.updatedAt||req.created||0).getTime();
       if(!isFinite(dt)||dt<thirtyDayCutoff||dt>Date.now())return total;
       var line=(req.dispensed||[]).find(function(x){return x.medId===medId});
-      return total+(line?Number(line.qty)||0:0);
-    },0);
+      if(line&&Number(line.qty)>0){total.qty+=Number(line.qty)||0;total.orders+=1}
+      return total;
+    },{qty:0,orders:0});
+    result.average=result.orders?result.qty/result.orders:0;return result;
   }
   var previousDispensed={};
   if(isEdit)(r.dispensed||[]).forEach(function(x){previousDispensed[String(x.medId)]=x.qty});
@@ -1797,7 +1813,7 @@ function openFulfill(id){
     return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.min!=null?m.min:'&mdash;')+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.max!=null?m.max:'&mdash;')+'</td>'
-      +'<td style="text-align:center"><span class="badge bbl" style="font-family:var(--mono);font-size:11px">'+last30+'</span></td>'
+      +'<td style="text-align:center"><span class="badge bbl" style="font-family:var(--mono);font-size:11px">'+last30.qty+' / '+last30.orders+' orders<br><small>avg '+(Math.round(last30.average*100)/100)+'/order</small></span></td>'
       +'<td style="text-align:center;font-family:var(--mono);font-weight:700">'+it.qty+'</td>'
       +'<td><input type="number" min="0" value="'+(Object.prototype.hasOwnProperty.call(previousDispensed,String(it.medId))?previousDispensed[String(it.medId)]:'')+'" placeholder="Enter qty" required data-med="'+it.medId+'" data-requested="'+it.qty+'" title="Any non-negative quantity is allowed, including more than Requested or departmental Max." style="width:100%;min-width:72px;padding:5px 7px;text-align:center;margin:0"></td></tr>';
   }).join('');
@@ -1825,6 +1841,11 @@ function renderMyReqs(){
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
 }
+
+window.canEditFulfillmentRequest=function(request,now){
+  var profile=typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():(window.CU||{});
+  return canEditFulfillment(request,profile,S.g(FULFILLMENT_EDIT_SETTINGS_KEY),now==null?Date.now():now);
+};
 
 
 // ── CONTROLLED & PSYCHOTROPIC MEDICINES ────────────────────────────────

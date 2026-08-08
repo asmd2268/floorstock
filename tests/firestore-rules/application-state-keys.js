@@ -37,6 +37,7 @@ export const APPLICATION_STATE_KEYS = [
   `expiry_${DEPARTMENT_ID}`,
   'facility_logo',
   'global_request_freeze_v2',
+  'fulfillment_edit_settings_v1',
   'hidden_request_categories_v1',
   `inventory_integrity_${DEPARTMENT_ID}`,
   'inventory_name_merge_history',
@@ -66,6 +67,7 @@ export const APPLICATION_STATE_KEYS = [
 ];
 
 export function mayWriteState(role, key) {
+  if (key === 'fulfillment_edit_settings_v1') return role === 'master';
   if (role === 'master' || role === 'pharmacy') return true;
   if (key === 'theme' || key === 'audit_log') return true;
   if (role === 'inpatient_supervisor') {
@@ -73,6 +75,9 @@ export function mayWriteState(role, key) {
   }
   if (role === 'pharmacy_staff') {
     return /^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
+  }
+  if (role === 'outpatient_pharmacy_supervisor') {
+    return /^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
   }
   if (role === 'controlled_pharmacy') {
     return /^(controlled_.*|accountability_.*|audit_log|theme)$/.test(key);

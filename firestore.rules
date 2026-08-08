@@ -100,9 +100,9 @@ service cloud.firestore {
     function stateFeatureAllowed(id, docId) {
       return (docId.matches('^crash_.*$') && tenantFeature(id, 'crash_cart'))
         || (docId.matches('^(controlled_.*|accountability_.*)$') && tenantFeature(id, 'controlled'))
-        || (docId.matches('^(requests|request_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$') && tenantFeature(id, 'requests'))
+        || (docId.matches('^(requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$') && tenantFeature(id, 'requests'))
         || (
-          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|requests|request_.*|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
+          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
           && tenantFeature(id, 'inventory')
         );
     }
@@ -124,12 +124,23 @@ service cloud.firestore {
         && request.resource.data.updatedAt is timestamp;
     }
 
+    function validFulfillmentEditSettings(docId) {
+      return docId != 'fulfillment_edit_settings_v1' || (
+        request.resource.data.value is map
+        && request.resource.data.value.keys().hasOnly(['hours', 'updatedAt', 'updatedBy', 'updatedById'])
+        && request.resource.data.value.hours is number
+        && request.resource.data.value.hours >= 0
+        && request.resource.data.value.hours <= 8760
+      );
+    }
+
     function canReadDepartmentState(docId) {
       return docId in [
           'departments', 'deleted_departments', 'custom_categories',
           'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2',
           'req_windows', 'disp_slots', 'request_count_limits_v1', 'request_hour_grids_v1',
           'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports',
+          'fulfillment_edit_settings_v1',
           'theme', 'facility_logo',
           'pharmacy_category_config', 'pharmacy_department_announcements',
           'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3',
@@ -158,7 +169,7 @@ service cloud.firestore {
       let p = profile();
       let r = p.role;
       let dept = p.deptId != null ? p.deptId : p.departmentId;
-      return (
+      return (docId != 'fulfillment_edit_settings_v1' || masterUser()) && (
           r == 'department'
           && (
             docId in [
@@ -187,6 +198,10 @@ service cloud.firestore {
             || (
               r in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']
               && docId.matches('^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|audit_log|theme)$')
+            )
+            || (
+              r == 'outpatient_pharmacy_supervisor'
+              && docId.matches('^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$')
             )
             || (
               r == 'pharmacy_staff'
@@ -222,7 +237,8 @@ service cloud.firestore {
         && stateFeatureAllowed(tenant, docId)
         && departmentLimitAllowed(tenant, docId)
         && canWriteState(docId)
-        && validStateShape();
+        && validStateShape()
+        && validFulfillmentEditSettings(docId);
       allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (
         masterUser() || pharmacyDirector()
         || (inpatientSupervisor() && docId.matches('^inventory_snapshot_.*$'))
@@ -266,7 +282,9 @@ service cloud.firestore {
       allow list: if activeUser() && tenantId() == '' && !departmentUser();
       allow create, update: if activeUser() && tenantId() == ''
         && canWriteState(docId)
-        && validStateShape();
+        && (docId != 'fulfillment_edit_settings_v1' || (role() in ['pharmacy', 'pharmacy_director'] && profile().master == true))
+        && validStateShape()
+        && validFulfillmentEditSettings(docId);
       allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector()
         || (inpatientSupervisor() && docId.matches('^inventory_snapshot_.*$'))
         || (departmentUser() && docId.matches('^inventory_snapshot_' + departmentId() + '_.*$')));

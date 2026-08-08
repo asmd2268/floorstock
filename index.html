@@ -2,10 +2,10 @@
 
 <html dir="ltr" lang="en">
 <head>
-<meta content="R6.75.0-saas" name="asdhealth-build"/><meta charset="utf-8"/>
-<meta content="default-src 'self' data: blob:; script-src 'self' https://www.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://www.google.com ; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: ; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://*.cloudfunctions.net https://*.run.app https://www.google.com ; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://www.google.com; object-src 'none'; base-uri 'self'; form-action 'self'" http-equiv="Content-Security-Policy"/>
+<meta content="R6.76.0-saas" name="asdhealth-build"/><meta charset="utf-8"/>
+<meta content="default-src 'self' data: blob:; script-src 'self' https://www.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://www.google.com ; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: ; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://www.gstatic.com https://fonts.googleapis.com https://fonts.gstatic.com https://cdnjs.cloudflare.com https://unpkg.com https://cdn.jsdelivr.net https://*.cloudfunctions.net https://*.run.app https://www.google.com ; worker-src 'self' blob: https://cdnjs.cloudflare.com; frame-src 'self' https://*.firebaseapp.com https://accounts.google.com https://www.google.com; frame-ancestors 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests" http-equiv="Content-Security-Policy"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-<title>ASDHealth FloorStock R6.75.0 SaaS</title>
+<title>ASDHealth FloorStock R6.76.0 SaaS</title>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-favicon" rel="icon" type="image/svg+xml"/>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-shortcut-icon" rel="shortcut icon" type="image/svg+xml"/>
 <link href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Crect%20width%3D%2264%22%20height%3D%2264%22%20rx%3D%2214%22%20fill%3D%22%23eff6ff%22%2F%3E%3Ctext%20x%3D%2232%22%20y%3D%2242%22%20text-anchor%3D%22middle%22%20font-family%3D%22Arial%2CHelvetica%2Csans-serif%22%20font-size%3D%2229%22%20font-weight%3D%22700%22%20letter-spacing%3D%22-1%22%20fill%3D%22%230969da%22%3EAD%3C%2Ftext%3E%3C%2Fsvg%3E" id="asdhealth-apple-touch-icon" rel="apple-touch-icon"/>
@@ -211,8 +211,10 @@
 <div class="card"><div class="ch"><span class="ct">🏆 Top 10 Most Dispensed</span></div><div class="cb"><div class="barchart" id="ctop"></div></div></div>
 <div class="card"><div class="ch"><span class="ct">🔴 Top High Alert Dispensed</span></div><div class="cb"><div class="barchart" id="cha"></div></div></div>
 </div>
+<div class="card" style="margin-bottom:14px"><div class="ch"><span class="ct">🔎 Compare item consumption by department</span><span class="ss">Search an item to see where it was dispensed</span></div><div class="cb"><input id="analytics-item-search" placeholder="Type medication name, e.g. Paracetamol inj / اكتب اسم الصنف" style="margin:0;max-width:520px" autocomplete="off"/><div id="analytics-item-compare"></div></div></div>
 <div class="card">
 <div class="ch"><span class="ct">⚠ Zero Dispense</span></div>
+<div class="g3" style="padding:12px 12px 0"><div class="sc"><div class="sl">Zero-dispense medicines</div><div class="sv" id="azero-count">0</div></div><div class="sc"><div class="sl">Dispensed units</div><div class="sv" id="analytics-units">0</div></div><div class="sc"><div class="sl">Fulfilled requests</div><div class="sv" id="analytics-requests">0</div></div></div>
 <div class="tw"><table><thead><tr><th>Medication</th><th>Category</th><th>Classification</th><th>Min</th><th>Max</th></tr></thead><tbody id="ztbl"></tbody></table></div>
 </div>
 </div>
@@ -956,7 +958,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="mh"><span class="mt">Add User / إضافة مستخدم</span><button class="xbtn" data-asdh-binding="b118">✕</button></div>
 <div class="fg"><label>Email</label><input id="nuname" placeholder="e.g. icu@example.com" type="email"/></div>
 <div class="fg"><label>Password</label><input id="nupass" placeholder="At least 8 characters" type="password"/></div>
-<div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" data-asdh-binding="b119"><option value="department">Department user</option><option value="controlled_pharmacy">Pharmacy controlled &amp; psychotropic medicines officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy_staff">Pharmacy Employee / موظف صيدلية</option><option value="inpatient_supervisor">Inpatient Pharmacy Supervisor / مشرف صيدلية داخلية</option><option value="pharmacy">Pharmacy Director / مدير الصيدلية</option></select></div>
+<div class="fg"><label>Role assigned by Pharmacy Manager</label><select id="nurole" data-asdh-binding="b119"><option value="department">Department user</option><option value="controlled_pharmacy">Pharmacy controlled &amp; psychotropic medicines officer</option><option value="warehouse">Warehouse custody officer</option><option value="pharmacy_staff">Pharmacy Employee / موظف صيدلية</option><option value="inpatient_supervisor">Inpatient Pharmacy Supervisor / مشرف صيدلية داخلية</option><option value="outpatient_pharmacy_supervisor">Outpatient Pharmacy Supervisor / مشرف الصيدلية الخارجية</option><option value="pharmacy">Pharmacy Director / مدير الصيدلية</option></select></div>
 <div class="fg" id="nudept-wrap"><label>Department</label><select id="nudept"></select></div>
 <div class="fg" id="numaster-wrap" style="display:none"><label style="display:flex;align-items:center;gap:8px;color:var(--tx);cursor:pointer"><input id="numaster" style="width:auto;margin:0" type="checkbox"/> Grant Master access</label><div class="fhint">Only a current Master can grant this permission.</div></div>
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
@@ -1417,6 +1419,6 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <!-- Public-snapshot Crash Cart recovery removed in the hardened production build.
      Operational carts are loaded only from authenticated floorstock_state/crash_carts. -->
 <script src="./public/assets/js/vendor/qrcode-generator.js?v=R6.74.0"></script>
-<script type="module" src="./public/assets/js/main.js?v=R6.75.0"></script>
+<script type="module" src="./public/assets/js/main.js?v=R6.76.0"></script>
 </body>
 </html>

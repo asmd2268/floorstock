@@ -174,6 +174,51 @@ test('My Requests exposes and saves edit only while ordering is open and request
   await expect(edit).toHaveCount(0);
 });
 
+test('department can edit its own recent fulfillment and loses the action after the configured window', async ({ page }) => {
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-asdh-modules', 'ready');
+
+  await page.evaluate(() => {
+    window.CU = { id: 'dept-user', role: 'department', deptId: 'dept-a', deptName: 'Ward A', username: 'ward-a' };
+    window.MASTER_EFFECTIVE = null;
+    window.S.cache.departments = [{ id: 'dept-a', name: 'Ward A' }];
+    window.S.cache['meds_dept-a'] = [{ id: 'med-a', name: 'Medication A', category: 'Tablets', min: 1, max: 20 }];
+    window.S.cache.fulfillment_edit_settings_v1 = { hours: 24 };
+    window.S.cache.requests = [{
+      id: 'req-fulfilled', deptId: 'dept-a', status: 'fulfilled', created: new Date(Date.now() - 3600000).toISOString(),
+      fulfilledAt: new Date(Date.now() - 3600000).toISOString(), items: [{ medId: 'med-a', qty: 2 }], dispensed: [{ medId: 'med-a', qty: 2 }]
+    }];
+    window.__fulfillmentSaved = null;
+    window.__fulfillmentAudit = null;
+    window.S.upd = async (key, id, changes) => { window.__fulfillmentSaved = { key, id, changes }; Object.assign(window.S.cache.requests[0], changes); return true; };
+    window.auditAction = async (action, meta) => { window.__fulfillmentAudit = { action, meta }; return true; };
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.querySelectorAll('.pg').forEach((node) => node.classList.remove('on'));
+    document.getElementById('pg-myreqs').classList.add('on');
+    window.renderMyReqs();
+  });
+
+  const edit = page.locator('#mrlst [data-request-action="edit-fulfillment"]');
+  await expect(edit).toBeVisible();
+  await edit.click();
+  await expect(page.locator('#mfulfill')).toHaveClass(/on/);
+  await page.locator('#ftbl input[data-med="med-a"]').fill('3');
+  await page.locator('#fulfill-btn').click();
+  await expect.poll(() => page.evaluate(() => window.__fulfillmentSaved)).toMatchObject({
+    key: 'requests', id: 'req-fulfilled', changes: { dispensed: [{ medId: 'med-a', qty: 3 }], fulfillmentEditRevision: 1 }
+  });
+  await expect.poll(() => page.evaluate(() => window.__fulfillmentAudit)).toMatchObject({
+    action: 'request_fulfillment_edited', meta: { requestId: 'req-fulfilled', revision: 1, before: [{ medId: 'med-a', qty: 2 }], after: [{ medId: 'med-a', qty: 3 }] }
+  });
+
+  await page.evaluate(() => {
+    window.S.cache.requests[0].fulfilledAt = new Date(Date.now() - 25 * 3600000).toISOString();
+    window.renderMyReqs();
+  });
+  await expect(edit).toHaveCount(0);
+});
+
 test('inpatient supervisor can manage Hide rules without unauthorized login-time writes', async ({ page }) => {
   await page.goto('/');
   await expect(page.locator('html')).toHaveAttribute('data-asdh-modules', 'ready');
@@ -263,4 +308,3 @@ test('temporary Accountability QR page records one party and completes after the
   await expect(page.locator('#handover-status')).toContainText('Handover completed');
   await expect(page.locator('#handover-form')).toHaveClass(/handover-hidden/);
 });
-

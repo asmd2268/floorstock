@@ -23,6 +23,12 @@ import {
   canDeleteStateKey,
 } from '../public/assets/js/core/role-capabilities.js';
 import { planFor, subscriptionIsWritable } from '../public/assets/js/core/subscription-plans.js';
+import {
+  DEFAULT_FULFILLMENT_EDIT_HOURS,
+  canEditFulfillment,
+  fulfillmentEditDeadline,
+  normalizeFulfillmentEditHours,
+} from '../public/assets/js/core/fulfillment-edit-policy.js';
 import { APPLICATION_STATE_KEYS, mayWriteState } from './firestore-rules/application-state-keys.js';
 
 const indexSource = fs.readFileSync(
@@ -68,6 +74,10 @@ const inventoryStatusSource = fs.readFileSync(
 );
 const securityRuntimeSource = fs.readFileSync(
   new URL('../public/assets/js/modules/59-r664-security-complete-runtime.js', import.meta.url),
+  'utf8',
+);
+const fulfillmentSettingsSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/67-r676-fulfillment-edit-settings.js', import.meta.url),
   'utf8',
 );
 const startupRepairSource = fs.readFileSync(
@@ -180,7 +190,8 @@ test('Requests page actions use CSP-safe delegated event bindings', () => {
   assert.match(requestEnhancementSource, /requestAction='v16-edit'/);
   assert.match(requestEnhancementSource, /requestAction='v16-delete'/);
   assert.match(requestEnhancementSource, /control\.addEventListener\(control\.tagName==='INPUT'\?'input':'change',window\.v16FilterRequests\)/);
-  assert.match(requestEnhancementSource, /\[data-request-action="master-delete"\],\[data-request-action="edit-fulfillment"\]/);
+  assert.match(requestEnhancementSource, /\[data-request-action="master-delete"\]/);
+  assert.doesNotMatch(requestEnhancementSource, /master-delete"\],\[data-request-action="edit-fulfillment/);
 });
 
 test('department login hydrates its directory before assignment validation and scopes local cache per account', () => {
@@ -313,6 +324,38 @@ test('request editing follows the department current open window and stops after
   assert.match(persistenceSource, /editUntil:Number\.isFinite\(deadline\)/);
 });
 
+test('fulfilled dispensing edits use the permanent 24-hour policy and exact role scope', () => {
+  const request = { status: 'fulfilled', deptId: 'dept-a', fulfilledAt: '2026-08-01T10:00:00.000Z' };
+  assert.equal(DEFAULT_FULFILLMENT_EDIT_HOURS, 24);
+  assert.equal(normalizeFulfillmentEditHours(undefined), 24);
+  assert.equal(normalizeFulfillmentEditHours({ hours: 12.5 }), 12.5);
+  assert.equal(fulfillmentEditDeadline(request, undefined), Date.parse('2026-08-02T10:00:00.000Z'));
+  assert.equal(canEditFulfillment(request, { role: 'inpatient_supervisor' }, undefined, '2026-08-02T09:59:59.999Z'), true);
+  assert.equal(canEditFulfillment(request, { role: 'inpatient_supervisor' }, undefined, '2026-08-02T10:00:00.001Z'), false);
+  assert.equal(canEditFulfillment(request, { role: 'department', deptId: 'dept-a' }, undefined, '2026-08-01T11:00:00.000Z'), true);
+  assert.equal(canEditFulfillment(request, { role: 'department', deptId: 'dept-b' }, undefined, '2026-08-01T11:00:00.000Z'), false);
+  assert.equal(canEditFulfillment(request, { role: 'pharmacy', allowedDepartmentIds: ['dept-a'] }, { hours: 1 }, '2026-08-01T10:30:00.000Z'), true);
+  assert.equal(canEditFulfillment(request, { role: 'pharmacy', allowedDepartmentIds: ['dept-b'] }, { hours: 1 }, '2026-08-01T10:30:00.000Z'), false);
+  assert.equal(canEditFulfillment(request, { role: 'pharmacy_staff' }, { hours: 1 }, '2026-08-01T10:30:00.000Z'), true);
+  assert.equal(canEditFulfillment(request, { role: 'warehouse' }, undefined, '2026-08-01T11:00:00.000Z'), false);
+  assert.equal(canEditFulfillment(request, { role: 'pharmacy', master: true }, { hours: 0 }, '2030-08-01T11:00:00.000Z'), true);
+  assert.equal(canEditFulfillment({ ...request, status: 'pending' }, { role: 'pharmacy', master: true }, undefined, '2026-08-01T11:00:00.000Z'), false);
+  assert.equal(canWriteStateKey({ role: 'pharmacy', master: true }, 'fulfillment_edit_settings_v1'), true);
+  assert.equal(canWriteStateKey({ role: 'pharmacy' }, 'fulfillment_edit_settings_v1'), false);
+  assert.match(requestSource, /canEditFulfillmentRequest/);
+  assert.match(persistenceSource, /request_fulfillment_edited/);
+  assert.match(persistenceSource, /fulfillmentEditRevision/);
+  assert.match(fulfillmentSettingsSource, /S\.s\(FULFILLMENT_EDIT_SETTINGS_KEY/);
+  assert.match(fulfillmentSettingsSource, /fulfillment_edit_window_changed/);
+});
+
+test('external pharmacy supervisor is a distinct assignable role with scoped fulfillment access', () => {
+  assert.equal(normalizeRole('external pharmacy supervisor'), 'outpatient_pharmacy_supervisor');
+  assert.equal(hasCapability({ role: 'outpatient_pharmacy_supervisor' }, 'requests.manage'), true);
+  assert.equal(canEditFulfillment({ status: 'fulfilled', fulfilledAt: '2026-08-02T10:00:00.000Z', deptId: 'outpatient' }, { role: 'outpatient_pharmacy_supervisor', deptId: 'outpatient' }, { hours: 24 }, '2026-08-02T11:00:00.000Z'), true);
+  assert.equal(canEditFulfillment({ status: 'fulfilled', fulfilledAt: '2026-08-02T10:00:00.000Z', deptId: 'other' }, { role: 'outpatient_pharmacy_supervisor', deptId: 'outpatient' }, { hours: 24 }, '2026-08-02T11:00:00.000Z'), false);
+});
+
 
 test('Crash Cart reports deduct immediately and replacement does not deduct twice', () => {
   assert.match(crashReportSource, /inventoryDeductedAtReport:true/);
@@ -410,6 +453,22 @@ test('Print Orders uses a CSP-safe external runtime and creates a PDF matching t
   assert.match(printOrdersRuntimeSource, /async function runStart\(\)/);
   assert.match(printOrdersRuntimeSource, /Print preparation failed:/);
   assert.match(printOrdersRuntimeSource, /Print preparation timed out/);
+});
+
+test('QR print pages wait for decoded QR images and stop on non-scannable fallback', () => {
+  assert.match(localQrRuntimeSource, /function printRuntimeScript\(options\)/);
+  assert.match(localQrRuntimeSource, /img\.naturalWidth>0/);
+  assert.match(localQrRuntimeSource, /QR image load timed out/);
+  assert.match(localQrRuntimeSource, /automatic printing was stopped/);
+  assert.match(localQrRuntimeSource, /data-qr-state/);
+  assert.match(usersSource, /ASD_QR\.printRuntimeScript\(\{closeAfter:true\}\)/);
+  assert.match(usersSource, /shelfQrPrintRuntime/);
+  assert.match(accountabilitySource, /qrPrintRuntime/);
+  assert.match(crashPrintSource, /data-qr-print-button disabled/);
+  assert.match(crashPrintSource, /ASD_QR\.printRuntimeScript/);
+  assert.doesNotMatch(crashPrintSource, /image\.onerror=go|setTimeout\(go,2200\)/);
+  assert.match(controlledCustodySource, /showQrFailure/);
+  assert.match(controlledCustodySource, /QR generator returned a placeholder/);
 });
 
 
@@ -538,7 +597,8 @@ test('department Shelves always exposes CSP-safe print controls for its own depa
   assert.match(usersSource, /shelfPrintTop\.onclick=printShelfList/);
   assert.match(usersSource, /printRole!=='department'/);
   assert.match(usersSource, /getMeds\(deptId\)/);
-  assert.match(usersSource, /pw\.focus\(\);pw\.print\(\)/);
+  assert.match(usersSource, /shelfQrPrintRuntime/);
+  assert.match(usersSource, /ASD_QR\.printRuntimeScript/);
   assert.doesNotMatch(usersSource, /<script>setTimeout\(function\(\)\{window\.print/);
 });
 

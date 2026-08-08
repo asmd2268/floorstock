@@ -42,6 +42,7 @@ const profiles = {
   },
   pharmacy_staff: { active: true, role: 'pharmacy_staff', master: false },
   inpatient_supervisor: { active: true, role: 'inpatient_supervisor', master: false },
+  outpatient_pharmacy_supervisor: { active: true, role: 'outpatient_pharmacy_supervisor', master: false },
   controlled_pharmacy: { active: true, role: 'controlled_pharmacy', master: false },
   warehouse: { active: true, role: 'warehouse', master: false },
   pharmacy: { active: true, role: 'pharmacy', master: false },
@@ -59,6 +60,7 @@ const activeRoles = [
   'custodian',
   'pharmacy_staff',
   'inpatient_supervisor',
+  'outpatient_pharmacy_supervisor',
   'controlled_pharmacy',
   'warehouse',
   'pharmacy',
@@ -222,7 +224,10 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     test(`${role} has the expected write result for every application state key`, async () => {
       const db = dbFor(role);
       for (const key of APPLICATION_STATE_KEYS) {
-        const operation = setDoc(doc(db, 'floorstock_state', key), statePayload({ role, key }));
+        const value = key === 'fulfillment_edit_settings_v1'
+          ? { hours: 24, updatedAt: new Date().toISOString(), updatedBy: role, updatedById: role }
+          : { role, key };
+        const operation = setDoc(doc(db, 'floorstock_state', key), statePayload(value));
         if (mayWriteState(role, key)) await assertSucceeds(operation);
         else await assertFails(operation);
       }
@@ -267,6 +272,17 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     await assertFails(setDoc(doc(db, 'floorstock_state', 'theme'), { value: 'dark', updatedAt: 'now' }));
     await assertFails(setDoc(doc(db, 'floorstock_state', 'theme'), { ...statePayload('dark'), extra: true }));
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'theme'), statePayload('dark')));
+  });
+
+  test('only Master may persist a valid fulfillment editing window', async () => {
+    const key = 'fulfillment_edit_settings_v1';
+    const valid = statePayload({ hours: 24, updatedAt: new Date().toISOString(), updatedBy: 'Master', updatedById: 'master' });
+    await assertSucceeds(setDoc(doc(dbFor('master'), 'floorstock_state', key), valid));
+    await assertFails(setDoc(doc(dbFor('pharmacy'), 'floorstock_state', key), valid));
+    await assertFails(setDoc(doc(dbFor('inpatient_supervisor'), 'floorstock_state', key), valid));
+    await assertFails(setDoc(doc(dbFor('department'), 'floorstock_state', key), valid));
+    await assertFails(setDoc(doc(dbFor('master'), 'floorstock_state', key), statePayload({ hours: -1 })));
+    await assertFails(setDoc(doc(dbFor('master'), 'floorstock_state', key), statePayload({ hours: 9000 })));
   });
 
   test('only pharmacy director and master may delete ordinary state documents', async () => {

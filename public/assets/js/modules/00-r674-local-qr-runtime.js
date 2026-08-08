@@ -49,6 +49,10 @@ function createQrDataUrl(text,options){
   }
 }
 
+function isPlaceholder(source){
+  return /^data:image\/svg\+xml/i.test(String(source||''));
+}
+
 function createQrSvg(text,options){
   options=options||{};
   try{
@@ -71,7 +75,7 @@ function imageMarkup(text,options){
   var source=createQrDataUrl(text,options);
   var width=Math.max(24,Number(options.width)||120);
   var height=Math.max(24,Number(options.height)||width);
-  return '<img class="asd-qr-image" src="'+escapeXml(source)+'" width="'+width+'" height="'+height+'" alt="'+escapeXml(options.alt||'QR code')+'">';
+  return '<img class="asd-qr-image" data-qr-state="'+(isPlaceholder(source)?'unavailable':'ready')+'" src="'+escapeXml(source)+'" width="'+width+'" height="'+height+'" alt="'+escapeXml(options.alt||'QR code')+'">';
 }
 
 function renderQr(target,text,options){
@@ -81,11 +85,24 @@ function renderQr(target,text,options){
   if(element.tagName==='IMG'){
     element.classList.add('asd-qr-image');
     element.src=createQrDataUrl(text,options);
+    element.dataset.qrState=isPlaceholder(element.src)?'unavailable':'ready';
     element.alt=String(options.alt||'QR code');
     return true;
   }
   element.innerHTML=imageMarkup(text,options);
   return true;
+}
+
+function printRuntimeScript(options){
+  options=options||{};
+  var closeAfter=options.closeAfter===true;
+  var timeout=Math.max(1000,Number(options.timeout)||5000);
+  return '(function(){var printed=false,timeout='+JSON.stringify(timeout)+',closeAfter='+JSON.stringify(closeAfter)+';'+
+    'function unavailable(img){return img.dataset.qrState==="unavailable"||/^data:image\\/svg\\+xml/i.test(img.getAttribute("src")||"")}'+
+    'function fail(message){document.body.dataset.qrPrint="failed";var imgs=Array.from(document.querySelectorAll("img.asd-qr-image"));imgs.forEach(function(img){if(unavailable(img))img.style.display="none"});var box=document.getElementById("asd-qr-print-error");if(!box){box=document.createElement("div");box.id="asd-qr-print-error";box.setAttribute("role","alert");box.style.cssText="margin:12px;padding:12px;border:2px solid #b42318;background:#fff1f0;color:#7a271a;font:700 13px Arial;text-align:center";box.innerHTML="QR generation failed; automatic printing was stopped because the code would not be scannable.<br>تعذر إنشاء رمز QR، وتم إيقاف الطباعة التلقائية لأن الرمز لن يكون قابلاً للمسح.<br><button type=\\"button\\" style=\\"margin-top:8px;padding:7px 12px\\">Print without QR / طباعة بدون QR</button>";document.body.insertBefore(box,document.body.firstChild);box.querySelector("button").onclick=function(){window.focus();window.print()}}console.error(message||"Printable QR unavailable")}'+
+    'function ready(img){return new Promise(function(resolve,reject){if(unavailable(img))return reject(new Error("QR generator returned a placeholder"));if(img.complete)return img.naturalWidth>0?resolve():reject(new Error("QR image failed to decode"));var done=false,timer=setTimeout(function(){if(done)return;done=true;reject(new Error("QR image load timed out"))},timeout);img.addEventListener("load",function(){if(done)return;done=true;clearTimeout(timer);img.naturalWidth>0?resolve():reject(new Error("QR image failed to decode"))},{once:true});img.addEventListener("error",function(){if(done)return;done=true;clearTimeout(timer);reject(new Error("QR image failed to load"))},{once:true})})}'+
+    'function start(){var manual=document.querySelector("[data-qr-print-button]");if(manual){manual.disabled=true;manual.onclick=null}var imgs=Array.from(document.querySelectorAll("img.asd-qr-image"));if(!imgs.length)return fail("No QR image was rendered");Promise.all(imgs.map(ready)).then(function(){document.body.dataset.qrPrint="ready";if(manual){manual.disabled=false;manual.onclick=function(){window.focus();window.print()}}if(printed)return;printed=true;setTimeout(function(){window.focus();window.print();if(closeAfter)setTimeout(function(){window.close()},50)},100)}).catch(function(error){fail(error&&error.message)})}'+
+    'if(document.readyState==="complete")start();else window.addEventListener("load",start,{once:true})})();';
 }
 
 var api=Object.freeze({
@@ -94,6 +111,8 @@ var api=Object.freeze({
   imageMarkup:imageMarkup,
   render:renderQr,
   placeholderDataUrl:placeholderDataUrl,
+  isPlaceholder:isPlaceholder,
+  printRuntimeScript:printRuntimeScript,
   available:function(){return typeof window.qrcode==='function'}
 });
 

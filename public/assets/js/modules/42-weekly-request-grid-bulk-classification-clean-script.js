@@ -378,12 +378,17 @@ async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
     await floorstockDeletionStep(
       report,
       'Delete official department record',
-      function(){return S.del('departments',id);}
+      function(){
+        var remaining=(S.g('departments')||[]).filter(function(department){
+          return String(department&&department.id||'')!==String(id);
+        });
+        return S.s('departments',remaining);
+      }
     );
   }
 
   var officialRemaining=(S.g('departments')||[]).some(function(department){
-    return matches(department&&department.id);
+    return String(department&&department.id||'')===String(id);
   });
   if(removeOfficial&&officialRemaining){
     var verifyError=new Error(

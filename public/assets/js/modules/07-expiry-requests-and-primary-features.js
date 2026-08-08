@@ -33,7 +33,7 @@ function renderUsers(){
   el('utbl').innerHTML=us.length
     ?us.map(function(u){
       var d=ds.find(function(x){return x.id===u.deptId});
-      var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department'))));
+      var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='outpatient_pharmacy_supervisor'?'Outpatient Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department')))));
       var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
       var actions='';
       if(CU&&CU.master===true&&u.id!==CU.id){
@@ -93,7 +93,7 @@ function bindUserPageActions(){
 }
 function updateUserRoleFields(){
   var role=el('nurole').value;
-  el('nudept-wrap').style.display=(role==='department')?'block':'none';
+  el('nudept-wrap').style.display=(role==='department'||role==='outpatient_pharmacy_supervisor')?'block':'none';
   el('numaster-wrap').style.display=(isMasterActual()&&role==='pharmacy')?'block':'none';
   if(role!=='pharmacy')el('numaster').checked=false;
 }
@@ -137,11 +137,11 @@ async function saveUser(){
   if(grantMaster&&gu().some(function(u){return u.master===true}))return toast('Only one Master user is allowed.','err');
   if(!email||!password)return toast('Fill all fields','err');
   if(password.length<8)return toast('Password must be at least 8 characters','err');
-  if((requestedRole==='department')&&!did)return toast('Create a department first, then choose it for this user.','err');
+  if((requestedRole==='department'||requestedRole==='outpatient_pharmacy_supervisor')&&!did)return toast('Choose the supervisor department before creating this user.','err');
   if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
   try{
     var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('createManagedUser');
-    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department')?did:null,master:grantMaster});
+    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='outpatient_pharmacy_supervisor')?did:null,master:grantMaster});
     toast('Firebase user created securely ✓','succ');CM('muser');
     await S.loadUsers();renderUsers();
   }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}
@@ -174,11 +174,17 @@ function renderAn(){
   var to=p==='custom'?new Date(el('rto').value||now):now;
   var archived=S.g('request_analytics_archive')||[];
   var rs=gr().concat(archived).filter(function(r){if(r.status==='pending')return false;var d=new Date(r.created||0);return(!df||r.deptId===df)&&d>=from&&d<=to});
+  var catalog={};gd().forEach(function(dep){getMeds(dep.id).forEach(function(m){var key=String(m.name||'').trim().toLowerCase()+'|'+String(m.concentration||m.strength||'').trim().toLowerCase();catalog[dep.id+'|'+m.id]={name:m.name||m.id,key:key,high_alert:!!m.high_alert}})});
+  var compare={};rs.forEach(function(r){(r.dispensed||[]).forEach(function(line){var qty=Number(line.qty)||0,meta=catalog[r.deptId+'|'+line.medId];if(qty<=0||!meta)return;var c=compare[meta.key]||(compare[meta.key]={name:meta.name,departments:{},total:0,orders:0});c.total+=qty;c.orders++;c.departments[r.deptId]=(c.departments[r.deptId]||0)+qty})});
+  var search=el('analytics-item-search');if(search&&!search.dataset.bound){search.dataset.bound='1';search.addEventListener('input',renderAn)}
+  var needle=search?String(search.value||'').trim().toLowerCase():'';var matches=Object.keys(compare).map(function(k){return compare[k]}).filter(function(c){return !needle||c.name.toLowerCase().indexOf(needle)>=0});
+  var compareHost=el('analytics-item-compare');if(compareHost){compareHost.innerHTML=matches.length?matches.sort(function(a,b){return b.total-a.total}).slice(0,20).map(function(c){var rows=Object.keys(c.departments).sort(function(a,b){return c.departments[b]-c.departments[a]}).map(function(d){var dep=gd().find(function(x){return String(x.id)===String(d)}),q=c.departments[d];return '<tr><td>'+esc(dep?dep.name:d)+'</td><td style="text-align:right;font-family:var(--mono)">'+q+'</td><td style="text-align:right;font-family:var(--mono)">'+(c.total?Math.round(q/c.total*1000)/10:0)+'%</td></tr>'}).join('');return '<div class="card" style="margin-top:10px"><div class="ch"><span class="ct">'+esc(c.name)+'</span><span class="ss">Total '+c.total+' · '+c.orders+' orders</span></div><div class="tw"><table><thead><tr><th>Department</th><th style="text-align:right">Quantity</th><th style="text-align:right">Share</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'}).join(''):'<div style="padding:12px;color:var(--tx2)">'+(needle?'No matching item in the selected period.':'Type an item name to compare department consumption.')+'</div>'}
   var tot={};
   rs.forEach(function(r){(r.dispensed||[]).forEach(function(d){if(d.qty>0)tot[d.medId]=(tot[d.medId]||0)+d.qty})});
   var srt=Object.keys(tot).map(function(k){return[k,tot[k]]}).sort(function(a,b){return b[1]-a[1]});
-  // For analytics, combine meds from all depts
-  var allMs=gd().reduce(function(acc,d){return acc.concat(getMeds(d.id));},[]);
+  // Keep the medication catalog in the same department scope as the request filter.
+  // Without this, Zero Dispense mixed every department's catalog into the selected one.
+  var allMs=df?getMeds(df):gd().reduce(function(acc,d){return acc.concat(getMeds(d.id));},[]);
   var t10=srt.slice(0,10),mx1=t10[0]?t10[0][1]:1;
   el('ctop').innerHTML=t10.length
     ?t10.map(function(e){var m=allMs.find(function(x){return x.id===e[0]});return '<div class="brow"><div class="blbl" title="'+(m?m.name:e[0])+'">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx1*100)+'%;background:var(--ac)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
@@ -191,6 +197,10 @@ function renderAn(){
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
   var usedIds=Object.keys(tot);
   var zero=allMs.filter(function(m){return usedIds.indexOf(m.id)<0});
+  var zc=el('azero-count'),au=el('analytics-units'),ar=el('analytics-requests');
+  if(zc)zc.textContent=zero.length;
+  if(au)au.textContent=Object.keys(tot).reduce(function(s,k){return s+Number(tot[k]||0)},0);
+  if(ar)ar.textContent=rs.length;
   el('ztbl').innerHTML=zero.length
     ?zero.map(function(m){return '<tr><td>'+m.name+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
     :'<tr><td colspan="5" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
@@ -656,6 +666,7 @@ async function doDeptPrint(){
     var userName=CU.username;
     var qrUrl=window.makeReadableQR(getAppUrl());
     var qrExpUrl=window.makeReadableQR(getPublicExpiryUrl(deptId));
+    var qrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript({closeAfter:true}):'';
     var expiryPrintBlock='<div style="text-align:center;max-width:260px;margin:18px auto 8px;padding:10px;border:1px solid #bbb;border-radius:6px;page-break-inside:avoid"><div style="font-size:8pt;font-weight:700;margin-bottom:5px">Expiry Monitor / متابعة الصلاحية</div><img class="asd-qr-image" src="'+qrExpUrl+'" width="110" height="110" alt="Expiry monitor QR code"><div style="font-size:7pt;color:#555;margin-top:3px">Scan to open the public expiry monitor</div></div>';
 
     var grp={};
@@ -777,7 +788,7 @@ async function doDeptPrint(){
       +'@page{counter-increment:page;} @media print{'
       +'#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}'
       +'}";document.head.appendChild(s);}'
-      +'setTimeout(function(){window.print();window.close();},600);'
+      +qrPrintRuntime
       +'<\/script></body></html>'
     );
     pw.document.close();
@@ -885,6 +896,7 @@ function printShelfList(){
   });
   var qrUrl=window.makeReadableQR(getPublicExpiryUrl(deptId));
   var qrSiteUrl=window.makeReadableQR(getAppUrl());
+  var shelfQrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript():'';
   var rows='';
   Object.keys(byShelf).sort().forEach(function(sid){
     var shelf=sid==='__none__'?{name:'Unassigned / &#x63A;&#x64A;&#x631; &#x645;&#x639;&#x64A;&#x646;'}:shelves.find(function(s){return s.id===sid});
@@ -951,9 +963,8 @@ function printShelfList(){
     +'<span>'+deptName+' — Floor Stock — '+today+' — By Ali Abudahash</span>'
     +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76">'
     +'</div>'
-    +'</body></html>');
+    +'<script>'+shelfQrPrintRuntime+'<\/script></body></html>');
   pw.document.close();
-  setTimeout(function(){try{if(!pw.closed){pw.focus();pw.print()}}catch(error){console.error('Shelf print failed',error);toast('Unable to open the shelf print dialog. / تعذر فتح نافذة طباعة الأرفف.','err')}},650);
   return true;
 }
 
@@ -2159,6 +2170,7 @@ function canManageUsers(){return isPharmacyDirector()&&!MASTER_EFFECTIVE}
 function masterRoleLabel(role){
   return role==='pharmacy'?'Pharmacy Director / مدير الصيدلية'
     :role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم'
+    :role==='outpatient_pharmacy_supervisor'?'Outpatient Pharmacy Supervisor / مشرف الصيدلية الخارجية'
     :role==='pharmacy_staff'?'Pharmacy Employee / موظف صيدلية'
     :role==='controlled_pharmacy'?'Controlled Medicines Pharmacy Officer / مسؤول الأدوية الخاضعة للرقابة'
     :role==='warehouse'?'Warehouse Custody Officer / مسؤول عهدة المستودع'
@@ -2193,6 +2205,7 @@ function startApp(){
       :CU.role==='controlled_pharmacy'?'🔒 Controlled Medicines Pharmacy Officer'
       :CU.role==='warehouse'?'📦 Warehouse Custody Officer'
       :CU.role==='inpatient_supervisor'?'🏥 Inpatient Pharmacy Supervisor'
+      :CU.role==='outpatient_pharmacy_supervisor'?'🏥 Outpatient Pharmacy Supervisor'
       :CU.role==='pharmacy_staff'?'💊 Pharmacy Staff'
       :'🏢 '+CU.deptName;
     rb.className='trole '+(['pharmacy','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>=0?'rph':'rdp');

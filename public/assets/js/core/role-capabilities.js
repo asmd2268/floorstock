@@ -6,6 +6,10 @@ const ROLE_ALIASES = Object.freeze({
   'inpatient-pharmacy-supervisor': 'inpatient_supervisor',
   'inpatient pharmacy supervisor': 'inpatient_supervisor',
   inpatient_supervisor: 'inpatient_supervisor',
+  external_pharmacy_supervisor: 'outpatient_pharmacy_supervisor',
+  outpatient_pharmacy_supervisor: 'outpatient_pharmacy_supervisor',
+  'external pharmacy supervisor': 'outpatient_pharmacy_supervisor',
+  'outpatient pharmacy supervisor': 'outpatient_pharmacy_supervisor',
   pharmacy_staff: 'pharmacy_staff',
   controlled_pharmacy: 'controlled_pharmacy',
   department: 'department',
@@ -47,11 +51,11 @@ export function hasCapability(profile, capability) {
   const capabilities = {
     'inventory.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff'],
     'inventory.manage': ['pharmacy', 'inpatient_supervisor'],
-    'requests.manage': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff'],
-    'schedule.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff'],
+    'requests.manage': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor'],
+    'schedule.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor'],
     'schedule.manage': ['pharmacy'],
-    'crashCart.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'department'],
-    'crashCart.operate': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff'],
+    'crashCart.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor', 'department'],
+    'crashCart.operate': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor'],
     'crashCart.configure': ['pharmacy', 'inpatient_supervisor'],
     'crashCart.delete': ['pharmacy'],
     'accountability.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'department', 'controlled_pharmacy'],
@@ -69,6 +73,7 @@ export function canWriteStateKey(profile, key) {
   const role = normalizeRole(user.role);
   const value = String(key || '');
   const master = user.master === true;
+  if (value === 'fulfillment_edit_settings_v1') return master;
   if (master || role === 'pharmacy') return true;
   if (value === 'theme' || value === 'audit_log') return true;
 
@@ -77,6 +82,9 @@ export function canWriteStateKey(profile, key) {
   }
   if (role === 'pharmacy_staff') {
     return /^(crash_carts$|crash_cart_reports$|accountability_.*|requests$|notes$|dept_notes$|request_analytics_archive$|audit_log$|theme$)/.test(value);
+  }
+  if (role === 'outpatient_pharmacy_supervisor') {
+    return /^(crash_carts$|crash_cart_reports$|requests$|notes$|dept_notes$|request_analytics_archive$|audit_log$|theme$)/.test(value);
   }
   if (role === 'controlled_pharmacy') {
     return /^(controlled_.*|accountability_.*|audit_log$|theme$)/.test(value);
@@ -109,4 +117,3 @@ export function canDeleteStateKey(profile, key) {
   }
   return false;
 }
-
