@@ -33,7 +33,7 @@ function renderUsers(){
   el('utbl').innerHTML=us.length
     ?us.map(function(u){
       var d=ds.find(function(x){return x.id===u.deptId});
-      var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='external_pharmacy_supervisor'?'External Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department')))));
+      var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='outpatient_pharmacy_supervisor'?'Outpatient Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department')))));
       var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
       var actions='';
       if(CU&&CU.master===true&&u.id!==CU.id){
@@ -93,7 +93,7 @@ function bindUserPageActions(){
 }
 function updateUserRoleFields(){
   var role=el('nurole').value;
-  el('nudept-wrap').style.display=(role==='department'||role==='external_pharmacy_supervisor')?'block':'none';
+  el('nudept-wrap').style.display=(role==='department'||role==='outpatient_pharmacy_supervisor')?'block':'none';
   el('numaster-wrap').style.display=(isMasterActual()&&role==='pharmacy')?'block':'none';
   if(role!=='pharmacy')el('numaster').checked=false;
 }
@@ -137,11 +137,11 @@ async function saveUser(){
   if(grantMaster&&gu().some(function(u){return u.master===true}))return toast('Only one Master user is allowed.','err');
   if(!email||!password)return toast('Fill all fields','err');
   if(password.length<8)return toast('Password must be at least 8 characters','err');
-  if((requestedRole==='department'||requestedRole==='external_pharmacy_supervisor')&&!did)return toast('Choose the supervisor department before creating this user.','err');
+  if((requestedRole==='department'||requestedRole==='outpatient_pharmacy_supervisor')&&!did)return toast('Choose the supervisor department before creating this user.','err');
   if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
   try{
     var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('createManagedUser');
-    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='external_pharmacy_supervisor')?did:null,master:grantMaster});
+    var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='outpatient_pharmacy_supervisor')?did:null,master:grantMaster});
     toast('Firebase user created securely ✓','succ');CM('muser');
     await S.loadUsers();renderUsers();
   }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}
@@ -177,8 +177,9 @@ function renderAn(){
   var tot={};
   rs.forEach(function(r){(r.dispensed||[]).forEach(function(d){if(d.qty>0)tot[d.medId]=(tot[d.medId]||0)+d.qty})});
   var srt=Object.keys(tot).map(function(k){return[k,tot[k]]}).sort(function(a,b){return b[1]-a[1]});
-  // For analytics, combine meds from all depts
-  var allMs=gd().reduce(function(acc,d){return acc.concat(getMeds(d.id));},[]);
+  // Keep the medication catalog in the same department scope as the request filter.
+  // Without this, Zero Dispense mixed every department's catalog into the selected one.
+  var allMs=df?getMeds(df):gd().reduce(function(acc,d){return acc.concat(getMeds(d.id));},[]);
   var t10=srt.slice(0,10),mx1=t10[0]?t10[0][1]:1;
   el('ctop').innerHTML=t10.length
     ?t10.map(function(e){var m=allMs.find(function(x){return x.id===e[0]});return '<div class="brow"><div class="blbl" title="'+(m?m.name:e[0])+'">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx1*100)+'%;background:var(--ac)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
@@ -191,6 +192,10 @@ function renderAn(){
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
   var usedIds=Object.keys(tot);
   var zero=allMs.filter(function(m){return usedIds.indexOf(m.id)<0});
+  var zc=el('azero-count'),au=el('analytics-units'),ar=el('analytics-requests');
+  if(zc)zc.textContent=zero.length;
+  if(au)au.textContent=Object.keys(tot).reduce(function(s,k){return s+Number(tot[k]||0)},0);
+  if(ar)ar.textContent=rs.length;
   el('ztbl').innerHTML=zero.length
     ?zero.map(function(m){return '<tr><td>'+m.name+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
     :'<tr><td colspan="5" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
@@ -2160,7 +2165,7 @@ function canManageUsers(){return isPharmacyDirector()&&!MASTER_EFFECTIVE}
 function masterRoleLabel(role){
   return role==='pharmacy'?'Pharmacy Director / مدير الصيدلية'
     :role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم'
-    :role==='external_pharmacy_supervisor'?'External Pharmacy Supervisor / مشرف الصيدلية الخارجية'
+    :role==='outpatient_pharmacy_supervisor'?'Outpatient Pharmacy Supervisor / مشرف الصيدلية الخارجية'
     :role==='pharmacy_staff'?'Pharmacy Employee / موظف صيدلية'
     :role==='controlled_pharmacy'?'Controlled Medicines Pharmacy Officer / مسؤول الأدوية الخاضعة للرقابة'
     :role==='warehouse'?'Warehouse Custody Officer / مسؤول عهدة المستودع'
@@ -2195,7 +2200,7 @@ function startApp(){
       :CU.role==='controlled_pharmacy'?'🔒 Controlled Medicines Pharmacy Officer'
       :CU.role==='warehouse'?'📦 Warehouse Custody Officer'
       :CU.role==='inpatient_supervisor'?'🏥 Inpatient Pharmacy Supervisor'
-      :CU.role==='external_pharmacy_supervisor'?'🏥 External Pharmacy Supervisor'
+      :CU.role==='outpatient_pharmacy_supervisor'?'🏥 Outpatient Pharmacy Supervisor'
       :CU.role==='pharmacy_staff'?'💊 Pharmacy Staff'
       :'🏢 '+CU.deptName;
     rb.className='trole '+(['pharmacy','controlled_pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>=0?'rph':'rdp');
