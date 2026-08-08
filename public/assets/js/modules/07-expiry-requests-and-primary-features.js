@@ -1071,8 +1071,11 @@ function renderPharmNotes(){
   // Populate dept filter
   var dsel=el('notes-filter-dept');
   if(dsel&&dsel.options.length<=1){
-    gd().forEach(function(d){dsel.innerHTML+='<option value="'+noteEsc(d.id)+'">'+noteEsc(d.name)+'</option>';});
+    var noteDeps=gd(),noteRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+    if(noteRole==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var od=window.fsOutpatientDeptId();noteDeps=noteDeps.filter(function(d){return String(d.id)===String(od)})}
+    noteDeps.forEach(function(d){dsel.innerHTML+='<option value="'+noteEsc(d.id)+'">'+noteEsc(d.name)+'</option>';});
   }
+  if(dsel&&window.fsEffectiveRole&&window.fsEffectiveRole()==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){dsel.value=window.fsOutpatientDeptId();dsel.disabled=true}
   var deptF=(el('notes-filter-dept')||{value:''}).value||'';
   var typeF=(el('notes-filter-type')||{value:''}).value||'';
   var statusF=(el('notes-filter-status')||{value:''}).value||'';
@@ -2424,7 +2427,8 @@ window.runExpiryStartupAlert=function(){
       if(days!==null&&days<=cfg.d2){alerts.push(dept.name+': '+m.name+' ('+days+'d)');}
     });
   });
-  if(alerts.length)toast('⚠ Expiry alert: '+alerts.slice(0,3).join(', ')+(alerts.length>3?' +more':''),'info');
+  var alertRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+  if(alerts.length&&['pharmacy','pharmacy_manager','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(alertRole)<0)toast('⚠ Expiry alert: '+alerts.slice(0,3).join(', ')+(alerts.length>3?' +more':''),'info');
 };
 
 
