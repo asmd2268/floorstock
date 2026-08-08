@@ -222,7 +222,7 @@ function acc2Usage(){var a=acc2Array(ACC2_USAGE_KEY),d=acc2ScopeDept();return d?
 function acc2Receipts(){return acc2Array(ACC2_RECEIPTS_KEY)}
 function acc2Regimens(){return acc2Array(ACC2_REGIMENS_KEY)}
 function acc2EffectiveMaster(){return master()&&!window.MASTER_EFFECTIVE}
-function canAccManage(){return window.fsHasCapability?window.fsHasCapability('accountability.manage'):(acc2EffectiveMaster()||['pharmacy','inpatient_supervisor','pharmacy_staff','outpatient_pharmacy_supervisor'].indexOf(role())>=0)}
+function canAccManage(){return role()==='outpatient_pharmacy_supervisor'||(window.fsHasCapability?window.fsHasCapability('accountability.manage'):(acc2EffectiveMaster()||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(role())>=0))}
 function acc2DepartmentRole(){return role()==='department'}
 function acc2StatusLabel(status){return {pending_pharmacy:'Pending pharmacy review / بانتظار مراجعة الصيدلية',approved_waiting_receipt:'Approved — waiting nursing receipt / معتمد وبانتظار الاستلام',received_locked:'Received and locked / تم الاستلام والإقفال',rejected:'Rejected / مرفوض'}[status]||status}
 function acc2StatusClass(status){return status==='received_locked'?'bgn':status==='approved_waiting_receipt'?'bbl':status==='rejected'?'brd':'byl'}
