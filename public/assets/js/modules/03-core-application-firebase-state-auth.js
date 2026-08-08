@@ -1597,7 +1597,8 @@ function renderInv(){
   var fil=ms.filter(function(m){
     var zero6=Number(m.stockQty!=null?m.stockQty:(m.currentStock!=null?m.currentStock:(m.availableQty!=null?m.availableQty:0)))<=0&&(!lastDispense(m)||lastDispense(m)<=sixMonths);
     var neverExpiry=hasExpiry(m)&&!wasRequested(m);
-    return(!srch||m.name.toLowerCase().indexOf(srch)>-1)&&(!catf||m.category===catf)&&(!clsf||m[clsf])&&(!special||special==='__zero_6m__'&&zero6||special==='__expiry_never_requested__'&&neverExpiry);
+    var expiryQty=(getExpiry(deptId)||[]).filter(function(x){return String(x.medId)===String(m.id)}).reduce(function(s,x){return s+Number(x.qty)||0},0),zeroStock=Number(m.stockQty!=null?m.stockQty:(m.currentStock!=null?m.currentStock:(m.availableQty!=null?m.availableQty:expiryQty)))<=0;
+    return(!srch||m.name.toLowerCase().indexOf(srch)>-1)&&(!catf||m.category===catf)&&(!clsf||m[clsf])&&(!special||special==='__zero_stock__'&&zeroStock||special==='__zero_6m__'&&zero6||special==='__expiry_never_requested__'&&neverExpiry);
   });
 
   // Duplicate detection
