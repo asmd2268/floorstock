@@ -1509,9 +1509,10 @@ function renderDash(){
   var expired=expAlerts.filter(function(e){return e.days<=0});
   var urgent=expAlerts.filter(function(e){return e.days>0&&e.days<=7});
   var soon=expAlerts.filter(function(e){return e.days>7});
-  if(expired.length)alertHtml+='<div class="alert-banner">🚨 <b>'+expired.length+' medications EXPIRED:</b> '+expired.map(function(e){return e.dept+': '+e.name}).join(', ')+'</div>';
-  if(urgent.length)alertHtml+='<div class="alert-banner">⚠ <b>'+urgent.length+' expiring within 7 days:</b> '+urgent.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
-  if(soon.length)alertHtml+='<div class="alert-banner-y">🔔 <b>'+soon.length+' expiring soon:</b> '+soon.map(function(e){return e.dept+': '+e.name+' ('+e.days+'d)'}).join(', ')+'</div>';
+  function groupedExpiry(items,withDays){var groups={};items.forEach(function(e){(groups[e.dept]||(groups[e.dept]=[])).push(e)});return Object.keys(groups).map(function(dept){var names=groups[dept].map(function(e){return e.name+(withDays?' ('+e.days+'d)':'')});return '<span style="display:block;margin-top:3px"><b>'+dept+':</b> '+names.join(', ')+'</span>'}).join('')}
+  if(expired.length)alertHtml+='<div class="alert-banner">🚨 <b>'+expired.length+' medications EXPIRED:</b>'+groupedExpiry(expired,false)+'</div>';
+  if(urgent.length)alertHtml+='<div class="alert-banner">⚠ <b>'+urgent.length+' expiring within 7 days:</b>'+groupedExpiry(urgent,true)+'</div>';
+  if(soon.length)alertHtml+='<div class="alert-banner-y">🔔 <b>'+soon.length+' expiring soon:</b>'+groupedExpiry(soon,true)+'</div>';
   el('exp-alerts').innerHTML=alertHtml;
   el('dptbl').innerHTML=pend.length
     ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button></td></tr>'}).join('')
@@ -1792,14 +1793,16 @@ function openFulfill(id){
   var ms=getMeds(r.deptId||'');
   var thirtyDayCutoff=Date.now()-(30*24*60*60*1000);
   function dispensedLast30Days(medId){
-    return gr().reduce(function(total,req){
+    var result=gr().reduce(function(total,req){
       if(!req||req.id===r.id||req.deptId!==r.deptId)return total;
       if(req.status!=='fulfilled'&&req.status!=='partial')return total;
       var dt=new Date(req.fulfilledAt||req.updatedAt||req.created||0).getTime();
       if(!isFinite(dt)||dt<thirtyDayCutoff||dt>Date.now())return total;
       var line=(req.dispensed||[]).find(function(x){return x.medId===medId});
-      return total+(line?Number(line.qty)||0:0);
-    },0);
+      if(line&&Number(line.qty)>0){total.qty+=Number(line.qty)||0;total.orders+=1}
+      return total;
+    },{qty:0,orders:0});
+    result.average=result.orders?result.qty/result.orders:0;return result;
   }
   var previousDispensed={};
   if(isEdit)(r.dispensed||[]).forEach(function(x){previousDispensed[String(x.medId)]=x.qty});
@@ -1810,7 +1813,7 @@ function openFulfill(id){
     return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.min!=null?m.min:'&mdash;')+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.max!=null?m.max:'&mdash;')+'</td>'
-      +'<td style="text-align:center"><span class="badge bbl" style="font-family:var(--mono);font-size:11px">'+last30+'</span></td>'
+      +'<td style="text-align:center"><span class="badge bbl" style="font-family:var(--mono);font-size:11px">'+last30.qty+' / '+last30.orders+' orders<br><small>avg '+(Math.round(last30.average*100)/100)+'/order</small></span></td>'
       +'<td style="text-align:center;font-family:var(--mono);font-weight:700">'+it.qty+'</td>'
       +'<td><input type="number" min="0" value="'+(Object.prototype.hasOwnProperty.call(previousDispensed,String(it.medId))?previousDispensed[String(it.medId)]:'')+'" placeholder="Enter qty" required data-med="'+it.medId+'" data-requested="'+it.qty+'" title="Any non-negative quantity is allowed, including more than Requested or departmental Max." style="width:100%;min-width:72px;padding:5px 7px;text-align:center;margin:0"></td></tr>';
   }).join('');
