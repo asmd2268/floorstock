@@ -177,6 +177,9 @@ function renderAn(){
   var catalog={};gd().forEach(function(dep){getMeds(dep.id).forEach(function(m){var key=String(m.name||'').trim().toLowerCase()+'|'+String(m.concentration||m.strength||'').trim().toLowerCase();catalog[dep.id+'|'+m.id]={name:m.name||m.id,key:key,high_alert:!!m.high_alert}})});
   var compare={};rs.forEach(function(r){(r.dispensed||[]).forEach(function(line){var qty=Number(line.qty)||0,meta=catalog[r.deptId+'|'+line.medId];if(qty<=0||!meta)return;var c=compare[meta.key]||(compare[meta.key]={name:meta.name,departments:{},total:0,orders:0});c.total+=qty;c.orders++;c.departments[r.deptId]=(c.departments[r.deptId]||0)+qty})});
   var search=el('analytics-item-search');if(search&&!search.dataset.bound){search.dataset.bound='1';search.addEventListener('input',renderAn)}
+  var jumpZero=el('analytics-jump-zero'),jumpCompare=el('analytics-jump-compare');
+  if(jumpZero&&!jumpZero.dataset.bound){jumpZero.dataset.bound='1';jumpZero.addEventListener('click',function(){el('analytics-zero-card').scrollIntoView({behavior:'smooth',block:'start'})})}
+  if(jumpCompare&&!jumpCompare.dataset.bound){jumpCompare.dataset.bound='1';jumpCompare.addEventListener('click',function(){el('analytics-compare-card').scrollIntoView({behavior:'smooth',block:'start'})})}
   var needle=search?String(search.value||'').trim().toLowerCase():'';var matches=Object.keys(compare).map(function(k){return compare[k]}).filter(function(c){return !needle||c.name.toLowerCase().indexOf(needle)>=0});
   var compareHost=el('analytics-item-compare');if(compareHost){compareHost.innerHTML=matches.length?matches.sort(function(a,b){return b.total-a.total}).slice(0,20).map(function(c){var rows=Object.keys(c.departments).sort(function(a,b){return c.departments[b]-c.departments[a]}).map(function(d){var dep=gd().find(function(x){return String(x.id)===String(d)}),q=c.departments[d];return '<tr><td>'+esc(dep?dep.name:d)+'</td><td style="text-align:right;font-family:var(--mono)">'+q+'</td><td style="text-align:right;font-family:var(--mono)">'+(c.total?Math.round(q/c.total*1000)/10:0)+'%</td></tr>'}).join('');return '<div class="card" style="margin-top:10px"><div class="ch"><span class="ct">'+esc(c.name)+'</span><span class="ss">Total '+c.total+' · '+c.orders+' orders</span></div><div class="tw"><table><thead><tr><th>Department</th><th style="text-align:right">Quantity</th><th style="text-align:right">Share</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'}).join(''):'<div style="padding:12px;color:var(--tx2)">'+(needle?'No matching item in the selected period.':'Type an item name to compare department consumption.')+'</div>'}
   var tot={};
@@ -184,7 +187,7 @@ function renderAn(){
   var srt=Object.keys(tot).map(function(k){return[k,tot[k]]}).sort(function(a,b){return b[1]-a[1]});
   // Keep the medication catalog in the same department scope as the request filter.
   // Without this, Zero Dispense mixed every department's catalog into the selected one.
-  var allMs=df?getMeds(df):gd().reduce(function(acc,d){return acc.concat(getMeds(d.id));},[]);
+  var allMs=df?getMeds(df).map(function(m){return Object.assign({deptId:df},m)}):gd().reduce(function(acc,d){return acc.concat(getMeds(d.id).map(function(m){return Object.assign({deptId:d.id},m)}));},[]);
   var t10=srt.slice(0,10),mx1=t10[0]?t10[0][1]:1;
   el('ctop').innerHTML=t10.length
     ?t10.map(function(e){var m=allMs.find(function(x){return x.id===e[0]});return '<div class="brow"><div class="blbl" title="'+(m?m.name:e[0])+'">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx1*100)+'%;background:var(--ac)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
@@ -195,15 +198,16 @@ function renderAn(){
   el('cha').innerHTML=ha.length
     ?ha.map(function(e){var m=allMs.find(function(x){return x.id===e[0]});return '<div class="brow"><div class="blbl">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx2*100)+'%;background:var(--rd)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
-  var usedIds=Object.keys(tot);
-  var zero=allMs.filter(function(m){return usedIds.indexOf(m.id)<0});
+  var usedIds=Object.keys(tot),zeroMap={};
+  allMs.forEach(function(m){if(usedIds.indexOf(m.id)>=0)return;var key=String(m.name||m.id).trim().toLowerCase(),z=zeroMap[key]||(zeroMap[key]={med:m,departments:[]}),dep=gd().find(function(d){return String(d.id)===String(m.deptId||df)}),name=dep?dep.name:(df?((gd().find(function(d){return String(d.id)===String(df)})||{}).name||df):'Department');if(z.departments.indexOf(name)<0)z.departments.push(name)});
+  var zero=Object.keys(zeroMap).map(function(k){return zeroMap[k]});
   var zc=el('azero-count'),au=el('analytics-units'),ar=el('analytics-requests');
   if(zc)zc.textContent=zero.length;
   if(au)au.textContent=Object.keys(tot).reduce(function(s,k){return s+Number(tot[k]||0)},0);
   if(ar)ar.textContent=rs.length;
   el('ztbl').innerHTML=zero.length
-    ?zero.map(function(m){return '<tr><td>'+m.name+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
-    :'<tr><td colspan="5" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
+    ?zero.map(function(z){var m=z.med;return '<tr><td>'+m.name+'</td><td>'+z.departments.join(', ')+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
+    :'<tr><td colspan="6" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
 }
 
 // ── ORDER RETENTION (6 MONTHS) ───────────────────────────
