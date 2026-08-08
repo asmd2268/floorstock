@@ -727,13 +727,15 @@ function fsR17NormalizeExpiryRow(deptId,row,index,usedIds){
   return Object.assign({},row,{id:id,batchId:id,medId:medId,date:date,expiry:date,batch:lot,lot:lot});
 }
 function fsR18NormalizeExpiryRows(deptId,rows){
-  var used={},changed=false;
+  var used={},changed=false,merged={};
   var normalized=(Array.isArray(rows)?rows:[]).map(function(row,index){
     var before=JSON.stringify(row||{});
     var next=fsR17NormalizeExpiryRow(deptId,row,index,used);
     if(before!==JSON.stringify(next))changed=true;
-    return next;
-  });
+    var key=next.medId+'|'+next.date+'|'+next.lot;
+    if(merged[key]){merged[key].qty=(Number(merged[key].qty)||0)+(Number(next.qty)||0);changed=true;return null}
+    merged[key]=next;return next;
+  }).filter(Boolean);
   return {rows:normalized,changed:changed};
 }
 function fsR18ExpiryComparable(rows){

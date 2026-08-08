@@ -151,6 +151,13 @@ exports.createManagedUser = onCall(CALLABLE_OPTIONS, async (request) => {
   if ((requestedRole === 'department' || requestedRole === 'custodian' || requestedRole === 'outpatient_pharmacy_supervisor') && !deptId) {
     throw new HttpsError('invalid-argument', 'Department is required for this role.');
   }
+  if (requestedRole === 'outpatient_pharmacy_supervisor') {
+    const departmentsSnap = await stateRef('departments', caller.tenantId || '').get();
+    const departments = stateArray(departmentsSnap);
+    const selected = departments.find((row) => String(row.id) === deptId);
+    const isOutpatient = selected && (/outpatient\s+department/i.test(String(selected.name || selected.nameEn || '')) || String(selected.id || '').toLowerCase() === 'outpatient');
+    if (!isOutpatient) throw new HttpsError('invalid-argument', 'Outpatient Pharmacy Supervisor must be assigned to OUTPATIENT DEPARTMENT.');
+  }
   if (grantMaster && (caller.master !== true || !['pharmacy', 'pharmacy_director'].includes(requestedRole))) {
     throw new HttpsError('permission-denied', 'Only a Master may grant Master access to a pharmacy user.');
   }
