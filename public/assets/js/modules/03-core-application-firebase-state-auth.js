@@ -1472,7 +1472,11 @@ function populateInvDeptSel(){
 
 // ── DASHBOARD ────────────────────────────────────────────
 function renderDash(){
-  var rs=gr(),ds=gd();
+  var allDs=gd(),dashRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''),ds=allDs;
+  if(dashRole==='inpatient_supervisor')ds=allDs.filter(function(d){return !/outpatient\s+department/i.test(String(d.name||''))&&String(d.id)!=='outpatient'});
+  else if(dashRole==='outpatient_pharmacy_supervisor')ds=allDs.filter(function(d){return /outpatient\s+department/i.test(String(d.name||''))||String(d.id)==='outpatient'});
+  var allowedDash={};ds.forEach(function(d){allowedDash[String(d.id)]=true});
+  var rs=gr().filter(function(r){return !r.deptId||allowedDash[String(r.deptId)]});
   var pend=rs.filter(function(r){return r.status==='pending'});
   var done=rs.filter(function(r){return r.status!=='pending'});
   var totalMeds=ds.reduce(function(s,d){return s+getMeds(d.id).length},0);
@@ -1518,8 +1522,8 @@ function renderDash(){
     ?pend.slice(0,10).map(function(r){var d=ds.find(function(x){return x.id===r.deptId});return '<tr><td>'+((d&&d.name)||r.deptId)+'</td><td>'+fmtDateTime(r.created)+'</td><td>'+(r.items||[]).length+'</td><td><span class="badge byl">Pending</span></td><td><button class="btn bp bxs" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button></td></tr>'}).join('')
     :'<tr><td colspan="5" style="text-align:center;color:var(--tx2);padding:20px">No pending requests ✓</td></tr>';
   // Notes alert on dashboard
-var openNotes=getNotes().filter(function(n){return n.status==='open'||n.status==='urgent'});
-var urgentNotes=getNotes().filter(function(n){return n.status==='urgent'});
+var openNotes=getNotes().filter(function(n){return (n.status==='open'||n.status==='urgent')&&(!n.deptId||allowedDash[String(n.deptId)]);});
+var urgentNotes=getNotes().filter(function(n){return n.status==='urgent'&&(!n.deptId||allowedDash[String(n.deptId)]);});
 var notesHtml='';
 if(urgentNotes.length)notesHtml+='<div class="alert-banner" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">🚨 <b>'+urgentNotes.length+' urgent note(s)</b> from departments — click to review</div>';
 else if(openNotes.length)notesHtml+='<div class="alert-banner-y" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">📝 <b>'+openNotes.length+' open note(s)</b> from departments — click to review</div>';
