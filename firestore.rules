@@ -263,12 +263,14 @@ service cloud.firestore {
       match /public_controlled_expiry/{docId} {
         allow get: if true;
         allow list: if sameTenant(tenant) && masterUser();
-        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && tenantFeature(tenant, 'controlled') && (
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && (
+          ((docId.matches('^crash_.*$') && tenantFeature(tenant, 'crash_cart')) ||
+           (!docId.matches('^crash_.*$') && tenantFeature(tenant, 'controlled'))) && (
           masterUser() || pharmacyDirector() || inpatientSupervisor()
           || (pharmacyStaff() && docId.matches('^crash_.*$'))
           || controlledOfficer() || warehouseOfficer()
           || (departmentUser() && docId == departmentId())
-        );
+        ));
         allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
       }
     }

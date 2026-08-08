@@ -96,7 +96,7 @@ function reconcileCrashCartData(carts){
  });
  return {carts:output,changed:changed};
 }
-window.setCrashCarts=async function(v){var repaired=reconcileCrashCartData(v),out=await S.s('crash_carts',repaired.carts);try{Promise.resolve(publishPublic(repaired.carts)).catch(function(e){warnPublicSync('Crash Cart data',e)})}catch(e){warnPublicSync('Crash Cart data',e)}return out};
+window.setCrashCarts=async function(v){var repaired=reconcileCrashCartData(v),out=await S.s('crash_carts',repaired.carts);try{await publishPublic(repaired.carts)}catch(e){warnPublicSync('Crash Cart data',e)}return out};
 window.fsReconcileCrashCartData=async function(){var current=typeof crashCarts==='function'?(crashCarts()||[]):[],fixed=reconcileCrashCartData(current);if(fixed.changed){await window.setCrashCarts(fixed.carts);if(typeof renderCrashCarts==='function')renderCrashCarts()}return fixed};
 
 function daysUntil(v){return window.fsDaysUntil?window.fsDaysUntil(v):null}
