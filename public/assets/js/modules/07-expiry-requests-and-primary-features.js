@@ -180,7 +180,13 @@ function renderAn(){
   var to=p==='custom'?new Date(el('rto').value||now):now;
   var archived=S.g('request_analytics_archive')||[];
   var rs=gr().concat(archived).filter(function(r){if(r.status==='pending')return false;var d=new Date(r.created||0);return(!df||r.deptId===df)&&d>=from&&d<=to});
-  var catalog={};gd().forEach(function(dep){getMeds(dep.id).forEach(function(m){var key=String(m.name||'').trim().toLowerCase()+'|'+String(m.concentration||m.strength||'').trim().toLowerCase();catalog[dep.id+'|'+m.id]={name:m.name||m.id,key:key,high_alert:!!m.high_alert}})});
+  /* Use the same stable identity across departments that the Similar Medicines
+     workbench uses after a merge.  The medication id is department-local, so
+     aggregating by medId incorrectly split identical items (e.g. Oxytocin).
+     Keep strength/concentration in the key so genuinely different variants do
+     not get combined. */
+  function analyticsMedKey(m){var name=String((m&&m.name)||m&&m.id||'').trim(),strength=String((m&&m.concentration)||(m&&m.strength)||'').trim();return name.toLowerCase().replace(/\s+/g,' ')+'|'+strength.toLowerCase().replace(/\s+/g,' ')}
+  var catalog={};gd().forEach(function(dep){getMeds(dep.id).forEach(function(m){var name=String(m.name||m.id).trim(),key=analyticsMedKey(m),slot={name:name,key:key,high_alert:!!(m.high_alert||m.highAlert),medId:String(m.id),deptId:String(dep.id)};catalog[dep.id+'|'+m.id]=slot})});
   var compare={};rs.forEach(function(r){(r.dispensed||[]).forEach(function(line){var qty=Number(line.qty)||0,meta=catalog[r.deptId+'|'+line.medId];if(qty<=0||!meta)return;var c=compare[meta.key]||(compare[meta.key]={name:meta.name,departments:{},total:0,orders:0});c.total+=qty;c.orders++;c.departments[r.deptId]=(c.departments[r.deptId]||0)+qty})});
   var search=el('analytics-item-search');if(search&&!search.dataset.bound){search.dataset.bound='1';search.addEventListener('input',renderAn)}
   var jumpZero=el('analytics-jump-zero'),jumpCompare=el('analytics-jump-compare');
@@ -188,24 +194,23 @@ function renderAn(){
   if(jumpCompare&&!jumpCompare.dataset.bound){jumpCompare.dataset.bound='1';jumpCompare.addEventListener('click',function(){el('analytics-compare-card').scrollIntoView({behavior:'smooth',block:'start'})})}
   var needle=search?String(search.value||'').trim().toLowerCase():'';var matches=Object.keys(compare).map(function(k){return compare[k]}).filter(function(c){return !needle||c.name.toLowerCase().indexOf(needle)>=0});
   var compareHost=el('analytics-item-compare');if(compareHost){compareHost.innerHTML=matches.length?matches.sort(function(a,b){return b.total-a.total}).slice(0,20).map(function(c){var rows=Object.keys(c.departments).sort(function(a,b){return c.departments[b]-c.departments[a]}).map(function(d){var dep=gd().find(function(x){return String(x.id)===String(d)}),q=c.departments[d];return '<tr><td>'+esc(dep?dep.name:d)+'</td><td style="text-align:right;font-family:var(--mono)">'+q+'</td><td style="text-align:right;font-family:var(--mono)">'+(c.total?Math.round(q/c.total*1000)/10:0)+'%</td></tr>'}).join('');return '<div class="card" style="margin-top:10px"><div class="ch"><span class="ct">'+esc(c.name)+'</span><span class="ss">Total '+c.total+' · '+c.orders+' orders</span></div><div class="tw"><table><thead><tr><th>Department</th><th style="text-align:right">Quantity</th><th style="text-align:right">Share</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'}).join(''):'<div style="padding:12px;color:var(--tx2)">'+(needle?'No matching item in the selected period.':'Type an item name to compare department consumption.')+'</div>'}
-  var tot={};
-  rs.forEach(function(r){(r.dispensed||[]).forEach(function(d){if(d.qty>0)tot[d.medId]=(tot[d.medId]||0)+d.qty})});
+  var tot={},totMeta={};
+  rs.forEach(function(r){(r.dispensed||[]).forEach(function(d){var qty=Number(d.qty)||0,meta=catalog[r.deptId+'|'+d.medId];if(qty<=0)return;var key=meta?meta.key:(String(d.medName||d.name||d.medId||'').trim().toLowerCase().replace(/\s+/g,' ')+'|');tot[key]=(tot[key]||0)+qty;if(!totMeta[key])totMeta[key]={name:meta?meta.name:(d.medName||d.name||d.medId),high_alert:!!(meta&&meta.high_alert)};else if(meta&&meta.high_alert)totMeta[key].high_alert=true})});
   var srt=Object.keys(tot).map(function(k){return[k,tot[k]]}).sort(function(a,b){return b[1]-a[1]});
   // Keep the medication catalog in the same department scope as the request filter.
   // Without this, Zero Dispense mixed every department's catalog into the selected one.
   var allMs=df?getMeds(df).map(function(m){return Object.assign({deptId:df},m)}):gd().reduce(function(acc,d){return acc.concat(getMeds(d.id).map(function(m){return Object.assign({deptId:d.id},m)}));},[]);
   var t10=srt.slice(0,10),mx1=t10[0]?t10[0][1]:1;
   el('ctop').innerHTML=t10.length
-    ?t10.map(function(e){var m=allMs.find(function(x){return x.id===e[0]});return '<div class="brow"><div class="blbl" title="'+(m?m.name:e[0])+'">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx1*100)+'%;background:var(--ac)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
+    ?t10.map(function(e){var m=totMeta[e[0]];return '<div class="brow"><div class="blbl" title="'+(m?m.name:e[0])+'">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx1*100)+'%;background:var(--ac)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
-  var haIds=allMs.filter(function(m){return m.high_alert}).map(function(m){return m.id});
-  var ha=srt.filter(function(e){return haIds.indexOf(e[0])>-1}).slice(0,10);
+  var ha=srt.filter(function(e){return totMeta[e[0]]&&totMeta[e[0]].high_alert}).slice(0,10);
   var mx2=ha[0]?ha[0][1]:1;
   el('cha').innerHTML=ha.length
-    ?ha.map(function(e){var m=allMs.find(function(x){return x.id===e[0]});return '<div class="brow"><div class="blbl">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx2*100)+'%;background:var(--rd)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
+    ?ha.map(function(e){var m=totMeta[e[0]];return '<div class="brow"><div class="blbl">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx2*100)+'%;background:var(--rd)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
-  var usedIds=Object.keys(tot),zeroMap={};
-  allMs.forEach(function(m){if(usedIds.indexOf(m.id)>=0)return;var key=String(m.name||m.id).trim().toLowerCase(),z=zeroMap[key]||(zeroMap[key]={med:m,departments:[]}),dep=gd().find(function(d){return String(d.id)===String(m.deptId||df)}),name=dep?dep.name:(df?((gd().find(function(d){return String(d.id)===String(df)})||{}).name||df):'Department');if(z.departments.indexOf(name)<0)z.departments.push(name)});
+  var usedKeys=Object.keys(tot),zeroMap={};
+  allMs.forEach(function(m){if(usedKeys.indexOf(analyticsMedKey(m))>=0)return;var key=analyticsMedKey(m),z=zeroMap[key]||(zeroMap[key]={med:m,departments:[]}),dep=gd().find(function(d){return String(d.id)===String(m.deptId||df)}),name=dep?dep.name:(df?((gd().find(function(d){return String(d.id)===String(df)})||{}).name||df):'Department');if(z.departments.indexOf(name)<0)z.departments.push(name)});
   var zero=Object.keys(zeroMap).map(function(k){return zeroMap[k]});
   var zc=el('azero-count'),au=el('analytics-units'),ar=el('analytics-requests');
   if(zc)zc.textContent=zero.length;
