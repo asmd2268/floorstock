@@ -1549,6 +1549,7 @@ function renderInv(){
     // If current value is for a deleted dept, clear it
     if(sel.value && existIds.indexOf(sel.value)<0) sel.value='';
     if(!sel.value && sel.options.length>1) sel.value=sel.options[1].value;
+    if((window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''))==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){sel.value=window.fsOutpatientDeptId();sel.disabled=true}else sel.disabled=false;
   }
   var deptId=getInvDept();
   var ms=deptId?getMeds(deptId):[];
