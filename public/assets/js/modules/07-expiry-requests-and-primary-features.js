@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js';
+import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js';
 
 // ── EXPIRY DATES ─────────────────────────────────────────
 var canonicalRenderShelfAlertSettings=globalThis.renderShelfAlertSettings;
@@ -1527,7 +1528,7 @@ function dayBits(days){return globalThis.dayBits(days)}
 function timeToMins(t){return globalThis.timeToMins(t)}
 
 // ── Check monthly request count ───────────────────────────
-function getMonthlyReqCount(deptId){return globalThis.getMonthlyReqCount(deptId)}
+function getMonthlyReqCount(deptId){return canonicalMonthlyReqCount(deptId)}
 var canonicalGetMonthlyLimit=globalThis.getMonthlyLimit;
 function getMonthlyLimit(deptId){return typeof canonicalGetMonthlyLimit==='function'&&canonicalGetMonthlyLimit!==getMonthlyLimit?canonicalGetMonthlyLimit(deptId):0}
 
