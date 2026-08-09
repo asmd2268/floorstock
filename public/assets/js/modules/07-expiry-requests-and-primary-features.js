@@ -1089,18 +1089,7 @@ function renderPharmNotes(){
   }).join('');
 }
 
-function openNoteReply(id){
-  var note=getNotes().find(function(n){return n.id===id});
-  if(!note)return;
-  var safeStatus=noteStatus(note.status);
-  el('mnote-content').innerHTML='<div style="font-weight:600;margin-bottom:4px">'+noteEsc(note.deptName)+(note.medName?' — <span style="color:var(--tx2)">'+noteEsc(note.medName)+'</span>':'')+' <span class="badge note-badge-'+safeStatus+'">'+noteEsc(safeStatus)+'</span></div>'
-    +'<div>'+noteEsc(note.body)+'</div>'
-    +(note.reply?'<div style="margin-top:6px;font-size:11px;color:var(--tx2)">Previous reply: '+noteEsc(note.reply)+'</div>':'');
-  el('note-reply-txt').value=note.reply||'';
-  el('note-reply-status').value=note.status||'open';
-  el('note-reply-id').value=id;
-  OM('mnote-reply');
-}
+function openNoteReply(id){return globalThis.asdhOpenNoteReply(id)}
 
 // ── Badge on nav button ──────────────────────────────────
 function updateNotesBadge(){return globalThis.asdhUpdateNotesBadge()}
