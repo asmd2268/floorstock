@@ -1,5 +1,6 @@
 /* ASDHealth R6.76.0 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js';
+import './core/runtime-health.js';
 import './modules/00-r674-local-qr-runtime.js?v=R6.76.0';
 import './modules/01-firebase-global-bootstrap.js';
 import './modules/02-r664-early-production-console-policy.js';
@@ -71,7 +72,9 @@ document.documentElement.dataset.asdhMissingActions = missingActions.join(',');
 if (missingActions.length) throw new Error(`Missing application actions: ${missingActions.join(', ')}`);
 installDomBindings();
 document.documentElement.dataset.asdhModules = 'ready';
-export const architecture = 'es-modules-v2';
+window.__asdhRuntime?.state && (window.__asdhRuntime.state.readyAt = Date.now());
+window.__asdhRuntime?.mark('application');
+export const architecture = 'es-modules-v3';
 
 import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.75.0';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.75.0';
