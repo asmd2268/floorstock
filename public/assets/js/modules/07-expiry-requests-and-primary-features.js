@@ -1571,12 +1571,7 @@ function editDispSlot(i){
   OM('mdisp-slot');
 }
 // ── Monthly Limits ────────────────────────────────────────
-function openBulkLimits(){
-  var lims=getMonthlyLimits();
-  el('bulk-limit-val').value='';
-  el('bulk-limits-per-dept').innerHTML=globalThis.renderBulkLimitsTable(gd(),lims);
-  OM('mbulk-limits');
-}
+function openBulkLimits(){return globalThis.openBulkLimits()}
 function applyBulkLimit(){return globalThis.applyBulkLimit()}
 
 
