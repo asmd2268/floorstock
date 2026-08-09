@@ -1870,7 +1870,7 @@ window.canEditFulfillmentRequest=function(request,now){
 // ── CONTROLLED & PSYCHOTROPIC MEDICINES ────────────────────────────────
 globalThis.CTL_VIEW = 'overview';
 function ctlCatalog(){return S.g('controlled_catalog')||[]}
-async function ctlSetCatalog(v){var out=await S.s('controlled_catalog',v);try{if(window.FB_DB&&typeof ctlPublishDept==='function'){var ids=(typeof gd==='function'?(gd()||[]):[]).map(function(d){return d.id});await Promise.all(ids.map(function(id){return ctlPublishDept(id)}))}}catch(e){warnPublicSync('Controlled catalogue',e)}return out}
+async function ctlSetCatalog(v){if(typeof window.ctlCanAddCatalog==='function'&&!window.ctlCanAddCatalog())return ctlCatalog();var out=await S.s('controlled_catalog',v);try{if(window.FB_DB&&typeof ctlPublishDept==='function'){var ids=(typeof gd==='function'?(gd()||[]):[]).map(function(d){return d.id});await Promise.all(ids.map(function(id){return ctlPublishDept(id)}))}}catch(e){warnPublicSync('Controlled catalogue',e)}return out}
 function ctlWarehouse(){return S.g('controlled_warehouse')||{}}
 function ctlSetWarehouse(v){return S.s('controlled_warehouse',v)}
 function ctlPharmacy(){return S.g('controlled_pharmacy_stock')||{}}
