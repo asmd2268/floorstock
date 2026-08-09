@@ -1365,7 +1365,7 @@ async function doLogin(){
     var profile=profileSnapshot.data()||{};
     profile.role=normalizeRole(profile.role);
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(['pharmacy','department','warehouse','controlled_pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(profile.role)<0)throw new Error('This account has an invalid role.');
+    if(typeof globalThis.isSupportedLoginRole!=='function'||!globalThis.isSupportedLoginRole(profile.role))throw new Error('This account has an invalid role.');
     if(profile.role==='department'){
       setLoginStage('Verifying department…');
       await fsHydrateDepartmentDirectoryForLogin(profile);
