@@ -1031,7 +1031,7 @@ function renderDeptNotes(){return globalThis.asdhRenderDeptNotes()}
 
 
 // ── PHARMACY: View & manage notes ───────────────────────
-function renderPharmNotes(){
+function legacyRenderPharmNotes(){
   // Populate dept filter
   var dsel=el('notes-filter-dept');
   if(dsel&&dsel.options.length<=1){
@@ -1088,6 +1088,8 @@ function renderPharmNotes(){
       +'</div>';
   }).join('');
 }
+
+function renderPharmNotes(){return globalThis.asdhRenderPharmNotes()}
 
 function openNoteReply(id){return globalThis.asdhOpenNoteReply(id)}
 
