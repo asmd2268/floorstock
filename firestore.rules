@@ -56,13 +56,19 @@ service cloud.firestore {
     }
 
     function scopedStateUser() {
-      return activeUser() && role() in ['department', 'outpatient_pharmacy_supervisor', 'warehouse', 'controlled_pharmacy'];
+      return activeUser() && role() in ['department', 'outpatient_pharmacy_supervisor', 'warehouse', 'controlled_pharmacy', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'];
     }
 
     function canReadScopedState(docId) {
       return (role() in ['department', 'outpatient_pharmacy_supervisor'] && canReadDepartmentState(docId))
         || (role() == 'controlled_pharmacy' && (docId.matches('^controlled_.*$') || docId in ['departments', 'theme', 'audit_log']))
-        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'theme', 'audit_log']));
+        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'theme', 'audit_log']))
+        || (role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'] && canReadPharmacyState(docId));
+    }
+
+    function canReadPharmacyState(docId) {
+      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1']
+        || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
     }
 
     function departmentId() {
