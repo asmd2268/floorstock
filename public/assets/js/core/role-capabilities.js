@@ -42,30 +42,43 @@ export function resolvePermissionProfile({ currentUser = {}, effectiveUser = {},
   return effective;
 }
 
+const CAPABILITIES = Object.freeze({
+  'inventory.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff']),
+  'inventory.manage': Object.freeze(['pharmacy', 'inpatient_supervisor']),
+  'requests.manage': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
+  'schedule.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
+  'schedule.manage': Object.freeze(['pharmacy']),
+  'crashCart.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor', 'department']),
+  'crashCart.operate': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
+  'crashCart.configure': Object.freeze(['pharmacy', 'inpatient_supervisor']),
+  'crashCart.delete': Object.freeze(['pharmacy']),
+  'accountability.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'department', 'controlled_pharmacy']),
+  'accountability.manage': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff']),
+  'accountability.handover.create': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff']),
+  'controlled.manage': Object.freeze(['pharmacy', 'controlled_pharmacy']),
+  'departments.manage': Object.freeze(['pharmacy']),
+  'users.manage': Object.freeze(['pharmacy'])
+});
+
+export function canAccessDepartment(profile, departmentId) {
+  const user = profile || {};
+  const role = normalizeRole(user.role);
+  const target = String(departmentId || '').trim().toLowerCase();
+  if (!target || user.master === true || role === 'pharmacy' || role === 'pharmacy_staff') return true;
+  const own = String(user.deptId || user.departmentId || '').trim().toLowerCase();
+  if (role === 'department') return !!own && own === target;
+  if (role === 'outpatient_pharmacy_supervisor') return target === 'outpatient' || target === 'outpatient department' || (!!own && own === target);
+  if (role === 'inpatient_supervisor') return target !== 'outpatient' && target !== 'outpatient department';
+  return false;
+}
+
 export function hasCapability(profile, capability) {
   const user = profile || {};
   const role = normalizeRole(user.role);
   const master = user.master === true;
   if (master) return true;
 
-  const capabilities = {
-    'inventory.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff'],
-    'inventory.manage': ['pharmacy', 'inpatient_supervisor'],
-    'requests.manage': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor'],
-    'schedule.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor'],
-    'schedule.manage': ['pharmacy'],
-    'crashCart.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor', 'department'],
-    'crashCart.operate': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor'],
-    'crashCart.configure': ['pharmacy', 'inpatient_supervisor'],
-    'crashCart.delete': ['pharmacy'],
-    'accountability.read': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'department', 'controlled_pharmacy'],
-    'accountability.manage': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff'],
-    'accountability.handover.create': ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff'],
-    'controlled.manage': ['pharmacy', 'controlled_pharmacy'],
-    'departments.manage': ['pharmacy'],
-    'users.manage': ['pharmacy']
-  };
-  return (capabilities[capability] || []).includes(role);
+  return (CAPABILITIES[String(capability || '')] || []).includes(role);
 }
 
 export function canWriteStateKey(profile, key) {

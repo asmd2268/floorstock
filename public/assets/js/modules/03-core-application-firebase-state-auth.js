@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js';
-import { normalizeRole, hasCapability } from '../core/role-capabilities.js?v=R6.75.0';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=R6.76.7';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
@@ -1145,6 +1145,7 @@ window.fsEffectiveRole=function(){var u=window.fsEffectiveUser();return normaliz
 window.fsActualUser=function(){return (window.MASTER_ACTUAL||window.CU||{})};
 window.fsActor=function(){var u=window.fsActualUser(),name=(typeof window.actualActorName==='function'?window.actualActorName():(u.name||u.fullName||u.displayName||u.username||u.email||'Unknown'));return {name:name,user:u.email||u.username||u.id||u.uid||'Unknown',id:u.id||u.uid||''}};
 window.fsHasCapability=function(capability){return hasCapability(window.fsEffectiveUser(),capability)};
+window.fsCanAccessDepartment=function(departmentId){return canAccessDepartment(window.fsEffectiveUser(),departmentId)};
 window.fsCanManage=function(){return window.fsHasCapability('inventory.manage')};
 window.fsCanManageCrashCart=function(){return window.fsHasCapability('crashCart.operate')};
 window.fsDeptName=function(id){try{var list=typeof window.gd==='function'?(window.gd()||[]):[],d=list.find(function(x){return String(x.id)===String(id)});return d?(d.name||d.nameEn||d.nameAr||String(id||'—')):String(id||'—')}catch(e){return String(id||'—')}};
