@@ -8,5 +8,11 @@ function getMonthlyLimit(deptId){
   var limits=typeof globalThis.getMonthlyLimits==='function'?globalThis.getMonthlyLimits():{};
   return limits[deptId]||null;
 }
-Object.assign(globalThis,{getMonthlyReqCount,getMonthlyLimit});
-export {getMonthlyReqCount,getMonthlyLimit};
+function normalizeMonthlyLimit(raw){
+  var text=String(raw==null?'':raw).trim();
+  if(!text)return {value:'',valid:true};
+  var parsed=Math.floor(Number(text));
+  return {value:isFinite(parsed)&&parsed>=1?String(parsed):'',valid:isFinite(parsed)&&parsed>=1};
+}
+Object.assign(globalThis,{getMonthlyReqCount,getMonthlyLimit,normalizeMonthlyLimit});
+export {getMonthlyReqCount,getMonthlyLimit,normalizeMonthlyLimit};

@@ -1581,11 +1581,11 @@ function openBulkLimits(){
   OM('mbulk-limits');
 }
 function applyBulkLimit(){
-  var field=el('bulk-limit-val'),raw=field?field.value.trim():'',value='';
-  if(raw){
-    var parsed=Math.floor(Number(raw));
-    if(!isFinite(parsed)||parsed<1)return toast('Enter a positive monthly limit, or leave it empty for unlimited.','err');
-    value=String(parsed);
+  var field=el('bulk-limit-val'),raw=field?field.value:'',normalized=globalThis.normalizeMonthlyLimit(raw),value=normalized.value;
+  if(raw&&String(raw).trim()&&!normalized.valid){
+    return toast('Enter a positive monthly limit, or leave it empty for unlimited.','err');
+  }
+  if(value){
     if(field)field.value=value;
   }
   var inputs=Array.from(document.querySelectorAll('#bulk-limits-per-dept .blim-inp'));
