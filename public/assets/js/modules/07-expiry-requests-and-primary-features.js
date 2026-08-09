@@ -1543,33 +1543,10 @@ function renderSchedule(){
 
 // ── Request Window CRUD ───────────────────────────────────
 
-function editReqWindow(i){
-  var w=getReqWindows()[i];if(!w)return;
-  el('mreqwin-title').textContent='Edit Window';
-  el('rwin-label').value=w.label||'';el('rwin-from').value=w.from||'';el('rwin-to').value=w.to||'';
-  el('rwin-edit-id').value=i;el('rwin-active').checked=w.active!==false;
-  globalThis.setScheduleDepartmentSelect(el('rwin-dept'),w.dept||'all');
-  globalThis.setScheduleDays(el('rwin-days'),w.days||[]);
-  OM('mreq-window');
-}
+function editReqWindow(i){return globalThis.editReqWindow(i)}
 // ── Dispense Slot CRUD ────────────────────────────────────
-function addDispSlot(){
-  el('mdisp-title').textContent='Add Dispense Slot';
-  el('dslot-label').value='';el('dslot-time').value='10:00';el('dslot-notes').value='';
-  el('dslot-edit-id').value='';
-  globalThis.setScheduleDepartmentSelect(el('dslot-dept'),'all');
-  globalThis.setScheduleDays(el('dslot-days'),[0,1,2,3,4]);
-  OM('mdisp-slot');
-}
-function editDispSlot(i){
-  var s=getDispSlots()[i];if(!s)return;
-  el('mdisp-title').textContent='Edit Dispense Slot';
-  el('dslot-label').value=s.label||'';el('dslot-time').value=s.time||'';el('dslot-notes').value=s.notes||'';
-  el('dslot-edit-id').value=i;
-  globalThis.setScheduleDepartmentSelect(el('dslot-dept'),s.dept||'all');
-  globalThis.setScheduleDays(el('dslot-days'),s.days||[]);
-  OM('mdisp-slot');
-}
+function addDispSlot(){return globalThis.addDispSlot()}
+function editDispSlot(i){return globalThis.editDispSlot(i)}
 // ── Monthly Limits ────────────────────────────────────────
 function openBulkLimits(){return globalThis.openBulkLimits()}
 function applyBulkLimit(){return globalThis.applyBulkLimit()}
