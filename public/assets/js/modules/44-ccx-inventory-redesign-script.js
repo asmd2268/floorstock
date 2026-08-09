@@ -62,7 +62,7 @@ function levelLabel(l){return {expired:'Expired / منتهي',urgent:'Urgent / �
 function fmt(v){try{return typeof fmtDate==='function'?fmtDate(v):String(v||'—')}catch(e){return String(v||'—')}}
 function canManage(){return window.fsCanManageCrashCart?window.fsCanManageCrashCart():(typeof canManageCrashCart==='function'&&canManageCrashCart())}
 function canEditContents(){if(window.fsHasCapability)return window.fsHasCapability('crashCart.configure');var r=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');return ['pharmacy','pharmacy_manager','inpatient_supervisor'].indexOf(r)>=0}
-function isDepartment(){return !!window.CU&&CU.role==='department'}
+function isDepartment(){return !!window.CU&&CU.role==='department'&&!window.__ccxScopedRowsLoaded}
 function ensureUI(){var pg=E('pg-crashcart'),alerts=E('crash-open-alerts'),list=E('crash-list');if(!pg||!alerts||!list)return false;
  var head=pg.querySelector('.fl.ic.jb.mb14');
  if(head&&!E('ccx-filters')){var bar=document.createElement('div');bar.id='ccx-filters';bar.className='ccx-toolbar';bar.innerHTML='<select id="ccx-dept"><option value="">All departments / كل الأقسام</option></select><select id="ccx-state"><option value="">All carts / كل العربات</option><option value="open">Open report / يوجد بلاغ</option><option value="closed">No open report / بدون بلاغ مفتوح</option></select><select id="ccx-expiry"><option value="">All expiry levels / جميع حالات الانتهاء</option><option value="expired">Expired / منتهي</option><option value="urgent">Urgent / عاجل</option><option value="near">Near expiry / قريب الانتهاء</option><option value="normal">Normal / طبيعي</option><option value="missing">Missing expiry / بدون تاريخ</option></select><input id="ccx-search" placeholder="Search cart or medicine / بحث..."><button class="btn bg bsm" id="ccx-rules" type="button">⚙ Expiry rules</button>';head.insertAdjacentElement('afterend',bar);
@@ -121,6 +121,10 @@ if(!window.__ccxSelectorScope){window.__ccxSelectorScope=true;var ccxSelectorRen
    profile alias still differs from the selector value, use the cart's
    canonical department id for this render so valid carts cannot be hidden. */
 if(!window.__ccxCartCanonicalScope){window.__ccxCartCanonicalScope=true;var ccxCanonicalRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},old=r.deptId,rows=typeof window.crashCarts==='function'?window.crashCarts():[],canonical=rows[0]&&(rows[0].deptId||rows[0].departmentId);if(typeof window.isDepartment==='function'&&window.isDepartment()&&canonical)r.deptId=canonical;try{return ccxCanonicalRender.apply(this,arguments)}finally{r.deptId=old}}}
+
+if(!window.__ccxScopedRowsGuard){window.__ccxScopedRowsGuard=true;var ccxScopedRowsRender=window.renderCrashCarts;window.renderCrashCarts=function(){var scoped=typeof S!=='undefined'&&S.cache&&S.cache.__scopedDepartmentState===true&&window.CU&&CU.role==='department',old=window.__ccxScopedRowsLoaded;window.__ccxScopedRowsLoaded=!!scoped;try{return ccxScopedRowsRender.apply(this,arguments)}finally{window.__ccxScopedRowsLoaded=old}}}
+
+
 
 
 })();
