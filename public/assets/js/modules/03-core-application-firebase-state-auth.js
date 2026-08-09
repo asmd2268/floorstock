@@ -13,6 +13,7 @@ import { withTimeout } from '../core/promise-timeout.js?v=R6.76.7';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=R6.76.7';
 import { tenantIdFromProfile, stateCollectionPath } from '../core/firestore-scope.js?v=R6.76.7';
 import { stateCollectionRef } from '../core/firestore-sdk-scope.js?v=R6.76.7';
+import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
