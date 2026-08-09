@@ -7,8 +7,7 @@ import {
 } from '../core/fulfillment-edit-policy.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
-// Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.
-globalThis.FIREBASE_CONFIG = {apiKey:"AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU",authDomain:"floorstock-6ac2d.firebaseapp.com",projectId:"floorstock-6ac2d",storageBucket:"floorstock-6ac2d.firebasestorage.app",messagingSenderId:"920762414422",appId:"1:920762414422:web:8d6dbc7069d4088defd2f7",measurementId:"G-61NRS4WT8Q"};
+// Firebase configuration is provided by the early Core firebase-config module.
 var FB_APP=window.FB_APP||null;
 var FB_AUTH=window.FB_AUTH||null;
 var FB_DB=window.FB_DB||null;
