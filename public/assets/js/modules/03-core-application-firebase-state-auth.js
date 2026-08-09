@@ -75,8 +75,8 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   FB_AUTH=firebase.auth();
   FB_DB=firebase.firestore();
   if(isFirebaseEmulatorEnabled()){
-    FB_AUTH.useEmulator('http://localhost:9099');
-    FB_DB.useEmulator('localhost',8080);
+    FB_AUTH.useEmulator('http://127.0.0.1:9099');
+    FB_DB.useEmulator('127.0.0.1',8080);
     console.info('Firebase Emulator mode enabled.');
   }
   try{
