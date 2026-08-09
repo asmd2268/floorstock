@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root = path.dirname(fileURLToPath(import.meta.url)) + '/..';
+const main = fs.readFileSync(root + '/public/assets/js/main.js', 'utf8');
+const controller = fs.readFileSync(root + '/public/assets/js/modules/68-schedule-controller.js', 'utf8');
+test('canonical schedule controller loads after legacy persistence actions', () => { assert.ok(main.indexOf("./modules/49-asdh-final-persistence-actions-20260725.js") < main.indexOf("./modules/68-schedule-controller.js")); });
+test('schedule controller owns all CRUD actions', () => { for (const action of ['saveReqWindow','toggleWindow','delWindow','saveDispSlot','delSlot']) assert.match(controller, new RegExp('window\\.'+action+'=async function')); });
+test('schedule controller uses centralized adapters and refreshes', () => { assert.match(controller,/globalThis\.getReqWindows\(\)/); assert.match(controller,/globalThis\.setReqWindows\(/); assert.match(controller,/globalThis\.getDispSlots\(\)/); assert.match(controller,/globalThis\.setDispSlots\(/); assert.match(controller,/globalThis\.renderSchedule/); });
