@@ -217,6 +217,7 @@ def main() -> None:
     )
     html, bindings = migrate_handlers(html, existing_bindings)
     html = html.replace("multi-file-classic-modules-v1", "es-modules-v3")
+    html = html.replace("es-modules-v2", "es-modules-v3")
     html = re.sub(r"main\.js\?v=[^\"']+", f"main.js?v={BUILD_VERSION}", html)
     entry = f'<script type="module" src="./assets/js/main.js?v={BUILD_VERSION}"></script>'
     html = html.replace("</body>", entry + "\n</body>")

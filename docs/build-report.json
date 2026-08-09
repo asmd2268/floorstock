@@ -6,7 +6,7 @@
   "inlineScriptCount": 0,
   "inlineStyleTagCount": 0,
   "duplicateIds": [],
-  "architecture": "es-modules-v2",
+  "architecture": "es-modules-v3",
   "moduleGraphFiles": 63,
   "staticEventBindings": 214,
   "inlineEventHandlers": 0,

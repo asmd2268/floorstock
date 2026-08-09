@@ -30,7 +30,7 @@ normalize_html = lambda value: re.sub(r"\s*;\s*", ";", re.sub(r"\s+", " ", value
 if normalize_html(root_html) != normalize_html(expected_root_html):
     errors.append("index.html must remain a generated root-path mirror of public/index.html")
 
-if 'name="asdhealth-architecture"' not in public_html or 'content="es-modules-v2"' not in public_html:
+if 'name="asdhealth-architecture"' not in public_html or 'content="es-modules-v3"' not in public_html:
     errors.append("public/index.html is not marked as the ES-module architecture")
 if len(re.findall(r'<script\b[^>]*\btype="module"[^>]*\bsrc="\./assets/js/main\.js', public_html)) != 1:
     errors.append("public/index.html must have exactly one ES-module application entrypoint")

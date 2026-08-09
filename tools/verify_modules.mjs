@@ -43,7 +43,7 @@ if (qrVendorIndex < 0 || mainIndex < 0 || qrVendorIndex > mainIndex) {
   errors.push('The local QR vendor must load before the ES-module application entrypoint.');
 }
 if (/\son[a-z]+\s*=/.test(html)) errors.push('Static inline event handlers remain in public/index.html.');
-if (!/name=["']asdhealth-architecture["'][^>]*content=["']es-modules-v2["']|content=["']es-modules-v2["'][^>]*name=["']asdhealth-architecture["']/.test(html)) {
+if (!/name=["']asdhealth-architecture["'][^>]*content=["']es-modules-v3["']|content=["']es-modules-v3["'][^>]*name=["']asdhealth-architecture["']/.test(html)) {
   errors.push('ES-module architecture marker is missing.');
 }
 
