@@ -1577,18 +1577,7 @@ function openBulkLimits(){
   el('bulk-limits-per-dept').innerHTML=globalThis.renderBulkLimitsTable(gd(),lims);
   OM('mbulk-limits');
 }
-function applyBulkLimit(){
-  var field=el('bulk-limit-val'),raw=field?field.value:'',normalized=globalThis.normalizeMonthlyLimit(raw),value=normalized.value;
-  if(raw&&String(raw).trim()&&!normalized.valid){
-    return toast('Enter a positive monthly limit, or leave it empty for unlimited.','err');
-  }
-  if(value){
-    if(field)field.value=value;
-  }
-  var inputs=Array.from(document.querySelectorAll('#bulk-limits-per-dept .blim-inp'));
-  inputs.forEach(function(inp){inp.value=value});
-  toast(value?('Applied '+value+' requests/month to all departments in this form. Click Save All Limits to confirm.'):'Cleared all limits in this form. Click Save All Limits to confirm.','info');
-}
+function applyBulkLimit(){return globalThis.applyBulkLimit()}
 
 
 // ── DEPT: Show window info + block if outside window ──────
