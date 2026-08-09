@@ -1019,8 +1019,8 @@ function renderMobileRequest(requestId){
 
 
 // ── NOTES / FEEDBACK ──────────────────────────────────────
-function getNotes(){return S.g('dept_notes')||[]}
-function setNotes(arr){return S.s('dept_notes',arr)}
+function getNotes(){return globalThis.asdhDepartmentNoteStore.getNotes()}
+function setNotes(arr){return globalThis.asdhDepartmentNoteStore.setNotes(arr)}
 
 function noteEsc(v){return globalThis.asdhDepartmentNoteUtils.noteEsc(v)}
 function noteStatus(v){return globalThis.asdhDepartmentNoteUtils.noteStatus(v)}
