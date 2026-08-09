@@ -7,6 +7,7 @@ import {
 } from '../core/fulfillment-edit-policy.js?v=R6.76.7';
 import { loadScriptOnce } from '../core/script-loader.js?v=R6.76.7';
 import { debounce } from '../core/timing.js?v=R6.76.7';
+import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
@@ -22,8 +23,6 @@ window.FB_DB=null;
 window.FB_FUNCTIONS=null;
 window.FB_APPCHECK=null;
 globalThis._lazyScripts = {};
-function ensurePDFJS(){return loadScriptOnce('PDF','https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',function(){return typeof pdfjsLib!=='undefined'}).then(function(){if(pdfjsLib&&pdfjsLib.GlobalWorkerOptions)pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';return pdfjsLib})}
-function ensureZXing(){return loadScriptOnce('Barcode scanner','https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js',function(){return typeof ZXing!=='undefined'})}
 function ensureFirebaseFunctions(){
   if(FB_FUNCTIONS&&typeof FB_FUNCTIONS.httpsCallable==='function'){
     window.FB_FUNCTIONS=FB_FUNCTIONS;
