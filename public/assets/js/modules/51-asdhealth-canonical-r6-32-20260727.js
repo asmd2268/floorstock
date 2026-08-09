@@ -1763,6 +1763,12 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
     deptName:deptId&&window.floorstockDepartmentName?window.floorstockDepartmentName(deptId):'',
     username:profile.username||profile.displayName||profile.email||fsR6RoleLabel(role)
   });
+  /* Master Test Mode changes the effective identity without a new auth event.
+     Re-apply the same department scope used at login so scoped pages receive
+     the selected department's Crash Cart records immediately. */
+  if(role==='department'&&typeof window.fsStateScopeCacheForProfile==='function'&&window.S&&S.cache){
+    S.cache=window.fsStateScopeCacheForProfile(S.cache,window.CU);
+  }
   fsR6Audit('master_test_mode_changed',{mode:MASTER_EFFECTIVE.mode,testedUserId:MASTER_EFFECTIVE.testedUserId,role:role,deptId:deptId||null,actualMasterId:actual.id||actual.uid});
   fsR6CloseModal('mmaster-role-r6');
   if(typeof window.startApp==='function')window.startApp();
