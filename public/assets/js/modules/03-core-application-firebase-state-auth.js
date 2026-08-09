@@ -13,7 +13,7 @@ import { withTimeout } from '../core/promise-timeout.js?v=R6.76.7';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=R6.76.7';
 import { tenantIdFromProfile, stateCollectionPath } from '../core/firestore-scope.js?v=R6.76.7';
 import { stateCollectionRef } from '../core/firestore-sdk-scope.js?v=R6.76.7';
-import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=R6.76.7';
+import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
@@ -74,6 +74,11 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
 }
   FB_AUTH=firebase.auth();
   FB_DB=firebase.firestore();
+  if(isFirebaseEmulatorEnabled()){
+    FB_AUTH.useEmulator('http://127.0.0.1:9099');
+    FB_DB.useEmulator('127.0.0.1',8080);
+    console.info('Firebase Emulator mode enabled.');
+  }
   try{
     if(FB_DB&&typeof FB_DB.settings==='function'){
       FB_DB.settings({
