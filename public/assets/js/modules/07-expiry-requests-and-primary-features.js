@@ -1497,12 +1497,12 @@ function getCatOptions(selected){return globalThis.getCatOptions(selected)}
 globalThis.DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
 // ── Storage ──────────────────────────────────────────────
-function getReqWindows(){return S.g('req_windows')||[]}
-function setReqWindows(a){return S.s('req_windows',a)}
-function getDispSlots(){return S.g('disp_slots')||[]}
-function setDispSlots(a){return S.s('disp_slots',a)}
-function getMonthlyLimits(){return S.g('monthly_limits')||{}}   // {deptId: N}
-function setMonthlyLimits(o){return S.s('monthly_limits',o)}
+function getReqWindows(){return globalThis.getReqWindows()}
+function setReqWindows(a){return globalThis.setReqWindows(a)}
+function getDispSlots(){return globalThis.getDispSlots()}
+function setDispSlots(a){return globalThis.setDispSlots(a)}
+function getMonthlyLimits(){return globalThis.getMonthlyLimits()}
+function setMonthlyLimits(o){return globalThis.setMonthlyLimits(o)}
 
 // ── Helpers ───────────────────────────────────────────────
 function fmt12(t){
