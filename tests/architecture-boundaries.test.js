@@ -19,3 +19,10 @@ test('core modules do not import feature modules', () => {
     assert.doesNotMatch(source, /from ['"]\.\.\/modules\//, file);
   }
 });
+
+test('Firebase client configuration has one source of truth', () => {
+  const config = fs.readFileSync(path.join(root, 'public/assets/js/core/firebase-config.js'), 'utf8');
+  const application = fs.readFileSync(path.join(root, 'public/assets/js/modules/03-core-application-firebase-state-auth.js'), 'utf8');
+  assert.match(config, /projectId:\s*['"]floorstock-6ac2d['"]/);
+  assert.doesNotMatch(application, /apiKey:\s*['"]AIza/);
+});
