@@ -52,3 +52,17 @@ test('script loader deduplicates pending loads and retries failures', async () =
   await retry;
   delete globalThis.document;
 });
+
+test('login role policy accepts only supported operational roles', async () => {
+  const policy = await import('../public/assets/js/core/auth-role-policy.js');
+  assert.equal(policy.isSupportedLoginRole('department'), true);
+  assert.equal(policy.isSupportedLoginRole('outpatient_pharmacy_supervisor'), true);
+  assert.equal(policy.isSupportedLoginRole('master'), false);
+  assert.equal(policy.isSupportedLoginRole('invalid'), false);
+});
+
+test('Firebase config remains bound to the FloorStock project', async () => {
+  const config = await import('../public/assets/js/core/firebase-config.js');
+  assert.equal(config.FIREBASE_CONFIG.projectId, 'floorstock-6ac2d');
+  assert.equal(config.FIREBASE_CONFIG.authDomain, 'floorstock-6ac2d.firebaseapp.com');
+});
