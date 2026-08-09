@@ -10,6 +10,7 @@ import { debounce } from '../core/timing.js?v=R6.76.7';
 import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=R6.76.7';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=R6.76.7';
 import { withTimeout } from '../core/promise-timeout.js?v=R6.76.7';
+import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
@@ -146,14 +147,8 @@ async function fsStateToken(forceRefresh){
     'Firebase data-access token timed out.'
   );
 }
-function fsStateRestBase(){
-  return 'https://firestore.googleapis.com/v1/projects/'+
-    encodeURIComponent(FIREBASE_CONFIG.projectId)+
-    '/databases/(default)/documents';
-}
 function fsTenantId(profile){return String(profile&&profile.tenantId||'').trim()}
 function fsStateCollectionPath(profile){var tenantId=fsTenantId(profile||(globalThis.S&&S.scopeProfile));return tenantId?'tenants/'+tenantId+'/state':'floorstock_state'}
-function fsRestPath(path){return String(path||'').split('/').filter(Boolean).map(encodeURIComponent).join('/')}
 function fsStateSdkCollection(profile){var tenantId=fsTenantId(profile||(globalThis.S&&S.scopeProfile));return tenantId?FB_DB.collection('tenants').doc(tenantId).collection('state'):FB_DB.collection('floorstock_state')}
 window.fsTenantId=function(){var profileId=fsTenantId(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
 window.fsTenantCollection=function(name){var tenantId=window.fsTenantId();return tenantId?FB_DB.collection('tenants').doc(tenantId).collection(name):FB_DB.collection(name)};

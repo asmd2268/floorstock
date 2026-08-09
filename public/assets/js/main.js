@@ -21,6 +21,7 @@ import './core/timing.js?v=R6.76.7';
 import './core/media-loaders.js?v=R6.76.7';
 import './core/firestore-value-codec.js?v=R6.76.7';
 import './core/promise-timeout.js?v=R6.76.7';
+import './core/firestore-rest-paths.js?v=R6.76.7';
 import './core/schedule-utils.js?v=R6.76.7';
 import './core/schedule-limits.js?v=R6.76.7';
 import './core/schedule-department-options.js?v=R6.76.7';
