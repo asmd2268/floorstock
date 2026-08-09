@@ -17,6 +17,7 @@ import './core/request-schedule-store.js?v=R6.76.7';
 import './core/auth-role-policy.js?v=R6.76.7';
 import './core/firebase-config.js?v=R6.76.7';
 import './core/script-loader.js?v=R6.76.7';
+import './core/timing.js?v=R6.76.7';
 import './core/schedule-utils.js?v=R6.76.7';
 import './core/schedule-limits.js?v=R6.76.7';
 import './core/schedule-department-options.js?v=R6.76.7';

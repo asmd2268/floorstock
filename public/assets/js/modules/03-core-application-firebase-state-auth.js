@@ -6,6 +6,7 @@ import {
   fulfillmentEditReason,
 } from '../core/fulfillment-edit-policy.js?v=R6.76.7';
 import { loadScriptOnce } from '../core/script-loader.js?v=R6.76.7';
+import { debounce } from '../core/timing.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
@@ -45,10 +46,9 @@ function ensureFirebaseFunctions(){
     return FB_FUNCTIONS;
   });
 }
-function debounce(fn,wait){var t;return function(){var a=arguments,c=this;clearTimeout(t);t=setTimeout(function(){fn.apply(c,a)},wait)}}
-globalThis.renderInvDebounced = debounce(function(){renderInv()},220);
-globalThis.renderReqFormDebounced = debounce(function(){renderReqForm()},220);
-globalThis.renderControlledDebounced = debounce(function(){renderControlled()},220);
+globalThis.renderInvDebounced = globalThis.debounce(function(){renderInv()},220);
+globalThis.renderReqFormDebounced = globalThis.debounce(function(){renderReqForm()},220);
+globalThis.renderControlledDebounced = globalThis.debounce(function(){renderControlled()},220);
 globalThis._firebasePersistenceAttempted = false;
 globalThis._firebaseReadyPromise = null;
 function initFirebase(){
@@ -1986,7 +1986,7 @@ const __asdhLegacyApi = {
   ensurePDFJS: ensurePDFJS,
   ensureZXing: ensureZXing,
   ensureFirebaseFunctions: ensureFirebaseFunctions,
-  debounce: debounce,
+  debounce,
   initFirebase: initFirebase,
   waitForFirebase: waitForFirebase,
   _trackSave: _trackSave,
