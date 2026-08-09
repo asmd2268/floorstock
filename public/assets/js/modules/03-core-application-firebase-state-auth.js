@@ -1414,7 +1414,7 @@ async function doLogout(){
     if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
     try{if(typeof window.asdhWaitForAllSaves==='function')await timeout(window.asdhWaitForAllSaves(12000),13000,'Save confirmation timed out')}catch(e){console.warn('Save confirmation failed before logout; continuing sign out.',e)}
     if(typeof previewClear==='function')previewClear();
-    try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.warn('Pending writes failed before logout; continuing sign out.',err)}
+    try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){if(window.CU&&window.CU.master===true)toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.warn('Pending writes failed before logout; continuing sign out.',err)}
     S.stopRealtime();
     if(FB_AUTH&&FB_AUTH.currentUser)await timeout(FB_AUTH.signOut(),8000,'Sign out timed out');
     CU=null;MASTER_ACTUAL=null;MASTER_EFFECTIVE=null;S.cache={};S.ready=false;var app=el('app'),auth=el('auth'),pass=el('lgp');if(app)app.style.display='none';if(auth)auth.style.display='flex';if(pass)pass.value='';

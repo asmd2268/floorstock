@@ -55,6 +55,16 @@ service cloud.firestore {
       return activeUser() && role() == 'department';
     }
 
+    function scopedStateUser() {
+      return activeUser() && role() in ['department', 'outpatient_pharmacy_supervisor', 'warehouse', 'controlled_pharmacy'];
+    }
+
+    function canReadScopedState(docId) {
+      return (role() in ['department', 'outpatient_pharmacy_supervisor'] && canReadDepartmentState(docId))
+        || (role() == 'controlled_pharmacy' && (docId.matches('^controlled_.*$') || docId in ['departments', 'theme', 'audit_log']))
+        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'theme', 'audit_log']));
+    }
+
     function departmentId() {
       return profile().deptId != null
         ? profile().deptId
@@ -141,6 +151,7 @@ service cloud.firestore {
           'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2',
           'req_windows', 'disp_slots', 'request_count_limits_v1', 'request_hour_grids_v1',
           'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports',
+          'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2',
           'fulfillment_edit_settings_v1',
           'theme', 'facility_logo',
           'pharmacy_category_config', 'pharmacy_department_announcements',
@@ -231,8 +242,8 @@ service cloud.firestore {
     }
 
     match /tenants/{tenant}/state/{docId} {
-      allow get: if sameTenant(tenant) && (!departmentUser() || canReadDepartmentState(docId));
-      allow list: if sameTenant(tenant) && !departmentUser();
+      allow get: if sameTenant(tenant) && (!scopedStateUser() || canReadScopedState(docId));
+      allow list: if sameTenant(tenant) && !scopedStateUser();
       allow create, update: if sameTenant(tenant)
         && tenantWritable(tenant)
         && stateFeatureAllowed(tenant, docId)
@@ -280,9 +291,9 @@ service cloud.firestore {
     // the client can retain only the authenticated department's carts and reports.
     match /floorstock_state/{docId} {
       allow get: if activeUser() && tenantId() == '' && (
-        !departmentUser() || canReadDepartmentState(docId)
+        !scopedStateUser() || canReadScopedState(docId)
       );
-      allow list: if activeUser() && tenantId() == '' && !departmentUser();
+      allow list: if activeUser() && tenantId() == '' && !scopedStateUser();
       allow create, update: if activeUser() && tenantId() == ''
         && canWriteState(docId)
         && (docId != 'fulfillment_edit_settings_v1' || (role() in ['pharmacy', 'pharmacy_director'] && profile().master == true))

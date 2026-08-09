@@ -10,3 +10,6 @@ playwright-report/
 *.local
 *.xlsx
 *.xls
+.env
+.env.*
+*.env
