@@ -148,7 +148,7 @@ async function fsStateToken(forceRefresh){
     'Firebase data-access token timed out.'
   );
 }
-function fsTenantId(profile){return tenantIdFromProfile(profile)}
+const fsTenantId = tenantIdFromProfile;
 function fsStateCollectionPath(profile){return stateCollectionPath(profile||(globalThis.S&&S.scopeProfile))}
 function fsStateSdkCollection(profile){var tenantId=fsTenantId(profile||(globalThis.S&&S.scopeProfile));return tenantId?FB_DB.collection('tenants').doc(tenantId).collection('state'):FB_DB.collection('floorstock_state')}
 window.fsTenantId=function(){var profileId=fsTenantId(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
