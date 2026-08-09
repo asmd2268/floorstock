@@ -279,6 +279,7 @@ window.fsStateScopeCacheForProfile=fsStateScopeCacheForProfile;
 async function fsStateLoadScoped(keys,loader,source,profile){
   var values=await Promise.all(keys.map(function(key){return loader(key)})),cache={};
   keys.forEach(function(key,index){if(values[index]!==null&&values[index]!==undefined)cache[key]=values[index]});
+  if(profile&&profile.role==='department')Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source};
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){
