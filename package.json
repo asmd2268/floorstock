@@ -8,7 +8,7 @@
     "verify": "python3 verify_repo.py && npm run verify:modules",
     "audit:architecture": "node tools/audit_architecture.mjs",
     "audit:firebase": "node tools/audit_firebase_exports.mjs",
-    "test:ui": "node --test tests/ui-actions-regression.test.js tests/r676-regression.test.js tests/firebase-functions-client-regression.test.cjs tests/role-capabilities.test.js tests/wrapper-integrity.test.js tests/build-architecture.test.js tests/build-order.test.js tests/module-manifest-integrity.test.js tests/import-url-integrity.test.js tests/security-baseline.test.js tests/department-note-modules.test.js tests/schedule-controller.test.js tests/architecture-boundaries.test.js",
+    "test:ui": "node --test tests/ui-actions-regression.test.js tests/r676-regression.test.js tests/firebase-functions-client-regression.test.cjs tests/role-capabilities.test.js tests/wrapper-integrity.test.js tests/build-architecture.test.js tests/build-order.test.js tests/module-manifest-integrity.test.js tests/import-url-integrity.test.js tests/security-baseline.test.js tests/department-note-modules.test.js tests/schedule-controller.test.js tests/architecture-boundaries.test.js tests/core-boundaries.test.js",
     "test:browser": "playwright test",
     "test:rules:emulator": "node --test --test-concurrency=1 tests/firestore-rules/firestore.rules.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-floorstock-rules --config firebase.json \"npm run test:rules:emulator\"",
