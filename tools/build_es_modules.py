@@ -168,7 +168,11 @@ def provider_footer(filename: str, functions: list[str], variables: list[str]) -
 
 def main() -> None:
     CORE.mkdir(parents=True, exist_ok=True)
-    module_files = sorted(MODULES.glob("*.js"))
+    current_main = (JS / "main.js").read_text(encoding="utf-8") if (JS / "main.js").exists() else ""
+    ordered_names = re.findall(r"import ['\"]\.\/modules\/([^?'\"]+)(?:\?[^'\"]*)?['\"]", current_main)
+    available = {path.name: path for path in MODULES.glob("*.js")}
+    module_files = [available[name] for name in ordered_names if name in available]
+    module_files.extend(path for name, path in sorted(available.items()) if name not in ordered_names)
     if not module_files:
         raise SystemExit("No application modules found")
 
