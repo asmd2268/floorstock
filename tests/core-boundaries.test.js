@@ -21,3 +21,9 @@ test('Firestore value codec preserves safe primitive representations', async () 
   assert.deepEqual(codec.fsStateRestEncode({ hidden: undefined }), { mapValue: { fields: {} } });
   assert.equal(codec.stateValueEqual({ a: 1 }, { a: 1 }), true);
 });
+
+test('promise timeout resolves and rejects deterministically', async () => {
+  const { withTimeout } = await import('../public/assets/js/core/promise-timeout.js');
+  assert.equal(await withTimeout(Promise.resolve('ok'), 50, 'late'), 'ok');
+  await assert.rejects(() => withTimeout(new Promise(() => {}), 5, 'late'), /late/);
+});
