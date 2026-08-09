@@ -8,6 +8,7 @@ import {
 import { loadScriptOnce } from '../core/script-loader.js?v=R6.76.7';
 import { debounce } from '../core/timing.js?v=R6.76.7';
 import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=R6.76.7';
+import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
@@ -136,27 +137,6 @@ window.asdhWaitForAllSaves=async function(timeoutMs){
   if(_lastSaveFailure){var f=_lastSaveFailure;_lastSaveFailure=null;throw (f.error||new Error('A database save failed: '+f.label))}
   return true;
 };
-function stateValueEqual(a,b){if(a===b)return true;try{return JSON.stringify(a)===JSON.stringify(b)}catch(e){return false}}
-function fsStateRestEncode(value){
-  if(value===null||value===undefined)return {nullValue:null};
-  if(value instanceof Date)return {timestampValue:value.toISOString()};
-  var type=typeof value;
-  if(type==='string')return {stringValue:value};
-  if(type==='boolean')return {booleanValue:value};
-  if(type==='number'){
-    if(!isFinite(value))return {nullValue:null};
-    return Number.isInteger(value)?{integerValue:String(value)}:{doubleValue:value};
-  }
-  if(Array.isArray(value))return {arrayValue:{values:value.map(fsStateRestEncode)}};
-  if(type==='object'){
-    var fields={};
-    Object.keys(value).forEach(function(key){
-      if(value[key]!==undefined)fields[key]=fsStateRestEncode(value[key]);
-    });
-    return {mapValue:{fields:fields}};
-  }
-  return {stringValue:String(value)};
-}
 async function fsStateToken(forceRefresh){
   if(!FB_AUTH||!FB_AUTH.currentUser)throw new Error('The authenticated Firebase session is unavailable.');
   return fsLoginTimeout(
