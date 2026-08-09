@@ -1,9 +1,12 @@
 import { publishLegacy } from '../core/legacy-registry.js';
 
 // ── EXPIRY DATES ─────────────────────────────────────────
-function renderShelfAlertSettings(){return globalThis.renderShelfAlertSettings()}
-function openAddExpiry(){return globalThis.openAddExpiry()}
-function openEditExpiry(btn){return globalThis.openEditExpiry(btn)}
+var canonicalRenderShelfAlertSettings=globalThis.renderShelfAlertSettings;
+var canonicalOpenAddExpiry=globalThis.openAddExpiry;
+var canonicalOpenEditExpiry=globalThis.openEditExpiry;
+function renderShelfAlertSettings(){return typeof canonicalRenderShelfAlertSettings==='function'&&canonicalRenderShelfAlertSettings!==renderShelfAlertSettings?canonicalRenderShelfAlertSettings():undefined}
+function openAddExpiry(){return typeof canonicalOpenAddExpiry==='function'&&canonicalOpenAddExpiry!==openAddExpiry?canonicalOpenAddExpiry():undefined}
+function openEditExpiry(btn){return typeof canonicalOpenEditExpiry==='function'&&canonicalOpenEditExpiry!==openEditExpiry?canonicalOpenEditExpiry(btn):undefined}
 // ── USERS
 // ── USERS ────────────────────────────────────────────────
 function renderUsers(){
@@ -1525,7 +1528,8 @@ function timeToMins(t){return globalThis.timeToMins(t)}
 
 // ── Check monthly request count ───────────────────────────
 function getMonthlyReqCount(deptId){return globalThis.getMonthlyReqCount(deptId)}
-function getMonthlyLimit(deptId){return globalThis.getMonthlyLimit(deptId)}
+var canonicalGetMonthlyLimit=globalThis.getMonthlyLimit;
+function getMonthlyLimit(deptId){return typeof canonicalGetMonthlyLimit==='function'&&canonicalGetMonthlyLimit!==getMonthlyLimit?canonicalGetMonthlyLimit(deptId):0}
 
 // ── RENDER schedule page ──────────────────────────────────
 function renderSchedule(){
