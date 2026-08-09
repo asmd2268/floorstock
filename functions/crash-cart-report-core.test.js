@@ -25,6 +25,7 @@ test('department report changes only its assigned cart and creates an open repor
   const result = applyCrashCartReport({
     ...source,
     cartId: 'cart-a', departmentId: 'dept-a', reason: 'Code Blue',
+    oldSeal: 'OLD-123',
     consumed: [{ itemId: 'med-a', qty: 2, reportedExpiry: '2027-01-01' }],
     actorName: 'Department Employee', stamp: '2026-08-04T07:00:00.000Z',
   });
@@ -32,6 +33,7 @@ test('department report changes only its assigned cart and creates an open repor
   assert.equal(result.cart.items[0].batches[0].qty, 1);
   assert.equal(result.report.status, 'open');
   assert.equal(result.report.inventoryDeductedAtReport, true);
+  assert.equal(result.report.oldSeal, 'OLD-123');
   assert.deepEqual(result.carts[1], source.carts[1]);
 });
 

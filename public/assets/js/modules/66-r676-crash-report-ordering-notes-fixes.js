@@ -67,7 +67,9 @@ function collectCrashReport(){
     consumed.push({itemId:String(item.id),qty:quantity,reportedExpiry:dateKey((row.querySelector('.ccr-expiry')||{}).value)});
   });
   if(!consumed.length)throw new Error('Select at least one medication and enter its quantity.');
-  return {cartId:id,reason:reason,oldSeal:String((E('ccr-old-seal')||{}).value||''),consumed:consumed};
+  var oldSeal=String((E('ccr-old-seal')||{}).value||'').trim();
+  if(!oldSeal)throw new Error('Enter the old seal number before submitting the report.');
+  return {cartId:id,reason:reason,oldSeal:oldSeal,consumed:consumed};
 }
 
 window.ccSubmitReport=async function(){

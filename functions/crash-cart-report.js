@@ -72,6 +72,7 @@ exports.submitDepartmentCrashCartReport = onCall(CALLABLE_OPTIONS, async (reques
   const data = request.data || {};
   const cartId = String(data.cartId || '').trim();
   const reason = String(data.reason || '').trim();
+  const oldSeal = String(data.oldSeal || '').trim();
   const consumed = cleanConsumed(data.consumed);
   if (!cartId) throw new HttpsError('invalid-argument', 'Crash Cart ID is required.');
   if (!reason) throw new HttpsError('invalid-argument', 'Select a reason for opening the Crash Cart.');
@@ -99,6 +100,7 @@ exports.submitDepartmentCrashCartReport = onCall(CALLABLE_OPTIONS, async (reques
         cartId,
         departmentId: profile.departmentId,
         reason,
+        oldSeal,
         consumed,
         actorName,
         stamp,
