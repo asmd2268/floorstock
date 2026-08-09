@@ -1243,8 +1243,7 @@ async function fsLoadProfileViaRest(user,statusCallback){
   if(typeof fetch!=='function')throw new Error('Secure profile fallback is unavailable in this browser.');
   if(statusCallback)statusCallback('Checking profile through secure fallback…');
   var token=await fsLoginTimeout(user.getIdToken(true),10000,'Firebase ID token refresh timed out.');
-  var projectId=FIREBASE_CONFIG.projectId;
-  var base='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(projectId)+'/databases/(default)/documents';
+  var base=fsStateRestBase();
   var headers={'Authorization':'Bearer '+token,'Content-Type':'application/json'};
   var directUrl=base+'/users/'+encodeURIComponent(user.uid)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
   var direct=await fsLoginFetchJson(directUrl,{method:'GET',headers:headers},10000);
