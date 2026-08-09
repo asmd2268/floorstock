@@ -1522,38 +1522,13 @@ function renderSchedule(){
   // Request windows
   var wins=getReqWindows();
   el('req-windows-list').innerHTML=wins.length
-    ?wins.map(function(w,i){
-      var deptName=globalThis.scheduleDepartmentName(w.dept);
-      return '<div class="win-card'+(w.active?'':' inactive')+'">'
-        +'<div>'
-          +'<div style="font-weight:600">'+w.label+'</div>'
-          +'<div class="win-days">'+deptName+' &nbsp;|&nbsp; '+dayBits(w.days||[])+'</div>'
-        +'</div>'
-        +'<div class="win-time">'+fmt12(w.from)+' &ndash; '+fmt12(w.to)+'</div>'
-        +'<div class="fl g8 ic">'
-          +'<button class="btn bg bxs" data-i="'+i+'" onclick="editReqWindow(+this.dataset.i)">✏</button>'
-          +'<button class="btn '+(w.active?'bg':'bp')+' bxs" data-i="'+i+'" onclick="toggleWindow(+this.dataset.i)">'+(w.active?'Pause':'Enable')+'</button>'
-          +'<button class="btn bd2c bxs" data-i="'+i+'" onclick="delWindow(+this.dataset.i)">✕</button>'
-        +'</div></div>';
-    }).join('')
+    ?wins.map(globalThis.renderRequestWindowCard).join('')
     :'<div style="color:var(--tx2);font-size:13px;padding:12px 0">No windows set — requests allowed anytime</div>';
 
   // Dispense slots
   var slots=getDispSlots();
   el('disp-slots-list').innerHTML=slots.length
-    ?slots.map(function(s,i){
-      var deptName=globalThis.scheduleDepartmentName(s.dept);
-      return '<div class="win-card">'
-        +'<div>'
-          +'<div style="font-weight:600">'+s.label+'</div>'
-          +'<div class="win-days">'+deptName+' &nbsp;|&nbsp; '+dayBits(s.days||[])+(s.notes?' &nbsp;|&nbsp; <i>'+s.notes+'</i>':'')+'</div>'
-        +'</div>'
-        +'<span class="slot-badge">⏰ '+fmt12(s.time)+'</span>'
-        +'<div class="fl g8 ic">'
-          +'<button class="btn bg bxs" data-i="'+i+'" onclick="editDispSlot(+this.dataset.i)">✏</button>'
-          +'<button class="btn bd2c bxs" data-i="'+i+'" onclick="delSlot(+this.dataset.i)">✕</button>'
-        +'</div></div>';
-    }).join('')
+    ?slots.map(globalThis.renderDispenseSlotCard).join('')
     :'<div style="color:var(--tx2);font-size:13px;padding:12px 0">No dispense slots defined</div>';
 
   // Monthly limits
