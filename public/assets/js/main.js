@@ -9,6 +9,7 @@ import './core/department-note-department-renderer.js?v=R6.76.7';
 import './core/department-note-reply.js?v=R6.76.7';
 import './core/department-note-pharmacy-renderer.js?v=R6.76.7';
 import './core/expiry-settings.js?v=R6.76.7';
+import './core/order-retention.js?v=R6.76.7';
 import './modules/00-r674-local-qr-runtime.js?v=R6.76.7';
 import './modules/01-firebase-global-bootstrap.js';
 import './modules/02-r664-early-production-console-policy.js';

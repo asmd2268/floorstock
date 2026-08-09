@@ -201,29 +201,10 @@ function renderAn(){
 }
 
 // ── ORDER RETENTION (6 MONTHS) ───────────────────────────
-function orderRetentionCutoff(){var d=new Date();d.setMonth(d.getMonth()-6);return d}
-function requestArchiveRecord(r){
-  return {id:r.id,deptId:r.deptId||'',deptName:r.deptName||'',created:r.created||r.fulfilledAt||nowISO(),fulfilledAt:r.fulfilledAt||'',status:r.status||'fulfilled',dispensed:(r.dispensed||[]).map(function(x){return {medId:x.medId,qty:Number(x.qty)||0}})};
-}
-async function cleanupOldOrders(autoMode){
-  if(!CU||CU.role!=='pharmacy')return;
-  if(!autoMode&&CU.master!==true)return toast('Only Master can delete old orders manually.','err');
-  var cutoff=orderRetentionCutoff(), all=gr(), old=all.filter(function(r){var dt=new Date(r.created||r.fulfilledAt||0);return !isNaN(dt)&&dt<cutoff});
-  if(!old.length){if(!autoMode)toast('No orders older than 6 months.','info');return}
-  if(!autoMode&&!await uiConfirm('Delete '+old.length+' orders older than 6 months? Their dispensed quantities will remain in Analytics.'))return;
-  var archive=(S.g('request_analytics_archive')||[]).slice(), ids={};archive.forEach(function(x){ids[x.id]=true});
-  old.forEach(function(r){if(r.status!=='pending'&&!ids[r.id])archive.push(requestArchiveRecord(r))});
-  // Requests are deleted only from order history. Medication, shelf and expiry databases are separate keys and are never touched here.
-  await S.s('request_analytics_archive',archive);
-  await S.s('requests',all.filter(function(r){return old.indexOf(r)<0}));
-  if(!autoMode)toast(old.length+' old orders deleted; analytics preserved.','succ');
-  if(document.querySelector('#pg-print.on'))renderPrint();
-}
-globalThis._orderCleanupStarted = false;
-function scheduleAutomaticOrderCleanup(){
-  if(_orderCleanupStarted||!CU||CU.role!=='pharmacy')return;_orderCleanupStarted=true;
-  cleanupOldOrders(true).catch(function(e){console.error('Automatic order cleanup failed',e)});
-}
+function orderRetentionCutoff(){return globalThis.orderRetentionCutoff()}
+function requestArchiveRecord(r){return globalThis.requestArchiveRecord(r)}
+async function cleanupOldOrders(autoMode){return globalThis.cleanupOldOrders(autoMode)}
+function scheduleAutomaticOrderCleanup(){return globalThis.scheduleAutomaticOrderCleanup()}
 
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
 // Final Print Orders renderer/engine is installed later in one canonical module.
