@@ -117,6 +117,11 @@ if(window.__ccxAliasScope&&!window.__ccxCanonicalScope){window.__ccxCanonicalSco
    department session. Normalize the renderer's comparison identity to it. */
 if(!window.__ccxSelectorScope){window.__ccxSelectorScope=true;var ccxSelectorRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},old=r.deptId,sel=E('ccx-dept'),chosen=sel&&sel.value;if(typeof window.isDepartment==='function'&&window.isDepartment()&&chosen)r.deptId=chosen;try{return ccxSelectorRender.apply(this,arguments)}finally{r.deptId=old}}}
 
+/* Scoped state already contains only this department's carts. If a legacy
+   profile alias still differs from the selector value, use the cart's
+   canonical department id for this render so valid carts cannot be hidden. */
+if(!window.__ccxCartCanonicalScope){window.__ccxCartCanonicalScope=true;var ccxCanonicalRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},old=r.deptId,rows=typeof window.crashCarts==='function'?window.crashCarts():[],canonical=rows[0]&&(rows[0].deptId||rows[0].departmentId);if(typeof window.isDepartment==='function'&&window.isDepartment()&&canonical)r.deptId=canonical;try{return ccxCanonicalRender.apply(this,arguments)}finally{r.deptId=old}}}
+
 
 })();
 
