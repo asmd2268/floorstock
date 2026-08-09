@@ -88,6 +88,7 @@ import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.76.7';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.76.7';
 import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.7';
 import './modules/67-r676-fulfillment-edit-settings.js?v=R6.76.7';
+import './modules/68-schedule-controller.js?v=R6.76.7';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.7';
 const requiredActions = ['doLogin','startApp','inventorySafetySetMeds','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];
 const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');
