@@ -1769,9 +1769,10 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
   /* Master Test Mode changes the effective identity without a new auth event.
      Re-apply the same department scope used at login so scoped pages receive
      the selected department's Crash Cart records immediately. */
-  if(role==='department'&&typeof window.fsStateScopeCacheForProfile==='function'&&window.S&&S.cache){
-    S.cache=window.fsStateScopeCacheForProfile(S.cache,window.CU);
-  }
+  /* Keep the authenticated Master's complete read cache in Test Mode. The
+     Crash Cart renderer applies the selected test-department scope; mutating
+     the Master's cache here made repeated role previews lose carts for the
+     remainder of the session. */
   fsR6Audit('master_test_mode_changed',{mode:MASTER_EFFECTIVE.mode,testedUserId:MASTER_EFFECTIVE.testedUserId,role:role,deptId:deptId||null,actualMasterId:actual.id||actual.uid});
   fsR6CloseModal('mmaster-role-r6');
   var restoreMasterCrash=function(){
