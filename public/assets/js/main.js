@@ -45,7 +45,7 @@ import './modules/40-v16-clean-optimized-script.js';
 import './modules/41-v16-inventory-status-merge-clean-script.js';
 import './modules/42-weekly-request-grid-bulk-classification-clean-script.js?v=R6.75.0';
 import './modules/43-similar-medicines-workbench-v2-script.js';
-import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.3';
+import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.4';
 import './modules/45-asdh-final-department-controlled-fix-script.js?v=R6.75.0';
 import './modules/46-r664-private-crash-cart-source-only.js';
 import './modules/47-asdh-authoritative-final-fixes-script.js?v=R6.75.0';
