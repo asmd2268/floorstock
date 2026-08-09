@@ -229,7 +229,7 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
 ]);
 function fsStateKeysForProfile(profile){
-  if(!profile||profile.role!=='department')return null;
+  if(!profile||!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
     ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
@@ -255,7 +255,7 @@ async function fsStateLoadDocumentViaSdk(key){
   return snapshot&&snapshot.exists?snapshot.data().value:null;
 }
 function fsStateScopeCacheForProfile(cache,profile){
-  if(!profile||profile.role!=='department')return cache;
+  if(!profile||!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return cache;
   var deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(!deptId)return cache;
   function scopeNorm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
@@ -279,7 +279,7 @@ window.fsStateScopeCacheForProfile=fsStateScopeCacheForProfile;
 async function fsStateLoadScoped(keys,loader,source,profile){
   var values=await Promise.all(keys.map(function(key){return loader(key)})),cache={};
   keys.forEach(function(key,index){if(values[index]!==null&&values[index]!==undefined)cache[key]=values[index]});
-  if(profile&&profile.role==='department')Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
+  if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source};
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){
