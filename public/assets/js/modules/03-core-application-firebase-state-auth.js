@@ -260,11 +260,11 @@ function fsStateScopeCacheForProfile(cache,profile){
   if(!deptId)return cache;
   function scopeNorm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
   var departments=Array.isArray(cache.departments)?cache.departments:[],dept=departments.find(function(item){return String(item&&item.id||'')===deptId})||{};
-  var candidates=[deptId,profile.deptName,profile.departmentName,profile.department,dept.id,dept.name,dept.code];
+  var candidates=[deptId,profile.deptName,profile.departmentName,profile.department,profile.deptCode,profile.departmentCode,dept.id,dept.name,dept.code,dept.codeName];
   var seed=candidates.map(scopeNorm).join(' ');
   if(/(^| )nicu( |$)|neonatal|حديثي الولادة|المواليد/.test(seed))candidates=candidates.concat(['NICU','Neonatal Intensive Care Unit','Neonatal ICU','Newborn Intensive Care Unit','العناية المركزة لحديثي الولادة','العناية المركزة للمواليد']);
   var allowed=new Set(candidates.map(scopeNorm).filter(Boolean));
-  function belongs(row){return [row&&row.deptId,row&&row.departmentId,row&&row.deptName,row&&row.departmentName,row&&row.department].some(function(value){return allowed.has(scopeNorm(value))})}
+  function belongs(row){return [row&&row.deptId,row&&row.departmentId,row&&row.deptName,row&&row.departmentName,row&&row.department,row&&row.deptCode,row&&row.departmentCode,row&&row.unit].some(function(value){return allowed.has(scopeNorm(value))})}
   var carts=Array.isArray(cache.crash_carts)?cache.crash_carts:[];
   var ownCarts=carts.filter(belongs).map(function(cart){return Object.assign({},cart,{deptId:deptId,deptName:cart.deptName||dept.name||profile.deptName||''})});
   var ownCartIds=new Set(ownCarts.map(function(cart){return String(cart&&cart.id||'')}));
