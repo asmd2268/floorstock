@@ -9,6 +9,7 @@ import { loadScriptOnce } from '../core/script-loader.js?v=R6.76.7';
 import { debounce } from '../core/timing.js?v=R6.76.7';
 import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=R6.76.7';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=R6.76.7';
+import { withTimeout } from '../core/promise-timeout.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
@@ -1185,17 +1186,7 @@ function fillDS(){
   var sel=el('dsel');if(!sel)return;
   sel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
 }
-function fsLoginTimeout(promise,ms,message){
-  var timer=null;
-  return new Promise(function(resolve,reject){
-    timer=setTimeout(function(){reject(new Error(message));},ms);
-    Promise.resolve(promise).then(function(value){
-      clearTimeout(timer);resolve(value);
-    },function(error){
-      clearTimeout(timer);reject(error);
-    });
-  });
-}
+function fsLoginTimeout(promise,ms,message){return withTimeout(promise,ms,message)}
 function fsLoginRestValue(value){
   if(!value||typeof value!=='object')return null;
   if(Object.prototype.hasOwnProperty.call(value,'nullValue'))return null;
