@@ -261,6 +261,7 @@ function fsStateScopeCacheForProfile(cache,profile){
   function scopeNorm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
   var departments=Array.isArray(cache.departments)?cache.departments:[],dept=departments.find(function(item){return String(item&&item.id||'')===deptId})||{};
   var candidates=[deptId,profile.deptName,profile.departmentName,profile.department,profile.deptCode,profile.departmentCode,dept.id,dept.name,dept.code,dept.codeName];
+  try{if(typeof window.fsR5DepartmentCandidates==='function')candidates=candidates.concat(window.fsR5DepartmentCandidates(deptId,profile.deptName||profile.departmentName||dept.name)||[])}catch(ignoreAliases){}
   var seed=candidates.map(scopeNorm).join(' ');
   if(/(^| )nicu( |$)|neonatal|حديثي الولادة|المواليد/.test(seed))candidates=candidates.concat(['NICU','Neonatal Intensive Care Unit','Neonatal ICU','Newborn Intensive Care Unit','العناية المركزة لحديثي الولادة','العناية المركزة للمواليد']);
   var allowed=new Set(candidates.map(scopeNorm).filter(Boolean));

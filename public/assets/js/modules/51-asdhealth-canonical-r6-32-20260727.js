@@ -91,6 +91,7 @@ function fsR5DepartmentCandidates(ref,name){
   }
   return out;
 }
+window.fsR5DepartmentCandidates=fsR5DepartmentCandidates;
 
 /* Print Orders: one A4 landscape page, dispensed positive quantities only. */
 
