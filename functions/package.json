@@ -8,6 +8,7 @@
   "scripts": {
     "lint": "node --check main.js && node --check index.js && node --check crash-cart-report.js && node --check crash-cart-report-core.js",
     "deploy": "firebase deploy --only functions",
+    "seed:emulator": "node seed-emulator-users.mjs",
     "test": "node --test accountability-handover-core.test.js crash-cart-report-core.test.js"
   },
   "dependencies": {
