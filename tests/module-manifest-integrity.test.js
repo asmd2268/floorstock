@@ -16,3 +16,11 @@ test('runtime boundary loads before feature modules and DOM bindings load last',
   assert.ok(main.indexOf("import './core/runtime-health.js") < main.indexOf("import './modules/"));
   assert.ok(main.indexOf("import { installDomBindings }") > main.lastIndexOf("import './modules/"));
 });
+
+test('each core module is imported with one cache URL only', () => {
+  const coreImports = [...main.matchAll(/from ['"]\.\.\/core\/([^?'"\s]+)(?:\?[^'"\s]*)?['"]/g)].map(match => match[1]);
+  for (const name of new Set(coreImports)) {
+    const urls = [...main.matchAll(new RegExp(`core/${name}\\?v=([^'"\\s]+)`, 'g'))].map(match => match[1]);
+    assert.ok(urls.length <= 1, `duplicate cache versions for ${name}`);
+  }
+});
