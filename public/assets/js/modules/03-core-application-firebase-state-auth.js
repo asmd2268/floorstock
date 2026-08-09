@@ -12,6 +12,7 @@ import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-code
 import { withTimeout } from '../core/promise-timeout.js?v=R6.76.7';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=R6.76.7';
 import { tenantIdFromProfile, stateCollectionPath } from '../core/firestore-scope.js?v=R6.76.7';
+import { stateCollectionRef } from '../core/firestore-sdk-scope.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
@@ -150,7 +151,7 @@ async function fsStateToken(forceRefresh){
 }
 const fsTenantId = tenantIdFromProfile;
 function fsStateCollectionPath(profile){return stateCollectionPath(profile||(globalThis.S&&S.scopeProfile))}
-function fsStateSdkCollection(profile){var tenantId=fsTenantId(profile||(globalThis.S&&S.scopeProfile));return tenantId?FB_DB.collection('tenants').doc(tenantId).collection('state'):FB_DB.collection('floorstock_state')}
+function fsStateSdkCollection(profile){return stateCollectionRef(FB_DB,profile||(globalThis.S&&S.scopeProfile))}
 window.fsTenantId=function(){var profileId=fsTenantId(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
 window.fsTenantCollection=function(name){var tenantId=window.fsTenantId();return tenantId?FB_DB.collection('tenants').doc(tenantId).collection(name):FB_DB.collection(name)};
 async function fsStateRestRequest(url,options,timeoutMs){
