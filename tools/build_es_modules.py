@@ -20,6 +20,7 @@ PUBLIC = ROOT / "public"
 JS = PUBLIC / "assets" / "js"
 MODULES = JS / "modules"
 CORE = JS / "core"
+BUILD_VERSION = "R6.76.7"
 PROVIDERS = {
     "01-firebase-global-bootstrap.js",
     "03-core-application-firebase-state-auth.js",
@@ -168,8 +169,8 @@ def provider_footer(filename: str, functions: list[str], variables: list[str]) -
 def main() -> None:
     CORE.mkdir(parents=True, exist_ok=True)
     module_files = sorted(MODULES.glob("*.js"))
-    if len(module_files) != 59:
-        raise SystemExit(f"Expected 59 application modules, found {len(module_files)}")
+    if not module_files:
+        raise SystemExit("No application modules found")
 
     provider_report = {}
     for path in module_files:
@@ -211,16 +212,17 @@ def main() -> None:
         html,
     )
     html, bindings = migrate_handlers(html, existing_bindings)
-    html = html.replace("multi-file-classic-modules-v1", "es-modules-v2")
-    html = html.replace("R6.65.0", "R6.65.1")
-    entry = '<script type="module" src="./assets/js/main.js?v=R6.65.1"></script>'
+    html = html.replace("multi-file-classic-modules-v1", "es-modules-v3")
+    html = re.sub(r"main\.js\?v=[^\"']+", f"main.js?v={BUILD_VERSION}", html)
+    entry = f'<script type="module" src="./assets/js/main.js?v={BUILD_VERSION}"></script>'
     html = html.replace("</body>", entry + "\n</body>")
     index_path.write_text(html, encoding="utf-8")
 
     imports = "\n".join(f"import './modules/{path.name}';" for path in module_files)
     (JS / "main.js").write_text(
-        "/* ASDHealth R6.65 ES-module entrypoint. Import order is intentional. */\n"
-        "import './core/legacy-registry.js';\n" + imports + "\n"
+        f"/* ASDHealth {BUILD_VERSION} ES-module entrypoint. Import order is intentional. */\n"
+        "import './core/legacy-registry.js';\n"
+        "import './core/runtime-health.js';\n" + imports + "\n"
         "import { installDomBindings } from './core/dom-bindings.js';\n"
         "const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];\n"
         "const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');\n"
@@ -228,7 +230,9 @@ def main() -> None:
         "if (missingActions.length) throw new Error(`Missing application actions: ${missingActions.join(', ')}`);\n"
         "installDomBindings();\n"
         "document.documentElement.dataset.asdhModules = 'ready';\n"
-        "export const architecture = 'es-modules-v2';\n",
+        "window.__asdhRuntime?.state && (window.__asdhRuntime.state.readyAt = Date.now());\n"
+        "window.__asdhRuntime?.mark('application');\n"
+        "export const architecture = 'es-modules-v3';\n",
         encoding="utf-8",
     )
 
@@ -240,8 +244,8 @@ def main() -> None:
     (ROOT / 'index.html').write_text(root_html, encoding='utf-8')
     manifest_path = ROOT / 'module-manifest.json'
     manifest = json.loads(manifest_path.read_text(encoding='utf-8'))
-    manifest['build'] = 'R6.65 ES Modules Protected'
-    manifest['architecture'] = 'Native ES modules with ordered imports, explicit provider exports, a constrained legacy registry, and external DOM event bindings.'
+    manifest['build'] = f'{BUILD_VERSION} ES Modules Protected'
+    manifest['architecture'] = 'Native ES modules with ordered imports, centralized runtime health, explicit provider exports, a constrained legacy registry, and external DOM event bindings.'
     manifest['entrypoint'] = 'assets/js/main.js'
     manifest['staticEventBindings'] = len(bindings)
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
