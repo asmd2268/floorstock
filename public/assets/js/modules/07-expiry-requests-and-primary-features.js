@@ -1533,20 +1533,7 @@ function renderSchedule(){
 
   // Monthly limits
   var lims=getMonthlyLimits();
-  el('monthly-limits-list').innerHTML='<div class="tw"><table><thead><tr><th>Department</th><th>Monthly Limit</th><th>Used This Month</th><th>Remaining</th></tr></thead><tbody>'
-    +gd().map(function(d){
-      var lim=lims[d.id]||null;
-      var used=getMonthlyReqCount(d.id);
-      var remaining=lim?Math.max(0,lim-used):'∞';
-      var remColor=lim&&remaining===0?'var(--rdl)':lim&&+remaining<=2?'var(--yll)':'var(--gnl)';
-      return '<tr>'
-        +'<td style="font-weight:600">'+d.name+'</td>'
-        +'<td><div class="fl ic g8"><input type="number" class="monthly-lim-inp" data-dept="'+d.id+'" value="'+(lim||'')+'" min="1" placeholder="∞ No limit" style="width:110px;margin:0;padding:6px 8px"> <span style="font-size:11px;color:var(--tx2)">requests/mo</span></div></td>'
-        +'<td style="font-family:var(--mono)">'+used+'</td>'
-        +'<td style="font-family:var(--mono);font-weight:700;color:'+remColor+'">'+remaining+'</td>'
-        +'</tr>';
-    }).join('')
-    +'</tbody></table></div>';
+  el('monthly-limits-list').innerHTML=globalThis.renderMonthlyLimitsTable(gd(),lims);
 
   if(typeof window.renderRequestCountLimitsSection==='function')window.renderRequestCountLimitsSection();
   if(typeof renderRequestHourGridUI==='function')window.renderRequestHourGridUI();
