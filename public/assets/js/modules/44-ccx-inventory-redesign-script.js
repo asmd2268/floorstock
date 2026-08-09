@@ -105,6 +105,11 @@ window.renderCrashCarts=function(){function after(){[window.refreshCrashBulkUi,w
 };
 window.ccxRenderDashboardAlerts=function(){var host=E('exp-alerts');if(!host||!canManage())return;var old=E('ccx-dashboard-reports');if(old)old.remove();var open=(typeof crashReports==='function'?crashReports():[]).filter(function(r){return r.status==='open'});if(!open.length)return;var box=document.createElement('div');box.id='ccx-dashboard-reports';box.className='card';box.innerHTML='<div class="ch"><span class="ct">🚑 Open Crash Cart reports / بلاغات الكراش كارت</span><span class="badge brd">'+open.length+'</span></div><div class="cb">'+open.map(function(r){var c=typeof crashCart==='function'?crashCart(r.cartId):null;return '<div class="ccx-dashboard-report" onclick="showPg(\'pg-crashcart\');ccxOpenReport(\''+escx(r.id)+'\')"><div><b>'+escx(deptName(r.deptId))+' — '+escx((c&&c.name)||'Crash Cart')+'</b><div class="fhint">'+escx(r.reason||'Opening report')+'</div></div><span class="btn bd2c bsm">Open</span></div>'}).join('')+'</div>';host.insertAdjacentElement('afterbegin',box)};
 
+/* Legacy carts may carry a department code/name instead of the current id. Normalize
+   the in-memory view for department users before the renderer applies its id filter. */
+var ccxOriginalRender=window.renderCrashCarts;
+if(ccxOriginalRender&&!window.__ccxAliasScope){window.__ccxAliasScope=true;window.renderCrashCarts=function(){var r=window.CU||{},isDept=typeof window.isDepartment==='function'&&window.isDepartment();if(!isDept)return ccxOriginalRender.apply(this,arguments);var norm=function(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()},aliases=[r.deptId,r.deptName,r.departmentName,r.department].map(norm).filter(Boolean),all=typeof window.crashCarts==='function'?window.crashCarts():[],own=all.filter(function(c){return [c.deptId,c.departmentId,c.deptName,c.departmentName,c.department,c.deptCode,c.departmentCode,c.unit].map(norm).some(function(v){return v&&aliases.indexOf(v)>-1})});var original=window.crashCarts;window.crashCarts=function(){return own};try{return ccxOriginalRender.apply(this,arguments)}finally{window.crashCarts=original}}}
+
 
 })();
 
