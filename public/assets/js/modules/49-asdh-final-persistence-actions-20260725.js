@@ -147,8 +147,6 @@ window.addCategory=async function(){var n=el('new-cat-inp').value.trim();if(!n)r
 
 /* Schedule and limits. */
 // Schedule CRUD moved to modules/68-schedule-controller.js.
-window.saveAllLimits=async function(){var lims=Object.assign({},getMonthlyLimits()||{});document.querySelectorAll('.monthly-lim-inp').forEach(function(inp){var v=inp.value.trim();if(v&&+v>0)lims[inp.dataset.dept]=+v;else delete lims[inp.dataset.dept]});try{await setMonthlyLimits(lims);renderSchedule();toast('Limits saved permanently ✓','succ')}catch(e){toast('Limits were not saved.','err')}};
-window.saveBulkLimits=async function(){var lims=Object.assign({},getMonthlyLimits()||{});document.querySelectorAll('.blim-inp').forEach(function(inp){var v=inp.value.trim();if(v&&+v>0)lims[inp.dataset.dept]=+v;else delete lims[inp.dataset.dept]});try{await setMonthlyLimits(lims);CM('mbulk-limits');renderSchedule();toast('All limits saved permanently ✓','succ')}catch(e){toast('Limits were not saved.','err')}};
 
 /* Departments are committed as one awaited operation set. */
 window.addDept=async function(){
