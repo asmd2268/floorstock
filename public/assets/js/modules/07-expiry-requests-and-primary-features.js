@@ -208,13 +208,8 @@ function scheduleAutomaticOrderCleanup(){return globalThis.scheduleAutomaticOrde
 
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
 // Final Print Orders renderer/engine is installed later in one canonical module.
-globalThis.PPP = 0; // employee must choose 2, 3, 4, or 5 orders per page
-function setPPP(n,btn){
-  PPP=n;
-  document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
-  if(btn)btn.classList.add('on');
-}
-function resetPrintPageState(){PPP=0;document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')})}
+function setPPP(n,btn){return globalThis.setPPP(n,btn)}
+function resetPrintPageState(){return globalThis.resetPrintPageState()}
 
 // ── IMPORT ───────────────────────────────────────────────
 function renderImport(){
