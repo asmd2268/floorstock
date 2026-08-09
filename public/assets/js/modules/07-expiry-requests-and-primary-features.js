@@ -1548,9 +1548,8 @@ function editReqWindow(i){
   el('mreqwin-title').textContent='Edit Window';
   el('rwin-label').value=w.label||'';el('rwin-from').value=w.from||'';el('rwin-to').value=w.to||'';
   el('rwin-edit-id').value=i;el('rwin-active').checked=w.active!==false;
-  el('rwin-dept').innerHTML=globalThis.scheduleDepartmentOptions();
-  el('rwin-dept').value=w.dept||'all';
-  el('rwin-days').querySelectorAll('input').forEach(function(c){c.checked=(w.days||[]).indexOf(+c.value)>-1});
+  globalThis.setScheduleDepartmentSelect(el('rwin-dept'),w.dept||'all');
+  globalThis.setScheduleDays(el('rwin-days'),w.days||[]);
   OM('mreq-window');
 }
 // ── Dispense Slot CRUD ────────────────────────────────────
@@ -1558,9 +1557,8 @@ function addDispSlot(){
   el('mdisp-title').textContent='Add Dispense Slot';
   el('dslot-label').value='';el('dslot-time').value='10:00';el('dslot-notes').value='';
   el('dslot-edit-id').value='';
-  el('dslot-dept').innerHTML=globalThis.scheduleDepartmentOptions();
-  el('dslot-dept').value='all';
-  el('dslot-days').querySelectorAll('input').forEach(function(c){c.checked=[0,1,2,3,4].indexOf(+c.value)>-1});
+  globalThis.setScheduleDepartmentSelect(el('dslot-dept'),'all');
+  globalThis.setScheduleDays(el('dslot-days'),[0,1,2,3,4]);
   OM('mdisp-slot');
 }
 function editDispSlot(i){
@@ -1568,9 +1566,8 @@ function editDispSlot(i){
   el('mdisp-title').textContent='Edit Dispense Slot';
   el('dslot-label').value=s.label||'';el('dslot-time').value=s.time||'';el('dslot-notes').value=s.notes||'';
   el('dslot-edit-id').value=i;
-  el('dslot-dept').innerHTML=globalThis.scheduleDepartmentOptions();
-  el('dslot-dept').value=s.dept||'all';
-  el('dslot-days').querySelectorAll('input').forEach(function(c){c.checked=(s.days||[]).indexOf(+c.value)>-1});
+  globalThis.setScheduleDepartmentSelect(el('dslot-dept'),s.dept||'all');
+  globalThis.setScheduleDays(el('dslot-days'),s.days||[]);
   OM('mdisp-slot');
 }
 // ── Monthly Limits ────────────────────────────────────────
