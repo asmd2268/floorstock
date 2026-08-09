@@ -196,7 +196,7 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     for (const role of activeRoles) {
       await assertSucceeds(getDoc(doc(dbFor(role), 'floorstock_state', 'theme')));
       const listing = getDocs(collection(dbFor(role), 'floorstock_state'));
-      if (role === 'department' || role === 'custodian') await assertFails(listing);
+      if (role !== 'pharmacy' && role !== 'master') await assertFails(listing);
       else await assertSucceeds(listing);
     }
     await assertFails(getDoc(doc(dbFor('anonymous'), 'floorstock_state', 'theme')));
