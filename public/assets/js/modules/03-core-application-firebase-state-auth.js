@@ -1186,7 +1186,7 @@ function fillDS(){
   var sel=el('dsel');if(!sel)return;
   sel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
 }
-function fsLoginTimeout(promise,ms,message){return withTimeout(promise,ms,message)}
+const fsLoginTimeout = withTimeout;
 function fsLoginRestValue(value){
   if(!value||typeof value!=='object')return null;
   if(Object.prototype.hasOwnProperty.call(value,'nullValue'))return null;
