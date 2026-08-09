@@ -6,6 +6,17 @@ process.env.FIREBASE_AUTH_EMULATOR_HOST ||= '127.0.0.1:9099';
 admin.initializeApp({ projectId: 'demo-floorstock-emulator' });
 const db = admin.firestore();
 
+// Keep the role fixtures usable in the Emulator: department-scoped profiles
+// must have matching directory entries before the app can load their pages.
+await db.collection('floorstock_state').doc('departments').set({
+  value: [
+    { id: 'anesthesia', name: 'ANESTHESIA', active: true },
+    { id: 'male-medical', name: 'MALE MEDICAL', active: true },
+    { id: 'outpatient', name: 'OUTPATIENT DEPARTMENT', active: true },
+  ],
+  updatedAt: new Date().toISOString(),
+}, { merge: true });
+
 const profiles = {
   master: { role: 'master', master: true, active: true },
   pharmacy: { role: 'pharmacy', active: true },
