@@ -1516,7 +1516,7 @@ function getMonthlyLimit(deptId){return globalThis.getMonthlyLimit(deptId)}
 // ── RENDER schedule page ──────────────────────────────────
 function renderSchedule(){
   // Populate dept dropdowns in modals
-  var deptOpts='<option value="all">All Departments</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+  var deptOpts=globalThis.scheduleDepartmentOptions();
   ['rwin-dept','dslot-dept'].forEach(function(id){var s=el(id);if(s)s.innerHTML=deptOpts;});
 
   // Request windows
