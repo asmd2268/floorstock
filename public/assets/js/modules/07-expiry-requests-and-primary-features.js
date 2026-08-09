@@ -1577,11 +1577,7 @@ function editDispSlot(i){
 function openBulkLimits(){
   var lims=getMonthlyLimits();
   el('bulk-limit-val').value='';
-  el('bulk-limits-per-dept').innerHTML='<div class="tw"><table><thead><tr><th>Department</th><th>Current Limit</th><th>New Limit</th></tr></thead><tbody>'
-    +gd().map(function(d){
-      return '<tr><td>'+d.name+'</td><td style="font-family:var(--mono)">'+(lims[d.id]||'—')+'</td>'
-        +'<td><input type="number" class="blim-inp" data-dept="'+d.id+'" value="'+(lims[d.id]||'')+'" min="1" placeholder="No limit" style="width:110px;margin:0;padding:6px 8px"></td></tr>';
-    }).join('')+'</tbody></table></div>';
+  el('bulk-limits-per-dept').innerHTML=globalThis.renderBulkLimitsTable(gd(),lims);
   OM('mbulk-limits');
 }
 function applyBulkLimit(){

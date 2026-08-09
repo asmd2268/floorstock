@@ -10,5 +10,8 @@ function renderDispenseSlotCard(s,i){
 function renderMonthlyLimitsTable(departments,limits){
   return '<div class="tw"><table><thead><tr><th>Department</th><th>Monthly Limit</th><th>Used This Month</th><th>Remaining</th></tr></thead><tbody>'+departments.map(function(d){var lim=limits[d.id]||null,used=globalThis.getMonthlyReqCount(d.id),remaining=lim?Math.max(0,lim-used):'∞',color=lim&&remaining===0?'var(--rdl)':lim&&+remaining<=2?'var(--yll)':'var(--gnl)';return '<tr><td style="font-weight:600">'+d.name+'</td><td><div class="fl ic g8"><input type="number" class="monthly-lim-inp" data-dept="'+d.id+'" value="'+(lim||'')+'" min="1" placeholder="∞ No limit" style="width:110px;margin:0;padding:6px 8px"> <span style="font-size:11px;color:var(--tx2)">requests/mo</span></div></td><td style="font-family:var(--mono)">'+used+'</td><td style="font-family:var(--mono);font-weight:700;color:'+color+'">'+remaining+'</td></tr>';}).join('')+'</tbody></table></div>';
 }
-Object.assign(globalThis,{renderRequestWindowCard,renderDispenseSlotCard,renderMonthlyLimitsTable});
-export {renderRequestWindowCard,renderDispenseSlotCard,renderMonthlyLimitsTable};
+function renderBulkLimitsTable(departments,limits){
+  return '<div class="tw"><table><thead><tr><th>Department</th><th>Current Limit</th><th>New Limit</th></tr></thead><tbody>'+departments.map(function(d){return '<tr><td>'+d.name+'</td><td style="font-family:var(--mono)">'+(limits[d.id]||'—')+'</td><td><input type="number" class="blim-inp" data-dept="'+d.id+'" value="'+(limits[d.id]||'')+'" min="1" placeholder="No limit" style="width:110px;margin:0;padding:6px 8px"></td></tr>';}).join('')+'</tbody></table></div>';
+}
+Object.assign(globalThis,{renderRequestWindowCard,renderDispenseSlotCard,renderMonthlyLimitsTable,renderBulkLimitsTable});
+export {renderRequestWindowCard,renderDispenseSlotCard,renderMonthlyLimitsTable,renderBulkLimitsTable};
