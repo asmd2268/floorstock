@@ -18,6 +18,7 @@ import './core/schedule-utils.js?v=R6.76.7';
 import './core/schedule-limits.js?v=R6.76.7';
 import './core/schedule-department-options.js?v=R6.76.7';
 import './core/schedule-renderers.js?v=R6.76.7';
+import './core/next-dispense-slot.js?v=R6.76.7';
 import './modules/00-r674-local-qr-runtime.js?v=R6.76.7';
 import './modules/01-firebase-global-bootstrap.js';
 import './modules/02-r664-early-production-console-policy.js';

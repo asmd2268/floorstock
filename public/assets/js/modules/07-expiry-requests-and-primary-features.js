@@ -1599,29 +1599,7 @@ function applyBulkLimit(){
 
 
 // ── DEPT: Show window info + block if outside window ──────
-function getNextDispSlot(deptId){
-  var now=new Date();
-  var slots=getDispSlots().filter(function(s){return s.dept==='all'||s.dept===deptId});
-  if(!slots.length)return null;
-  var nowMins=now.getHours()*60+now.getMinutes();var dow=now.getDay();
-  var best=null,bestDiff=Infinity;
-  for(var d=0;d<7;d++){
-    var day=(dow+d)%7;
-    slots.forEach(function(s){
-      if((s.days||[]).indexOf(day)<0)return;
-      var sm=timeToMins(s.time);
-      var diff=d*1440+(sm-nowMins),dayOffset=d;
-      if(diff<=0&&d===0){diff+=1440;dayOffset=1;}
-      if(diff>0&&diff<bestDiff){
-        var scheduled=new Date(now);
-        scheduled.setDate(now.getDate()+dayOffset);
-        scheduled.setHours(Math.floor(sm/60),sm%60,0,0);
-        bestDiff=diff;best={slot:s,day:DAY_NAMES[day],time:fmt12(s.time),minsAway:diff,scheduledAt:scheduled.toISOString()};
-      }
-    });
-  }
-  return best;
-}
+function getNextDispSlot(deptId){return globalThis.getNextDispSlot(deptId)}
 // Single global exit lifecycle: persist transient UI state, close public listeners, then warn on pending writes.
 window.addEventListener('beforeunload',function(e){
   if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
