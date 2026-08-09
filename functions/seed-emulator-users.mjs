@@ -33,10 +33,13 @@ const users = await admin.auth().listUsers(1000);
 const now = new Date().toISOString();
 for (const [role, profile] of Object.entries(profiles)) {
   const email = `test-${role}@floorstock.local`;
-  const user = users.users.find((candidate) => candidate.email === email);
+  let user = users.users.find((candidate) => candidate.email === email);
   if (!user) {
-    console.log(`Skipping ${email}: create the Auth Emulator account first.`);
-    continue;
+    user = await admin.auth().createUser({
+      email,
+      password: `Test-${role}-2026-Password`,
+      displayName: `Emulator ${role}`,
+    });
   }
   await db.collection('users').doc(user.uid).set({
     uid: user.uid,
