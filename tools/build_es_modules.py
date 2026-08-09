@@ -218,12 +218,12 @@ def main() -> None:
     html = html.replace("</body>", entry + "\n</body>")
     index_path.write_text(html, encoding="utf-8")
 
-    imports = "\n".join(f"import './modules/{path.name}';" for path in module_files)
+    imports = "\n".join(f"import './modules/{path.name}?v={BUILD_VERSION}';" for path in module_files)
     (JS / "main.js").write_text(
         f"/* ASDHealth {BUILD_VERSION} ES-module entrypoint. Import order is intentional. */\n"
-        "import './core/legacy-registry.js';\n"
-        "import './core/runtime-health.js';\n" + imports + "\n"
-        "import { installDomBindings } from './core/dom-bindings.js';\n"
+        f"import './core/legacy-registry.js?v={BUILD_VERSION}';\n"
+        f"import './core/runtime-health.js?v={BUILD_VERSION}';\n" + imports + "\n"
+        f"import {{ installDomBindings }} from './core/dom-bindings.js?v={BUILD_VERSION}';\n"
         "const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];\n"
         "const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');\n"
         "document.documentElement.dataset.asdhMissingActions = missingActions.join(',');\n"
