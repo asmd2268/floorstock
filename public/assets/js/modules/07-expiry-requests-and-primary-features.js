@@ -1022,9 +1022,9 @@ function renderMobileRequest(requestId){
 function getNotes(){return S.g('dept_notes')||[]}
 function setNotes(arr){return S.s('dept_notes',arr)}
 
-function noteEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function noteStatus(v){return ['open','urgent','resolved'].indexOf(String(v))>=0?String(v):'open'}
-function noteType(v){return Object.prototype.hasOwnProperty.call(NOTE_TYPE_LABELS,String(v))?String(v):'other'}
+function noteEsc(v){return globalThis.asdhDepartmentNoteUtils.noteEsc(v)}
+function noteStatus(v){return globalThis.asdhDepartmentNoteUtils.noteStatus(v)}
+function noteType(v){return globalThis.asdhDepartmentNoteUtils.noteType(v)}
 
 // ── DEPT: Submit note ────────────────────────────────────
 function renderDeptNotes(){
