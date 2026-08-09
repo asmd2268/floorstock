@@ -42,7 +42,7 @@ const profiles = {
   },
   pharmacy_staff: { active: true, role: 'pharmacy_staff', master: false },
   inpatient_supervisor: { active: true, role: 'inpatient_supervisor', master: false },
-  outpatient_pharmacy_supervisor: { active: true, role: 'outpatient_pharmacy_supervisor', master: false },
+  outpatient_pharmacy_supervisor: { active: true, role: 'outpatient_pharmacy_supervisor', master: false, deptId: DEPARTMENT_ID },
   controlled_pharmacy: { active: true, role: 'controlled_pharmacy', master: false },
   warehouse: { active: true, role: 'warehouse', master: false },
   pharmacy: { active: true, role: 'pharmacy', master: false },
@@ -218,6 +218,14 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     }
     await assertFails(getDoc(doc(dbFor('department'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
     await assertSucceeds(getDoc(doc(dbFor('custodian'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
+  });
+
+  test('outpatient supervisor can read only the assigned department inventory keys', async () => {
+    await seed(`floorstock_state/meds_${DEPARTMENT_ID}`, statePayload([{ id: 'own' }]));
+    await seed(`floorstock_state/meds_${OTHER_DEPARTMENT_ID}`, statePayload([{ id: 'other' }]));
+    const db = dbFor('outpatient_pharmacy_supervisor');
+    await assertSucceeds(getDoc(doc(db, 'floorstock_state', `meds_${DEPARTMENT_ID}`)));
+    await assertFails(getDoc(doc(db, 'floorstock_state', `meds_${OTHER_DEPARTMENT_ID}`)));
   });
 
   for (const role of activeRoles) {
