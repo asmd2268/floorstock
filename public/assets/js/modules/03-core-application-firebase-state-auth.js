@@ -4,7 +4,7 @@ import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
   fulfillmentEditReason,
-} from '../core/fulfillment-edit-policy.js?v=R6.76.0';
+} from '../core/fulfillment-edit-policy.js?v=R6.76.7';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase web configuration is intentionally public; access is protected by Firebase Auth and Firestore rules.

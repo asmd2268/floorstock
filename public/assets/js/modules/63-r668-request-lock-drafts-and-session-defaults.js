@@ -1,4 +1,4 @@
-import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=R6.75.0';
+import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=R6.76.7';
 
 (function(){
 'use strict';

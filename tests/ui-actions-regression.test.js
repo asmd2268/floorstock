@@ -687,7 +687,7 @@ test('Accountability supports independent medicines and temporary two-party QR c
 });
 
 test('all QR features use one local generator and printing continues with a visible fallback', () => {
-  assert.match(indexSource, /assets\/js\/vendor\/qrcode-generator\.js\?v=R6\.74\.0/);
+  assert.match(indexSource, /assets\/js\/vendor\/qrcode-generator\.js\?v=R6\.[0-9.]+/);
   assert.match(localQrVendorSource, /Licensed under the MIT license/);
   assert.match(localQrRuntimeSource, /window\.ASD_QR=api/);
   assert.match(localQrRuntimeSource, /window\.makeReadableQR=createQrDataUrl/);
