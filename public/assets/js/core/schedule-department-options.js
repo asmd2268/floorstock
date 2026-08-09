@@ -4,5 +4,11 @@ function scheduleDepartmentOptions(){
   var escape=typeof globalThis.esc==='function'?globalThis.esc:function(v){return String(v??'')};
   return '<option value="all">All Departments</option>'+departments.map(function(d){return '<option value="'+escape(d.id)+'">'+escape(d.name)+'</option>'}).join('');
 }
+function scheduleDepartmentName(id){
+  if(id==='all') return 'All Departments';
+  var departments=typeof globalThis.gd==='function'?globalThis.gd():[];
+  return (departments.find(function(d){return d.id===id})||{name:id}).name;
+}
 globalThis.scheduleDepartmentOptions=scheduleDepartmentOptions;
-export {scheduleDepartmentOptions};
+globalThis.scheduleDepartmentName=scheduleDepartmentName;
+export {scheduleDepartmentOptions,scheduleDepartmentName};

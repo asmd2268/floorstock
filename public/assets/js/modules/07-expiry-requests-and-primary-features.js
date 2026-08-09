@@ -1523,7 +1523,7 @@ function renderSchedule(){
   var wins=getReqWindows();
   el('req-windows-list').innerHTML=wins.length
     ?wins.map(function(w,i){
-      var deptName=w.dept==='all'?'All Departments':(gd().find(function(d){return d.id===w.dept})||{name:w.dept}).name;
+      var deptName=globalThis.scheduleDepartmentName(w.dept);
       return '<div class="win-card'+(w.active?'':' inactive')+'">'
         +'<div>'
           +'<div style="font-weight:600">'+w.label+'</div>'
@@ -1542,7 +1542,7 @@ function renderSchedule(){
   var slots=getDispSlots();
   el('disp-slots-list').innerHTML=slots.length
     ?slots.map(function(s,i){
-      var deptName=s.dept==='all'?'All Departments':(gd().find(function(d){return d.id===s.dept})||{name:s.dept}).name;
+      var deptName=globalThis.scheduleDepartmentName(s.dept);
       return '<div class="win-card">'
         +'<div>'
           +'<div style="font-weight:600">'+s.label+'</div>'
