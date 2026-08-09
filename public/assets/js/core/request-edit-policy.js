@@ -55,3 +55,12 @@ export function canEditRequestWhileWindowIsOpen(request, requestWindowAllowed) {
   if (request.fulfilledAt || request.fulfilled === true || typeof request.fulfilled === 'string') return false;
   return requestWindowAllowed === true;
 }
+
+// Shared read-scope policy used by request renderers. Keeping this in core
+// prevents page modules from reimplementing department isolation differently.
+export function scopeRequestsToDepartment(requests, departmentId) {
+  if (!Array.isArray(requests) || departmentId == null) return [];
+  return requests.filter((request) => request && request.deptId === departmentId);
+}
+
+globalThis.scopeRequestsToDepartment = scopeRequestsToDepartment;
