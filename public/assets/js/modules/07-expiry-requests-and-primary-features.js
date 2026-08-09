@@ -1494,8 +1494,6 @@ function getCatOptions(selected){return globalThis.getCatOptions(selected)}
 // ════════════════════════════════════════════════════════
 // SCHEDULE & LIMITS
 // ════════════════════════════════════════════════════════
-globalThis.DAY_NAMES = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-
 // ── Storage ──────────────────────────────────────────────
 function getReqWindows(){return globalThis.getReqWindows()}
 function setReqWindows(a){return globalThis.setReqWindows(a)}
