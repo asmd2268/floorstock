@@ -1,30 +1,9 @@
 import { publishLegacy } from '../core/legacy-registry.js';
 
 // ── EXPIRY DATES ─────────────────────────────────────────
-function renderShelfAlertSettings(){
-  if(!CU||CU.role!=='department')return;
-  var cfg=getAlertSettings(CU.deptId);
-  if(el('alert-days1'))el('alert-days1').value=cfg.d1||30;
-  if(el('alert-days2'))el('alert-days2').value=cfg.d2||7;
-}
-function openAddExpiry(){
-  el('mexpiry-title').textContent='Add Expiry / إضافة تاريخ صلاحية';
-  var ms=getMeds(CU.deptId);
-  el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.name)+'</option>'}).join('');
-  el('exp-batch-inp').value='';
-  el('exp-date-inp').value='';
-  el('exp-edit-id').value='';
-  OM('mexpiry');
-}
-function openEditExpiry(btn){
-  el('mexpiry-title').textContent='Edit Expiry / تعديل تاريخ الصلاحية';
-  var ms=getMeds(CU.deptId);
-  el('exp-med-sel').innerHTML=ms.map(function(m){return '<option value="'+esc(m.id)+'"'+(m.id===btn.dataset.mid?' selected':'')+'>'+esc(m.name)+'</option>'}).join('');
-  el('exp-batch-inp').value=btn.dataset.batch||'';
-  el('exp-date-inp').value=btn.dataset.date||'';
-  el('exp-edit-id').value=btn.dataset.bid||'';
-  OM('mexpiry');
-}
+function renderShelfAlertSettings(){return globalThis.renderShelfAlertSettings()}
+function openAddExpiry(){return globalThis.openAddExpiry()}
+function openEditExpiry(btn){return globalThis.openEditExpiry(btn)}
 // ── USERS
 // ── USERS ────────────────────────────────────────────────
 function renderUsers(){
