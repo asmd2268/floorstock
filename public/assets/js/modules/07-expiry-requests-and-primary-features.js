@@ -1022,15 +1022,6 @@ function renderMobileRequest(requestId){
 function getNotes(){return S.g('dept_notes')||[]}
 function setNotes(arr){return S.s('dept_notes',arr)}
 
-globalThis.NOTE_TYPE_LABELS = {
-  classification:'🏷 Classification',
-  request:'➕ Add Medication',
-  missing:'⚠ Missing Info',
-  other:'💬 Other'
-};
-globalThis.NOTE_STATUS_LABELS = {
-  open:'open',urgent:'urgent',resolved:'resolved'
-};
 function noteEsc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function noteStatus(v){return ['open','urgent','resolved'].indexOf(String(v))>=0?String(v):'open'}
 function noteType(v){return Object.prototype.hasOwnProperty.call(NOTE_TYPE_LABELS,String(v))?String(v):'other'}

@@ -40,6 +40,10 @@ const usersSource = fs.readFileSync(
   new URL('../public/assets/js/modules/07-expiry-requests-and-primary-features.js', import.meta.url),
   'utf8',
 );
+const noteSchemaSource = fs.readFileSync(
+  new URL('../public/assets/js/core/department-note-schema.js', import.meta.url),
+  'utf8',
+);
 const masterTestSource = fs.readFileSync(
   new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
   'utf8',
@@ -402,7 +406,7 @@ test('legacy icon entities render as symbols and bilingual alerts use Arabic the
     formatBilingualText('Editable until tomorrow\nيمكن التعديل حتى الغد'),
     'يمكن التعديل حتى الغد\nEditable until tomorrow',
   );
-  assert.match(usersSource, /classification:'🏷 Classification'/);
+  assert.match(noteSchemaSource, /classification: '🏷 Classification'/);
   assert.doesNotMatch(usersSource, /classification:'&#x1F3F7;/);
   assert.match(requestEnhancementSource, /requestEditDeadlineHtml/);
   assert.match(requestEnhancementSource, /<div dir="rtl"><b>✏ صلاحية التعديل:<\/b>/);
