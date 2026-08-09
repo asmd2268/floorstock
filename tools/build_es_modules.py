@@ -179,7 +179,14 @@ def main() -> None:
     provider_report = {}
     for path in module_files:
         source = path.read_text(encoding="utf-8")
-        source = re.sub(r"^import \{ publishLegacy \} from '../core/legacy-registry\.js';\n\n", "", source)
+        # Generated provider modules may already contain this import from a
+        # previous build. Remove every leading copy before adding one canonical
+        # import below; this keeps repeated builds idempotent.
+        source = re.sub(
+            r"^(?:import \{ publishLegacy \} from '../core/legacy-registry\.js';\s*)+",
+            "",
+            source,
+        )
         source = re.sub(r"\n\nconst __asdhLegacyApi = \{.*\Z", "", source, flags=re.S)
         source = re.sub(r"\nexport \{\};\n?\Z", "\n", source)
         source = re.sub(r"^/\* ASDHealth R6\.65 Modular.*?\*/\s*", "", source, count=1, flags=re.S)

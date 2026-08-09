@@ -4,7 +4,11 @@ import { parse } from 'acorn';
 const filename = process.argv[2];
 if (!filename) throw new Error('Pass a JavaScript source path.');
 const source = fs.readFileSync(filename, 'utf8');
-const program = parse(source, { ecmaVersion: 'latest', sourceType: 'script', allowHashBang: true });
+// Provider sources are normally legacy scripts, but some locally maintained
+// modules are valid ES modules (they may contain import/export declarations).
+// Parse as a module so the build pipeline can inspect either form without
+// changing the source file or stripping its module boundaries.
+const program = parse(source, { ecmaVersion: 'latest', sourceType: 'module', allowHashBang: true });
 const functions = [];
 const variables = [];
 const replacements = [];
