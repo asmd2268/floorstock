@@ -66,3 +66,22 @@ test('Firebase config remains bound to the FloorStock project', async () => {
   assert.equal(config.FIREBASE_CONFIG.projectId, 'floorstock-6ac2d');
   assert.equal(config.FIREBASE_CONFIG.authDomain, 'floorstock-6ac2d.firebaseapp.com');
 });
+
+test('Firestore SDK scope selects tenant or legacy state collection', async () => {
+  const { stateCollectionRef } = await import('../public/assets/js/core/firestore-sdk-scope.js');
+  const calls = [];
+  const db = {
+    collection(name) {
+      calls.push(name);
+      if (name === 'floorstock_state') return 'legacy-ref';
+      return {
+        doc(id) { calls.push(id); return { collection(child) { calls.push(child); return 'tenant-ref'; } }; },
+      };
+    },
+  };
+  assert.equal(stateCollectionRef(db, { tenantId: 't1' }), 'tenant-ref');
+  assert.deepEqual(calls, ['tenants', 't1', 'state']);
+  calls.length = 0;
+  assert.equal(stateCollectionRef(db, {}), 'legacy-ref');
+  assert.deepEqual(calls, ['floorstock_state']);
+});
