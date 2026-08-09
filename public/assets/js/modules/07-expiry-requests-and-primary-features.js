@@ -1505,16 +1505,11 @@ function getMonthlyLimits(){return globalThis.getMonthlyLimits()}
 function setMonthlyLimits(o){return globalThis.setMonthlyLimits(o)}
 
 // ── Helpers ───────────────────────────────────────────────
-function fmt12(t){
-  if(!t)return '';
-  var p=t.split(':');var h=+p[0],m=p[1]||'00';
-  var ampm=h>=12?'PM':'AM';h=h%12||12;
-  return h+':'+m+' '+ampm;
-}
-function dayBits(days){return days.map(function(d){return DAY_NAMES[d]}).join(', ')}
+function fmt12(t){return globalThis.fmt12(t)}
+function dayBits(days){return globalThis.dayBits(days)}
 
 // ── Check if request is currently allowed ─────────────────
-function timeToMins(t){var p=(t||'00:00').split(':');return +p[0]*60+(+p[1]||0);}
+function timeToMins(t){return globalThis.timeToMins(t)}
 
 // ── Check monthly request count ───────────────────────────
 function getMonthlyReqCount(deptId){
