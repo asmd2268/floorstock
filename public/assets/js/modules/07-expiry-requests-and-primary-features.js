@@ -1510,15 +1510,8 @@ function dayBits(days){return globalThis.dayBits(days)}
 function timeToMins(t){return globalThis.timeToMins(t)}
 
 // ── Check monthly request count ───────────────────────────
-function getMonthlyReqCount(deptId){
-  var now=new Date();
-  var ms0=new Date(now.getFullYear(),now.getMonth(),1).toISOString();
-  return gr().filter(function(r){return r.deptId===deptId&&r.created>=ms0}).length;
-}
-function getMonthlyLimit(deptId){
-  var lims=getMonthlyLimits();
-  return lims[deptId]||null; // null = no limit
-}
+function getMonthlyReqCount(deptId){return globalThis.getMonthlyReqCount(deptId)}
+function getMonthlyLimit(deptId){return globalThis.getMonthlyLimit(deptId)}
 
 // ── RENDER schedule page ──────────────────────────────────
 function renderSchedule(){
