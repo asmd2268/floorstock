@@ -1864,6 +1864,7 @@ function renderMyReqs(){
     :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests yet</div></div>';
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
+  if(typeof window.enhanceRequests==='function')window.enhanceRequests();
 }
 
 window.canEditFulfillmentRequest=function(request,now){

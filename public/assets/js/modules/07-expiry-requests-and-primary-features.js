@@ -1495,12 +1495,12 @@ function getCatOptions(selected){return globalThis.getCatOptions(selected)}
 // SCHEDULE & LIMITS
 // ════════════════════════════════════════════════════════
 // ── Storage ──────────────────────────────────────────────
-function getReqWindows(){return globalThis.getReqWindows()}
-function setReqWindows(a){return globalThis.setReqWindows(a)}
-function getDispSlots(){return globalThis.getDispSlots()}
-function setDispSlots(a){return globalThis.setDispSlots(a)}
-function getMonthlyLimits(){return globalThis.getMonthlyLimits()}
-function setMonthlyLimits(o){return globalThis.setMonthlyLimits(o)}
+function getReqWindows(){return globalThis.scheduleGetReqWindows()}
+function setReqWindows(a){return globalThis.scheduleSetReqWindows(a)}
+function getDispSlots(){return globalThis.scheduleGetDispSlots()}
+function setDispSlots(a){return globalThis.scheduleSetDispSlots(a)}
+function getMonthlyLimits(){return globalThis.scheduleGetMonthlyLimits()}
+function setMonthlyLimits(o){return globalThis.scheduleSetMonthlyLimits(o)}
 
 // ── Helpers ───────────────────────────────────────────────
 function fmt12(t){return globalThis.fmt12(t)}

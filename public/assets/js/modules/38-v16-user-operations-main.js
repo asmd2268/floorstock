@@ -148,6 +148,7 @@ function scheduleAfterRender(){if(afterRenderScheduled)return;afterRenderSchedul
 
 
 window.schedulePagePostRender=scheduleAfterRender;
+window.enhanceRequests=enhanceRequests;
 
 })();
 

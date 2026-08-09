@@ -6,4 +6,5 @@ function setDispSlots(a){return globalThis.S.s('disp_slots',a)}
 function getMonthlyLimits(){return globalThis.S.g('monthly_limits')||{}}
 function setMonthlyLimits(o){return globalThis.S.s('monthly_limits',o)}
 Object.assign(globalThis,{getReqWindows,setReqWindows,getDispSlots,setDispSlots,getMonthlyLimits,setMonthlyLimits})
+Object.assign(globalThis,{scheduleGetReqWindows:getReqWindows,scheduleSetReqWindows:setReqWindows,scheduleGetDispSlots:getDispSlots,scheduleSetDispSlots:setDispSlots,scheduleGetMonthlyLimits:getMonthlyLimits,scheduleSetMonthlyLimits:setMonthlyLimits})
 export {getReqWindows,setReqWindows,getDispSlots,setDispSlots,getMonthlyLimits,setMonthlyLimits}
