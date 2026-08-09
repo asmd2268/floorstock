@@ -6,7 +6,7 @@
     "build:modules": "python3 tools/build_es_modules.py",
     "verify:modules": "node tools/verify_modules.mjs",
     "verify": "python3 verify_repo.py && npm run verify:modules",
-    "test:ui": "node --test tests/ui-actions-regression.test.js tests/r676-regression.test.js tests/firebase-functions-client-regression.test.cjs tests/role-capabilities.test.js tests/wrapper-integrity.test.js tests/build-architecture.test.js tests/build-order.test.js tests/module-manifest-integrity.test.js tests/import-url-integrity.test.js",
+    "test:ui": "node --test tests/ui-actions-regression.test.js tests/r676-regression.test.js tests/firebase-functions-client-regression.test.cjs tests/role-capabilities.test.js tests/wrapper-integrity.test.js tests/build-architecture.test.js tests/build-order.test.js tests/module-manifest-integrity.test.js tests/import-url-integrity.test.js tests/security-baseline.test.js",
     "test:browser": "playwright test",
     "test:rules:emulator": "node --test --test-concurrency=1 tests/firestore-rules/firestore.rules.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-floorstock-rules --config firebase.json \"npm run test:rules:emulator\"",
