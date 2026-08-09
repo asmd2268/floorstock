@@ -2,6 +2,8 @@
  * CRUD surface has one authoritative implementation while old call sites remain valid. */
 (function(){
   var q=globalThis.el, toast=globalThis.toast, close=globalThis.CM, confirmFn=globalThis.uiConfirm;
+  var legacyRenderSchedule=globalThis.renderSchedule;
+  window.renderSchedule=function(){return typeof legacyRenderSchedule==='function'?legacyRenderSchedule.apply(this,arguments):undefined};
   function checkedDays(id){return Array.from(q(id).querySelectorAll('input:checked')).map(function(c){return +c.value})}
   function refresh(){if(typeof globalThis.renderSchedule==='function')globalThis.renderSchedule()}
   window.saveReqWindow=async function(){var label=q('rwin-label').value.trim(),from=q('rwin-from').value,to=q('rwin-to').value;if(!label)return toast('Enter a label','err');if(!from||!to)return toast('Set start and end time','err');var days=checkedDays('rwin-days');if(!days.length)return toast('Select at least one day','err');var wins=(globalThis.getReqWindows()||[]).slice(),idx=q('rwin-edit-id').value,w={label:label,dept:q('rwin-dept').value,from:from,to:to,days:days,active:q('rwin-active').checked};if(idx!=='')wins[+idx]=w;else wins.push(w);try{await globalThis.setReqWindows(wins);close('mreq-window');refresh();toast('Request window saved permanently ✓','succ')}catch(e){toast('Request window was not saved.','err')}};
