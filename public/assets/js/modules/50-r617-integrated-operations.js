@@ -968,6 +968,7 @@ async function publicStorageView(){
       '</tbody></table>';
   }catch(error){host.innerHTML='<div style="color:#b00">'+esc(error&&error.message||error)+'</div>';}
 }
+if(typeof window!=='undefined')window.acc2LockOutpatientSelectors=acc2LockOutpatientSelectors;
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',publicStorageView);else publicStorageView();
 })();
 
@@ -975,6 +976,5 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
    manually, while the existing temporary dual-QR workflow remains available. */
 function ensureManualReceiptOption(){var checks=document.querySelectorAll('.acc2-receipt-check');if(!checks.length||document.getElementById('acc2-manual-receipt-btn'))return;var host=checks[0].closest('.card');if(!host)return;var b=document.createElement('button');b.id='acc2-manual-receipt-btn';b.type='button';b.className='btn bp bsm';b.textContent='✍ Manual receipt / استلام يدوي';b.onclick=function(){if(typeof acc2CreateReceipt==='function')acc2CreateReceipt()};var row=host.querySelector('.fl')||host.querySelector('.ch');if(row)row.appendChild(b)}
 if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',function(){setInterval(ensureManualReceiptOption,1000)});
-if(typeof window!=='undefined')window.acc2LockOutpatientSelectors=acc2LockOutpatientSelectors;
 if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',function(){setInterval(function(){var lock=window.acc2LockOutpatientSelectors;if(typeof lock==='function')lock()},700)});
 export {};
