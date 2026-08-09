@@ -77,7 +77,8 @@ window.ccSubmitReport=async function(){
   var button=document.querySelector('#mcc-report .fl.g8 .btn.bd2c'),oldText=button&&button.textContent;
   crashReportSaving=true;if(button){button.disabled=true;button.textContent='جاري الحفظ… / Saving…'}
   try{
-    if(!window.CU||String(CU.role||'')!=='department')throw new Error('Only a department employee can submit this report.');
+    var effectiveRole=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(CU&&CU.role||'');
+    if(!window.CU||['department','department_employee'].indexOf(String(effectiveRole))<0)throw new Error('Only a department employee can submit this report.');
     var payload=collectCrashReport(),functions=await functionsClient(),call=functions.httpsCallable('submitCrashCartReport'),response=await call(payload),data=response&&response.data||{};
     if(!data.ok||!data.cart||!data.report)throw new Error('The server did not confirm the Crash Cart report save.');
     replaceCachedCrashState(data.cart,data.report);
