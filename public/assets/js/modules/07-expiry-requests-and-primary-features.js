@@ -1489,10 +1489,7 @@ function officialPrintHeaderHTML(){
 
 
 // ── CATEGORY SELECTOR OPTIONS ────────────────────────────
-function getCatOptions(selected){
-  var cats=getCategories();
-  return cats.map(function(c){return '<option value="'+esc(c)+'"'+(c===selected?' selected':'')+'>'+esc(c)+'</option>'}).join('');
-}
+function getCatOptions(selected){return globalThis.getCatOptions(selected)}
 
 // ════════════════════════════════════════════════════════
 // SCHEDULE & LIMITS
