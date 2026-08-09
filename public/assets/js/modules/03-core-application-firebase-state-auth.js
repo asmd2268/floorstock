@@ -1347,7 +1347,10 @@ async function doLogin(){
     }
     // Keep the login screen visible until the authenticated user's state is ready.
     // Opening the shell before this finishes makes valid pages look empty or broken.
-    await S.init(setLoginStage,stateProfile);
+    // Safari can leave a Firestore stream pending indefinitely when a network
+    // filter or private relay interrupts the request. Never leave the login
+    // button stuck in “Loading data…”; fail cleanly and allow a retry.
+    await fsLoginTimeout(S.init(setLoginStage,stateProfile),25000,'Loading Floor Stock data timed out. Check the network and retry.');
     window.startApp();
     if(window.FSArchitecture)FSArchitecture.emit('app:started',FSArchitecture.session());
 
