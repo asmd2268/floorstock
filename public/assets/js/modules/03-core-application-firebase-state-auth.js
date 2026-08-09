@@ -274,6 +274,7 @@ function fsStateScopeCacheForProfile(cache,profile){
   }
   return cache;
 }
+window.fsStateScopeCacheForProfile=fsStateScopeCacheForProfile;
 async function fsStateLoadScoped(keys,loader,source,profile){
   var values=await Promise.all(keys.map(function(key){return loader(key)})),cache={};
   keys.forEach(function(key,index){if(values[index]!==null&&values[index]!==undefined)cache[key]=values[index]});
