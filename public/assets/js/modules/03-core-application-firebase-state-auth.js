@@ -643,6 +643,8 @@ S.ready=true;
 globalThis._publicSyncWarningAt = 0;
 function warnPublicSync(scope,error){
   console.error((scope||'Public QR')+' sync failed',error);
+  var currentRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');
+  if(currentRole==='department')return;
   var now=Date.now();if(now-_publicSyncWarningAt<12000)return;_publicSyncWarningAt=now;
   if(typeof toast==='function')toast((scope||'Data')+' was saved, but the public QR view could not be refreshed.','info');
 }
