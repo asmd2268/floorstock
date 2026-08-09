@@ -1027,34 +1027,7 @@ function noteStatus(v){return globalThis.asdhDepartmentNoteUtils.noteStatus(v)}
 function noteType(v){return globalThis.asdhDepartmentNoteUtils.noteType(v)}
 
 // ── DEPT: Submit note ────────────────────────────────────
-function renderDeptNotes(){
-  if(!CU||CU.role!=='department')return;
-  el('notes-dept-sub').textContent=CU.deptName+' — Notes & Feedback to Pharmacy';
-  var notes=getNotes().filter(function(n){return n.deptId===CU.deptId}).slice().reverse();
-  var list=el('my-notes-list');
-  if(!notes.length){
-    list.innerHTML='<div style="text-align:center;padding:24px;color:var(--tx2)">No notes submitted yet</div>';
-    return;
-  }
-  list.innerHTML=notes.map(function(n){
-    var safeType=noteType(n.type),safeStatus=noteStatus(n.status),typeLabel=NOTE_TYPE_LABELS[safeType]||safeType;
-    var statusCls=safeStatus==='resolved'?'note-resolved':safeStatus==='urgent'?'note-urgent':'note-open';
-    var statusBadgeCls='note-badge-'+safeStatus;
-    return '<div class="note-card '+statusCls+'">'
-      +'<div class="fl jb ic" style="flex-wrap:wrap;gap:6px">'
-        +'<div style="font-weight:600">'+noteEsc(n.medName)+(n.medName?' — ':'')+noteEsc(typeLabel)+'</div>'
-        +'<span class="badge '+statusBadgeCls+'">'+noteEsc(safeStatus)+'</span>'
-      +'</div>'
-      +'<div style="margin-top:6px;color:var(--tx)">'+noteEsc(n.body)+'</div>'
-      +(n.reply?'<div style="margin-top:8px;padding:8px 10px;background:rgba(46,160,67,.08);border-left:2px solid var(--gn);border-radius:4px;font-size:12px"><b>Pharmacy reply:</b> '+noteEsc(n.reply)+'</div>':'')
-      +'<div class="note-meta">'
-        +'<span>'+noteEsc(fmtDate(n.created))+'</span>'
-        +'<span class="note-tag ntag-'+safeType+'">'+noteEsc(typeLabel)+'</span>'
-        +(n.priority==='urgent'?'<span class="badge brd">🚨 Urgent</span>':'')
-      +'</div>'
-      +'</div>';
-  }).join('');
-}
+function renderDeptNotes(){return globalThis.asdhRenderDeptNotes()}
 
 
 // ── PHARMACY: View & manage notes ───────────────────────

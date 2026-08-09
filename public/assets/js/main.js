@@ -5,6 +5,7 @@ import './core/department-note-schema.js?v=R6.76.7';
 import './core/department-note-utils.js?v=R6.76.7';
 import './core/department-note-store.js?v=R6.76.7';
 import './core/department-note-badge.js?v=R6.76.7';
+import './core/department-note-department-renderer.js?v=R6.76.7';
 import './modules/00-r674-local-qr-runtime.js?v=R6.76.7';
 import './modules/01-firebase-global-bootstrap.js';
 import './modules/02-r664-early-production-console-policy.js';
