@@ -1130,25 +1130,7 @@ function openNoteReply(id){
 }
 
 // ── Badge on nav button ──────────────────────────────────
-function updateNotesBadge(){
-  var badgeRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''),badgeDept=badgeRole==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId?window.fsOutpatientDeptId():'';
-  var openCount=getNotes().filter(function(n){return (n.status==='open'||n.status==='urgent')&&(!badgeDept||String(n.deptId)===String(badgeDept))}).length;
-  document.querySelectorAll('.nb').forEach(function(btn){
-    if(btn.getAttribute('data-pg')==='pg-notes-ph'){
-      btn.innerHTML='📝 Notes'+(openCount>0?' <span style="background:var(--rd);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">'+openCount+'</span>':'');
-    }
-  });
-  // Dept: show unread reply count
-  var deptId=CU&&CU.deptId;
-  if(deptId){
-    var withReply=getNotes().filter(function(n){return n.deptId===deptId&&n.reply&&!n._replyRead}).length;
-    document.querySelectorAll('.nb').forEach(function(btn){
-      if(btn.getAttribute('data-pg')==='pg-notes-dept'){
-        btn.innerHTML='📝 Notes / \u0645\u0644\u0627\u062D\u0638\u0627\u062A'+(withReply>0?' <span style="background:var(--gn);color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">'+withReply+'</span>':'');
-      }
-    });
-  }
-}
+function updateNotesBadge(){return globalThis.asdhUpdateNotesBadge()}
 
 
 // ── BARCODE SCANNER ──────────────────────────────────────
