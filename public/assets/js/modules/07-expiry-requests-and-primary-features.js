@@ -208,8 +208,22 @@ function scheduleAutomaticOrderCleanup(){return globalThis.scheduleAutomaticOrde
 
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
 // Final Print Orders renderer/engine is installed later in one canonical module.
-function setPPP(n,btn){return globalThis.setPPP(n,btn)}
-function resetPrintPageState(){return globalThis.resetPrintPageState()}
+// Delegate to the canonical print-page state module without resolving through
+// globalThis at call time (publishing this legacy API would otherwise point
+// globalThis back to these wrappers and recurse forever).
+var canonicalSetPPP = globalThis.setPPP;
+var canonicalResetPrintPageState = globalThis.resetPrintPageState;
+function setPPP(n,btn){
+  if(typeof canonicalSetPPP==='function'&&canonicalSetPPP!==setPPP)return canonicalSetPPP(n,btn);
+  globalThis.PPP=n;
+  document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
+  if(btn)btn.classList.add('on');
+}
+function resetPrintPageState(){
+  if(typeof canonicalResetPrintPageState==='function'&&canonicalResetPrintPageState!==resetPrintPageState)return canonicalResetPrintPageState();
+  globalThis.PPP=0;
+  document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
+}
 
 // ── IMPORT ───────────────────────────────────────────────
 function renderImport(){
