@@ -1031,6 +1031,7 @@ function renderDeptNotes(){return globalThis.asdhRenderDeptNotes()}
 
 
 // ── PHARMACY: View & manage notes ───────────────────────
+// Retained only as a migration marker; the live renderer is in the dedicated core module.
 function legacyRenderPharmNotes(){
   // Populate dept filter
   var dsel=el('notes-filter-dept');

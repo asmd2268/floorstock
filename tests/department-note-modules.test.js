@@ -12,6 +12,12 @@ test('Department Notes schema exposes only supported types and statuses', () => 
   assert.equal(Object.isFrozen(globalThis.NOTE_STATUS_LABELS), true);
 });
 
+test('Department Notes pharmacy renderer has no legacy call sites', async () => {
+  const fs = await import('node:fs/promises');
+  const source = await fs.readFile(new URL('../public/assets/js/modules/07-expiry-requests-and-primary-features.js', import.meta.url), 'utf8');
+  assert.equal(source.match(/legacyRenderPharmNotes/g)?.length, 1);
+});
+
 test('Department Notes utilities escape content and normalize invalid values', () => {
   const utils = globalThis.asdhDepartmentNoteUtils;
   assert.equal(utils.noteEsc('<script>"x"</script>'), '&lt;script&gt;&quot;x&quot;&lt;/script&gt;');
