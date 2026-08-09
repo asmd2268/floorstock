@@ -1749,9 +1749,9 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
   var actual=fsR6ActualMaster();
   if(!actual)throw new Error('Actual Master profile is unavailable.');
   if(!window.MASTER_ACTUAL)window.MASTER_ACTUAL=Object.assign({},actual);
+  var role=fsR6S(profile.role,''),deptId=fsR6S(profile.deptId||profile.departmentId,'');
   var masterCrashSnapshot=null;
   if(window.S&&S.cache){var testDeptName=deptId&&window.floorstockDepartmentName?window.floorstockDepartmentName(deptId):'',testNorm=function(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()},testAliases=[deptId,testDeptName].map(testNorm).filter(Boolean),belongsTest=function(row){return [row&&row.deptId,row&&row.departmentId,row&&row.deptName,row&&row.departmentName,row&&row.department,row&&row.deptCode,row&&row.departmentCode,row&&row.unit].map(testNorm).some(function(v){return v&&testAliases.indexOf(v)>-1})},testCarts=(Array.isArray(S.cache.crash_carts)?S.cache.crash_carts:[]).filter(belongsTest),testIds=new Set(testCarts.map(function(c){return String(c.id||'')}));masterCrashSnapshot={carts:testCarts,reports:(Array.isArray(S.cache.crash_cart_reports)?S.cache.crash_cart_reports:[]).filter(function(r){return belongsTest(r)||testIds.has(String(r.cartId||''))})};}
-  var role=fsR6S(profile.role,''),deptId=fsR6S(profile.deptId||profile.departmentId,'');
   if((role==='department'||role==='outpatient_pharmacy_supervisor')&&!deptId)throw new Error('A department is required for this role.');
   window.MASTER_EFFECTIVE={
     mode:meta&&meta.mode||'user',testedUserId:profile.id||profile.uid||meta&&meta.testedUserId||'role:'+role,
@@ -1774,13 +1774,15 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
   }
   fsR6Audit('master_test_mode_changed',{mode:MASTER_EFFECTIVE.mode,testedUserId:MASTER_EFFECTIVE.testedUserId,role:role,deptId:deptId||null,actualMasterId:actual.id||actual.uid});
   fsR6CloseModal('mmaster-role-r6');
-  if(typeof window.startApp==='function')window.startApp();
-  if(masterCrashSnapshot)setTimeout(function(){
+  var restoreMasterCrash=function(){
     if(!window.MASTER_EFFECTIVE||!window.S||!S.cache)return;
     S.cache.crash_carts=masterCrashSnapshot.carts.slice();
     S.cache.crash_cart_reports=masterCrashSnapshot.reports.slice();
     if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
-  },1200);
+  };
+  if(masterCrashSnapshot&&window.FSArchitecture&&typeof FSArchitecture.on==='function'){var offRestore=FSArchitecture.on('app:started',function(){offRestore();restoreMasterCrash()});}
+  if(typeof window.startApp==='function')window.startApp();
+  if(masterCrashSnapshot&&!window.FSArchitecture)setTimeout(restoreMasterCrash,10000);
   window.floorstockEnforceMasterSystemHealth();
   fsR6Toast('Test mode: '+fsR6RoleLabel(role)+(CU.deptName?' · '+CU.deptName:''),'info');
   return true;
