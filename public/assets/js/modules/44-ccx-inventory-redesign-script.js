@@ -113,6 +113,10 @@ if(ccxOriginalRender&&!window.__ccxAliasScope){window.__ccxAliasScope=true;windo
 /* Apply the same canonical department id to the renderer's second-level filter. */
 if(window.__ccxAliasScope&&!window.__ccxCanonicalScope){window.__ccxCanonicalScope=true;var ccxScopedRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},all=typeof window.crashCarts==='function'?window.crashCarts():[],old=r.deptId,norm=function(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()},aliases=[r.deptId,r.deptName,r.departmentName,r.department].map(norm).filter(Boolean),match=all.find(function(c){return [c.deptId,c.departmentId,c.deptName,c.departmentName,c.department,c.deptCode,c.departmentCode,c.unit].map(norm).some(function(v){return v&&aliases.indexOf(v)>-1})}),canonical=match&&(match.deptId||match.departmentId||match.deptCode||'');if(canonical)r.deptId=canonical;try{return ccxScopedRender.apply(this,arguments)}finally{if(canonical)r.deptId=old}}}
 
+/* Final guard: the disabled department selector is authoritative for a
+   department session. Normalize the renderer's comparison identity to it. */
+if(!window.__ccxSelectorScope){window.__ccxSelectorScope=true;var ccxSelectorRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},old=r.deptId,sel=E('ccx-dept'),chosen=sel&&sel.value;if(typeof window.isDepartment==='function'&&window.isDepartment()&&chosen)r.deptId=chosen;try{return ccxSelectorRender.apply(this,arguments)}finally{r.deptId=old}}}
+
 
 })();
 
