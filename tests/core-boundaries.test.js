@@ -27,3 +27,28 @@ test('promise timeout resolves and rejects deterministically', async () => {
   assert.equal(await withTimeout(Promise.resolve('ok'), 50, 'late'), 'ok');
   await assert.rejects(() => withTimeout(new Promise(() => {}), 5, 'late'), /late/);
 });
+
+test('script loader deduplicates pending loads and retries failures', async () => {
+  const scripts = [];
+  globalThis.document = {
+    createElement() {
+      return { set src(value) { this.url = value; }, async: false };
+    },
+    head: { appendChild(script) { scripts.push(script); } },
+  };
+  const { loadScriptOnce } = await import('../public/assets/js/core/script-loader.js');
+  const first = loadScriptOnce('unit', '/unit.js');
+  const second = loadScriptOnce('unit', '/unit.js');
+  assert.equal(first, second);
+  assert.equal(scripts.length, 1);
+  scripts[0].onload();
+  await first;
+  const failed = loadScriptOnce('retry', '/retry.js');
+  scripts[1].onerror();
+  await assert.rejects(failed, /library failed to load/);
+  const retry = loadScriptOnce('retry', '/retry.js');
+  assert.equal(scripts.length, 3);
+  scripts[2].onload();
+  await retry;
+  delete globalThis.document;
+});
