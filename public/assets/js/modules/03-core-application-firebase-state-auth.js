@@ -98,6 +98,26 @@ function fsCallableUrl(name){
 }
 async function fsCallFunction(name,data){
   var user=await ensureCallableAuth();
+  // Use the SDK callable transport whenever the live Auth session is present.
+  // It attaches the active Firebase credential using the exact callable
+  // protocol.  The former hand-built request intermittently reached the
+  // server without request.auth in Safari/Chrome and was rejected as
+  // “Sign in first” despite a completed login.
+  var liveAuth=window.FB_AUTH||FB_AUTH;
+  if(liveAuth&&liveAuth.currentUser&&String(liveAuth.currentUser.uid||'')===String(user.uid||'')){
+    try{
+      var functions=await ensureFirebaseFunctions();
+      var callable=functions.httpsCallable(name);
+      var sdkResult=await fsLoginTimeout(callable(data||{}),12000,'User service timed out.');
+      return sdkResult&&Object.prototype.hasOwnProperty.call(sdkResult,'data')?sdkResult.data:sdkResult;
+    }catch(sdkError){
+      var code=String(sdkError&&sdkError.code||'').toLowerCase();
+      // Only recover from authentication/transport failures.  Retrying an
+      // application error could repeat a successful write such as user create.
+      if(code.indexOf('unauthenticated')<0&&code.indexOf('network')<0)throw sdkError;
+      console.warn('Firebase callable SDK transport was unavailable; using the authenticated recovery transport.',sdkError);
+    }
+  }
   var token=await fsLoginTimeout(user.getIdToken(true),10000,'Firebase authentication refresh timed out.');
   var response=await fsLoginTimeout(fetch(fsCallableUrl(name),{
     method:'POST',

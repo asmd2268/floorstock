@@ -33,7 +33,7 @@ import './core/schedule-form-utils.js?v=R6.76.19';
 import './modules/00-r674-local-qr-runtime.js?v=R6.76.19';
 import './modules/01-firebase-global-bootstrap.js';
 import './modules/02-r664-early-production-console-policy.js';
-import './modules/03-core-application-firebase-state-auth.js?v=R6.76.27';
+import './modules/03-core-application-firebase-state-auth.js?v=R6.76.28';
 import './modules/53-r661-authoritative-inventory-safety.js?v=R6.76.19';
 import './modules/04-v13-complete-clean-fix-script.js';
 import './modules/05-controlled-ui-compatibility-fixes.js';

@@ -56,11 +56,13 @@ test('managed-user directory uses the canonical legacy collection before an empt
 
 test('the production entrypoint cache version advances with authenticated-operation fixes', () => {
   const index = fs.readFileSync('public/index.html', 'utf8');
-  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.27/);
+  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.28/);
   assert.match(core, /window\.__fsAuthenticatedUser=credential\.user/);
   assert.match(core, /rememberedMatchesCurrentProfile/);
   assert.match(core, /String\(remembered\.email\|\|''\)\.trim\(\)\.toLowerCase\(\)/);
   assert.match(core, /window\.__fsAuthenticatedUser=null/);
+  assert.match(core, /Firebase callable SDK transport was unavailable/);
+  assert.match(core, /functions\.httpsCallable\(name\)/);
 });
 
 test('managed-user refresh retains a known-good directory after a transient empty fallback', () => {
