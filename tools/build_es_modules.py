@@ -20,7 +20,9 @@ PUBLIC = ROOT / "public"
 JS = PUBLIC / "assets" / "js"
 MODULES = JS / "modules"
 CORE = JS / "core"
-BUILD_VERSION = "R6.76.7"
+# Bump this on every production JavaScript release.  The application is served
+# as static modules, so the version is the cache boundary for browsers and CDNs.
+BUILD_VERSION = "R6.76.10"
 PROVIDERS = {
     "01-firebase-global-bootstrap.js",
     "03-core-application-firebase-state-auth.js",
