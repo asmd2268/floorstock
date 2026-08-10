@@ -44,11 +44,44 @@ function cleanEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function legacyProfileMatches(identity, candidate) {
+  if (!candidate || typeof candidate !== 'object') return false;
+  const uid = String(identity.uid || '');
+  const email = cleanEmail(identity.email);
+  return (uid && String(candidate.id || candidate.uid || '') === uid)
+    || (email && cleanEmail(candidate.email) === email);
+}
+
+async function legacyCallerProfile(identity) {
+  // Legacy installations keep their directory in one state document.  This
+  // compatibility lookup is deliberately server-side: it lets an existing
+  // authenticated administrator use the new callable API without weakening
+  // client Firestore permissions.
+  const snap = await stateRef('users').get();
+  return stateArray(snap).find((row) => legacyProfileMatches(identity, row)) || null;
+}
+
 async function callerProfile(request) {
   if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in first.');
-  const snap = await db.collection('users').doc(request.auth.uid).get();
-  if (!snap.exists) throw new HttpsError('permission-denied', 'User profile not found.');
-  const profile = snap.data();
+  const ref = db.collection('users').doc(request.auth.uid);
+  const snap = await ref.get();
+  let profile = snap.exists ? snap.data() : null;
+  if (!profile) {
+    const legacy = await legacyCallerProfile(request.auth);
+    if (!legacy) throw new HttpsError('permission-denied', 'User profile not found.');
+    // Migrate only the caller on their first authenticated operation.  The
+    // original legacy directory is left untouched as a read-only fallback,
+    // so this cannot delete accounts or lose historical data.
+    profile = {
+      ...legacy,
+      id: request.auth.uid,
+      email: cleanEmail(legacy.email || request.auth.token.email),
+      active: legacy.active !== false,
+      tenantId: legacy.tenantId || null,
+      migratedFromLegacyDirectoryAt: FieldValue.serverTimestamp()
+    };
+    await ref.set(profile, { merge: true });
+  }
   if (profile.active === false) throw new HttpsError('permission-denied', 'Account is inactive.');
   return { uid: request.auth.uid, ...profile };
 }

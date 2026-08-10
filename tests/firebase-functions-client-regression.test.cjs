@@ -58,3 +58,11 @@ test('the production entrypoint cache version advances with authenticated-operat
   assert.match(core, /remembered&&window\.CU&&String\(remembered\.uid\|\|''\)===String\(CU\.id\|\|''\)/);
   assert.match(core, /window\.__fsAuthenticatedUser=null/);
 });
+
+test('managed-user callables support legacy administrator directories during migration', () => {
+  const functions = fs.readFileSync('functions/index.js', 'utf8');
+  assert.match(functions, /async function legacyCallerProfile\(identity\)/);
+  assert.match(functions, /const legacy = await legacyCallerProfile\(request\.auth\)/);
+  assert.match(functions, /migratedFromLegacyDirectoryAt: FieldValue\.serverTimestamp\(\)/);
+  assert.match(functions, /original legacy directory is left untouched/);
+});
