@@ -5,6 +5,7 @@ import { test } from 'node:test';
 const crashSource = await readFile(new URL('../public/assets/js/modules/44-ccx-inventory-redesign-script.js', import.meta.url), 'utf8');
 const authSource = await readFile(new URL('../public/assets/js/modules/64-r671-permissions-and-accountability-qr.js', import.meta.url), 'utf8');
 const crashDeletionSource = await readFile(new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url), 'utf8');
+const sessionDefaultsSource = await readFile(new URL('../public/assets/js/modules/63-r668-request-lock-drafts-and-session-defaults.js', import.meta.url), 'utf8');
 const lifecycleSources = await Promise.all([
   '53-r661-authoritative-inventory-safety.js',
   '54-r662-accountability-draft-protection.js',
@@ -25,6 +26,10 @@ test('Crash Cart post-render controls use a hook, not a renderer wrapper', () =>
   assert.match(crashDeletionSource, /window\.refreshCrashDeletionControls\s*=\s*decorate/);
   assert.doesNotMatch(crashDeletionSource, /oldRender\s*=\s*window\.renderCrashCarts/);
   assert.doesNotMatch(crashDeletionSource, /new MutationObserver/);
+});
+
+test('session defaults do not wrap the canonical logout lifecycle', () => {
+  assert.doesNotMatch(sessionDefaultsSource, /window\.doLogout\s*=\s*async function/);
 });
 
 test('startApp extensions preserve the previous implementation', () => {

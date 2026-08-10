@@ -74,7 +74,15 @@ async function ensureCallableAuth(){
   // loaded.  Reuse only the exact credential that completed this active Floor
   // Stock login; it is cleared during logout and is never used for another CU.
   var remembered=window.__fsAuthenticatedUser;
-  if(!current&&remembered&&window.CU&&String(remembered.uid||'')===String(CU.id||''))current=remembered;
+  // Legacy profiles can have an id unrelated to their Firebase Auth UID.
+  // The authenticated email is a stable identity for the active profile, so
+  // accept it as a narrowly-scoped fallback until the callable migrates the
+  // profile to /users/{uid}.
+  var rememberedMatchesCurrentProfile=remembered&&window.CU&&(
+    String(remembered.uid||'')===String(CU.id||'') ||
+    (String(remembered.email||'').trim().toLowerCase()!==''&&String(remembered.email||'').trim().toLowerCase()===String(CU.email||'').trim().toLowerCase())
+  );
+  if(!current&&rememberedMatchesCurrentProfile)current=remembered;
   if(!current)throw new Error('Sign in first.');
   await fsLoginTimeout(current.getIdToken(true),10000,'Firebase authentication refresh timed out.');
   return current;
@@ -1496,6 +1504,7 @@ async function doLogout(){
   function timeout(promise,ms,label){return Promise.race([Promise.resolve(promise),new Promise(function(_,reject){setTimeout(function(){reject(new Error(label||'Operation timed out'))},ms)})])}
   try{
     if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
+    if(typeof window.resetFloorstockSessionFilters==='function')window.resetFloorstockSessionFilters();
     try{if(typeof window.asdhWaitForAllSaves==='function')await timeout(window.asdhWaitForAllSaves(12000),13000,'Save confirmation timed out')}catch(e){console.warn('Save confirmation failed before logout; continuing sign out.',e)}
     if(typeof previewClear==='function')previewClear();
     try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){if(window.CU&&window.CU.master===true)toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.warn('Pending writes failed before logout; continuing sign out.',err)}

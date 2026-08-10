@@ -176,10 +176,14 @@ exports.listManagedUsers = onCall(CALLABLE_OPTIONS, async (request) => {
   // and legacy rows only fill gaps.  This is read-only and never creates or
   // changes an Authentication account.
   const legacySnap = await stateRef('users', tenantId).get();
-  const known = new Set(currentUsers.map((user) => String(user.id || '').trim()).filter(Boolean));
+  const knownIds = new Set(currentUsers.map((user) => String(user.id || '').trim()).filter(Boolean));
+  const knownEmails = new Set(currentUsers.map((user) => cleanEmail(user.email)).filter(Boolean));
   const legacyUsers = stateArray(legacySnap).filter((user) => {
     const id = String(user && user.id || '').trim();
-    if (!id || known.has(id)) return false;
+    const email = cleanEmail(user && user.email);
+    // A migrated caller receives a Firebase UID but keeps its legacy email.
+    // Do not show one account twice in the managed-user directory.
+    if (!id || knownIds.has(id) || (email && knownEmails.has(email))) return false;
     if (tenantId && String(user && user.tenantId || '') !== tenantId) return false;
     return true;
   }).map((user) => ({
