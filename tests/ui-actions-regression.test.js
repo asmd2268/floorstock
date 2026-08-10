@@ -669,7 +669,8 @@ test('inpatient supervisor capabilities align across Inventory, Crash Cart, Acco
   assert.match(securityRuntimeSource, /canDeleteStateKey/);
   assert.match(securityRuntimeSource, /Not authorized to modify/);
   assert.match(permissionQrSource, /schedule\.manage/);
-  assert.match(permissionQrSource, /Schedule is read-only for the Inpatient Pharmacy Supervisor/);
+  assert.match(permissionQrSource, /schedule-manage-only/);
+  assert.doesNotMatch(permissionQrSource, /Schedule is read-only for the Inpatient Pharmacy Supervisor/);
   assert.match(firestoreRulesSource, /alerts_\.\*/);
   assert.match(firestoreRulesSource, /hidden_request_categories_v1/);
   assert.match(firestoreRulesSource, /accountability_handover_sessions/);
@@ -760,6 +761,12 @@ test('Accountability handover log is a separate filterable and printable view', 
   assert.match(accountabilityHandoverLogViewSource, /Print filtered log/);
   assert.match(accountabilityHandoverLogViewSource, /accountability_usage_v2/);
   assert.match(accountabilityHandoverLogViewSource, /accountability_receipts_v2/);
+});
+
+test('Schedule editing controls stay restricted without a read-only warning banner', () => {
+  assert.match(permissionQrSource, /schedule-manage-only/);
+  assert.match(permissionQrSource, /if\(notice\)notice\.remove\(\)/);
+  assert.doesNotMatch(permissionQrSource, /هذه الصفحة للعرض فقط لمشرف صيدلية التنويم/);
 });
 
 test('Top 10 general dispensing excludes high-alert medicines', () => {

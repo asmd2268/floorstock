@@ -73,7 +73,7 @@ installDomBindings();
 document.documentElement.dataset.asdhModules = 'ready';
 export const architecture = 'es-modules-v2';
 
-import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.76.11';
+import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.76.22';
 import './modules/69-r676-regimen-print-and-severity.js?v=R6.76.19';
 import './modules/70-r676-accountability-regimen-roster-and-log.js?v=R6.76.19';
 import './modules/71-r676-accountability-review-and-retention.js?v=R6.76.15';

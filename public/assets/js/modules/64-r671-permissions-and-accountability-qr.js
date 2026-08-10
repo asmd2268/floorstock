@@ -21,9 +21,8 @@ function enforceScheduleReadOnly(){
   page.querySelectorAll('#req-windows-list button,#disp-slots-list button,.monthly-lim-inp,.r18-limit-24,.r18-limit-7,#request-hour-grid input,#request-hour-grid button,#request-grid-targets input,#request-grid-source').forEach(function(node){
     if(node.matches('button'))node.style.display=allowed?'':'none';else node.disabled=!allowed;
   });
-  var card=page.querySelector('.stitle'),notice=document.getElementById('r671-schedule-readonly');
-  if(!allowed&&!notice&&card){notice=document.createElement('div');notice.id='r671-schedule-readonly';notice.className='alert-banner-y';notice.innerHTML='<div dir="rtl">هذه الصفحة للعرض فقط لمشرف صيدلية التنويم. تعديل أوقات وحدود الطلب مخصص لمدير الصيدلية.</div><div dir="ltr">Schedule is read-only for the Inpatient Pharmacy Supervisor. Only the Pharmacy Director may change ordering windows and limits.</div>';card.insertAdjacentElement('afterend',notice)}
-  if(allowed&&notice)notice.remove();
+  var notice=document.getElementById('r671-schedule-readonly');
+  if(notice)notice.remove();
 }
 function installPermissionUi(){
   enforceScheduleReadOnly();
