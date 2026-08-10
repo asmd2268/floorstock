@@ -54,7 +54,7 @@ import './modules/49-asdh-final-persistence-actions-20260725.js?v=R6.76.0';
 import './modules/50-r617-integrated-operations.js?v=R6.76.0';
 import './modules/51-asdhealth-canonical-r6-32-20260727.js?v=R6.76.0';
 import './modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.75.0';
-import './modules/54-r662-accountability-draft-protection.js';
+import './modules/54-r662-accountability-draft-protection.js?v=R6.76.13';
 import './modules/55-r647-crash-cart-authoritative-boot.js';
 import './modules/56-r664-security-idle-timeout.js';
 import './modules/57-r664-production-console-policy.js';

@@ -128,6 +128,10 @@ const accountabilitySource = fs.readFileSync(
   new URL('../public/assets/js/modules/50-r617-integrated-operations.js', import.meta.url),
   'utf8',
 );
+const accountabilityDraftProtectionSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/54-r662-accountability-draft-protection.js', import.meta.url),
+  'utf8',
+);
 const permissionQrSource = fs.readFileSync(
   new URL('../public/assets/js/modules/64-r671-permissions-and-accountability-qr.js', import.meta.url),
   'utf8',
@@ -696,6 +700,16 @@ test('Accountability supports independent medicines and temporary two-party QR c
   assert.match(publicHandoverSource, /confirmAccountabilityHandover/);
   assert.match(publicHandoverPage, /noindex,nofollow/);
   assert.match(publicHandoverPage, /no-referrer/);
+});
+
+test('Accountability keeps an unsaved draft intact across live refreshes', () => {
+  assert.match(accountabilityDraftProtectionSource, /floorstockShouldProtectAutoRefresh/);
+  assert.match(accountabilityDraftProtectionSource, /pageId==='pg-med-accountability'/);
+  assert.match(accountabilityDraftProtectionSource, /persist\(\);indicator\(\);return true/);
+  assert.match(accountabilityDraftProtectionSource, /sessionStorage\.setItem/);
+  assert.match(accountabilityDraftProtectionSource, /localStorage\.setItem/);
+  assert.match(accountabilityDraftProtectionSource, /restorePageTransientUi/);
+  assert.match(accountabilityDraftProtectionSource, /acc2SaveAssignment/);
 });
 
 test('all QR features use one local generator and printing continues with a visible fallback', () => {
