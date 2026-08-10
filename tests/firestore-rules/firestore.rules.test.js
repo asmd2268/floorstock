@@ -480,7 +480,9 @@ describe('crash cart and Medication Accountability regression coverage', () => {
       'accountability_assignments_v2',
       'accountability_usage_v2',
       'accountability_receipts_v2',
-      'accountability_regimens_v2'
+      'accountability_regimens_v2',
+      'accountability_regimen_catalog_v1',
+      'accountability_regimens_v3'
     ]) {
       await assertSucceeds(setDoc(doc(db, 'floorstock_state', key), statePayload([])));
     }

@@ -225,11 +225,13 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
   'request_count_limits_v1','request_hour_grids_v1','requests','dept_notes','notes',
   'fulfillment_edit_settings_v1',
   'crash_carts','crash_cart_reports',
+  'accountability_regimen_catalog_v1','accountability_regimens_v3',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
 ]);
 var PHARMACY_SCOPED_STATE_KEYS=Object.freeze(DEPARTMENT_SHARED_STATE_KEYS.concat([
-  'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2'
+  'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2',
+  'accountability_regimens_v2','accountability_regimen_catalog_v1','accountability_regimens_v3'
 ]));
 var CONTROLLED_PHARMACY_SCOPED_STATE_KEYS=Object.freeze([
   'departments','deleted_departments','controlled_catalog','controlled_pharmacy_stock',

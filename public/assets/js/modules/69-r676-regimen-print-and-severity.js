@@ -15,6 +15,7 @@ function enhanceBuilder(){
 }
 function renderTable(){
   var root=document.getElementById('r17-accountability-root');if(!root||root.querySelector('#acc2-regimen-print-table'))return;
+  if(root.querySelector('#acc2-independent-regimens'))return;
   var on=root.querySelector('.acc2-tab.on');if(!on||String(on.textContent||'').indexOf('Regimens')<0)return;
   var rows=state();if(!rows.length)return;
   var html='<div class="card" id="acc2-regimen-print-table"><div class="ch"><div><span class="ct">Approved regimen table / جدول الخطط العلاجية المعتمدة</span><div class="fhint">QR encodes the currently approved plan and its specified quantities. Print the table for bedside reference.</div></div></div><div class="tw"><table class="acc2-table"><thead><tr><th>Plan / الخطة</th><th>Department</th><th>Indication</th><th>Line</th><th>Severity</th><th>Medicines and planned units</th><th>Current approved QR</th><th>Print</th></tr></thead><tbody>';

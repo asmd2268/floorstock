@@ -656,6 +656,7 @@ test('inpatient supervisor capabilities align across Inventory, Crash Cart, Acco
     'medication_visibility_rules_v3', 'medication_freeze_rules_v3',
     'crash_carts', 'crash_cart_reports', 'crash_cart_medication_names_v1',
     'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_regimens_v2',
+    'accountability_regimen_catalog_v1', 'accountability_regimens_v3',
     'requests', 'request_analytics_archive', 'deleted_request_audit_v4', 'department_request_notifications_v1',
   ]) assert.equal(canWriteStateKey(supervisor, key), true, key);
 

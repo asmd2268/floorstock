@@ -67,7 +67,7 @@ service cloud.firestore {
     }
 
     function canReadPharmacyState(docId) {
-      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1']
+      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'accountability_regimens_v2', 'accountability_regimen_catalog_v1', 'accountability_regimens_v3', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1']
         || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
     }
 
@@ -158,6 +158,7 @@ service cloud.firestore {
           'req_windows', 'disp_slots', 'request_count_limits_v1', 'request_hour_grids_v1',
           'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports',
           'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2',
+          'accountability_regimens_v2', 'accountability_regimen_catalog_v1', 'accountability_regimens_v3',
           'fulfillment_edit_settings_v1',
           'theme', 'facility_logo',
           'pharmacy_category_config', 'pharmacy_department_announcements',

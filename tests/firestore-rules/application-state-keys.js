@@ -7,6 +7,8 @@ export const APPLICATION_STATE_KEYS = [
   'accountability_assignments_v2',
   'accountability_receipts_v2',
   'accountability_regimens_v2',
+  'accountability_regimen_catalog_v1',
+  'accountability_regimens_v3',
   'accountability_usage_v2',
   `alerts_${DEPARTMENT_ID}`,
   'audit_log',

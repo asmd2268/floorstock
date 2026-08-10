@@ -10,7 +10,7 @@ function matchingDept(value){var target=norm(value);return assignments().find(fu
 function selectedDept(){var select=document.getElementById('acc2-regimen-dept');return select&&select.value||''}
 function renderRegimenRoster(){
   var host=document.querySelector('#r17-accountability-root .acc2-regimen-items');
-  if(!host||host.dataset.r676Roster==='1'||host.querySelector('[data-acc2-regimen-assignment]'))return;
+  if(!host||host.dataset.r676Roster==='1'||host.querySelector('[data-acc2-regimen-assignment]')||host.querySelector('[data-acc3-regimen-catalog]'))return;
   var selected=selectedDept(),candidate=matchingDept(selected)||assignments()[0];
   if(!candidate){
     host.dataset.r676Roster='1';
