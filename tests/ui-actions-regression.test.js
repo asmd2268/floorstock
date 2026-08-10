@@ -132,6 +132,10 @@ const accountabilityDraftProtectionSource = fs.readFileSync(
   new URL('../public/assets/js/modules/54-r662-accountability-draft-protection.js', import.meta.url),
   'utf8',
 );
+const accountabilityRosterLogSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/70-r676-accountability-regimen-roster-and-log.js', import.meta.url),
+  'utf8',
+);
 const permissionQrSource = fs.readFileSync(
   new URL('../public/assets/js/modules/64-r671-permissions-and-accountability-qr.js', import.meta.url),
   'utf8',
@@ -710,6 +714,15 @@ test('Accountability keeps an unsaved draft intact across live refreshes', () =>
   assert.match(accountabilityDraftProtectionSource, /localStorage\.setItem/);
   assert.match(accountabilityDraftProtectionSource, /restorePageTransientUi/);
   assert.match(accountabilityDraftProtectionSource, /acc2SaveAssignment/);
+});
+
+test('Accountability regimen builder resolves active custody medicines and exposes a handover audit log', () => {
+  assert.match(accountabilityRosterLogSource, /accountability_assignments_v2/);
+  assert.match(accountabilityRosterLogSource, /Select two or more approved custody medicines/);
+  assert.match(accountabilityRosterLogSource, /Add custody medicine/);
+  assert.match(accountabilityRosterLogSource, /Handover activity log/);
+  assert.match(accountabilityRosterLogSource, /Dual QR/);
+  assert.match(accountabilityRosterLogSource, /Manual/);
 });
 
 test('all QR features use one local generator and printing continues with a visible fallback', () => {
