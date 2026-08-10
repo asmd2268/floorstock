@@ -12,7 +12,7 @@ function decorateReview(){
 }
 function retentionPanel(){
   var root=document.getElementById('r17-accountability-root');if(!root||!isActualMaster()||root.querySelector('#r676-accountability-retention'))return;
-  var log=root.querySelector('#r676-accountability-handover-log');if(!log)return;
+  var log=root.querySelector('#r676-accountability-handover-log, #r676-accountability-handover-log-view');if(!log)return;
   var oldUsage=appState('accountability_usage_v2').filter(function(row){return olderThanSixMonths(row.submittedAt||row.consumptionDate)}).length;
   var oldReceipts=appState('accountability_receipts_v2').filter(function(row){return olderThanSixMonths(row.receivedAt||row.createdAt||row.receivedDate)}).length;
   var panel=document.createElement('div');panel.id='r676-accountability-retention';panel.className='alert-banner-y';panel.innerHTML='<b>Master retention controls / إدارة الاحتفاظ للماستر</b><br>Historical accountability activity older than six months: '+oldUsage+' usage record(s), '+oldReceipts+' receipt/handover record(s). Active custody lines and regimens are never deleted.<br><button class="btn bd2c bsm" type="button" data-acc2-purge-history style="margin-top:8px">Delete accountability history older than 6 months / حذف سجل العهد الأقدم من 6 أشهر</button>';

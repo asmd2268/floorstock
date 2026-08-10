@@ -140,6 +140,10 @@ const accountabilityRetentionSource = fs.readFileSync(
   new URL('../public/assets/js/modules/71-r676-accountability-review-and-retention.js', import.meta.url),
   'utf8',
 );
+const accountabilityHandoverLogViewSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/72-r676-accountability-handover-log-view.js', import.meta.url),
+  'utf8',
+);
 const permissionQrSource = fs.readFileSync(
   new URL('../public/assets/js/modules/64-r671-permissions-and-accountability-qr.js', import.meta.url),
   'utf8',
@@ -737,6 +741,22 @@ test('Accountability review defaults to unreviewed rows and has Master-only six-
   assert.match(accountabilityRetentionSource, /accountability_receipts_v2/);
   assert.match(accountabilityRetentionSource, /accountability_history_retention_purge/);
   assert.match(accountabilityRetentionSource, /Active custody and regimens will remain unchanged/);
+});
+
+test('Accountability handover log is a separate filterable and printable view', () => {
+  assert.match(accountabilityHandoverLogViewSource, /Handover activity log/);
+  assert.match(accountabilityHandoverLogViewSource, /data-acc2-handover-log/);
+  assert.match(accountabilityHandoverLogViewSource, /From date/);
+  assert.match(accountabilityHandoverLogViewSource, /To date/);
+  assert.match(accountabilityHandoverLogViewSource, /Dual QR/);
+  assert.match(accountabilityHandoverLogViewSource, /Print filtered log/);
+  assert.match(accountabilityHandoverLogViewSource, /accountability_usage_v2/);
+  assert.match(accountabilityHandoverLogViewSource, /accountability_receipts_v2/);
+});
+
+test('Top 10 general dispensing excludes high-alert medicines', () => {
+  assert.match(usersSource, /Top 10 useful for routine consumption/);
+  assert.match(usersSource, /srt\.filter\(function\(e\)\{return !\(totMeta\[e\[0\]\]&&totMeta\[e\[0\]\]\.high_alert\)\}\)\.slice\(0,10\)/);
 });
 
 test('all QR features use one local generator and printing continues with a visible fallback', () => {

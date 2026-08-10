@@ -41,7 +41,9 @@ function handoverLog(){
   var html='<div class="card" id="r676-accountability-handover-log"><div class="ch"><div><span class="ct">Handover activity log / سجل نشاط الاستلام والتسليم</span><div class="fhint">One chronological audit log for pharmacy approval, delivery, department receipt, QR and documented manual handovers.</div></div></div><div class="tw"><table class="acc2-table"><thead><tr><th>Time / الوقت</th><th>Activity / النشاط</th><th>Department / القسم</th><th>Medicines / الأدوية</th><th>Units</th><th>Performed by / المنفذ</th><th>Method / الطريقة</th><th>Status</th></tr></thead><tbody>'+(events.length?events.map(function(event){return '<tr><td>'+esc(event.at||'—')+'</td><td><b>'+esc(event.kind)+'</b></td><td>'+esc(deptName(event.dept))+'</td><td>'+esc(event.medicine||'—')+'</td><td>'+esc(event.units||'—')+'</td><td>'+esc(event.actor||'—')+'</td><td>'+esc(event.method||'—')+'</td><td><span class="badge '+(event.status==='received_locked'?'bgn':event.status==='pending_pharmacy'?'byl':'bbl')+'>'+esc(event.status||'—')+'</span></td></tr>'}).join(''):'<tr><td colspan="8" class="acc2-empty">No handover activity recorded yet.</td></tr>')+'</tbody></table></div></div>';
   root.insertAdjacentHTML('beforeend',html);
 }
-function enhance(){renderRegimenRoster();handoverLog()}
+/* The activity log is rendered by the dedicated, filterable log view in
+   module 72. Keep this module focused on the regimen roster. */
+function enhance(){renderRegimenRoster()}
 document.addEventListener('change',function(event){if(event.target&&event.target.id==='acc2-regimen-dept')setTimeout(enhance,0)},true);
 document.addEventListener('click',function(event){var button=event.target&&event.target.closest&&event.target.closest('[data-acc2-open-custody]');if(button&&typeof window.acc2SetAdminTab==='function'){window.acc2SetAdminTab('custody')}},true);
 var previous=window.renderMedicationAccountability;

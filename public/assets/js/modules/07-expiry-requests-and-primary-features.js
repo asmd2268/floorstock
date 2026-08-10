@@ -200,7 +200,9 @@ function renderAn(){
   // Keep the medication catalog in the same department scope as the request filter.
   // Without this, Zero Dispense mixed every department's catalog into the selected one.
   var allMs=df?getMeds(df).map(function(m){return Object.assign({deptId:df},m)}):gd().reduce(function(acc,d){return acc.concat(getMeds(d.id).map(function(m){return Object.assign({deptId:d.id},m)}));},[]);
-  var t10=srt.slice(0,10),mx1=t10[0]?t10[0][1]:1;
+  /* High-alert medicines have their own dedicated panel. Keep the general
+     Top 10 useful for routine consumption by excluding them here. */
+  var t10=srt.filter(function(e){return !(totMeta[e[0]]&&totMeta[e[0]].high_alert)}).slice(0,10),mx1=t10[0]?t10[0][1]:1;
   el('ctop').innerHTML=t10.length
     ?t10.map(function(e){var m=totMeta[e[0]];return '<div class="brow"><div class="blbl" title="'+(m?m.name:e[0])+'">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx1*100)+'%;background:var(--ac)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
