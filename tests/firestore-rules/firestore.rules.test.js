@@ -203,7 +203,7 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     await assertFails(getDoc(doc(dbFor('inactive'), 'floorstock_state', 'theme')));
   });
 
-  test('department reads exclude global controlled data while a custodian can read only their department controlled keys', async () => {
+  test('department reads exclude global controlled data while each department can read only its own controlled list', async () => {
     await seed('floorstock_state/controlled_catalog', statePayload([{ id: 'restricted' }]));
     await seed('floorstock_state/crash_carts', statePayload([{ id: 'cart-a', deptId: DEPARTMENT_ID }]));
     await seed('floorstock_state/crash_cart_reports', statePayload([{ id: 'report-a', cartId: 'cart-a', deptId: DEPARTMENT_ID }]));
@@ -216,7 +216,7 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_carts')));
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_cart_reports')));
     }
-    await assertFails(getDoc(doc(dbFor('department'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
+    await assertSucceeds(getDoc(doc(dbFor('department'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
     await assertSucceeds(getDoc(doc(dbFor('custodian'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
   });
 

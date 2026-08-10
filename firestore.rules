@@ -181,11 +181,11 @@ service cloud.firestore {
         || docId == 'alerts_' + departmentId()
         || docId == 'inventory_integrity_' + departmentId()
         || docId == 'inventory_snapshot_index_' + departmentId()
+        || docId == 'controlled_dept_list_' + departmentId()
         || (
           profile().get('controlledCustodian', false) == true
           && (
-            docId == 'controlled_dept_list_' + departmentId()
-            || docId == 'controlled_dept_shelves_' + departmentId()
+            docId == 'controlled_dept_shelves_' + departmentId()
             || docId == 'controlled_settings_' + departmentId()
           )
         );

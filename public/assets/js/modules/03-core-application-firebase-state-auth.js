@@ -286,8 +286,11 @@ function fsStateKeysForProfile(profile){
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
     ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
+    // Every department may view its own controlled-custody list.  Editing and
+    // the custody configuration remain restricted to the controlled custodian.
+    keys.push('controlled_dept_list_'+deptId);
     if(profile.controlledCustodian===true){
-      ['controlled_dept_list_','controlled_dept_shelves_','controlled_settings_'].forEach(function(prefix){keys.push(prefix+deptId)});
+      ['controlled_dept_shelves_','controlled_settings_'].forEach(function(prefix){keys.push(prefix+deptId)});
     }
   }
   return keys;
@@ -416,6 +419,25 @@ async function fsStateLoadUsersViaSdk(){
 async function fsStateLoadUsersViaCallable(){
   var result=await fsCallFunction('listManagedUsers',{});
   return result&&Array.isArray(result.users)?result.users:[];
+}
+function fsStateIsLegacyMasterProfile(profile){
+  return !!(profile&&profile.master===true&&!fsTenantId(profile));
+}
+async function fsStateLoadLegacyUserDirectory(){
+  // The legacy installation has its canonical directory in /users.  The
+  // callable is useful as a final compatibility source, but an empty callable
+  // result must never erase real users after an auth-session refresh.
+  var loaders=[fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest,fsStateLoadUsersViaCallable],failures=[];
+  for(var index=0;index<loaders.length;index++){
+    try{
+      var rows=await loaders[index]();
+      if(Array.isArray(rows)&&rows.length)return rows;
+    }catch(error){failures.push(error);}
+  }
+  if(failures.length===loaders.length){
+    throw new Error('Loading legacy users failed. '+failures.map(function(error){return error&&error.message||String(error);}).join(' | '));
+  }
+  return [];
 }
 function fsStateFirstSuccess(tasks,label){
   return new Promise(function(resolve,reject){
@@ -599,14 +621,18 @@ S.ready=true;
     // result from a failed fallback path during the 30-second refresh cycle.
     var previousUsers=Array.isArray(S.cache&&S.cache.users)?S.cache.users:[];
     var users;
-    try{
-      users=await fsStateLoadUsersViaCallable();
-    }catch(callableError){
-      console.warn('Managed-user directory callable was unavailable; using a read-only fallback.',callableError);
-      users=await fsStateFirstSuccess([
-        fsStateLoadUsersViaRest(),
-        fsStateLoadUsersViaSdk()
-      ],'Loading users');
+    if(fsStateIsLegacyMasterProfile(S.scopeProfile)){
+      users=await fsStateLoadLegacyUserDirectory();
+    }else{
+      try{
+        users=await fsStateLoadUsersViaCallable();
+      }catch(callableError){
+        console.warn('Managed-user directory callable was unavailable; using a read-only fallback.',callableError);
+        users=await fsStateFirstSuccess([
+          fsStateLoadUsersViaRest(),
+          fsStateLoadUsersViaSdk()
+        ],'Loading users');
+      }
     }
     if(Array.isArray(users)&&users.length===0&&previousUsers.length){
       console.warn('Managed-user directory refresh returned no records; retaining the last verified directory.');
@@ -654,7 +680,13 @@ S.ready=true;
           // Always refresh through the canonical directory callable.  A direct
           // /users listener cannot include legacy users and caused the Users
           // page to become empty again after the first realtime update.
-          S.usersPollTimer=setInterval(function(){S.loadUsers().catch(function(error){console.warn('User-list refresh was unavailable.',error)})},30000);
+          S.usersPollTimer=setInterval(function(){
+            var before=S.cache.users||[];
+            S.loadUsers().then(function(users){
+              var active=document.querySelector('.pg.on');
+              if(!stateValueEqual(before,users||[])&&active&&active.id==='pg-users')S.scheduleRefresh();
+            }).catch(function(error){console.warn('User-list refresh was unavailable.',error)});
+          },30000);
         }
         return;
       }catch(error){
@@ -674,9 +706,9 @@ S.ready=true;
       if(changed)S.scheduleRefresh();
       if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
         try{
-          var users=await fsStateLoadUsersViaCallable();
-          var usersChanged=!stateValueEqual(S.cache.users||[],users);
-          S.cache.users=users;
+          var previousUsers=S.cache.users||[];
+          var users=await S.loadUsers();
+          var usersChanged=!stateValueEqual(previousUsers,users||[]);
           var active=document.querySelector('.pg.on');
           if(usersChanged&&active&&active.id==='pg-users')S.scheduleRefresh();
         }catch(usersError){
