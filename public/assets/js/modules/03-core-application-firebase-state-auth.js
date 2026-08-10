@@ -1534,22 +1534,29 @@ function populateInvDeptSel(){
 // ── DASHBOARD ────────────────────────────────────────────
 function renderDash(){
   var allDs=gd(),dashRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''),ds=allDs;
-  if(dashRole==='inpatient_supervisor')ds=allDs.filter(function(d){return !/outpatient\s+department/i.test(String(d.name||''))&&String(d.id)!=='outpatient'});
-  else if(dashRole==='outpatient_pharmacy_supervisor')ds=allDs.filter(function(d){return /outpatient\s+department/i.test(String(d.name||''))||String(d.id)==='outpatient'});
+  /* The inpatient pharmacy supervisor serves the full pharmacy workflow,
+     including the Outpatient Department.  Only the outpatient supervisor is
+     restricted to that one department. */
+  if(dashRole==='outpatient_pharmacy_supervisor')ds=allDs.filter(function(d){return /outpatient\s+department/i.test(String(d.name||''))||String(d.id)==='outpatient'});
   var allowedDash={};ds.forEach(function(d){allowedDash[String(d.id)]=true});
   var rs=gr().filter(function(r){return !r.deptId||allowedDash[String(r.deptId)]});
   var pend=rs.filter(function(r){return r.status==='pending'});
   var done=rs.filter(function(r){return r.status!=='pending'});
-  var totalMeds=ds.reduce(function(s,d){return s+getMeds(d.id).length},0);
+  /* Scoped pharmacy sessions load each allowed inventory document
+     asynchronously.  Do not briefly present a false zero while that
+     permitted hydration is still in progress. */
+  var pharmacyScoped=typeof fsPharmacyInventoryScopedProfile==='function'&&fsPharmacyInventoryScopedProfile((S&&S.scopeProfile)||{});
+  var inventoryReady=!pharmacyScoped||!ds.length||ds.some(function(d){return Object.prototype.hasOwnProperty.call((S&&S.cache)||{},'meds_'+d.id)});
+  var totalMeds=inventoryReady?ds.reduce(function(s,d){return s+getMeds(d.id).length},0):null;
   var tot=done.reduce(function(s,r){return s+(r.dispensed||[]).reduce(function(a,i){return a+(i.qty||0)},0)},0);
   // Per-dept med breakdown
-  var deptBreakdown=ds.map(function(d){
+  var deptBreakdown=inventoryReady?ds.map(function(d){
     var lim=getMonthlyLimit(d.id);
     var used=lim!==null?getMonthlyReqCount(d.id):null;
     return d.name+': '+getMeds(d.id).length+' meds'+(lim!==null?' ('+used+'/'+lim+' req)':'');
-  }).join(' &nbsp;|&nbsp; ');
+  }).join(' &nbsp;|&nbsp; '):'Loading permitted department medicine lists…';
   el('dstats').innerHTML=
-    '<div class="sc"><div class="sl">Total Medications</div><div class="sv">'+totalMeds+'</div><div class="ss" style="font-size:10px">'+deptBreakdown+'</div></div>'+
+    '<div class="sc"><div class="sl">Total Medications</div><div class="sv">'+(inventoryReady?totalMeds:'…')+'</div><div class="ss" style="font-size:10px">'+deptBreakdown+'</div></div>'+
     '<div class="sc"><div class="sl">Departments</div><div class="sv" style="color:var(--acl)">'+ds.length+'</div><div class="ss">Active</div></div>'+
     '<div class="sc"><div class="sl">Pending Requests</div><div class="sv" style="color:var(--yll)">'+pend.length+'</div><div class="ss">Awaiting fulfillment</div></div>'+
     '<div class="sc"><div class="sl">Fulfilled</div><div class="sv" style="color:var(--gnl)">'+done.length+'</div><div class="ss">Total completed</div></div>';

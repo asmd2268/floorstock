@@ -10,6 +10,7 @@ const functionsPackage = JSON.parse(fs.readFileSync(new URL('../functions/packag
 const stateSource = fs.readFileSync(new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url), 'utf8');
 const accountabilitySource = fs.readFileSync(new URL('../public/assets/js/modules/50-r617-integrated-operations.js', import.meta.url), 'utf8');
 const analyticsReportSource = fs.readFileSync(new URL('../public/assets/js/modules/73-r676-analytics-quarterly-annual-reports.js', import.meta.url), 'utf8');
+const psychotropicImportSource = fs.readFileSync(new URL('../public/assets/js/modules/21-r664-psychotropic-pharmacy-stock-import-20260728.js', import.meta.url), 'utf8');
 
 // These checks protect the architectural fix: department reports must never write
 // the scoped crash_carts array directly from the browser.
@@ -61,10 +62,17 @@ test('controlled medicines officer uses permitted document reads instead of a de
   assert.match(stateSource, /role==='controlled_pharmacy'\?CONTROLLED_PHARMACY_SCOPED_STATE_KEYS/);
 });
 
+test('controlled medicines officer cannot rerun a pharmacy-owned historical import on page open', () => {
+  assert.match(psychotropicImportSource, /u\.master===true\|\|r==='pharmacy'/);
+  assert.doesNotMatch(psychotropicImportSource, /u\.master===true\|\|r==='pharmacy'\|\|r==='controlled_pharmacy'/);
+});
+
 test('inpatient dashboard hydration reads each allowed department medicine document explicitly', () => {
   assert.match(stateSource, /function fsPharmacyInventoryScopedProfile/);
   assert.match(stateSource, /\['meds_','expiry_'\]/);
   assert.match(stateSource, /Scoped pharmacy inventory document was unavailable/);
+  assert.doesNotMatch(stateSource, /if\(dashRole==='inpatient_supervisor'\)ds=allDs\.filter/);
+  assert.match(stateSource, /Loading permitted department medicine lists/);
 });
 
 test('a regimen is locked to the explicitly assigned supervisor department', () => {

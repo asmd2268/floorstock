@@ -12,7 +12,11 @@
   function code(v){return String(v==null?'':v).replace(/[^0-9]/g,'')}
   function canApply(){
     var u=window.CU||{},r=String(u.role||'');
-    return !!(u.master===true||r==='pharmacy'||r==='controlled_pharmacy');
+    /* This is a one-time, pharmacy-owned data migration.  A controlled
+       medicines officer may manage the resulting catalogue and stock, but
+       must never re-run the importer merely by opening the page.  The
+       migration marker is intentionally protected from that role. */
+    return !!(u.master===true||r==='pharmacy');
   }
   function sourceCodeIsUnique(field,value){
     value=code(value);if(!value)return false;
