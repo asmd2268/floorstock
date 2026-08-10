@@ -123,6 +123,74 @@ async function countActiveMasters(excludeUid = null, tenantId = '') {
   }).length;
 }
 
+// Department-side Crash Cart reporting is intentionally handled server-side.
+// This keeps departments from writing the authoritative cart document while
+// still recording the report and applying the reported consumption atomically.
+exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  if (caller.role !== 'department') {
+    throw new HttpsError('permission-denied', 'Only a department employee can submit a Crash Cart report.');
+  }
+  const data = request.data || {};
+  const cartId = String(data.cartId || '').trim();
+  const reason = String(data.reason || '').trim();
+  const oldSeal = String(data.oldSeal || '').trim();
+  const consumed = Array.isArray(data.consumed) ? data.consumed : [];
+  if (!cartId || !reason || !consumed.length) {
+    throw new HttpsError('invalid-argument', 'Crash Cart, reason, and at least one consumed medicine are required.');
+  }
+  const cartsRef = stateRef('crash_carts', caller.tenantId || '');
+  const reportsRef = stateRef('crash_cart_reports', caller.tenantId || '');
+  let result;
+  await db.runTransaction(async (transaction) => {
+    const [cartsSnap, reportsSnap] = await Promise.all([transaction.get(cartsRef), transaction.get(reportsRef)]);
+    const carts = stateArray(cartsSnap).map((cart) => ({ ...cart, items: Array.isArray(cart.items) ? cart.items.map((item) => ({ ...item })) : [] }));
+    const reports = stateArray(reportsSnap).map((report) => ({ ...report }));
+    const cart = carts.find((entry) => String(entry.id) === cartId);
+    if (!cart) throw new HttpsError('not-found', 'Crash Cart not found.');
+    if (String(cart.deptId || '') !== String(caller.deptId || '')) {
+      throw new HttpsError('permission-denied', 'This Crash Cart is not assigned to your department.');
+    }
+    const existingIndex = reports.findIndex((report) => String(report.cartId) === cartId && report.status === 'open');
+    const previous = existingIndex >= 0 ? reports[existingIndex] : null;
+    const normalized = [];
+    for (const row of consumed) {
+      const item = cart.items.find((entry) => String(entry.id) === String(row.itemId));
+      const qty = Number(row.qty);
+      if (!item || !Number.isFinite(qty) || qty <= 0) throw new HttpsError('invalid-argument', 'Invalid consumed medicine or quantity.');
+      const available = Number(item.present == null ? item.qty : item.present) || 0;
+      if (qty > available) throw new HttpsError('failed-precondition', `${item.name || 'Medicine'} quantity exceeds available stock.`);
+      item.present = available - qty;
+      item.stockStatus = item.present <= 0 ? 'out_of_stock' : item.present < (Number(item.standardQty || item.max || item.qty) || item.present) ? 'partial' : 'available';
+      normalized.push({ itemId: String(item.id), name: item.name || '', strength: item.strength || item.concentration || '', qty, reportedExpiry: String(row.reportedExpiry || '').slice(0, 10) });
+    }
+    const stamp = new Date().toISOString();
+    const report = {
+      id: previous && previous.id || `ccr_${Date.now().toString(36)}`,
+      cartId,
+      deptId: caller.deptId || null,
+      reason,
+      oldSeal,
+      consumed: normalized,
+      status: 'open',
+      openedAt: previous && previous.openedAt || stamp,
+      openedBy: previous && previous.openedBy || caller.displayName || caller.email || caller.uid,
+      lastReportedAt: stamp,
+      lastReportedBy: caller.displayName || caller.email || caller.uid,
+      inventoryDeductedAtReport: true,
+      inventoryDeductedAt: stamp
+    };
+    if (existingIndex >= 0) reports[existingIndex] = report; else reports.push(report);
+    cart.updatedAt = stamp;
+    cart.updatedBy = caller.displayName || caller.email || caller.uid;
+    writeState(transaction, cartsRef, carts);
+    writeState(transaction, reportsRef, reports);
+    result = { ok: true, cart, report };
+  });
+  await audit('crash_cart.report.create', caller, null, { cartId, reportId: result.report.id, consumed: result.report.consumed }).catch(() => {});
+  return result;
+});
+
 exports.listManagedUsers = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requirePharmacy(caller);
