@@ -282,6 +282,8 @@ test('department Crash Cart view retains the authenticated department scope', ()
   assert.match(crashInventorySource, /function isDepartmentRole\(\)\{[\s\S]*?function isDepartment\(\)\{return isDepartmentRole\(\)&&!window\.__ccxScopedRowsLoaded\}/);
   assert.match(crashInventorySource, /var departmentScoped=isDepartmentRole\(\)\|\|\(CU&&CU\.role==='outpatient_pharmacy_supervisor'\),scopeDept=departmentScoped\?String\(CU&&CU\.deptId\|\|''\):''/);
   assert.match(crashInventorySource, /if\(isDepartmentRole\(\)&&!rep\)actions\+=/);
+  assert.doesNotMatch(crashInventorySource, /cc-dept-report-btn/);
+  assert.match(crashInventorySource, /__ccxLastScopedCarts/);
   assert.doesNotMatch(crashInventorySource, /scopedOutpatient=CU&&CU\.role==='outpatient_pharmacy_supervisor',scopeDept=scopedOutpatient\?String\(CU\.deptId\|\|''\):''/);
 });
 
