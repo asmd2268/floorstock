@@ -27,9 +27,8 @@ test('Firebase Functions loader publishes and returns the initialized client', (
   assert.match(core, /return FB_FUNCTIONS/);
 });
 
-test('user management never dereferences the nullable global Functions handle', () => {
+test('user management uses the central authenticated callable transport', () => {
   assert.doesNotMatch(users, /FB_FUNCTIONS\.httpsCallable/);
-
   for (const callable of [
     'createManagedUser',
     'deleteManagedUser',
@@ -38,8 +37,10 @@ test('user management never dereferences the nullable global Functions handle', 
     assert.match(
       users,
       new RegExp(
-        String.raw`functionsClient\.httpsCallable\('${callable}'\)`
+        String.raw`window\.fsCallFunction\('${callable}'`
       )
     );
   }
+  assert.match(core, /async function fsCallFunction\(name,data\)/);
+  assert.match(core, /'Authorization':'Bearer '\+token/);
 });

@@ -75,6 +75,31 @@ async function ensureCallableAuth(){
   return current;
 }
 window.ensureCallableAuth=ensureCallableAuth;
+// Use the callable HTTP protocol with the freshly-issued ID token.  The
+// compat Functions client occasionally lost its auth context in Safari and
+// reported "Sign in first" despite a valid visible session.  Keeping this
+// transport here gives every user-management action one authenticated path.
+function fsCallableUrl(name){
+  if(isFirebaseEmulatorEnabled())return 'http://127.0.0.1:5001/demo-floorstock-emulator/us-central1/'+encodeURIComponent(name);
+  return 'https://us-central1-'+encodeURIComponent(FIREBASE_CONFIG.projectId)+'.cloudfunctions.net/'+encodeURIComponent(name);
+}
+async function fsCallFunction(name,data){
+  var user=await ensureCallableAuth();
+  var token=await fsLoginTimeout(user.getIdToken(true),10000,'Firebase authentication refresh timed out.');
+  var response=await fsLoginTimeout(fetch(fsCallableUrl(name),{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    body:JSON.stringify({data:data||{}})
+  }),12000,'User service timed out.');
+  var payload=null;
+  try{payload=await response.json()}catch(ignoreJson){}
+  if(!response.ok||payload&&payload.error){
+    var issue=payload&&payload.error||{};
+    throw new Error(issue.message||('User service failed ('+response.status+').'));
+  }
+  return payload&&Object.prototype.hasOwnProperty.call(payload,'result')?payload.result:payload;
+}
+window.fsCallFunction=fsCallFunction;
 globalThis.renderInvDebounced = globalThis.debounce(function(){renderInv()},220);
 globalThis.renderReqFormDebounced = globalThis.debounce(function(){renderReqForm()},220);
 globalThis.renderControlledDebounced = globalThis.debounce(function(){renderControlled()},220);
@@ -376,10 +401,8 @@ async function fsStateLoadUsersViaSdk(){
   return snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
 }
 async function fsStateLoadUsersViaCallable(){
-  await ensureCallableAuth();
-  var functionsService=await ensureFirebaseFunctions();
-  var result=await fsLoginTimeout(functionsService.httpsCallable('listManagedUsers')({}),10000,'User service timed out.');
-  return result&&result.data&&Array.isArray(result.data.users)?result.data.users:[];
+  var result=await fsCallFunction('listManagedUsers',{});
+  return result&&Array.isArray(result.users)?result.users:[];
 }
 function fsStateFirstSuccess(tasks,label){
   return new Promise(function(resolve,reject){

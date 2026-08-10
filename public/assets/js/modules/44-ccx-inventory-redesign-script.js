@@ -63,7 +63,7 @@ function fmt(v){try{return typeof fmtDate==='function'?fmtDate(v):String(v||'—
 function canManage(){return window.fsCanManageCrashCart?window.fsCanManageCrashCart():(typeof canManageCrashCart==='function'&&canManageCrashCart())}
 function canEditContents(){if(window.fsHasCapability)return window.fsHasCapability('crashCart.configure');var r=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');return ['pharmacy','pharmacy_manager','inpatient_supervisor'].indexOf(r)>=0}
 function isDepartmentRole(){return !!window.CU&&(['department','department_employee'].indexOf(String(CU.role||''))>=0||typeof window.fsEffectiveRole==='function'&&window.fsEffectiveRole()==='department')}
-function isDepartment(){return isDepartmentRole()&&!window.__ccxScopedRowsLoaded}
+function isDepartment(){return isDepartmentRole()}
 function ensureUI(){var pg=E('pg-crashcart'),alerts=E('crash-open-alerts'),list=E('crash-list');if(!pg||!alerts||!list)return false;
  var head=pg.querySelector('.fl.ic.jb.mb14');
  if(head&&!E('ccx-filters')){var bar=document.createElement('div');bar.id='ccx-filters';bar.className='ccx-toolbar';bar.innerHTML='<select id="ccx-dept"><option value="">All departments / كل الأقسام</option></select><select id="ccx-state"><option value="">All carts / كل العربات</option><option value="open">Open report / يوجد بلاغ</option><option value="closed">No open report / بدون بلاغ مفتوح</option></select><select id="ccx-expiry"><option value="">All expiry levels / جميع حالات الانتهاء</option><option value="expired">Expired / منتهي</option><option value="urgent">Urgent / عاجل</option><option value="near">Near expiry / قريب الانتهاء</option><option value="normal">Normal / طبيعي</option><option value="missing">Missing expiry / بدون تاريخ</option></select><input id="ccx-search" placeholder="Search cart or medicine / بحث..."><button class="btn bg bsm" id="ccx-rules" type="button">⚙ Expiry rules</button>';head.insertAdjacentElement('afterend',bar);
@@ -106,24 +106,11 @@ window.renderCrashCarts=function(){function after(){[window.refreshCrashBulkUi,w
 };
 window.ccxRenderDashboardAlerts=function(){var host=E('exp-alerts');if(!host||!canManage())return;var old=E('ccx-dashboard-reports');if(old)old.remove();var open=(typeof crashReports==='function'?crashReports():[]).filter(function(r){return r.status==='open'});if(!open.length)return;var box=document.createElement('div');box.id='ccx-dashboard-reports';box.className='card';box.innerHTML='<div class="ch"><span class="ct">🚑 Open Crash Cart reports / بلاغات الكراش كارت</span><span class="badge brd">'+open.length+'</span></div><div class="cb">'+open.map(function(r){var c=typeof crashCart==='function'?crashCart(r.cartId):null;return '<div class="ccx-dashboard-report" onclick="showPg(\'pg-crashcart\');ccxOpenReport(\''+escx(r.id)+'\')"><div><b>'+escx(deptName(r.deptId))+' — '+escx((c&&c.name)||'Crash Cart')+'</b><div class="fhint">'+escx(r.reason||'Opening report')+'</div></div><span class="btn bd2c bsm">Open</span></div>'}).join('')+'</div>';host.insertAdjacentElement('afterbegin',box)};
 
-/* Legacy carts may carry a department code/name instead of the current id. Normalize
-   the in-memory view for department users before the renderer applies its id filter. */
-var ccxOriginalRender=window.renderCrashCarts;
-if(ccxOriginalRender&&!window.__ccxAliasScope){window.__ccxAliasScope=true;window.renderCrashCarts=function(){var r=window.CU||{},isDept=typeof window.isDepartment==='function'&&window.isDepartment();if(!isDept)return ccxOriginalRender.apply(this,arguments);var norm=function(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()},aliases=[r.deptId,r.deptName,r.departmentName,r.department].map(norm).filter(Boolean),all=typeof window.crashCarts==='function'?window.crashCarts():[],own=all.filter(function(c){return [c.deptId,c.departmentId,c.deptName,c.departmentName,c.department,c.deptCode,c.departmentCode,c.unit].map(norm).some(function(v){return v&&aliases.indexOf(v)>-1})});var original=window.crashCarts;window.crashCarts=function(){return own};try{return ccxOriginalRender.apply(this,arguments)}finally{window.crashCarts=original}}}
-
-/* Apply the same canonical department id to the renderer's second-level filter. */
-if(window.__ccxAliasScope&&!window.__ccxCanonicalScope){window.__ccxCanonicalScope=true;var ccxScopedRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},all=typeof window.crashCarts==='function'?window.crashCarts():[],old=r.deptId,norm=function(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()},aliases=[r.deptId,r.deptName,r.departmentName,r.department].map(norm).filter(Boolean),match=all.find(function(c){return [c.deptId,c.departmentId,c.deptName,c.departmentName,c.department,c.deptCode,c.departmentCode,c.unit].map(norm).some(function(v){return v&&aliases.indexOf(v)>-1})}),canonical=match&&(match.deptId||match.departmentId||match.deptCode||'');if(canonical)r.deptId=canonical;try{return ccxScopedRender.apply(this,arguments)}finally{if(canonical)r.deptId=old}}}
-
-/* Final guard: the disabled department selector is authoritative for a
-   department session. Normalize the renderer's comparison identity to it. */
-if(!window.__ccxSelectorScope){window.__ccxSelectorScope=true;var ccxSelectorRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},old=r.deptId,sel=E('ccx-dept'),chosen=sel&&sel.value;if(typeof window.isDepartment==='function'&&window.isDepartment()&&chosen)r.deptId=chosen;try{return ccxSelectorRender.apply(this,arguments)}finally{r.deptId=old}}}
-
-/* Scoped state already contains only this department's carts. If a legacy
-   profile alias still differs from the selector value, use the cart's
-   canonical department id for this render so valid carts cannot be hidden. */
-if(!window.__ccxCartCanonicalScope){window.__ccxCartCanonicalScope=true;var ccxCanonicalRender=window.renderCrashCarts;window.renderCrashCarts=function(){var r=window.CU||{},old=r.deptId,rows=typeof window.crashCarts==='function'?window.crashCarts():[],canonical=rows[0]&&(rows[0].deptId||rows[0].departmentId);if(typeof window.isDepartment==='function'&&window.isDepartment()&&canonical)r.deptId=canonical;try{return ccxCanonicalRender.apply(this,arguments)}finally{r.deptId=old}}}
-
-if(!window.__ccxScopedRowsGuard){window.__ccxScopedRowsGuard=true;var ccxScopedRowsRender=window.renderCrashCarts;window.renderCrashCarts=function(){var scoped=typeof S!=='undefined'&&S.cache&&S.cache.__scopedDepartmentState===true&&window.CU&&CU.role==='department',old=window.__ccxScopedRowsLoaded;window.__ccxScopedRowsLoaded=!!scoped;try{return ccxScopedRowsRender.apply(this,arguments)}finally{window.__ccxScopedRowsLoaded=old}}}
+/* The renderer above is the single source of truth.  Earlier releases wrapped
+   it five times to compensate for legacy department aliases.  The wrappers
+   changed CU.deptId during renders, duplicated report actions, and could make
+   carts disappear on the next realtime update.  Alias resolution now happens
+   once while scoped state is loaded, so no render-time mutation is needed. */
 
 
 

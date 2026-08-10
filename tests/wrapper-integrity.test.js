@@ -13,12 +13,10 @@ const lifecycleSources = await Promise.all([
   '64-r671-permissions-and-accountability-qr.js'
 ].map(name => readFile(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8')));
 
-test('Crash Cart renderer wrappers are explicitly idempotent', () => {
-  const assignments = crashSource.match(/window\.renderCrashCarts\s*=/g) || [];
-  assert.ok(assignments.length >= 1);
-  for (const flag of ['__ccxAliasScope', '__ccxCanonicalScope', '__ccxSelectorScope', '__ccxCartCanonicalScope', '__ccxScopedRowsGuard']) {
-    assert.match(crashSource, new RegExp(flag));
-  }
+test('Crash Cart renderer has one canonical implementation', () => {
+  const assignments = crashSource.match(/window\.renderCrashCarts\s*=(?!=)/g) || [];
+  assert.equal(assignments.length, 1);
+  assert.doesNotMatch(crashSource, /__ccxAliasScope|__ccxCanonicalScope|__ccxSelectorScope|__ccxCartCanonicalScope|__ccxScopedRowsGuard/);
 });
 
 test('startApp extensions preserve the previous implementation', () => {

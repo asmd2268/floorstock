@@ -271,15 +271,15 @@ test('every legacy inline action name in the module set is covered by the CSP br
   assert.deepEqual(missing, []);
 });
 
-test('department Crash Cart boot is read-only and controlled custody loading is deduplicated', () => {
-  assert.match(crashBootSource, /canReconcile=.*\['pharmacy','inpatient_supervisor','pharmacy_staff'\]/);
-  assert.match(crashBootSource, /if\(window\.CU&&!canReconcile\)\{done=true;return\}/);
+test('Crash Cart boot is read-only and controlled custody loading is deduplicated', () => {
+  assert.match(crashBootSource, /must never be changed merely by opening the page/);
+  assert.doesNotMatch(crashBootSource, /fsReconcileCrashCartData\(\)/);
   assert.match(controlledCustodySource, /if\(host\.dataset\.controlledLoading==='1'\)return false/);
   assert.match(controlledCustodySource, /delete host\.dataset\.controlledLoading/);
 });
 
 test('department Crash Cart view retains the authenticated department scope', () => {
-  assert.match(crashInventorySource, /function isDepartmentRole\(\)\{[\s\S]*?function isDepartment\(\)\{return isDepartmentRole\(\)&&!window\.__ccxScopedRowsLoaded\}/);
+  assert.match(crashInventorySource, /function isDepartmentRole\(\)\{[\s\S]*?function isDepartment\(\)\{return isDepartmentRole\(\)\}/);
   assert.match(crashInventorySource, /var departmentScoped=isDepartmentRole\(\)\|\|\(CU&&CU\.role==='outpatient_pharmacy_supervisor'\),scopeDept=departmentScoped\?String\(CU&&CU\.deptId\|\|''\):''/);
   assert.match(crashInventorySource, /if\(isDepartmentRole\(\)&&!rep\)actions\+=/);
   assert.doesNotMatch(crashInventorySource, /cc-dept-report-btn/);

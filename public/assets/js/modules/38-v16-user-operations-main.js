@@ -141,7 +141,10 @@ function afterRender(){
  if(page==='pg-inv'){ensureInventoryTools();enhanceCategories();return}
  if(page==='pg-reqs'||page==='pg-myreqs'){enhanceRequests();return}
  if(page==='pg-schedule'){enhanceSchedule();return}
- if(page==='pg-crashcart'){unifyCrashMedicationNames();polishDepartment();enhanceCrash();crashMonthlyReminder()}
+ // Do not rewrite Crash Cart records during a page render.  Medication-name
+ // normalisation is a deliberate manager maintenance operation, not a
+ // side-effect of viewing a cart.
+ if(page==='pg-crashcart'){polishDepartment();enhanceCrash();crashMonthlyReminder()}
 }
 var afterRenderScheduled=false;
 function scheduleAfterRender(){if(afterRenderScheduled)return;afterRenderScheduled=true;var run=function(){afterRenderScheduled=false;afterRender()};Promise.resolve().then(run)}
