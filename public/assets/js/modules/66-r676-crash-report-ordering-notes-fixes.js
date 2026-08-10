@@ -79,7 +79,8 @@ window.ccSubmitReport=async function(){
   try{
     var effectiveRole=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(CU&&CU.role||'');
     if(!window.CU||['department','department_employee'].indexOf(String(effectiveRole))<0)throw new Error('Only a department employee can submit this report.');
-    var payload=collectCrashReport(),functions=await functionsClient(),call=functions.httpsCallable('submitCrashCartReport'),response=await call(payload),data=response&&response.data||{};
+    if(typeof window.fsCallFunction!=='function')throw new Error('Secure Crash Cart service is still loading. Please retry.');
+    var payload=collectCrashReport(),data=await window.fsCallFunction('submitCrashCartReport',payload)||{};
     if(!data.ok||!data.cart||!data.report)throw new Error('The server did not confirm the Crash Cart report save.');
     replaceCachedCrashState(data.cart,data.report);
     if(typeof window.CM==='function')window.CM('mcc-report');

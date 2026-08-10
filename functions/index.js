@@ -133,7 +133,29 @@ exports.listManagedUsers = onCall(CALLABLE_OPTIONS, async (request) => {
   const snap = tenantId
     ? await db.collection('users').where('tenantId', '==', tenantId).get()
     : await db.collection('users').get();
-  return { users: snap.docs.filter((doc) => tenantId ? doc.data().tenantId === tenantId : !doc.data().tenantId).map((doc) => ({ id: doc.id, ...doc.data() })) };
+  const currentUsers = snap.docs
+    .filter((doc) => tenantId ? doc.data().tenantId === tenantId : !doc.data().tenantId)
+    .map((doc) => ({ id: doc.id, ...doc.data() }));
+
+  // Before managed profiles moved to /users, legacy installations stored the
+  // directory in floorstock_state/users (or tenants/{id}/state/users).  Keep
+  // that directory readable during the transition: existing user profiles win
+  // and legacy rows only fill gaps.  This is read-only and never creates or
+  // changes an Authentication account.
+  const legacySnap = await stateRef('users', tenantId).get();
+  const known = new Set(currentUsers.map((user) => String(user.id || '').trim()).filter(Boolean));
+  const legacyUsers = stateArray(legacySnap).filter((user) => {
+    const id = String(user && user.id || '').trim();
+    if (!id || known.has(id)) return false;
+    if (tenantId && String(user && user.tenantId || '') !== tenantId) return false;
+    return true;
+  }).map((user) => ({
+    ...user,
+    id: String(user.id),
+    tenantId: tenantId || null,
+    legacyDirectory: true
+  }));
+  return { users: currentUsers.concat(legacyUsers), legacyCount: legacyUsers.length };
 });
 
 exports.createManagedUser = onCall(CALLABLE_OPTIONS, async (request) => {

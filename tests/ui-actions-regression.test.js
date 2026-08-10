@@ -686,7 +686,7 @@ test('Accountability supports independent medicines and temporary two-party QR c
   assert.match(accountabilitySource, /never adds it to meds_&lt;department&gt;/);
   assert.match(accountabilitySource, /Temporary dual-QR handover/);
   assert.match(accountabilitySource, /Expired — may reissue/);
-  assert.match(permissionQrSource, /httpsCallable\('createAccountabilityHandover'\)/);
+  assert.match(permissionQrSource, /fsCallFunction\('createAccountabilityHandover'/);
   assert.match(permissionQrSource, /window\.ASD_QR\.imageMarkup/);
   assert.match(permissionQrSource, /url\.hash=new URLSearchParams/);
   assert.doesNotMatch(permissionQrSource, /api\.qrserver\.com|cdn\.jsdelivr\.net/);

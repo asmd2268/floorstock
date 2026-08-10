@@ -577,11 +577,20 @@ S.ready=true;
     return true;
   },
   loadUsers:async function(){
-    var users=await fsStateFirstSuccess([
-      fsStateLoadUsersViaCallable(),
-      fsStateLoadUsersViaRest(),
-      fsStateLoadUsersViaSdk()
-    ],'Loading users');
+    // The callable is authoritative: it combines the current /users
+    // collection with the legacy directory.  Do not race it against a direct
+    // Firestore query, because an empty direct query can otherwise overwrite a
+    // valid legacy directory before the callable returns.
+    var users;
+    try{
+      users=await fsStateLoadUsersViaCallable();
+    }catch(callableError){
+      console.warn('Managed-user directory callable was unavailable; using a read-only fallback.',callableError);
+      users=await fsStateFirstSuccess([
+        fsStateLoadUsersViaRest(),
+        fsStateLoadUsersViaSdk()
+      ],'Loading users');
+    }
     S.cache.users=users||[];
     return S.cache.users;
   },
@@ -620,13 +629,10 @@ S.ready=true;
           S.transport='rest';S.startRealtime();
         });
         var tenantId=fsTenantId(S.scopeProfile),canManageUsers=!!(S.scopeProfile&&(S.scopeProfile.master===true||['pharmacy','pharmacy_director'].indexOf(S.scopeProfile.role)>=0));
-        if(canManageUsers&&tenantId){
-          S.usersUnsub=FB_DB.collection('users').where('tenantId','==',tenantId).onSnapshot(function(snapshot){
-            var nextUsers=snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
-            var changed=!stateValueEqual(S.cache.users||[],nextUsers);S.cache.users=nextUsers;
-            var active=document.querySelector('.pg.on');if(changed&&active&&active.id==='pg-users')S.scheduleRefresh();
-          },function(error){console.warn('users realtime error; the state listener remains active.',error);});
-        }else if(canManageUsers){
+        if(canManageUsers){
+          // Always refresh through the canonical directory callable.  A direct
+          // /users listener cannot include legacy users and caused the Users
+          // page to become empty again after the first realtime update.
           S.usersPollTimer=setInterval(function(){S.loadUsers().catch(function(error){console.warn('User-list refresh was unavailable.',error)})},30000);
         }
         return;

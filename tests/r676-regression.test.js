@@ -11,7 +11,7 @@ const functionsPackage = JSON.parse(fs.readFileSync(new URL('../functions/packag
 // These checks protect the architectural fix: department reports must never write
 // the scoped crash_carts array directly from the browser.
 test('Crash Cart department reporting uses the authenticated callable and updates local cache only after server confirmation', () => {
-  assert.match(clientSource, /httpsCallable\('submitCrashCartReport'\)/);
+  assert.match(clientSource, /fsCallFunction\('submitCrashCartReport'/);
   const submitBody = clientSource.match(/window\.ccSubmitReport=async function\(\)\{([\s\S]*?)\n\};\nwindow\.ccSubmitReport\.__r676SecureCallable/);
   assert.ok(submitBody);
   assert.doesNotMatch(submitBody[1], /setCrashCarts\s*\(/);

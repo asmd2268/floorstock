@@ -44,3 +44,9 @@ test('user management uses the central authenticated callable transport', () => 
   assert.match(core, /async function fsCallFunction\(name,data\)/);
   assert.match(core, /'Authorization':'Bearer '\+token/);
 });
+
+test('managed-user directory is loaded through the authoritative callable first', () => {
+  assert.match(core, /users=await fsStateLoadUsersViaCallable\(\)/);
+  assert.doesNotMatch(core, /loadUsers:async function\(\)\{\s*var users=await fsStateFirstSuccess/);
+  assert.match(core, /Always refresh through the canonical directory callable/);
+});
