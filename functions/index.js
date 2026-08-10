@@ -54,7 +54,10 @@ async function callerProfile(request) {
 }
 
 function requirePharmacy(profile) {
-  if (!['pharmacy', 'pharmacy_director'].includes(profile.role)) {
+  // Master accounts are the platform's pharmacy administrators. Older
+  // profiles use role="master" while newer profiles use role="pharmacy"
+  // with master=true; both must be accepted by managed-user callables.
+  if (profile.master !== true && !['master', 'pharmacy', 'pharmacy_director'].includes(profile.role)) {
     throw new HttpsError('permission-denied', 'Only a pharmacy manager can perform this action.');
   }
 }
