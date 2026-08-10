@@ -136,6 +136,10 @@ const accountabilityRosterLogSource = fs.readFileSync(
   new URL('../public/assets/js/modules/70-r676-accountability-regimen-roster-and-log.js', import.meta.url),
   'utf8',
 );
+const accountabilityRetentionSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/71-r676-accountability-review-and-retention.js', import.meta.url),
+  'utf8',
+);
 const permissionQrSource = fs.readFileSync(
   new URL('../public/assets/js/modules/64-r671-permissions-and-accountability-qr.js', import.meta.url),
   'utf8',
@@ -723,6 +727,16 @@ test('Accountability regimen builder resolves active custody medicines and expos
   assert.match(accountabilityRosterLogSource, /Handover activity log/);
   assert.match(accountabilityRosterLogSource, /Dual QR/);
   assert.match(accountabilityRosterLogSource, /Manual/);
+});
+
+test('Accountability review defaults to unreviewed rows and has Master-only six-month retention cleanup', () => {
+  assert.match(accountabilityRetentionSource, /acc2SetFilter\('status','pending_pharmacy'\)/);
+  assert.match(accountabilityRetentionSource, /isActualMaster/);
+  assert.match(accountabilityRetentionSource, /olderThanSixMonths/);
+  assert.match(accountabilityRetentionSource, /accountability_usage_v2/);
+  assert.match(accountabilityRetentionSource, /accountability_receipts_v2/);
+  assert.match(accountabilityRetentionSource, /accountability_history_retention_purge/);
+  assert.match(accountabilityRetentionSource, /Active custody and regimens will remain unchanged/);
 });
 
 test('all QR features use one local generator and printing continues with a visible fallback', () => {

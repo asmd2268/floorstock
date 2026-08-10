@@ -76,6 +76,7 @@ export const architecture = 'es-modules-v2';
 import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.76.11';
 import './modules/69-r676-regimen-print-and-severity.js?v=R6.76.12';
 import './modules/70-r676-accountability-regimen-roster-and-log.js?v=R6.76.14';
+import './modules/71-r676-accountability-review-and-retention.js?v=R6.76.15';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.75.0';
 import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.75.1';
 import './modules/67-r676-fulfillment-edit-settings.js?v=R6.76.0';
