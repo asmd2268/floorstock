@@ -228,13 +228,26 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
 ]);
+var PHARMACY_SCOPED_STATE_KEYS=Object.freeze(DEPARTMENT_SHARED_STATE_KEYS.concat([
+  'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2'
+]));
+function fsScopedRole(profile){return String(profile&&profile.role||'').trim().toLowerCase()}
+function fsUsesDocumentScope(profile){return [
+  'department','department_employee','outpatient_pharmacy_supervisor',
+  'inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor',
+  'pharmacy_staff'
+].indexOf(fsScopedRole(profile))>=0}
+function fsDepartmentScopedProfile(profile){return ['department','department_employee','outpatient_pharmacy_supervisor'].indexOf(fsScopedRole(profile))>=0}
 function fsStateKeysForProfile(profile){
-  if(!profile||profile.role!=='department')return null;
-  var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
-  if(deptId){
+  if(!fsUsesDocumentScope(profile))return null;
+  var departmentScoped=fsDepartmentScopedProfile(profile),keys=(departmentScoped?DEPARTMENT_SHARED_STATE_KEYS:PHARMACY_SCOPED_STATE_KEYS).slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
+  if(departmentScoped&&deptId){
     ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
+    // Every department may read its own controlled list for clinical reference
+    // and printing. Editing remains restricted to the named custodian.
+    keys.push('controlled_dept_list_'+deptId);
     if(profile.controlledCustodian===true){
-      ['controlled_dept_list_','controlled_dept_shelves_','controlled_settings_'].forEach(function(prefix){keys.push(prefix+deptId)});
+      ['controlled_dept_shelves_','controlled_settings_'].forEach(function(prefix){keys.push(prefix+deptId)});
     }
   }
   return keys;
@@ -255,7 +268,7 @@ async function fsStateLoadDocumentViaSdk(key){
   return snapshot&&snapshot.exists?snapshot.data().value:null;
 }
 function fsStateScopeCacheForProfile(cache,profile){
-  if(!profile||profile.role!=='department')return cache;
+  if(!fsDepartmentScopedProfile(profile))return cache;
   var deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(!deptId)return cache;
   function scopeNorm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
@@ -275,9 +288,13 @@ function fsStateScopeCacheForProfile(cache,profile){
   return cache;
 }
 async function fsStateLoadScoped(keys,loader,source,profile){
-  var values=await Promise.all(keys.map(function(key){return loader(key)})),cache={};
-  keys.forEach(function(key,index){if(values[index]!==null&&values[index]!==undefined)cache[key]=values[index]});
-  return {cache:fsStateScopeCacheForProfile(cache,profile),source:source};
+  var values=await Promise.allSettled(keys.map(function(key){return loader(key)})),cache={},failedKeys=[];
+  keys.forEach(function(key,index){
+    var result=values[index];
+    if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined)cache[key]=result.value;
+    else if(result.status==='rejected'){failedKeys.push(key);console.warn('Scoped state document was unavailable:',key,result.reason)}
+  });
+  return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){
   var keys=fsStateKeysForProfile(profile);
@@ -522,6 +539,15 @@ S.ready=true;
     S.stopRealtime();
     if(!S.ready)return;
 
+    // Firestore intentionally denies collection LIST requests to scoped roles.
+    // Never start a collection onSnapshot for them: use their allowed document
+    // reads from the outset rather than first failing and losing the view.
+    if(fsStateKeysForProfile(S.scopeProfile)){
+      S.transport='rest';
+      S.pollTimer=setInterval(function(){S.pollRest();},30000);
+      return;
+    }
+
     if(S.transport==='sdk'){
       try{
         S.stateUnsub=fsStateSdkCollection().onSnapshot(function(snapshot){
@@ -566,7 +592,11 @@ S.ready=true;
     S.pollBusy=true;
     try{
       var state=await fsStateLoadFloorstockForProfileViaRest(S.scopeProfile);
-      var changed=fsStateApplyCache(state.cache||{});
+      var incoming=state.cache||{},previous=S.cache||{};
+      (state.failedKeys||[]).forEach(function(key){
+        if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previous,key))incoming[key]=previous[key];
+      });
+      var changed=fsStateApplyCache(incoming);
       if(changed)S.scheduleRefresh();
       if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
         try{

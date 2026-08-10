@@ -274,6 +274,18 @@ test('department Crash Cart boot is read-only and controlled custody loading is 
   assert.match(controlledCustodySource, /delete host\.dataset\.controlledLoading/);
 });
 
+test('scoped Crash Cart state uses permitted document reads and keeps the department id', () => {
+  assert.match(requestSource, /function fsUsesDocumentScope\(profile\)/);
+  assert.match(requestSource, /if\(fsStateKeysForProfile\(S\.scopeProfile\)\)/);
+  assert.match(requestSource, /Promise\.allSettled/);
+  assert.match(requestSource, /state\.failedKeys/);
+  assert.match(requestSource, /keys\.push\('controlled_dept_list_'\+deptId\)/);
+  assert.match(firestoreRulesSource, /docId == 'controlled_dept_list_' \+ departmentId\(\)/);
+  assert.match(crashInventorySource, /scopedDepartment=isDepartment\(\)\|\|scopedOutpatient/);
+  assert.match(crashInventorySource, /scopeDept=scopedDepartment\?String\(CU\.deptId\|\|''\):''/);
+  assert.match(crashInventorySource, /isDept=\['department','department_employee'\]/);
+});
+
 test('Hide and Frozen controls remain visible to inpatient supervisor, pharmacy director, and master', () => {
   assert.match(inventoryStatusSource, /\['pharmacy','inpatient_supervisor'\]\.indexOf\(R\(\)\)>-1/);
   assert.match(inventoryStatusSource, /CU\.master===true/);

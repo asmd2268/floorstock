@@ -191,19 +191,19 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'medication_freeze_rules_v3'), statePayload({})));
   });
 
-  test('all active roles can read shared state, but department sessions cannot list the collection', async () => {
+  test('all active roles can read shared state, while scoped roles use document reads instead of collection listing', async () => {
     await seed('floorstock_state/theme', statePayload('dark'));
     for (const role of activeRoles) {
       await assertSucceeds(getDoc(doc(dbFor(role), 'floorstock_state', 'theme')));
       const listing = getDocs(collection(dbFor(role), 'floorstock_state'));
-      if (role === 'department' || role === 'custodian') await assertFails(listing);
+      if (['department', 'custodian', 'pharmacy_staff', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'controlled_pharmacy', 'warehouse'].includes(role)) await assertFails(listing);
       else await assertSucceeds(listing);
     }
     await assertFails(getDoc(doc(dbFor('anonymous'), 'floorstock_state', 'theme')));
     await assertFails(getDoc(doc(dbFor('inactive'), 'floorstock_state', 'theme')));
   });
 
-  test('department reads exclude global controlled data while a custodian can read only their department controlled keys', async () => {
+  test('department reads exclude global controlled data but may read its own controlled list; a custodian remains scoped to the same key', async () => {
     await seed('floorstock_state/controlled_catalog', statePayload([{ id: 'restricted' }]));
     await seed('floorstock_state/crash_carts', statePayload([{ id: 'cart-a', deptId: DEPARTMENT_ID }]));
     await seed('floorstock_state/crash_cart_reports', statePayload([{ id: 'report-a', cartId: 'cart-a', deptId: DEPARTMENT_ID }]));
@@ -216,7 +216,7 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_carts')));
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_cart_reports')));
     }
-    await assertFails(getDoc(doc(dbFor('department'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
+    await assertSucceeds(getDoc(doc(dbFor('department'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
     await assertSucceeds(getDoc(doc(dbFor('custodian'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
   });
 
