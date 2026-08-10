@@ -245,7 +245,7 @@ function acc2RegimenVersion(regimen){return regimen&&((regimen.versions||[]).fin
 function acc2DeptAssignments(deptId,includeInactive){return acc2Assignments().filter(function(a){return String(a.deptId)===String(deptId)&&(includeInactive||a.active!==false)})}
 function acc2RegimenForAssignment(deptId,assignmentId){return acc2Regimens().filter(function(r){if(r.active===false||String(r.deptId)!==String(deptId))return false;var version=acc2RegimenVersion(r);return !!(version&&(version.items||[]).some(function(i){return String(i.assignmentId)===String(assignmentId)}))})}
 function acc2SubmissionBlocked(deptId,assignmentId){return acc2RegimenForAssignment(deptId,assignmentId).find(function(r){return r.paused===true})||null}
-function acc2MedicationNames(deptId){var map={};try{(getMeds(deptId)||[]).forEach(function(m){var name=String(m.name||'').trim();if(name)map[name]=1})}catch(e){}acc2DeptAssignments(deptId,true).forEach(function(a){if(a.medName)map[a.medName]=1});return Object.keys(map).sort(function(a,b){return a.localeCompare(b)})}
+function acc2MedicationNames(deptId){var map={};try{(getMeds(deptId)||[]).forEach(function(m){var name=String(m.name||'').trim();if(name)map[name]=1})}catch(e){}acc2DeptAssignments(deptId,true).forEach(function(a){if(a.medName)map[a.medName]=1});acc2Array('accountability_regimen_catalog_v1').filter(function(row){return row&&row.active!==false&&String(row.deptId)===String(deptId)}).forEach(function(row){if(row.name)map[String(row.name).trim()]=1});return Object.keys(map).sort(function(a,b){return a.localeCompare(b)})}
 function acc2Date(v){return String(v||'').slice(0,10)}
 function acc2Today(){return new Date().toISOString().slice(0,10)}
 function acc2Number(v){return Math.max(0,n(v))}
