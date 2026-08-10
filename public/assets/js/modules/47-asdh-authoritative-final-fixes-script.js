@@ -20,7 +20,10 @@ async function repairDepartmentLinksZ(){
     var requests=(S.g('requests')||[]).map(function(x){return x&&typeof x==='object'?Object.assign({},x):x}),requestChanged=false;
     requests.forEach(function(x){if(!x||x.departmentId||x.deptId)return;var id=byName[norm(x.departmentName||x.department||x.dept||x.deptName)];if(id){x.departmentId=id;x.deptId=id;requestChanged=true}});
     var jobs=[];
-    if(cartChanged&&typeof setCrashCarts==='function')jobs.push(setCrashCarts(carts));
+    /* Department sessions are read-only for cart stock. They may submit a
+       report, but must never run a background migration against crash_carts. */
+    var canWriteCart=typeof window.fsCanWriteStateKey!=='function'||window.fsCanWriteStateKey('crash_carts');
+    if(cartChanged&&canWriteCart&&typeof setCrashCarts==='function')jobs.push(setCrashCarts(carts));
     if(requestChanged)jobs.push(S.s('requests',requests));
     if(jobs.length)await Promise.all(jobs);
     departmentLinksRepairedZ=true;
@@ -84,6 +87,7 @@ function isWrongNorepiZ(it){
 async function repairNorepinephrineZ(force,silent){
   if(repairBusyZ||repairDoneZ||typeof crashCarts!=='function'||typeof setCrashCarts!=='function'||!window.S||typeof S.g!=='function'||typeof S.s!=='function')return;
   /* This is a database migration, not a login task for operational roles. */
+  if(typeof window.fsCanWriteStateKey==='function'&&!window.fsCanWriteStateKey('crash_carts')){repairDoneZ=true;return}
   if(typeof window.fsCanWriteStateKey==='function'&&!window.fsCanWriteStateKey(NOREPI_MIGRATION_KEY_Z)){repairDoneZ=true;return}
   var previous=S.g(NOREPI_MIGRATION_KEY_Z)||null;
   var carts=(crashCarts()||[]).slice(),changed=0;repairBusyZ=true;
