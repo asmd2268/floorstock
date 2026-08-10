@@ -4,6 +4,7 @@ import { test } from 'node:test';
 
 const crashSource = await readFile(new URL('../public/assets/js/modules/44-ccx-inventory-redesign-script.js', import.meta.url), 'utf8');
 const authSource = await readFile(new URL('../public/assets/js/modules/64-r671-permissions-and-accountability-qr.js', import.meta.url), 'utf8');
+const crashDeletionSource = await readFile(new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url), 'utf8');
 const lifecycleSources = await Promise.all([
   '53-r661-authoritative-inventory-safety.js',
   '54-r662-accountability-draft-protection.js',
@@ -17,6 +18,13 @@ test('Crash Cart renderer has one canonical implementation', () => {
   const assignments = crashSource.match(/window\.renderCrashCarts\s*=(?!=)/g) || [];
   assert.equal(assignments.length, 1);
   assert.doesNotMatch(crashSource, /__ccxAliasScope|__ccxCanonicalScope|__ccxSelectorScope|__ccxCartCanonicalScope|__ccxScopedRowsGuard/);
+});
+
+test('Crash Cart post-render controls use a hook, not a renderer wrapper', () => {
+  assert.match(crashSource, /window\.refreshCrashDeletionControls/);
+  assert.match(crashDeletionSource, /window\.refreshCrashDeletionControls\s*=\s*decorate/);
+  assert.doesNotMatch(crashDeletionSource, /oldRender\s*=\s*window\.renderCrashCarts/);
+  assert.doesNotMatch(crashDeletionSource, /new MutationObserver/);
 });
 
 test('startApp extensions preserve the previous implementation', () => {

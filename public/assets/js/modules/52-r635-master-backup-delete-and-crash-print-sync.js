@@ -90,14 +90,13 @@ window.delDept=hardDeleteDepartment;
 function decorate(){
   document.body.classList.toggle('master-mode',master());
   document.querySelectorAll('[onclick^="delDept("],[onclick*=" delDept("]').forEach(function(b){b.style.display=master()?'':'none';b.disabled=!master()});
-  document.querySelectorAll('[id^="ccx-cart-"]').forEach(function(card){var id=card.id.replace('ccx-cart-',''),bar=card.querySelector('.ccx-toolbar-actions');if(!bar||bar.querySelector('.r635-delete-cart'))return;var b=document.createElement('button');b.type='button';b.className='btn bd2c bsm master-delete-only r635-delete-cart';b.textContent='🗑 Delete cart';b.onclick=function(){window.masterDeleteCrashCart(id)};bar.appendChild(b)});
+  document.querySelectorAll('[id^="ccx-cart-"]').forEach(function(card){var id=card.id.replace('ccx-cart-',''),bar=card.querySelector('.ccx-toolbar-actions');if(!bar||bar.querySelector('.r635-delete-cart'))return;var b=document.createElement('button');b.type='button';b.className='btn bd2c bsm master-delete-only r635-delete-cart';b.textContent='🗑 Delete cart';b.addEventListener('click',function(){window.masterDeleteCrashCart(id)});bar.appendChild(b)});
 }
-var oldRender=window.renderCrashCarts;if(typeof oldRender==='function')window.renderCrashCarts=function(){var r=oldRender.apply(this,arguments);setTimeout(decorate,0);return r};
-function observeDeletionHosts(){
-  ['pg-crashcart','pg-users'].forEach(function(id){var host=document.getElementById(id);if(host)new MutationObserver(function(mutations){if(mutations.some(function(m){return m.addedNodes&&m.addedNodes.length}))decorate()}).observe(host,{childList:true,subtree:true})});
-  decorate()
-}
-window.addEventListener('load',observeDeletionHosts);
+// The canonical Crash Cart renderer calls this hook after every render.
+// It replaces the former render wrapper and mutation observers, both of
+// which could multiply decorations when modules were loaded more than once.
+window.refreshCrashDeletionControls=decorate;
+window.addEventListener('load',decorate);
 })();
 
 export {};
