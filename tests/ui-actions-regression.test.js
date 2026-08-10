@@ -279,7 +279,9 @@ test('department Crash Cart boot is read-only and controlled custody loading is 
 });
 
 test('department Crash Cart view retains the authenticated department scope', () => {
-  assert.match(crashInventorySource, /var departmentScoped=isDepartment\(\)\|\|\(CU&&CU\.role==='outpatient_pharmacy_supervisor'\),scopeDept=departmentScoped\?String\(CU&&CU\.deptId\|\|''\):''/);
+  assert.match(crashInventorySource, /function isDepartmentRole\(\)\{[\s\S]*?function isDepartment\(\)\{return isDepartmentRole\(\)&&!window\.__ccxScopedRowsLoaded\}/);
+  assert.match(crashInventorySource, /var departmentScoped=isDepartmentRole\(\)\|\|\(CU&&CU\.role==='outpatient_pharmacy_supervisor'\),scopeDept=departmentScoped\?String\(CU&&CU\.deptId\|\|''\):''/);
+  assert.match(crashInventorySource, /if\(isDepartmentRole\(\)&&!rep\)actions\+=/);
   assert.doesNotMatch(crashInventorySource, /scopedOutpatient=CU&&CU\.role==='outpatient_pharmacy_supervisor',scopeDept=scopedOutpatient\?String\(CU\.deptId\|\|''\):''/);
 });
 

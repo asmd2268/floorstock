@@ -22,7 +22,7 @@ MODULES = JS / "modules"
 CORE = JS / "core"
 # Bump this on every production JavaScript release.  The application is served
 # as static modules, so the version is the cache boundary for browsers and CDNs.
-BUILD_VERSION = "R6.76.13"
+BUILD_VERSION = "R6.76.14"
 PROVIDERS = {
     "01-firebase-global-bootstrap.js",
     "03-core-application-firebase-state-auth.js",
