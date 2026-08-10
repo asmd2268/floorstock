@@ -70,6 +70,11 @@ async function ensureCallableAuth(){
       var unsub=auth.onAuthStateChanged(function(user){if(!settled){settled=true;clearTimeout(timer);if(unsub)unsub();resolve(user)}});
     });
   }
+  // WebKit can briefly expose a null `auth.currentUser` after the profile has
+  // loaded.  Reuse only the exact credential that completed this active Floor
+  // Stock login; it is cleared during logout and is never used for another CU.
+  var remembered=window.__fsAuthenticatedUser;
+  if(!current&&remembered&&window.CU&&String(remembered.uid||'')===String(CU.id||''))current=remembered;
   if(!current)throw new Error('Sign in first.');
   await fsLoginTimeout(current.getIdToken(true),10000,'Firebase authentication refresh timed out.');
   return current;
@@ -1428,6 +1433,7 @@ async function doLogin(){
   try{
     await waitForFirebase(15000);
     credential=await fsLoginTimeout(FB_AUTH.signInWithEmailAndPassword(email,password),30000,'Firebase sign-in timed out.');
+    window.__fsAuthenticatedUser=credential.user;
     setLoginStage('Verifying profile…');
     var profileSnapshot=await fsLoadAuthenticatedProfile(credential.user,setLoginStage);
     if(!profileSnapshot||!profileSnapshot.exists)throw new Error('Your Firebase account has no Floor Stock role profile.');
@@ -1478,6 +1484,7 @@ setTimeout(function(){
       message+=' Open the file in Chrome or Safari with internet access, and verify that firestore.googleapis.com is not blocked by a firewall or content filter.';
     }
     setLoginError(message);
+    window.__fsAuthenticatedUser=null;
     try{if(credential&&FB_AUTH&&FB_AUTH.currentUser)await FB_AUTH.signOut();}catch(signOutError){console.warn('Could not clear the partial authentication session.',signOutError);}
     if(loginBtn){loginBtn.disabled=false;loginBtn.innerHTML=oldLoginText||'Sign In / دخول';}
   }
@@ -1494,6 +1501,7 @@ async function doLogout(){
     try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){if(window.CU&&window.CU.master===true)toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.warn('Pending writes failed before logout; continuing sign out.',err)}
     S.stopRealtime();
     if(FB_AUTH&&FB_AUTH.currentUser)await timeout(FB_AUTH.signOut(),8000,'Sign out timed out');
+    window.__fsAuthenticatedUser=null;
     var signedOutSession=window.FSArchitecture&&FSArchitecture.session?FSArchitecture.session():null;CU=null;MASTER_ACTUAL=null;MASTER_EFFECTIVE=null;S.cache={};S.ready=false;if(window.FSArchitecture)FSArchitecture.emit('auth:signed-out',signedOutSession);var app=el('app'),auth=el('auth'),pass=el('lgp');if(app)app.style.display='none';if(auth)auth.style.display='flex';if(pass)pass.value='';var loginButton=el('login-btn')||document.querySelector('#auth button[data-asdh-binding],#auth button.btn.bp.bw');if(loginButton){loginButton.disabled=false;loginButton.innerHTML='Sign In / دخول';}
   }catch(err){console.error(err);if(typeof toast==='function')toast('Sign out failed: '+String(err&&err.message||err),'err')}
   finally{logoutBusy=false;logoutButtons.forEach(function(button){button.disabled=false})}

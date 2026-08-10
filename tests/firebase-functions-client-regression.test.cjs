@@ -53,5 +53,8 @@ test('managed-user directory is loaded through the authoritative callable first'
 
 test('the production entrypoint cache version advances with authenticated-operation fixes', () => {
   const index = fs.readFileSync('public/index.html', 'utf8');
-  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.22/);
+  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.23/);
+  assert.match(core, /window\.__fsAuthenticatedUser=credential\.user/);
+  assert.match(core, /remembered&&window\.CU&&String\(remembered\.uid\|\|''\)===String\(CU\.id\|\|''\)/);
+  assert.match(core, /window\.__fsAuthenticatedUser=null/);
 });
