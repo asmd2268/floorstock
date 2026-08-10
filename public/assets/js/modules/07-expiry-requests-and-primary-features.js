@@ -133,6 +133,7 @@ async function saveUser(){
   if((requestedRole==='department'||requestedRole==='outpatient_pharmacy_supervisor')&&!did)return toast('Choose the supervisor department before creating this user.','err');
   if(grantMaster&&(!CU.master||requestedRole!=='pharmacy'))return toast('Only a Master may grant Master access to a pharmacy user.','err');
   try{
+    await window.ensureCallableAuth();
     var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('createManagedUser');
     var result=await call({email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='outpatient_pharmacy_supervisor')?did:null,master:grantMaster});
     toast('Firebase user created securely ✓','succ');CM('muser');
@@ -143,14 +144,14 @@ async function delUser(id){
   if(!CU||CU.master!==true)return toast('Only Master can permanently delete users.','err');
   if(id===CU.id)return toast('You cannot delete your own account.','err');
   if(!await uiConfirm('Permanently delete this user from Firebase Authentication and Firestore?\n\nThis cannot be undone.'))return;
-  try{var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('deleteManagedUser');await call({uid:id});await S.loadUsers();toast('User permanently deleted','info');renderUsers();}
+  try{await window.ensureCallableAuth();var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('deleteManagedUser');await call({uid:id});await S.loadUsers();toast('User permanently deleted','info');renderUsers();}
   catch(err){console.error(err);toast((err&&err.message)||'Could not delete user','err');}
 }
 async function toggleMasterUser(id,isMaster){
   if(!CU||CU.master!==true)return toast('Only Master can change Master access.','err');
   var action=isMaster?'remove Master access from':'grant Master access to';
   if(!await uiConfirm('Are you sure you want to '+action+' this user?'))return;
-  try{var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});await S.loadUsers();toast('Master access updated ✓','succ');renderUsers();}
+  try{await window.ensureCallableAuth();var functionsClient=await ensureFirebaseFunctions();var call=functionsClient.httpsCallable('setMasterAccess');await call({uid:id,master:!isMaster});await S.loadUsers();toast('Master access updated ✓','succ');renderUsers();}
   catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
 }
 // ── ANALYTICS ────────────────────────────────────────────

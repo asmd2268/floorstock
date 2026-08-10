@@ -51,6 +51,18 @@ function ensureFirebaseFunctions(){
     return FB_FUNCTIONS;
   });
 }
+// Callable Functions must use the same, still-authenticated Firebase session
+// as Firestore. Safari can retain the app shell while its auth token has
+// expired; in that state callable requests arrive without request.auth and
+// are reported as “Sign in first”. Refresh the token before every callable
+// operation instead of relying on a stale compat client context.
+async function ensureCallableAuth(){
+  await waitForFirebase(12000);
+  if(!FB_AUTH||!FB_AUTH.currentUser)throw new Error('Sign in first.');
+  await fsLoginTimeout(FB_AUTH.currentUser.getIdToken(true),10000,'Firebase authentication refresh timed out.');
+  return FB_AUTH.currentUser;
+}
+window.ensureCallableAuth=ensureCallableAuth;
 globalThis.renderInvDebounced = globalThis.debounce(function(){renderInv()},220);
 globalThis.renderReqFormDebounced = globalThis.debounce(function(){renderReqForm()},220);
 globalThis.renderControlledDebounced = globalThis.debounce(function(){renderControlled()},220);
@@ -352,6 +364,7 @@ async function fsStateLoadUsersViaSdk(){
   return snapshot.docs.map(function(doc){return Object.assign({id:doc.id},doc.data());});
 }
 async function fsStateLoadUsersViaCallable(){
+  await ensureCallableAuth();
   var functionsService=await ensureFirebaseFunctions();
   var result=await fsLoginTimeout(functionsService.httpsCallable('listManagedUsers')({}),10000,'User service timed out.');
   return result&&result.data&&Array.isArray(result.data.users)?result.data.users:[];
