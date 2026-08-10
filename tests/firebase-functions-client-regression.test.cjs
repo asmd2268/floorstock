@@ -56,7 +56,7 @@ test('managed-user directory uses the canonical legacy collection before an empt
 
 test('the production entrypoint cache version advances with authenticated-operation fixes', () => {
   const index = fs.readFileSync('public/index.html', 'utf8');
-  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.28/);
+  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.29/);
   assert.match(core, /window\.__fsAuthenticatedUser=credential\.user/);
   assert.match(core, /rememberedMatchesCurrentProfile/);
   assert.match(core, /String\(remembered\.email\|\|''\)\.trim\(\)\.toLowerCase\(\)/);

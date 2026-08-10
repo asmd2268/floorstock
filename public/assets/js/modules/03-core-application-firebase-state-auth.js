@@ -540,6 +540,21 @@ function fsStateApplyCache(nextCache){
   });
   return changed;
 }
+function fsStateScheduleManagedUserLoad(profileHint){
+  var role=profileHint&&profileHint.role||'';
+  var shouldLoadUsers=!!(profileHint&&profileHint.master===true)||role==='pharmacy'||role==='pharmacy_director';
+  if(!shouldLoadUsers)return;
+  setTimeout(function(){
+    if(!S.ready)return;
+    S.loadUsers().then(function(users){
+      S.cache.users=users||[];
+      var active=document.querySelector('.pg.on');
+      if(active&&active.id==='pg-users')S.scheduleRefresh();
+    }).catch(function(error){
+      console.warn('Background user-list load was unavailable.',error);
+    });
+  },0);
+}
 
 globalThis.S = {
   cache:{},ready:false,stateUnsub:null,usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,
@@ -555,6 +570,7 @@ globalThis.S = {
         if(key.indexOf('floorstock_last_cache_v2_')===0&&key!==cacheKey)localStorage.removeItem(key);
       });
     }catch(removeError){}
+    var hasCachedState=false;
     try{
       var cached=cacheKey?localStorage.getItem(cacheKey):null;
       if(cached){
@@ -567,10 +583,26 @@ globalThis.S = {
         S.cache=fsStateScopeCacheForProfile(parsed||{},profileHint);
         S.cache.users=[];
         S.ready=true;
+        hasCachedState=Object.keys(S.cache).length>0;
       }
     }catch(e){
       console.warn('Local Floor Stock cache unavailable.',e);
     }
+    // A same-account cache is already permission-scoped.  Open it immediately
+    // and refresh in the background; Safari otherwise waits for a complete
+    // collection read before it paints the application shell.
+    if(hasCachedState){
+      S.transport='rest';
+      S.writeTransport=window.FB_DB?'sdk':'rest';
+      S.startRealtime();
+      fsStateScheduleManagedUserLoad(profileHint);
+      setTimeout(function(){
+        if(S.ready)S.pollRest();
+      },1500);
+      if(statusCallback)statusCallback('Opening Floor Stock…');
+      return true;
+    }
+
     if(statusCallback)statusCallback('Loading data… / جاري تحميل البيانات…');
 
     var result;
@@ -603,11 +635,7 @@ S.ready=true;
     }catch(e){
       console.warn('Could not save Floor Stock cache.',e);
     }
-    S.startRealtime();setTimeout(function(){
-  if(typeof S.pollRest==='function'){
-    S.pollRest();
-  }
-},1000);
+    S.startRealtime();
 
     setTimeout(function(){
       if(typeof window.renderRequestHourGridUI==='function'){
@@ -615,18 +643,7 @@ S.ready=true;
       }
     },0);
 
-    var role=profileHint&&profileHint.role||'';
-    var shouldLoadUsers=!!(profileHint&&profileHint.master===true)||role==='pharmacy'||role==='pharmacy_director';
-    if(shouldLoadUsers)setTimeout(function(){
-      if(!S.ready)return;
-      S.loadUsers().then(function(users){
-        S.cache.users=users||[];
-        var active=document.querySelector('.pg.on');
-        if(active&&active.id==='pg-users')S.scheduleRefresh();
-      }).catch(function(error){
-        console.warn('Background user-list load was unavailable.',error);
-      });
-    },0);
+    fsStateScheduleManagedUserLoad(profileHint);
 
     if(statusCallback)statusCallback('Opening Floor Stock…');
     return true;

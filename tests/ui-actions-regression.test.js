@@ -220,7 +220,9 @@ test('login waits for Floor Stock state before opening the application shell', (
   assert.ok(initAt > 0);
   assert.ok(startAt > initAt);
   assert.match(requestSource, /Loading data… \/ جاري تحميل البيانات…/);
-  assert.doesNotMatch(requestSource, /S\.init background|Background Floor Stock initialization failed/);
+  assert.match(requestSource, /if\(hasCachedState\)\{/);
+  assert.match(requestSource, /fsStateScheduleManagedUserLoad\(profileHint\)/);
+  assert.match(requestSource, /if\(S\.ready\)S\.pollRest\(\)/);
 });
 
 test('Firebase App Check activates the Enterprise provider with token auto-refresh', () => {
