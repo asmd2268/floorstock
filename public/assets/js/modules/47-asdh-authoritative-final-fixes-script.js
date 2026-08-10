@@ -51,8 +51,10 @@ window.preparePreviewStart=function(){
 };
 window.finalizePreviewStart=function(){
   previewStartSavedZ=null;
-  repairDepartmentLinksZ();
-  repairNorepinephrineZ(false,true);
+  /* Data migrations are explicit maintenance actions, never page-load work.
+     Running them during Crash Cart boot caused a valid read-only page to show
+     a misleading Firebase save failure when a tenant was read-only or a role
+     lacked the corresponding write permission. */
 };
 
 
