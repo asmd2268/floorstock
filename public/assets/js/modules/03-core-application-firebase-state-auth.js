@@ -231,16 +231,21 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
 var PHARMACY_SCOPED_STATE_KEYS=Object.freeze(DEPARTMENT_SHARED_STATE_KEYS.concat([
   'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2'
 ]));
+var CONTROLLED_PHARMACY_SCOPED_STATE_KEYS=Object.freeze([
+  'departments','deleted_departments','controlled_catalog','controlled_pharmacy_stock',
+  'controlled_moves','controlled_warehouse','controlled_pdf_receipts',
+  'controlled_pharmacy_storage_v1','theme','audit_log'
+]);
 function fsScopedRole(profile){return String(profile&&profile.role||'').trim().toLowerCase()}
 function fsUsesDocumentScope(profile){return [
   'department','department_employee','outpatient_pharmacy_supervisor',
   'inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor',
-  'pharmacy_staff'
+  'pharmacy_staff','controlled_pharmacy'
 ].indexOf(fsScopedRole(profile))>=0}
 function fsDepartmentScopedProfile(profile){return ['department','department_employee','outpatient_pharmacy_supervisor'].indexOf(fsScopedRole(profile))>=0}
 function fsStateKeysForProfile(profile){
   if(!fsUsesDocumentScope(profile))return null;
-  var departmentScoped=fsDepartmentScopedProfile(profile),keys=(departmentScoped?DEPARTMENT_SHARED_STATE_KEYS:PHARMACY_SCOPED_STATE_KEYS).slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
+  var role=fsScopedRole(profile),departmentScoped=fsDepartmentScopedProfile(profile),keys=(role==='controlled_pharmacy'?CONTROLLED_PHARMACY_SCOPED_STATE_KEYS:(departmentScoped?DEPARTMENT_SHARED_STATE_KEYS:PHARMACY_SCOPED_STATE_KEYS)).slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(departmentScoped&&deptId){
     ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
     // Every department may read its own controlled list for clinical reference
@@ -251,6 +256,9 @@ function fsStateKeysForProfile(profile){
     }
   }
   return keys;
+}
+function fsPharmacyInventoryScopedProfile(profile){
+  return ['inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor','pharmacy_staff'].indexOf(fsScopedRole(profile))>=0;
 }
 async function fsStateLoadDocumentViaRest(key){
   var url=fsStateRestBase()+'/'+fsRestPath(fsStateCollectionPath()+'/'+key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
@@ -294,6 +302,24 @@ async function fsStateLoadScoped(keys,loader,source,profile){
     if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined)cache[key]=result.value;
     else if(result.status==='rejected'){failedKeys.push(key);console.warn('Scoped state document was unavailable:',key,result.reason)}
   });
+  /* Pharmacy-scoped roles may read each department's inventory documents but
+     must not use a collection LIST.  Discover department ids from the allowed
+     directory document, then fetch those documents explicitly.  This keeps
+     the dashboard complete while preserving the least-privilege Firestore
+     rules that protect department sessions. */
+  if(fsPharmacyInventoryScopedProfile(profile)){
+    var deptIds=(Array.isArray(cache.departments)?cache.departments:[]).map(function(dept){return String(dept&&dept.id||'').trim()}).filter(Boolean);
+    var inventoryKeys=[];
+    deptIds.forEach(function(deptId){['meds_','expiry_'].forEach(function(prefix){inventoryKeys.push(prefix+deptId)})});
+    if(inventoryKeys.length){
+      var inventoryResults=await Promise.allSettled(inventoryKeys.map(function(key){return loader(key)}));
+      inventoryKeys.forEach(function(key,index){
+        var result=inventoryResults[index];
+        if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined)cache[key]=result.value;
+        else if(result.status==='rejected'){failedKeys.push(key);console.warn('Scoped pharmacy inventory document was unavailable:',key,result.reason)}
+      });
+    }
+  }
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){

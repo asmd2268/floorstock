@@ -7,6 +7,9 @@ const clientSource = fs.readFileSync(new URL('../public/assets/js/modules/66-r67
 const functionSource = fs.readFileSync(new URL('../functions/crash-cart-report.js', import.meta.url), 'utf8');
 const coreSource = fs.readFileSync(new URL('../functions/crash-cart-report-core.js', import.meta.url), 'utf8');
 const functionsPackage = JSON.parse(fs.readFileSync(new URL('../functions/package.json', import.meta.url), 'utf8'));
+const stateSource = fs.readFileSync(new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url), 'utf8');
+const accountabilitySource = fs.readFileSync(new URL('../public/assets/js/modules/50-r617-integrated-operations.js', import.meta.url), 'utf8');
+const analyticsReportSource = fs.readFileSync(new URL('../public/assets/js/modules/73-r676-analytics-quarterly-annual-reports.js', import.meta.url), 'utf8');
 
 // These checks protect the architectural fix: department reports must never write
 // the scoped crash_carts array directly from the browser.
@@ -50,4 +53,29 @@ test('Cloud Functions package loads the combined entrypoint and validates all ne
   assert.equal(functionsPackage.main, 'main.js');
   assert.match(functionsPackage.scripts.lint, /crash-cart-report\.js/);
   assert.match(functionsPackage.scripts.test, /crash-cart-report-core\.test\.js/);
+});
+
+test('controlled medicines officer uses permitted document reads instead of a denied state collection listing', () => {
+  assert.match(stateSource, /CONTROLLED_PHARMACY_SCOPED_STATE_KEYS/);
+  assert.match(stateSource, /'pharmacy_staff','controlled_pharmacy'/);
+  assert.match(stateSource, /role==='controlled_pharmacy'\?CONTROLLED_PHARMACY_SCOPED_STATE_KEYS/);
+});
+
+test('inpatient dashboard hydration reads each allowed department medicine document explicitly', () => {
+  assert.match(stateSource, /function fsPharmacyInventoryScopedProfile/);
+  assert.match(stateSource, /\['meds_','expiry_'\]/);
+  assert.match(stateSource, /Scoped pharmacy inventory document was unavailable/);
+});
+
+test('a regimen is locked to the explicitly assigned supervisor department', () => {
+  assert.match(accountabilitySource, /function acc2RegimenScopeDept/);
+  assert.match(accountabilitySource, /This account may create regimens only for its assigned department/);
+  assert.match(accountabilitySource, /scopeDept\?depts\(\)\.filter/);
+});
+
+test('Analytics provides printable annual, quarterly, and quarter-over-quarter reports', () => {
+  assert.match(analyticsReportSource, /Quarterly & annual analytics reports/);
+  assert.match(analyticsReportSource, /Change vs previous/);
+  assert.match(analyticsReportSource, /Print report/);
+  assert.match(analyticsReportSource, /Top 10 routine medicines/);
 });

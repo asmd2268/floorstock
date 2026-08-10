@@ -221,6 +221,7 @@ function renderAn(){
   el('ztbl').innerHTML=zero.length
     ?zero.map(function(z){var m=z.med;return '<tr><td>'+m.name+'</td><td>'+z.departments.join(', ')+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
     :'<tr><td colspan="6" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
+  if(typeof window.renderAnalyticsReports==='function')window.renderAnalyticsReports();
 }
 
 // ── ORDER RETENTION (6 MONTHS) ───────────────────────────
