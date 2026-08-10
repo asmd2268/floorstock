@@ -58,3 +58,24 @@ test('completion replenishes accountability balance only after both confirmation
   assert.equal(state.receipts[0].confirmationMethod, 'temporary_dual_qr');
   assert.equal(state.receipts[0].medicineTotals[0].medName, 'Independent Drug');
 });
+
+test('manual handover creates one auditable locked receipt', () => {
+  const state = completeHandoverState({
+    assignments: [{ id: 'a1', medName: 'Independent Drug', quota: 10, balance: 6 }],
+    usage: [{ id: 'u1', assignmentId: 'a1', deptId: 'd1', medName: 'Independent Drug', units: 4, status: 'approved_waiting_receipt' }],
+    receipts: [],
+    session: {
+      id: 'manual-1', deptId: 'd1', usageIds: ['u1'], departmentName: 'NICU', confirmationMethod: 'manual',
+      receivedDate: '2026-08-10', createdBy: 'Pharmacy user', createdByUser: 'uid-1',
+      pharmacyConfirmation: { name: 'Pharmacist', employeeId: 'P1' },
+      departmentConfirmation: { name: 'Nurse', employeeId: 'N1' }
+    },
+    nowIso: '2026-08-10T10:00:00.000Z'
+  });
+  assert.equal(state.assignments[0].balance, 10);
+  assert.equal(state.usage[0].locked, true);
+  assert.equal(state.receipts[0].id, 'acc2receipt_manual_manual-1');
+  assert.equal(state.receipts[0].confirmationMethod, 'manual');
+  assert.equal(state.receipts[0].receivedDate, '2026-08-10');
+  assert.equal(state.receipts[0].createdBy, 'Pharmacy user');
+});

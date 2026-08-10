@@ -503,6 +503,79 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
   return responsePayload;
 });
 
+exports.completeManualAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  const tenant = await requireWritableSubscription(caller);
+  if (tenant && (!Array.isArray(tenant.features) || !tenant.features.includes('controlled'))) {
+    throw new HttpsError('permission-denied', 'Controlled accountability is not included in this subscription.');
+  }
+  if (!canCreateHandover(caller)) {
+    throw new HttpsError('permission-denied', 'This role cannot complete accountability handovers.');
+  }
+  const requestedIds = Array.isArray(request.data && request.data.usageIds) ? request.data.usageIds : [];
+  const usageIds = [...new Set(requestedIds.map((value) => String(value || '').trim()).filter(Boolean))];
+  if (!usageIds.length || usageIds.length > 100) {
+    throw new HttpsError('invalid-argument', 'Select between 1 and 100 approved accountability records.');
+  }
+  const pharmacyConfirmation = {
+    name: cleanIdentity(request.data && request.data.pharmacyName, 120),
+    employeeId: cleanIdentity(request.data && request.data.pharmacyEmployeeId, 60)
+  };
+  const departmentConfirmation = {
+    name: cleanIdentity(request.data && request.data.departmentName, 120),
+    employeeId: cleanIdentity(request.data && request.data.departmentEmployeeId, 60)
+  };
+  const receivedDate = cleanIdentity(request.data && request.data.receivedDate, 10);
+  if (pharmacyConfirmation.name.length < 2 || pharmacyConfirmation.employeeId.length < 2 ||
+      departmentConfirmation.name.length < 2 || departmentConfirmation.employeeId.length < 2) {
+    throw new HttpsError('invalid-argument', 'Enter the name and employee number for both pharmacy and department staff.');
+  }
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(receivedDate)) {
+    throw new HttpsError('invalid-argument', 'Enter a valid receipt date.');
+  }
+
+  const usageRef = stateRef('accountability_usage_v2', caller.tenantId);
+  const assignmentsRef = stateRef('accountability_assignments_v2', caller.tenantId);
+  const receiptsRef = stateRef('accountability_receipts_v2', caller.tenantId);
+  const departmentsRef = stateRef('departments', caller.tenantId);
+  const manualId = db.collection(HANDOVER_COLLECTION).doc().id;
+  let result;
+  await db.runTransaction(async (transaction) => {
+    const [usageSnap, assignmentsSnap, receiptsSnap, departmentsSnap] = await Promise.all([
+      transaction.get(usageRef), transaction.get(assignmentsRef), transaction.get(receiptsRef), transaction.get(departmentsRef)
+    ]);
+    const usage = stateArray(usageSnap);
+    const selected = usage.filter((row) => usageIds.includes(String(row.id)));
+    if (selected.length !== usageIds.length || selected.some((row) => row.status !== 'approved_waiting_receipt')) {
+      throw new HttpsError('failed-precondition', 'Only current approved records waiting for receipt may be handed over.');
+    }
+    const deptIds = [...new Set(selected.map((row) => String(row.deptId || '')).filter(Boolean))];
+    if (deptIds.length !== 1) {
+      throw new HttpsError('failed-precondition', 'All selected records must belong to the same department.');
+    }
+    const department = stateArray(departmentsSnap).find((row) => String(row.id) === deptIds[0]) || {};
+    const nowIso = new Date().toISOString();
+    const completed = completeHandoverState({
+      assignments: stateArray(assignmentsSnap), usage, receipts: stateArray(receiptsSnap), nowIso,
+      session: {
+        id: manualId, deptId: deptIds[0], usageIds, receivedDate, confirmationMethod: 'manual',
+        departmentName: department.name || department.nameEn || department.nameAr || deptIds[0],
+        pharmacyConfirmation: { ...pharmacyConfirmation, confirmedAt: nowIso, party: 'pharmacy' },
+        departmentConfirmation: { ...departmentConfirmation, confirmedAt: nowIso, party: 'department' },
+        createdBy: caller.displayName || caller.email || caller.uid, createdByUser: caller.uid
+      }
+    });
+    writeState(transaction, assignmentsRef, completed.assignments);
+    writeState(transaction, usageRef, completed.usage);
+    writeState(transaction, receiptsRef, completed.receipts);
+    result = { receiptId: completed.receipt.id, deptId: deptIds[0], totalUnits: completed.receipt.totalUnits };
+  });
+  await audit('accountability.handover.manual-complete', caller, null, {
+    ...result, usageIds, pharmacyEmployeeId: pharmacyConfirmation.employeeId, departmentEmployeeId: departmentConfirmation.employeeId
+  }).catch((error) => console.warn('Manual handover audit warning', error));
+  return { ok: true, ...result };
+});
+
 exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (request, response) => {
   if (request.method === 'OPTIONS') return response.status(204).send('');
   if (request.method !== 'GET') return sendJson(response, 405, { ok: false, error: 'Method not allowed.' });

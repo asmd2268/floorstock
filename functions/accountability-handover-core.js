@@ -98,12 +98,13 @@ function completeHandoverState({ assignments, usage, receipts, session, nowIso }
     assignment.updatedBy = session.departmentConfirmation.name;
   }
 
-  const receiptId = `acc2receipt_qr_${session.id}`;
+  const confirmationMethod = session.confirmationMethod || 'temporary_dual_qr';
+  const receiptId = `${confirmationMethod === 'manual' ? 'acc2receipt_manual' : 'acc2receipt_qr'}_${session.id}`;
   for (const row of selected) {
     row.status = 'received_locked';
     row.receiptId = receiptId;
     row.receivedAt = nowIso;
-    row.receivedDate = nowIso.slice(0, 10);
+    row.receivedDate = session.receivedDate || nowIso.slice(0, 10);
     row.deliveredByPharmacy = session.pharmacyConfirmation.name;
     row.deliveredByPharmacyEmployeeId = session.pharmacyConfirmation.employeeId;
     row.receivedByNurse = session.departmentConfirmation.name;
@@ -122,16 +123,16 @@ function completeHandoverState({ assignments, usage, receipts, session, nowIso }
     pharmacyEmployeeId: session.pharmacyConfirmation.employeeId,
     nurseName: session.departmentConfirmation.name,
     departmentEmployeeId: session.departmentConfirmation.employeeId,
-    receivedDate: nowIso.slice(0, 10),
+    receivedDate: session.receivedDate || nowIso.slice(0, 10),
     receivedAt: nowIso,
     usageIds: [...usageIds],
     totalUnits: selected.reduce((sum, row) => sum + number(row.units), 0),
     medicineTotals: totals,
     createdAt: nowIso,
-    createdBy: 'Temporary dual QR confirmation',
-    createdByUser: 'public-qr',
+    createdBy: session.createdBy || (confirmationMethod === 'manual' ? 'Manual handover confirmation' : 'Temporary dual QR confirmation'),
+    createdByUser: session.createdByUser || (confirmationMethod === 'manual' ? 'authenticated-user' : 'public-qr'),
     locked: true,
-    confirmationMethod: 'temporary_dual_qr'
+    confirmationMethod
   };
   const nextReceipts = (receipts || []).some((row) => String(row.id) === receiptId)
     ? (receipts || []).map((row) => String(row.id) === receiptId ? receipt : row)
