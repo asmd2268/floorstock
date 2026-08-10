@@ -22,12 +22,14 @@ var FB_AUTH=window.FB_AUTH||null;
 var FB_DB=window.FB_DB||null;
 var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
 var FB_APPCHECK=window.FB_APPCHECK||null;
-// Global Firebase handles for injected modules and Safari/WebKit compatibility
-window.FB_APP=null;
-window.FB_AUTH=null;
-window.FB_DB=null;
-window.FB_FUNCTIONS=null;
-window.FB_APPCHECK=null;
+// Keep an already-initialized Firebase session intact. Replacing these handles
+// during a module reload races Safari's auth restoration and makes protected
+// operations look anonymous ("Sign in first").
+window.FB_APP=FB_APP;
+window.FB_AUTH=FB_AUTH;
+window.FB_DB=FB_DB;
+window.FB_FUNCTIONS=FB_FUNCTIONS;
+window.FB_APPCHECK=FB_APPCHECK;
 globalThis._lazyScripts = {};
 function ensureFirebaseFunctions(){
   if(FB_FUNCTIONS&&typeof FB_FUNCTIONS.httpsCallable==='function'){
@@ -66,7 +68,7 @@ async function ensureCallableAuth(){
   var current=auth.currentUser;
   if(!current&&typeof auth.onAuthStateChanged==='function'){
     current=await new Promise(function(resolve){
-      var settled=false,timer=setTimeout(function(){if(!settled){settled=true;resolve(null)}},4000);
+      var settled=false,timer=setTimeout(function(){if(!settled){settled=true;resolve(null)}},8000);
       var unsub=auth.onAuthStateChanged(function(user){if(!settled){settled=true;clearTimeout(timer);if(unsub)unsub();resolve(user)}});
     });
   }
@@ -175,6 +177,16 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   window.FB_APP=FB_APP;
   window.FB_AUTH=FB_AUTH;
   window.FB_DB=FB_DB;
+  // Keep the live Firebase identity in sync with restored browser sessions.
+  // Previously this value was assigned only immediately after a password
+  // login, so Safari could render an already-loaded profile while callable
+  // Functions saw no authenticated user and returned "Sign in first".
+  if(!FB_AUTH.__floorstockSessionObserver&&typeof FB_AUTH.onAuthStateChanged==='function'){
+    FB_AUTH.__floorstockSessionObserver=true;
+    FB_AUTH.onAuthStateChanged(function(user){
+      window.__fsAuthenticatedUser=user||null;
+    });
+  }
   if(!_firebasePersistenceAttempted&&FB_DB&&typeof FB_DB.enablePersistence==='function'){
     _firebasePersistenceAttempted=true;
     FB_DB.enablePersistence({synchronizeTabs:true}).then(function(){
@@ -355,13 +367,16 @@ window.fsStateScopeCacheForProfile=fsStateScopeCacheForProfile;
 async function fsStateLoadScoped(keys,loader,source,profile){
   // A scoped session may legitimately be denied one optional document. Do not
   // discard every permitted document (especially crash_carts) because of it.
-  var results=await Promise.allSettled(keys.map(function(key){return loader(key)})),cache={};
+  var results=await Promise.allSettled(keys.map(function(key){return loader(key)})),cache={},failedKeys=[];
   results.forEach(function(result,index){
     if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined)cache[keys[index]]=result.value;
-    else if(result.status==='rejected')console.warn('Scoped state document was unavailable:',keys[index],result.reason);
+    else if(result.status==='rejected'){
+      failedKeys.push(keys[index]);
+      console.warn('Scoped state document was unavailable:',keys[index],result.reason);
+    }
   });
   if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
-  return {cache:fsStateScopeCacheForProfile(cache,profile),source:source};
+  return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
 function fsPharmacyDepartmentStateKeys(cache){
   var departments=Array.isArray(cache&&cache.departments)?cache.departments:[];
@@ -379,6 +394,7 @@ async function fsStateLoadPharmacyScoped(profile,loader,source){
   if(!dynamicKeys.length)return initial;
   var dynamic=await fsStateLoadScoped(dynamicKeys,loader,source,profile);
   Object.assign(initial.cache,dynamic.cache);
+  initial.failedKeys=(initial.failedKeys||[]).concat(dynamic.failedKeys||[]);
   return initial;
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){
@@ -447,7 +463,7 @@ async function fsStateLoadLegacyUserDirectory(){
   // The legacy installation has its canonical directory in /users.  The
   // callable is useful as a final compatibility source, but an empty callable
   // result must never erase real users after an auth-session refresh.
-  var loaders=[fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest,fsStateLoadUsersViaCallable],failures=[];
+  var loaders=[fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest],failures=[];
   for(var index=0;index<loaders.length;index++){
     try{
       var rows=await loaders[index]();
@@ -658,18 +674,14 @@ S.ready=true;
     // result from a failed fallback path during the 30-second refresh cycle.
     var previousUsers=Array.isArray(S.cache&&S.cache.users)?S.cache.users:[];
     var users;
-    if(fsStateIsLegacyMasterProfile(S.scopeProfile)){
+    try{
+      // The server function is the canonical directory for both legacy and
+      // tenant installations. It can merge Authentication-backed records with
+      // the legacy state directory without depending on client list rules.
+      users=await fsStateLoadUsersViaCallable();
+    }catch(callableError){
+      console.warn('Managed-user directory callable was unavailable; using a read-only fallback.',callableError);
       users=await fsStateLoadLegacyUserDirectory();
-    }else{
-      try{
-        users=await fsStateLoadUsersViaCallable();
-      }catch(callableError){
-        console.warn('Managed-user directory callable was unavailable; using a read-only fallback.',callableError);
-        users=await fsStateFirstSuccess([
-          fsStateLoadUsersViaRest(),
-          fsStateLoadUsersViaSdk()
-        ],'Loading users');
-      }
     }
     if(Array.isArray(users)&&users.length===0&&previousUsers.length){
       console.warn('Managed-user directory refresh returned no records; retaining the last verified directory.');
@@ -739,7 +751,15 @@ S.ready=true;
     S.pollBusy=true;
     try{
       var state=await fsStateLoadFloorstockForProfileViaRest(S.scopeProfile);
-      var changed=fsStateApplyCache(state.cache||{});
+      var incoming=state.cache||{},previousCache=S.cache||{};
+      // A scoped poll is an explicit set of document reads. Preserve only a
+      // document whose read failed in this poll; a fulfilled null still means
+      // the document was deliberately removed. This prevents a transient
+      // permission/network failure from blanking every visible crash cart.
+      (state.failedKeys||[]).forEach(function(key){
+        if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previousCache,key))incoming[key]=previousCache[key];
+      });
+      var changed=fsStateApplyCache(incoming);
       if(changed)S.scheduleRefresh();
       if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
         try{

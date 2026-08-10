@@ -15,7 +15,13 @@ function renderUsers(){
   var us=gu(),ds=gd();
   if(!us.length&&typeof window.S!=='undefined'&&typeof S.loadUsers==='function'&&!window.__usersPageLoadPending){
     window.__usersPageLoadPending=true;
-    S.loadUsers().then(function(){window.__usersPageLoadPending=false;renderUsers()}).catch(function(error){window.__usersPageLoadPending=false;console.warn('User list refresh failed.',error)});
+    window.__usersPageLoadError='';
+    S.loadUsers().then(function(){window.__usersPageLoadPending=false;renderUsers()}).catch(function(error){
+      window.__usersPageLoadPending=false;
+      window.__usersPageLoadError=String(error&&error.message||'The user directory could not be loaded.');
+      console.warn('User list refresh failed.',error);
+      renderUsers();
+    });
   }
   el('utbl').innerHTML=us.length
     ?us.map(function(u){
@@ -33,7 +39,9 @@ function renderUsers(){
         +'<td><span class="badge '+(u.active===false?'brd':'bgn')+'">'+(u.active===false?'Inactive':'Active')+'</span></td>'
         +'<td>'+actions+'</td></tr>';
     }).join('')
-    :'<tr><td colspan="4" style="text-align:center;color:var(--tx2);padding:18px">No managed users yet</td></tr>';
+    :'<tr><td colspan="4" style="text-align:center;color:var(--tx2);padding:18px">'
+      +(window.__usersPageLoadPending?'Loading managed users…':(window.__usersPageLoadError?'Unable to load managed users: '+esc(window.__usersPageLoadError):'No managed users yet'))
+      +'</td></tr>';
   el('dlst').innerHTML=ds.length
     ?ds.map(function(d){
       var medCount=getMeds(d.id).length;
@@ -135,6 +143,7 @@ async function saveUser(){
   try{
     var result=await window.fsCallFunction('createManagedUser',{email:email,password:password,role:requestedRole,deptId:(requestedRole==='department'||requestedRole==='outpatient_pharmacy_supervisor')?did:null,master:grantMaster});
     toast('Firebase user created securely ✓','succ');CM('muser');
+    window.__usersPageLoadError='';
     await S.loadUsers();renderUsers();
   }catch(err){console.error(err);toast((err&&err.message)||'Could not create Firebase user','err');}
 }

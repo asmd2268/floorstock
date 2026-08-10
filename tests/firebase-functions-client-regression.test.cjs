@@ -45,18 +45,18 @@ test('user management uses the central authenticated callable transport', () => 
   assert.match(core, /'Authorization':'Bearer '\+token/);
 });
 
-test('managed-user directory uses the canonical legacy collection before an empty callable result', () => {
+test('managed-user directory uses the authenticated callable before any legacy client fallback', () => {
   assert.match(core, /users=await fsStateLoadUsersViaCallable\(\)/);
   assert.match(core, /async function fsStateLoadLegacyUserDirectory\(\)/);
-  assert.match(core, /var loaders=\[fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest,fsStateLoadUsersViaCallable\]/);
-  assert.match(core, /if\(fsStateIsLegacyMasterProfile\(S\.scopeProfile\)\)/);
+  assert.match(core, /var loaders=\[fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest\]/);
+  assert.match(core, /Managed-user directory callable was unavailable; using a read-only fallback/);
   assert.doesNotMatch(core, /loadUsers:async function\(\)\{\s*var users=await fsStateFirstSuccess/);
   assert.match(core, /User-list refresh was unavailable/);
 });
 
 test('the production entrypoint cache version advances with authenticated-operation fixes', () => {
   const index = fs.readFileSync('public/index.html', 'utf8');
-  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.29/);
+  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.30/);
   assert.match(core, /window\.__fsAuthenticatedUser=credential\.user/);
   assert.match(core, /rememberedMatchesCurrentProfile/);
   assert.match(core, /String\(remembered\.email\|\|''\)\.trim\(\)\.toLowerCase\(\)/);
