@@ -278,6 +278,11 @@ test('department Crash Cart boot is read-only and controlled custody loading is 
   assert.match(controlledCustodySource, /delete host\.dataset\.controlledLoading/);
 });
 
+test('department Crash Cart view retains the authenticated department scope', () => {
+  assert.match(crashInventorySource, /var departmentScoped=isDepartment\(\)\|\|\(CU&&CU\.role==='outpatient_pharmacy_supervisor'\),scopeDept=departmentScoped\?String\(CU&&CU\.deptId\|\|''\):''/);
+  assert.doesNotMatch(crashInventorySource, /scopedOutpatient=CU&&CU\.role==='outpatient_pharmacy_supervisor',scopeDept=scopedOutpatient\?String\(CU\.deptId\|\|''\):''/);
+});
+
 test('Hide and Frozen controls remain visible to inpatient supervisor, pharmacy director, and master', () => {
   assert.match(inventoryStatusSource, /\['pharmacy','inpatient_supervisor'\]\.indexOf\(R\(\)\)>-1/);
   assert.match(inventoryStatusSource, /CU\.master===true/);
