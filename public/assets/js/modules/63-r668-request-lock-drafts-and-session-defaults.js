@@ -128,8 +128,7 @@ preserveDraftAround('renderCrashOperations','pg-crash-ops');
 if(typeof window.renderReqFormDebounced==='function')window.renderReqFormDebounced=function(){var args=arguments;clearTimeout(window.__r668ReqRenderTimer);window.__r668ReqRenderTimer=setTimeout(function(){if(typeof window.renderReqForm==='function')window.renderReqForm.apply(window,args)},220)};
 var previousStart=window.startApp;
 if(typeof previousStart==='function')window.startApp=function(){window.resetFloorstockSessionFilters();var result=previousStart.apply(this,arguments);setTimeout(function(){window.resetFloorstockSessionFilters();var active=document.querySelector('.pg.on');if(active&&typeof window.restorePageTransientUi==='function')window.restorePageTransientUi(active.id);setTimeout(function(){setValue('rsrch','');applyNewRequestGate()},0)},0);return result};
-var previousLogout=window.doLogout;
-if(typeof previousLogout==='function')window.doLogout=async function(){if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();window.resetFloorstockSessionFilters();var result=await previousLogout.apply(this,arguments);window.resetFloorstockSessionFilters();return result};
+if(!window.__r668LogoutWrapped&&typeof window.doLogout==='function'){window.__r668LogoutWrapped=true;var previousLogout=window.doLogout;window.__r668BaseLogout=previousLogout;window.doLogout=async function(){if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();window.resetFloorstockSessionFilters();var result=await window.__r668BaseLogout.apply(this,arguments);window.resetFloorstockSessionFilters();return result};}
 document.documentElement.dataset.asdhSessionDefaults=VERSION;
 })();
 export {};

@@ -13,6 +13,10 @@ function openEditExpiry(btn){return typeof canonicalOpenEditExpiry==='function'&
 function renderUsers(){
   if(typeof canManageUsers==='function'&&!canManageUsers()){el('utbl').innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px">User management is restricted to the Pharmacy Director.</td></tr>';return}
   var us=gu(),ds=gd();
+  if(!us.length&&typeof window.S!=='undefined'&&typeof S.loadUsers==='function'&&!window.__usersPageLoadPending){
+    window.__usersPageLoadPending=true;
+    S.loadUsers().then(function(){window.__usersPageLoadPending=false;renderUsers()}).catch(function(error){window.__usersPageLoadPending=false;console.warn('User list refresh failed.',error)});
+  }
   el('utbl').innerHTML=us.length
     ?us.map(function(u){
       var d=ds.find(function(x){return x.id===u.deptId});

@@ -415,7 +415,10 @@ async function fsR5ControlledRows(dept){
   for(var k=0;k<candidates.length;k++){
     try{
       var publicRows=await readPublicRest(candidates[k]);
-      if(publicRows.length)return {dept:candidates[k],rows:publicRows,source:'public-rest'};
+      if(publicRows.length){
+        if(window.S&&S.cache)S.cache['controlled_dept_list_'+candidates[k]]=publicRows.map(function(row){return {medId:row.key,requiredQty:row.required,actualQty:row.actual,qty:row.actual,batches:row.batches}});
+        return {dept:candidates[k],rows:publicRows,source:'public-rest'};
+      }
     }catch(error){errors.push(error);}
   }
 
