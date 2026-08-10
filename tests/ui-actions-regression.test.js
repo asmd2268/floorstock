@@ -215,7 +215,7 @@ test('department login hydrates its directory before assignment validation and s
 });
 
 test('login waits for Floor Stock state before opening the application shell', () => {
-  const initAt = requestSource.indexOf('await S.init(setLoginStage,stateProfile)');
+  const initAt = requestSource.indexOf('await fsLoginTimeout(S.init(setLoginStage,stateProfile)');
   const startAt = requestSource.indexOf('window.startApp();', initAt);
   assert.ok(initAt > 0);
   assert.ok(startAt > initAt);
@@ -731,4 +731,15 @@ test('subscription plans expose selected features and enforce read-only expiry',
   assert.equal(subscriptionIsWritable({ status: 'active', currentPeriodEnd: '2099-01-01T00:00:00Z' }), true);
   assert.equal(subscriptionIsWritable({ status: 'trialing', currentPeriodEnd: '2020-01-01T00:00:00Z' }), false);
   assert.equal(subscriptionIsWritable({ status: 'past_due', currentPeriodEnd: '2099-01-01T00:00:00Z' }), false);
+});
+
+test('scoped pharmacy roles load permitted state documents without collection list access', () => {
+  for (const role of ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff']) {
+    assert.match(requestSource, new RegExp("'" + role + "'"));
+  }
+  assert.match(requestSource, /function fsStateLoadPharmacyScoped\(/);
+  assert.match(requestSource, /function fsPharmacyDepartmentStateKeys\(/);
+  assert.match(requestSource, /Promise\.allSettled\(keys\.map/);
+  assert.match(requestSource, /if\(fsStateKeysForProfile\(S\.scopeProfile\)\)\{/);
+  assert.match(firestoreRulesSource, /allow list: if sameTenant\(tenant\) && !scopedStateUser\(\);/);
 });

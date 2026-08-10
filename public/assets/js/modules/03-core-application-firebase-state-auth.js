@@ -201,8 +201,26 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
 ]);
+// These roles are deliberately restricted by Firestore Rules to individual
+// document reads.  They must never fall back to collection.list()/onSnapshot(),
+// otherwise their permitted state appears empty even though each document is
+// readable. Keep this list aligned with canReadPharmacyState() in firestore.rules.
+var PHARMACY_SCOPED_STATE_KEYS=Object.freeze([
+  'departments','deleted_departments','custom_categories','requests','dept_notes','notes',
+  'crash_carts','crash_cart_reports','accountability_assignments_v2','accountability_usage_v2',
+  'accountability_receipts_v2','theme','facility_logo','pharmacy_category_config',
+  'pharmacy_department_announcements','pharmacy_department_expiry_rules',
+  'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1',
+  'req_windows','disp_slots','daily_limits_v2','weekly_limits_v2','monthly_limits',
+  'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1'
+]);
+function fsIsPharmacyScopedProfile(profile){
+  return !!profile&&['inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor','pharmacy_staff'].includes(String(profile.role||''));
+}
 function fsStateKeysForProfile(profile){
-  if(!profile||!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
+  if(!profile)return null;
+  if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
+  if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
     ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
@@ -250,16 +268,41 @@ function fsStateScopeCacheForProfile(cache,profile){
 }
 window.fsStateScopeCacheForProfile=fsStateScopeCacheForProfile;
 async function fsStateLoadScoped(keys,loader,source,profile){
-  var values=await Promise.all(keys.map(function(key){return loader(key)})),cache={};
-  keys.forEach(function(key,index){if(values[index]!==null&&values[index]!==undefined)cache[key]=values[index]});
+  // A scoped session may legitimately be denied one optional document. Do not
+  // discard every permitted document (especially crash_carts) because of it.
+  var results=await Promise.allSettled(keys.map(function(key){return loader(key)})),cache={};
+  results.forEach(function(result,index){
+    if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined)cache[keys[index]]=result.value;
+    else if(result.status==='rejected')console.warn('Scoped state document was unavailable:',keys[index],result.reason);
+  });
   if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source};
 }
+function fsPharmacyDepartmentStateKeys(cache){
+  var departments=Array.isArray(cache&&cache.departments)?cache.departments:[];
+  var prefixes=['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'];
+  var keys=[];
+  departments.forEach(function(dept){
+    var id=String(dept&&dept.id||'').trim();
+    if(id)prefixes.forEach(function(prefix){keys.push(prefix+id)});
+  });
+  return keys;
+}
+async function fsStateLoadPharmacyScoped(profile,loader,source){
+  var initial=await fsStateLoadScoped(PHARMACY_SCOPED_STATE_KEYS,loader,source,profile);
+  var dynamicKeys=fsPharmacyDepartmentStateKeys(initial.cache);
+  if(!dynamicKeys.length)return initial;
+  var dynamic=await fsStateLoadScoped(dynamicKeys,loader,source,profile);
+  Object.assign(initial.cache,dynamic.cache);
+  return initial;
+}
 function fsStateLoadFloorstockForProfileViaRest(profile){
+  if(fsIsPharmacyScopedProfile(profile))return fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped');
   var keys=fsStateKeysForProfile(profile);
   return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped',profile):fsStateLoadFloorstockViaRest();
 }
 function fsStateLoadFloorstockForProfileViaSdk(profile){
+  if(fsIsPharmacyScopedProfile(profile))return fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaSdk,'sdk-scoped');
   var keys=fsStateKeysForProfile(profile);
   return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-scoped',profile):fsStateLoadFloorstockViaSdk();
 }
@@ -497,6 +540,16 @@ S.ready=true;
   startRealtime:function(){
     S.stopRealtime();
     if(!S.ready)return;
+
+    // Scoped roles may read their allowed documents but are intentionally not
+    // allowed to list the state collection. Poll explicit document reads so a
+    // denied collection listener can never erase a valid Crash Cart view.
+    if(fsStateKeysForProfile(S.scopeProfile)){
+      S.transport='rest';
+      S.pollRest();
+      S.pollTimer=setInterval(function(){S.pollRest();},30000);
+      return;
+    }
 
     if(S.transport==='sdk'){
       try{
