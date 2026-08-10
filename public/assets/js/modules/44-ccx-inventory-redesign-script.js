@@ -68,7 +68,7 @@ function ensureUI(){var pg=E('pg-crashcart'),alerts=E('crash-open-alerts'),list=
  if(head&&!E('ccx-filters')){var bar=document.createElement('div');bar.id='ccx-filters';bar.className='ccx-toolbar';bar.innerHTML='<select id="ccx-dept"><option value="">All departments / كل الأقسام</option></select><select id="ccx-state"><option value="">All carts / كل العربات</option><option value="open">Open report / يوجد بلاغ</option><option value="closed">No open report / بدون بلاغ مفتوح</option></select><select id="ccx-expiry"><option value="">All expiry levels / جميع حالات الانتهاء</option><option value="expired">Expired / منتهي</option><option value="urgent">Urgent / عاجل</option><option value="near">Near expiry / قريب الانتهاء</option><option value="normal">Normal / طبيعي</option><option value="missing">Missing expiry / بدون تاريخ</option></select><input id="ccx-search" placeholder="Search cart or medicine / بحث..."><button class="btn bg bsm" id="ccx-rules" type="button">⚙ Expiry rules</button>';head.insertAdjacentElement('afterend',bar);
  ['ccx-dept','ccx-state','ccx-expiry'].forEach(function(id){E(id).addEventListener('change',function(){window.renderCrashCarts()})});E('ccx-search').addEventListener('input',function(){clearTimeout(ccxSearchTimer);ccxSearchTimer=setTimeout(function(){window.renderCrashCarts()},120)});E('ccx-rules').onclick=window.ccxEditRules;
  }
- var dsel=E('ccx-dept');if(dsel){var current=dsel.value;var opts='<option value="">All departments / كل الأقسام</option>'+((typeof gd==='function'?gd():[])||[]).map(function(d){return '<option value="'+escx(d.id)+'">'+escx(d.name)+'</option>'}).join('');if(dsel.innerHTML!==opts)dsel.innerHTML=opts;if(isDepartment()){dsel.value=CU.deptId||'';dsel.disabled=true}else{dsel.disabled=false;if(current)dsel.value=current}}
+ var dsel=E('ccx-dept');if(dsel){var current=dsel.value;var opts='<option value="">All departments / كل الأقسام</option>'+((typeof gd==='function'?gd():[])||[]).map(function(d){return '<option value="'+escx(d.id)+'">'+escx(d.name)+'</option>'}).join('');if(dsel.innerHTML!==opts)dsel.innerHTML=opts;var outpatient=CU&&CU.role==='outpatient_pharmacy_supervisor';if(isDepartment()||outpatient){var fixed=outpatient&&window.fsOutpatientDeptId?window.fsOutpatientDeptId():String(CU&&CU.deptId||'');dsel.value=fixed;dsel.disabled=true}else{dsel.disabled=false;if(current)dsel.value=current}}
  if(E('ccx-rules'))E('ccx-rules').style.display=ccxCanEditRules()?'inline-flex':'none';
  var modal=E('mcc-close');if(modal&&!E('ccx-close-actor')){var host=modal.querySelector('.cc-report-meta');if(host){var a=document.createElement('div');a.id='ccx-close-actor';host.insertAdjacentElement('afterend',a)}}
  return true}
@@ -115,5 +115,8 @@ if(window.__ccxAliasScope&&!window.__ccxCanonicalScope){window.__ccxCanonicalSco
 
 
 })();
+
+/* Keep outpatient pharmacy supervisor views pinned to the canonical outpatient department. */
+(function(){var previous=window.renderCrashCarts;if(typeof previous!=='function'||previous.__outpatientScopeFix)return;var scoped=function(){var profile=window.CU,role=profile&&profile.role,original=profile&&profile.deptId,canonical=role==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId?window.fsOutpatientDeptId():'';if(canonical&&profile)profile.deptId=canonical;try{return previous.apply(this,arguments)}finally{if(profile&&canonical)profile.deptId=original}};scoped.__outpatientScopeFix=true;window.renderCrashCarts=scoped})();
 
 export {};
