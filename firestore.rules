@@ -97,6 +97,17 @@ service cloud.firestore {
       ) == tenantId();
     }
 
+    // The original FloorStock installation predates tenant records.  Its
+    // master profile and user directory therefore have no tenantId.  A Firestore
+    // collection LIST cannot safely use resource.data to inspect every user,
+    // which left that legitimate master unable to load the directory whenever
+    // the callable path was temporarily unavailable.  Keep this narrowly
+    // limited to the non-tenant legacy installation; tenant administrators
+    // continue to use the server-side directory callable.
+    function legacyMasterDirectoryReader() {
+      return masterUser() && tenantId() == '';
+    }
+
     function platformAdmin() {
       return signedIn() && request.auth.token.get('platformAdmin', false) == true;
     }
@@ -243,7 +254,9 @@ service cloud.firestore {
         || ((masterUser() || pharmacyDirector()) && sameUserTenant(resource.data))
         || platformAdmin()
       );
-      allow list: if platformAdmin() || ((masterUser() || pharmacyDirector()) && sameUserTenant(resource.data));
+      allow list: if platformAdmin()
+        || legacyMasterDirectoryReader()
+        || ((masterUser() || pharmacyDirector()) && sameUserTenant(resource.data));
       allow create, update, delete: if false;
     }
 

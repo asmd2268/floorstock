@@ -17,3 +17,9 @@ test('state writes are shape-validated and role-gated', () => {
   assert.match(rules, /function canWriteState\(docId\)/);
   assert.match(rules, /canWriteState\(docId\)/);
 });
+
+test('the legacy single-site master can read its canonical user directory without widening tenant access', () => {
+  assert.match(rules, /function legacyMasterDirectoryReader\(\)/);
+  assert.match(rules, /return masterUser\(\) && tenantId\(\) == '';/);
+  assert.match(rules, /allow list: if platformAdmin\(\)\s*\|\| legacyMasterDirectoryReader\(\)/);
+});

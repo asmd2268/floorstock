@@ -53,11 +53,17 @@ test('managed-user directory is loaded through the authoritative callable first'
 
 test('the production entrypoint cache version advances with authenticated-operation fixes', () => {
   const index = fs.readFileSync('public/index.html', 'utf8');
-  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.25/);
+  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.26/);
   assert.match(core, /window\.__fsAuthenticatedUser=credential\.user/);
   assert.match(core, /rememberedMatchesCurrentProfile/);
   assert.match(core, /String\(remembered\.email\|\|''\)\.trim\(\)\.toLowerCase\(\)/);
   assert.match(core, /window\.__fsAuthenticatedUser=null/);
+});
+
+test('managed-user refresh retains a known-good directory after a transient empty fallback', () => {
+  assert.match(core, /var previousUsers=Array\.isArray\(S\.cache&&S\.cache\.users\)\?S\.cache\.users:\[\];/);
+  assert.match(core, /users\.length===0&&previousUsers\.length/);
+  assert.match(core, /retaining the last verified directory/);
 });
 
 test('managed-user callables support legacy administrator directories during migration', () => {

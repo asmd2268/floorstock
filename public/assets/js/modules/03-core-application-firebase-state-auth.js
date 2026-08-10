@@ -594,6 +594,10 @@ S.ready=true;
     // collection with the legacy directory.  Do not race it against a direct
     // Firestore query, because an empty direct query can otherwise overwrite a
     // valid legacy directory before the callable returns.
+    // Keep a known-good directory during a transient network/callable issue.
+    // In particular, never replace a populated Users screen with an empty
+    // result from a failed fallback path during the 30-second refresh cycle.
+    var previousUsers=Array.isArray(S.cache&&S.cache.users)?S.cache.users:[];
     var users;
     try{
       users=await fsStateLoadUsersViaCallable();
@@ -604,7 +608,11 @@ S.ready=true;
         fsStateLoadUsersViaSdk()
       ],'Loading users');
     }
-    S.cache.users=users||[];
+    if(Array.isArray(users)&&users.length===0&&previousUsers.length){
+      console.warn('Managed-user directory refresh returned no records; retaining the last verified directory.');
+      return previousUsers;
+    }
+    S.cache.users=Array.isArray(users)?users:[];
     return S.cache.users;
   },
   startRealtime:function(){
