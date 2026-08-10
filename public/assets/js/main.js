@@ -51,7 +51,7 @@ import './modules/46-r664-private-crash-cart-source-only.js';
 import './modules/47-asdh-authoritative-final-fixes-script.js?v=R6.75.0';
 import './modules/48-asdh-final-request-completion-script.js?v=R6.76.0';
 import './modules/49-asdh-final-persistence-actions-20260725.js?v=R6.76.0';
-import './modules/50-r617-integrated-operations.js?v=R6.76.20';
+import './modules/50-r617-integrated-operations.js?v=R6.76.21';
 import './modules/51-asdhealth-canonical-r6-32-20260727.js?v=R6.76.0';
 import './modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.75.0';
 import './modules/54-r662-accountability-draft-protection.js?v=R6.76.13';

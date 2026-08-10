@@ -744,6 +744,13 @@ test('Accountability review defaults to unreviewed rows and has Master-only six-
   assert.match(accountabilityRetentionSource, /Active custody and regimens will remain unchanged/);
 });
 
+test('Only the actual Master can remove a custody record that has transaction history', () => {
+  assert.match(accountabilitySource, /history&&!masterOverride/);
+  assert.match(accountabilitySource, /masterOverride=acc2EffectiveMaster/);
+  assert.match(accountabilitySource, /Historical use and handover records will be retained/);
+  assert.match(accountabilitySource, /Custody removed; historical records retained/);
+});
+
 test('Accountability handover log is a separate filterable and printable view', () => {
   assert.match(accountabilityHandoverLogViewSource, /Handover activity log/);
   assert.match(accountabilityHandoverLogViewSource, /data-acc2-handover-log/);
