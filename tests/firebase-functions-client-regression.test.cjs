@@ -50,3 +50,8 @@ test('managed-user directory is loaded through the authoritative callable first'
   assert.doesNotMatch(core, /loadUsers:async function\(\)\{\s*var users=await fsStateFirstSuccess/);
   assert.match(core, /Always refresh through the canonical directory callable/);
 });
+
+test('the production entrypoint cache version advances with authenticated-operation fixes', () => {
+  const index = fs.readFileSync('public/index.html', 'utf8');
+  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.22/);
+});
