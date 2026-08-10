@@ -58,9 +58,21 @@ function ensureFirebaseFunctions(){
 // operation instead of relying on a stale compat client context.
 async function ensureCallableAuth(){
   await waitForFirebase(12000);
-  if(!FB_AUTH||!FB_AUTH.currentUser)throw new Error('Sign in first.');
-  await fsLoginTimeout(FB_AUTH.currentUser.getIdToken(true),10000,'Firebase authentication refresh timed out.');
-  return FB_AUTH.currentUser;
+  // Always read the live auth handle. Some module loads capture the handle
+  // before initFirebase publishes it, which made valid sessions appear signed
+  // out when a callable was invoked from the Users page.
+  var auth=window.FB_AUTH||FB_AUTH;
+  if(!auth)throw new Error('Firebase authentication is unavailable. Reload and try again.');
+  var current=auth.currentUser;
+  if(!current&&typeof auth.onAuthStateChanged==='function'){
+    current=await new Promise(function(resolve){
+      var settled=false,timer=setTimeout(function(){if(!settled){settled=true;resolve(null)}},4000);
+      var unsub=auth.onAuthStateChanged(function(user){if(!settled){settled=true;clearTimeout(timer);if(unsub)unsub();resolve(user)}});
+    });
+  }
+  if(!current)throw new Error('Sign in first.');
+  await fsLoginTimeout(current.getIdToken(true),10000,'Firebase authentication refresh timed out.');
+  return current;
 }
 window.ensureCallableAuth=ensureCallableAuth;
 globalThis.renderInvDebounced = globalThis.debounce(function(){renderInv()},220);
