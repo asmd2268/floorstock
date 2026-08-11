@@ -1615,7 +1615,7 @@ function officialPrintHeaderHTML(){
       (header.img?'<img src="'+headerEscape(header.img)+'" alt="Official logo" style="max-width:31mm;max-height:25mm;object-fit:contain">':'')+
     '</div>'+
     '<div dir="rtl" style="text-align:right">'+rows(arabic,'rtl')+'</div>'+
-  '</div>';
+  '</div><div class="official-byline" style="font-size:8pt;text-align:center;color:#555;margin:-1mm 0 3mm">By Ali Abudahash</div>';
 }
 
 
