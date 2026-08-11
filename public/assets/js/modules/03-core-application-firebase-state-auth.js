@@ -1973,7 +1973,7 @@ function ctlDate(v){
 }
 function ctlNum(v){var n=Number(String(v==null?'':v).replace(/,/g,''));return isFinite(n)?n:0}
 function ctlKey(moh,nupco,name){return 'cm_'+String(moh||nupco||name).toLowerCase().replace(/[^a-z0-9]+/g,'_').replace(/^_|_$/g,'').slice(0,70)}
-function ctlMedicine(id){return ctlCatalog().find(function(m){return m.id===id})||null}
+function ctlMedicine(id){var key=String(id==null?'':id);return ctlCatalog().find(function(m){return String(m&&m.id)==key||String(m&&m.moh||m.mohCode||'')===key||String(m&&m.nupco||m.nupcoCode||'')===key})||null}
 function ctlBatchText(batches){return (batches||[]).length?(batches||[]).map(function(b){return '<div><span class="chip">'+(b.qty||0)+'</span> '+esc(fmtDate(b.expiry))+(b.lot?' · '+esc(b.lot):'')+'</div>'}).join(''):'—'}
 function ctlCurrentDept(){var s=el('ctl-dept');return s&&s.value?s.value:(CU.deptId||'')}
 
