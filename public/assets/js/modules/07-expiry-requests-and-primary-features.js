@@ -1615,7 +1615,7 @@ function officialPrintHeaderHTML(){
       (header.img?'<img src="'+headerEscape(header.img)+'" alt="Official logo" style="max-width:31mm;max-height:25mm;object-fit:contain">':'')+
     '</div>'+
     '<div dir="rtl" style="text-align:right">'+rows(arabic,'rtl')+'</div>'+
-  '</div><div class="official-byline" style="font-size:8pt;text-align:center;color:#555;margin:-1mm 0 3mm">By Ali Abudahash</div>';
+  '</div><style>@media print{.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}.official-page-number:after{content:counter(page)}.official-page-count:after{content:counter(pages)}}</style><div class="official-print-footer" style="text-align:center;font-size:8pt;color:#555;direction:ltr">By Ali Abu Dahash &nbsp;·&nbsp; (<span class="official-page-number"></span>/<span class="official-page-count"></span>)</div>';
 }
 
 
