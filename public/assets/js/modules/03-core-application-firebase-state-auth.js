@@ -2023,15 +2023,14 @@ async function ctlReceiveDelivery(moveId,accept){
 
 async function ctlAssignMedicineToDept(){
   if(!ctlCanEditDept())return;
-  var dept=ctlCurrentDept(),cat=ctlCatalog(),term=await uiPrompt('Enter medicine name, MOH code or NUPCO code');if(!term)return;
-  var q=term.toLowerCase(),matches=cat.filter(function(m){return [m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)});
-  if(!matches.length)return toast('Medicine not found in shared catalogue','err');
-  var med=matches.length===1?matches[0]:matches[ctlNum(await uiPrompt(matches.map(function(m,i){return (i+1)+'. '+m.name}).join('\n')+'\nChoose number','1'))-1];if(!med)return;
-  var list=ctlDeptList(dept).slice();if(list.some(function(x){return x.medId===med.id}))return toast('Already assigned','err');
-  list.push({medId:med.id,min:med.min,max:med.max,qty:0,batches:[]});
-  try{await ctlSetDeptList(dept,list)}catch(e){console.error('Department medicine assignment failed',e);return toast('Medicine assignment was not saved.','err')}
-  var movementSaved=await ctlSaveMovementLog({type:'dept_list_add',dept:dept,medId:med.id,note:'Added to inpatient department list'},'Department medicine assignment');
-  renderControlled();if(!movementSaved)toast('Medicine was assigned, but the movement log was not saved.','info');return true
+  var dept=ctlCurrentDept();
+  if(!dept||dept==='__all_inpatient__')return toast('Select one inpatient department before adding a medicine.','info');
+  if(!el('mctlassign'))document.body.insertAdjacentHTML('beforeend','<div class="modal-bg" id="mctlassign"><div class="modal" style="max-width:720px"><div class="mh"><span class="mt">Add from shared catalogue / إضافة من القائمة المشتركة</span><button class="xbtn" onclick="CM(\'mctlassign\')">✕</button></div><p style="color:var(--tx2);font-size:13px">Search and select a medicine to add to the selected inpatient department.</p><input id="ctlassign-search" class="full" placeholder="Search by medicine name, MOH or NUPCO code"><select id="ctlassign-med" size="8" style="width:100%;margin-top:12px"></select><div class="fl g8" style="justify-content:flex-end;margin-top:18px"><button class="btn bg" onclick="CM(\'mctlassign\')">Cancel</button><button class="btn bp" id="ctlassign-add">Add medicine</button></div></div></div>');
+  var cat=ctlCatalog(),search=el('ctlassign-search'),select=el('ctlassign-med');
+  function renderOptions(){var q=String(search.value||'').toLowerCase().trim();select.innerHTML=cat.filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)}).map(function(m){return '<option value="'+esc(m.id)+'">'+esc(m.name)+' · '+esc(m.moh||m.nupco||'')+'</option>'}).join('')||'<option disabled>No matching medicines</option>'}
+  search.oninput=renderOptions;renderOptions();OM('mctlassign');
+  el('ctlassign-add').onclick=async function(){var med=cat.find(function(m){return m.id===select.value});if(!med)return toast('Select a medicine first','err');var list=ctlDeptList(dept).slice();if(list.some(function(x){return x.medId===med.id}))return toast('Already assigned','err');list.push({medId:med.id,min:med.min,max:med.max,qty:0,batches:[]});try{await ctlSetDeptList(dept,list)}catch(e){console.error('Department medicine assignment failed',e);return toast('Medicine assignment was not saved.','err')}var movementSaved=await ctlSaveMovementLog({type:'dept_list_add',dept:dept,medId:med.id,note:'Added to inpatient department list'},'Department medicine assignment');CM('mctlassign');renderControlled();if(!movementSaved)toast('Medicine was assigned, but the movement log was not saved.','info');return true};
+  return true;
 }
 async function ctlRemoveDeptMedicine(id){
   if(!ctlCanEditDept()||!await uiConfirm('Remove this medicine from the department list?'))return;
