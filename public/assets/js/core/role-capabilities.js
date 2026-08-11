@@ -49,6 +49,7 @@ const CAPABILITIES = Object.freeze({
   'schedule.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
   'schedule.manage': Object.freeze(['pharmacy']),
   'crashCart.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor', 'department']),
+  'crashCart.report': Object.freeze(['department']),
   'crashCart.operate': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
   'crashCart.configure': Object.freeze(['pharmacy', 'inpatient_supervisor']),
   'crashCart.delete': Object.freeze(['pharmacy']),

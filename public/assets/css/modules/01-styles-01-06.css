@@ -556,3 +556,20 @@ tr.rha:hover td,tr.rhz:hover td,tr.rls:hover td,tr.rrf:hover td{filter:saturate(
 .inventory-action-modal .ops-scope-all{font-weight:700;border-bottom:1px solid var(--bd);margin-bottom:5px!important}
 #v13aq-expiry-summary{border-color:var(--ac)!important;background:rgba(31,111,235,.08)!important}
 @media(max-width:760px){#ctl-single-stock-host .ctl-clean-toolbar>*{width:100%!important}#ctl-single-stock-host table{min-width:1040px}}
+
+/* iPadOS/Safari touch layout: keep dense pharmacy tables usable without
+   changing desktop dimensions or permission-sensitive renderers. */
+@media (min-width:768px) and (max-width:1180px), (pointer:coarse){
+  html,body{min-width:0;max-width:100%;overflow-x:hidden;-webkit-text-size-adjust:100%}
+  input,select,textarea,button{font-size:16px;line-height:1.35}
+  button,.btn,[role="button"]{min-height:42px}
+  .topnav,.nav,.tabs,.toolbar,nav{max-width:100%;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .topnav::-webkit-scrollbar,.nav::-webkit-scrollbar,.tabs::-webkit-scrollbar,.toolbar::-webkit-scrollbar,nav::-webkit-scrollbar{display:none}
+  .table-wrap,.table-scroll,.scroll-x{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .modal,.dialog,.modal-card{max-width:calc(100vw - 24px);max-height:calc(100dvh - 24px);overflow:auto}
+}
+@media (max-width:767px){
+  .grid,.form-grid,.dashboard-grid,.stats-grid{grid-template-columns:1fr!important}
+  .two-col,.three-col{grid-template-columns:1fr!important}
+  table{font-size:14px}
+}

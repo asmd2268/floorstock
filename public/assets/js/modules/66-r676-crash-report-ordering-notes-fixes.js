@@ -78,7 +78,8 @@ window.ccSubmitReport=async function(){
   crashReportSaving=true;if(button){button.disabled=true;button.textContent='جاري الحفظ… / Saving…'}
   try{
     var effectiveRole=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(CU&&CU.role||'');
-    if(!window.CU||['department','department_employee'].indexOf(String(effectiveRole))<0)throw new Error('Only a department employee can submit this report.');
+    var canReport=typeof window.fsHasCapability==='function'?window.fsHasCapability('crashCart.report'):['department','department_employee'].indexOf(String(effectiveRole))>=0;
+    if(!window.CU||!canReport)throw new Error('Only a department employee can submit this report.');
     if(typeof window.fsCallFunction!=='function')throw new Error('Secure Crash Cart service is still loading. Please retry.');
     var payload=collectCrashReport(),data=await window.fsCallFunction('submitCrashCartReport',payload)||{};
     if(!data.ok||!data.cart||!data.report)throw new Error('The server did not confirm the Crash Cart report save.');

@@ -136,7 +136,16 @@ async function fsCallFunction(name,data){
 }
 window.fsCallFunction=fsCallFunction;
 globalThis.renderInvDebounced = globalThis.debounce(function(){renderInv()},220);
-globalThis.renderReqFormDebounced = globalThis.debounce(function(){renderReqForm()},220);
+function hasPendingRequestDraft(){
+  return Array.from(document.querySelectorAll('#rfbody input, #rfbody textarea, #rfbody select')).some(function(field){
+    if(field.disabled||field.type==='checkbox'||field.type==='radio')return false;
+    return String(field.value||'').trim()!=='';
+  });
+}
+globalThis.renderReqFormDebounced = globalThis.debounce(function(){
+  if(hasPendingRequestDraft())return;
+  renderReqForm();
+},220);
 globalThis.renderControlledDebounced = globalThis.debounce(function(){renderControlled()},220);
 globalThis._firebasePersistenceAttempted = false;
 globalThis._firebaseReadyPromise = null;
@@ -463,7 +472,7 @@ async function fsStateLoadLegacyUserDirectory(){
   // The legacy installation has its canonical directory in /users.  The
   // callable is useful as a final compatibility source, but an empty callable
   // result must never erase real users after an auth-session refresh.
-  var loaders=[fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest],failures=[];
+  var loaders=[fsStateLoadUsersViaCallable,fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest],failures=[];
   for(var index=0;index<loaders.length;index++){
     try{
       var rows=await loaders[index]();
