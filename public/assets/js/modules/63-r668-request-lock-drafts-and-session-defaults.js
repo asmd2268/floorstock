@@ -123,9 +123,10 @@ function preserveDraftAround(name,pageId){
   }
   wrapped.__r668DraftWrapped=true;window[name]=wrapped;
 }
-preserveDraftAround('renderReqForm','pg-newreq');
 preserveDraftAround('renderCrashOperations','pg-crash-ops');
-if(typeof window.renderReqFormDebounced==='function')window.renderReqFormDebounced=function(){var args=arguments;clearTimeout(window.__r668ReqRenderTimer);window.__r668ReqRenderTimer=setTimeout(function(){if(typeof window.renderReqForm==='function')window.renderReqForm.apply(window,args)},220)};
+// renderReqFormDebounced is owned by the canonical request renderer.  Do not
+// replace it here: replacing it bypasses draft protection and creates a second
+// render path that can erase quantities during realtime updates.
 var previousStart=window.startApp;
 if(typeof previousStart==='function')window.startApp=function(){window.resetFloorstockSessionFilters();var result=previousStart.apply(this,arguments);setTimeout(function(){window.resetFloorstockSessionFilters();var active=document.querySelector('.pg.on');if(active&&typeof window.restorePageTransientUi==='function')window.restorePageTransientUi(active.id);setTimeout(function(){setValue('rsrch','');applyNewRequestGate()},0)},0);return result};
 // The canonical authentication module owns logout and invokes the reset helper.
