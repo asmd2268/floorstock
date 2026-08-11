@@ -888,6 +888,8 @@ function openEditShelf(btn){
 function printShelfList(){
   var profile=(window.fsEffectiveUser&&window.fsEffectiveUser())||CU||{},printRole=window.fsEffectiveRole?window.fsEffectiveRole():String(profile.role||''),deptId=String(profile.deptId||profile.departmentId||'');
   if(printRole!=='department'||!deptId)return toast('Shelf printing is available to department accounts for their own department. / طباعة الأرفف متاحة لحساب القسم لقسمه فقط.','err');
+  var officialHeader=typeof window.officialPrintHeaderHTML==='function'?window.officialPrintHeaderHTML():'';
+  if(!officialHeader)return toast('Configure the official print header before printing. / اضبط الترويسة الرسمية قبل الطباعة.','err');
   var shelfId=el('print-shelf-sel').value;
   var clsFilter=el('print-shelf-cls').value;
   var ms=getMeds(deptId);
@@ -950,21 +952,20 @@ function printShelfList(){
   var filterLabel=clsFilter==='all'?'All Classifications':clsFilter.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
   var shelfLabel=shelfId==='all'?'All Shelves':(shelves.find(function(s){return s.id===shelfId})||{name:'?'}).name;
   pw.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+deptName+' — Shelf List</title><style>'
-    +'@page{size:A4;margin:10mm 10mm 18mm 10mm}'
+    +'@page{size:A4;margin:13mm 11mm 17mm 11mm}'
     +'body{font-family:Arial,sans-serif;font-size:8.5pt;color:#000;margin:0}'
     +'table{width:100%;border-collapse:collapse}'
     +'th{background:#1f2328;color:#fff;padding:5px 6px;text-align:left;font-size:7.5pt}'
     +'th.c{text-align:center}'
     +'tr{page-break-inside:avoid}'
     +'thead{display:table-header-group}'
-    +'#footer{position:fixed;bottom:0;left:0;right:0;font-size:6.5pt;color:#555;display:flex;justify-content:space-between;align-items:center;padding:4px 10px;border-top:1px solid #ccc;background:#fff}'
+    +'.official-print-footer{position:fixed;bottom:4mm;left:0;right:0;font-size:8pt;color:#555;text-align:center;background:#fff}.official-print-footer .page-number:before{content:"Page " counter(page)}'
     +'</style></head><body>'
-    +officialPrintHeaderHTML()
+    +officialHeader
     +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #000">'
     +'<div>'
     +'<div style="font-size:13pt;font-weight:700">'+deptName+' — Floor Stock / &#x645;&#x62E;&#x632;&#x648;&#x646; &#x627;&#x644;&#x623;&#x631;&#x636;&#x64A;&#x629;</div>'
     +'<div style="font-size:8pt;color:#333;margin-top:3px">Date: <b>'+today+'</b> &nbsp;|&nbsp; Shelf: <b>'+shelfLabel+'</b> &nbsp;|&nbsp; Filter: <b>'+filterLabel+'</b> &nbsp;|&nbsp; Items: <b>'+filtered.length+'</b></div>'
-    +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+(profile.username||profile.email||'Department')+' &nbsp;|&nbsp; Developed by Ali Abudahash | ASDHealth</div>'
     +'</div>'
     +'<div style="display:flex;gap:8px">'
     +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrSiteUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">System</div></div>'
@@ -977,10 +978,7 @@ function printShelfList(){
     +'<th class="c">Min / &#x627;&#x644;&#x623;&#x62F;&#x646;&#x649;</th>'
     +'<th class="c">Max / &#x627;&#x644;&#x623;&#x639;&#x644;&#x649;</th>'
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
-    +'<div id="footer">'
-    +'<span>'+deptName+' — Floor Stock — '+today+' — By Ali Abudahash</span>'
-    +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76">'
-    +'</div>'
+    +'<footer class="official-print-footer">By Ali AbuDahash · <span class="page-number"></span></footer>'
     +'<script>'+shelfQrPrintRuntime+'<\/script></body></html>');
   pw.document.close();
   return true;
@@ -1622,10 +1620,24 @@ function officialPrintHeaderHTML(){
  * does not call this helper: pharmacy request slips remain operational slips,
  * not official reports. */
 window.officialPrintHeaderHTML=officialPrintHeaderHTML;
-window.fsOfficialPrint=function(options){
+/* Canonical document frame for every official print. Pharmacy request slips
+ * deliberately remain outside this helper. */
+window.fsOfficialPrintDocument=function(options){
   options=options||{};
   var header=officialPrintHeaderHTML();
-  if(!header){
+  if(!header)return '';
+  var title=String(options.title||'Official document').replace(/[&<>"']/g,'');
+  var css=String(options.css||'');
+  var body=String(options.html||'');
+  var script=String(options.script||'');
+  return '<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>'+
+    '@page{margin:13mm 11mm 17mm}body{font:13px Arial,sans-serif;color:#111;margin:0}.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}.official-print-footer .page-number:before{content:"Page " counter(page)}'+css+
+    '</style></head><body>'+header+body+'<footer class="official-print-footer">By Ali AbuDahash · <span class="page-number"></span></footer>'+script+'</body></html>';
+};
+window.fsOfficialPrint=function(options){
+  options=options||{};
+  var documentHtml=window.fsOfficialPrintDocument(options);
+  if(!documentHtml){
     if(typeof toast==='function')toast('Save the official header and logo before printing.','err');
     return false;
   }
@@ -1634,14 +1646,8 @@ window.fsOfficialPrint=function(options){
     if(typeof toast==='function')toast('Allow pop-ups to print the official document.','err');
     return false;
   }
-  var title=String(options.title||'Official document').replace(/[&<>"']/g,'');
-  var css=String(options.css||'');
-  var body=String(options.html||'');
-  var footer='<footer class="official-print-footer">By Ali AbuDahash</footer>';
   popup.document.open();
-  popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>'+
-    '@page{margin:13mm 11mm 17mm}body{font:13px Arial,sans-serif;color:#111;margin:0}.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}'+css+
-    '</style></head><body>'+header+body+footer+'</body></html>');
+  popup.document.write(documentHtml);
   popup.document.close();
   popup.focus();
   setTimeout(function(){popup.print()},250);

@@ -798,11 +798,21 @@ window.controlledStoragePrint=async function(id,mode){
         '</div>';
     }
 
+    /* Storage lists and maps are official controlled-medicines documents.
+       Keep their header/footer identical to the canonical official frame. */
+    var officialHeader=typeof window.officialPrintHeaderHTML==='function'
+      ?window.officialPrintHeaderHTML():'';
+    if(!officialHeader){
+      popup.close();
+      toast('Configure the official print header before printing. / اضبط الترويسة الرسمية قبل الطباعة.','err');
+      return false;
+    }
+    var officialFooter='<footer class="official-print-footer">By Ali AbuDahash · <span class="page-number"></span></footer>';
     var printHtml=
       '<!doctype html><html><head><meta charset="utf-8">'+
       '<title>'+esc(unit.name)+' — Controlled storage '+esc(mode)+'</title>'+
       '<style>'+
-      '@page{size:A4 portrait;margin:4mm}'+
+      '@page{size:A4 portrait;margin:13mm 11mm 17mm}'+
       'html,body{width:100%;margin:0}'+
       '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
       'body{font-family:Arial,Tahoma,sans-serif;color:#000}'+
@@ -827,7 +837,9 @@ window.controlledStoragePrint=async function(id,mode){
       '.map-code{font-size:11px;line-height:1}.pcell span{font-weight:900;margin-top:5px;font-size:14px;line-height:1.08;overflow-wrap:anywhere}.pcell small{font-size:7.5px;line-height:1.2}.map-codes{margin-top:5px}.map-expiry{margin-top:auto;padding-top:3px}'+
       '.cert{text-align:center;font-size:7px;margin-top:4px;border-top:1px solid #000;padding-top:3px;flex:0 0 auto}'+
       '.public-url{text-align:center;font-size:6px;margin-top:1px;overflow-wrap:anywhere;flex:0 0 auto}'+
+      '.official-print-header{margin-bottom:4mm!important}.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}.official-print-footer .page-number:before{content:"Page " counter(page)}'+
       '</style></head><body class="print-'+mode+'">'+
+      officialHeader+
       '<div class="head">'+
       '<div class="title">'+
       '<h2>'+esc(unit.name)+' — Controlled Pharmacy Custody</h2>'+
@@ -853,6 +865,7 @@ window.controlledStoragePrint=async function(id,mode){
       'This list is electronically approved and certified and does not require a stamp.'+
       '</div>'+
       '<div class="public-url">'+esc(publicUrl)+'</div>'+
+      officialFooter+
       '<script>'+qrPrintRuntime+'<\/script>'+
       '</body></html>';
 

@@ -68,6 +68,10 @@ const controlledCustodySource = fs.readFileSync(
   new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
   'utf8',
 );
+const controlledStoragePrintSource = fs.readFileSync(
+  new URL('../public/assets/js/modules/50-r617-integrated-operations.js', import.meta.url),
+  'utf8',
+);
 const inventoryStatusSource = fs.readFileSync(
   new URL('../public/assets/js/modules/41-v16-inventory-status-merge-clean-script.js', import.meta.url),
   'utf8',
@@ -483,6 +487,14 @@ test('Print Orders uses a CSP-safe external runtime and creates a PDF matching t
   assert.match(printOrdersRuntimeSource, /Print preparation timed out/);
   assert.doesNotMatch(printOrdersRuntimeSource, /By Ali AbuDahash/i);
   assert.doesNotMatch(printOrdersRuntimeSource, /official-print-header|official-print-footer|officialPrintHeaderHTML/i);
+});
+
+test('official controlled prints use the configured header and the canonical footer', () => {
+  assert.match(usersSource, /window\.fsOfficialPrintDocument=function\(options\)/);
+  assert.match(usersSource, /By Ali AbuDahash · <span class="page-number"><\/span>/);
+  assert.match(controlledCustodySource, /official-print-footer/);
+  assert.match(controlledStoragePrintSource, /officialHeader=typeof window\.officialPrintHeaderHTML/);
+  assert.match(controlledStoragePrintSource, /By Ali AbuDahash · <span class="page-number"><\/span>/);
 });
 
 test('QR print pages wait for decoded QR images and stop on non-scannable fallback', () => {

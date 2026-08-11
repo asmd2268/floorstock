@@ -844,6 +844,7 @@ th{font-weight:900}
   unicode-bidi:plaintext
 }
 .footer{text-align:center;font-size:5.8pt;margin-top:.7mm}
+.official-print-footer{position:fixed;left:0;right:0;bottom:3mm;text-align:center;font:7pt Arial;color:#555;direction:ltr}.official-print-footer .page-number:before{content:"Page " counter(page)}
 .print-error{padding:15mm;text-align:center}
 @media print and (orientation:landscape){
   .landscape-layout{display:block!important}
@@ -901,6 +902,7 @@ th{font-weight:900}
       '<span class="cert-en">This list is electronically approved and certified and does not require a stamp.</span>'+
     '</div>'+
     '<div class="footer">Live list: '+fsR5Esc(url)+'</div>'+
+    '<footer class="official-print-footer">By Ali AbuDahash · <span class="page-number"></span></footer>'+
   '</div>';
 
   var runtime=`(function(){
@@ -1029,6 +1031,8 @@ window.addEventListener('load',start,{once:true});
 window.printDepartmentCustodyExact=async function(dept,options){
   options=options||{};
   dept=fsR5S(dept||fsR5ControlledDept(),'');
+  var officialHeader=typeof window.officialPrintHeaderHTML==='function'?window.officialPrintHeaderHTML():'';
+  if(!officialHeader){fsR5Toast('Configure the official print header before printing. / اضبط الترويسة الرسمية قبل الطباعة','err');return false;}
   var popup=options.printWindow||window.open('about:blank','_blank');
   if(!popup){fsR5Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');return false;}
   popup.document.open();

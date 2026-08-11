@@ -3,6 +3,11 @@
 
   /* Controlled print pages: full-width A4 landscape, left-to-right, Gregorian dates. */
   window.ctlPrintHTML=function(title,body,preparedWindow){
+    var officialHeader=typeof window.officialPrintHeaderHTML==='function'?window.officialPrintHeaderHTML():'';
+    if(!officialHeader){
+      toast('Configure the official print header before printing. / اضبط الترويسة الرسمية قبل الطباعة.','err');
+      return null;
+    }
     var w=preparedWindow||window.open('','_blank');
     if(!w){toast('Allow pop-ups to print.','err');return null}
     try{
@@ -27,9 +32,9 @@
         '.signs{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:16px;direction:ltr;page-break-inside:avoid!important;break-inside:avoid!important}'+
         '.sig{text-align:center;border-top:1px solid #222;padding-top:5px;margin-top:24px;page-break-inside:avoid;break-inside:avoid}'+
         '.electronic-cert{margin-top:10px;padding:6px;border:1px solid #333;text-align:center;font-size:9px;font-weight:bold;page-break-inside:avoid;break-inside:avoid}'+
-        '.by{font-size:8px;text-align:center;margin-top:8px;page-break-inside:avoid;break-inside:avoid}.handover{margin:8px 0;padding:7px;border:1px solid #444;page-break-inside:avoid;break-inside:avoid}.ltr{direction:ltr!important}'+
+        '.by{font-size:8px;text-align:center;margin-top:8px;page-break-inside:avoid;break-inside:avoid}.by .page-number:before{content:"Page " counter(page)}.handover{margin:8px 0;padding:7px;border:1px solid #444;page-break-inside:avoid;break-inside:avoid}.ltr{direction:ltr!important}'+
         '@media print{html,body,.print-page{height:auto!important;max-height:none!important;overflow:visible!important}table{page-break-inside:auto!important;break-inside:auto!important}thead{display:table-header-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}.by{position:fixed;left:0;right:0;bottom:3mm;margin:0}}'+
-        '</style></head><body><div class="print-page">'+officialPrintHeaderHTML()+body+'<div class="electronic-cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><footer class="by">By Ali AbuDahash</footer></div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,250)},{once:true});setTimeout(go,1800)})();<\/script></body></html>');
+        '</style></head><body><div class="print-page">'+officialHeader+body+'<div class="electronic-cert">هذه القائمة معتمدة ومصدقة إلكترونيًا ولا تحتاج إلى ختم<br>This list is electronically approved and certified and does not require a stamp.</div><footer class="by">By Ali AbuDahash · <span class="page-number"></span></footer></div><script>(function(){var fired=false;function go(){if(fired)return;fired=true;try{window.focus()}catch(e){}window.print()}window.addEventListener("load",function(){setTimeout(go,250)},{once:true});setTimeout(go,1800)})();<\/script></body></html>');
       w.document.close();
       return w
     }catch(err){
