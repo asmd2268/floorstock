@@ -2170,11 +2170,10 @@ function renderCtlDepartments(){
       '<td>'+ctlNum(x.min!=null?x.min:m.min)+'</td>'+
       '<td>'+ctlNum(x.max!=null?x.max:m.max)+'</td>'+
       '<td>'+ctlNum(x.qty)+'</td>'+
-      '<td><span class="shelf-badge">'+(x._deptName?esc(x._deptName)+' · ': '')+esc(ctlDeptShelfName(x._deptId||dept,x.shelfId))+'</span></td>'+
       '<td>'+ctlBatchText(x.batches)+'</td>'+
       '<td>'+(aggregate&&ctlCanEditDept()?'<button class="btn bg bxs" data-dept="'+esc(x._deptId||'')+'" data-id="'+x.medId+'" onclick="ctlEditDeptMedicineFromAggregate(this.dataset.dept,this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-dept="'+esc(x._deptId||'')+'" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicineFromAggregate(this.dataset.dept,this.dataset.id)">Remove</button>':(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>'))+'</td>'+
     '</tr>';
-  }).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
+  }).join(''):'<tr><td colspan="12" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
 
   if(el('ctl-dept-select-all')){
     el('ctl-dept-select-all').checked=list.length>0&&list.every(function(x){return selected[x.medId]});
