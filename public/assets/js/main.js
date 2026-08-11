@@ -79,6 +79,7 @@ import './modules/70-r676-accountability-regimen-roster-and-log.js?v=R6.76.19';
 import './modules/71-r676-accountability-review-and-retention.js?v=R6.76.15';
 import './modules/72-r676-accountability-handover-log-view.js?v=R6.76.16';
 import './modules/73-r676-analytics-quarterly-annual-reports.js?v=R6.76.17';
+import './modules/74-r676-analytics-department-print-comparison.js?v=R6.76.26';
 import './modules/74-r676-independent-regimen-database.js?v=R6.76.23';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.76.25';
 import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.25';
