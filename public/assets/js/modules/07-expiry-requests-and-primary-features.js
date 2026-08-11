@@ -1615,8 +1615,38 @@ function officialPrintHeaderHTML(){
       (header.img?'<img src="'+headerEscape(header.img)+'" alt="Official logo" style="max-width:31mm;max-height:25mm;object-fit:contain">':'')+
     '</div>'+
     '<div dir="rtl" style="text-align:right">'+rows(arabic,'rtl')+'</div>'+
-  '</div><style>@media print{.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}}</style><div class="official-print-footer" style="text-align:center;font-size:8pt;color:#555;direction:ltr">By Ali Abu Dahash</div>';
+  '</div>';
 }
+
+/* Canonical official-print shell.  Request fulfillment printing deliberately
+ * does not call this helper: pharmacy request slips remain operational slips,
+ * not official reports. */
+window.officialPrintHeaderHTML=officialPrintHeaderHTML;
+window.fsOfficialPrint=function(options){
+  options=options||{};
+  var header=officialPrintHeaderHTML();
+  if(!header){
+    if(typeof toast==='function')toast('Save the official header and logo before printing.','err');
+    return false;
+  }
+  var popup=window.open('','_blank');
+  if(!popup){
+    if(typeof toast==='function')toast('Allow pop-ups to print the official document.','err');
+    return false;
+  }
+  var title=String(options.title||'Official document').replace(/[&<>"']/g,'');
+  var css=String(options.css||'');
+  var body=String(options.html||'');
+  var footer='<footer class="official-print-footer">By Ali AbuDahash</footer>';
+  popup.document.open();
+  popup.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title+'</title><style>'+
+    '@page{margin:13mm 11mm 17mm}body{font:13px Arial,sans-serif;color:#111;margin:0}.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}'+css+
+    '</style></head><body>'+header+body+footer+'</body></html>');
+  popup.document.close();
+  popup.focus();
+  setTimeout(function(){popup.print()},250);
+  return true;
+};
 
 
 // ── CATEGORY SELECTOR OPTIONS ────────────────────────────
