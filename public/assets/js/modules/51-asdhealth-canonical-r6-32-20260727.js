@@ -185,7 +185,7 @@ function fsR5OrdersPrintData(orders){
 function fsR5OrdersHtml(orders){
   var payload={rows:fsR5OrdersPrintData(orders)};
   var runtimeUrl='';
-  try{runtimeUrl=new URL('./assets/js/print-orders-runtime.js?v=R6.75.0',window.location.href).href;}catch(e){runtimeUrl='/assets/js/print-orders-runtime.js?v=R6.75.0';}
+  try{runtimeUrl=new URL('./assets/js/print-orders-runtime.js?v=R6.76.31',window.location.href).href;}catch(e){runtimeUrl='/assets/js/print-orders-runtime.js?v=R6.76.31';}
   return '<!doctype html><html><head><meta charset="utf-8">'+
     '<meta name="viewport" content="width=device-width,initial-scale=1">'+
     '<title>Print Orders — Preparing PDF</title>'+
