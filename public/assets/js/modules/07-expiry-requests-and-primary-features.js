@@ -1615,7 +1615,7 @@ function officialPrintHeaderHTML(){
       (header.img?'<img src="'+headerEscape(header.img)+'" alt="Official logo" style="max-width:31mm;max-height:25mm;object-fit:contain">':'')+
     '</div>'+
     '<div dir="rtl" style="text-align:right">'+rows(arabic,'rtl')+'</div>'+
-  '</div><style>@media print{.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}.official-page-number:after{content:counter(page)}.official-page-count:after{content:counter(pages)}}</style><div class="official-print-footer" style="text-align:center;font-size:8pt;color:#555;direction:ltr">By Ali Abu Dahash &nbsp;·&nbsp; (<span class="official-page-number"></span>/<span class="official-page-count"></span>)</div>';
+  '</div><style>@media print{.official-print-footer{position:fixed;left:0;right:0;bottom:4mm;text-align:center;font-size:8pt;color:#555;direction:ltr}}</style><div class="official-print-footer" style="text-align:center;font-size:8pt;color:#555;direction:ltr">By Ali Abu Dahash</div>';
 }
 
 
@@ -2033,7 +2033,21 @@ function ctlPublicUrl(dept){var u=new URL(window.location.href);u.search='';u.ha
 async function ctlPublishDept(dept){
   if(!window.FB_DB)throw new Error('Firebase is not initialized');
   var d=(typeof gd==='function'?(gd()||[]):[]).find(function(x){return x.id===dept})||{};
-  var items=(typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return {name:m.name||'',classification:m.classification||'narcotic',qty:ctlNum(x.qty),batches:(x.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':ctlNum(b.qty)}})}});
+  var items=(typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x){
+    x=x||{};
+    var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};
+    var snap=x.catalogSnapshot||x.medicationSnapshot||{};
+    return {
+      id:x.medId||x.medicationId||x.catalogId||x.id||'',
+      medId:x.medId||x.medicationId||x.catalogId||x.id||'',
+      name:m.name||snap.name||x.name||x.medName||x.medicineName||x.drugName||'',
+      moh:m.moh||m.mohCode||snap.moh||snap.mohCode||x.moh||x.mohCode||'',
+      nupco:m.nupco||m.nupcoCode||snap.nupco||snap.nupcoCode||x.nupco||x.nupcoCode||'',
+      classification:m.classification||snap.classification||x.classification||'narcotic',
+      qty:ctlNum(x.qty),
+      batches:(x.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':ctlNum(b.qty)}})
+    };
+  });
   var alertDays=((typeof ctlSettingsGlobal==='function'?(ctlSettingsGlobal()||{}):{}).expiryAlertDays||30);
   var collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');
   await collection.doc(dept).set({departmentId:dept,departmentName:d.name||((window.CU&&CU.deptId===dept)?CU.deptName:'')||dept,alertDays:Number(alertDays)||30,items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});

@@ -1958,7 +1958,35 @@ function ctlSetWarehouse(v){return S.s('controlled_warehouse',v)}
 function ctlPharmacy(){return S.g('controlled_pharmacy_stock')||{}}
 function ctlSetPharmacy(v){return S.s('controlled_pharmacy_stock',v)}
 function ctlDeptList(dept){return S.g('controlled_dept_list_'+dept)||[]}
-async function ctlSetDeptList(dept,v){var out=await S.s('controlled_dept_list_'+dept,v);try{if(window.FB_DB&&typeof ctlPublishDept==='function')await ctlPublishDept(dept)}catch(e){warnPublicSync('Controlled custody',e)}return out}
+function ctlDeptMedicationSnapshot(row){
+  row=row||{};
+  var id=String(row.medId||row.medicationId||row.catalogId||row.id||'');
+  var catalog=ctlMedicine(id)||{};
+  var prior=row.catalogSnapshot||row.medicationSnapshot||{};
+  var snapshot={
+    id:String(catalog.id||prior.id||id),
+    name:String(catalog.name||prior.name||row.name||row.medName||row.medicineName||row.drugName||row.itemName||''),
+    moh:String(catalog.moh||catalog.mohCode||prior.moh||prior.mohCode||row.moh||row.mohCode||''),
+    nupco:String(catalog.nupco||catalog.nupcoCode||prior.nupco||prior.nupcoCode||row.nupco||row.nupcoCode||''),
+    classification:String(catalog.classification||prior.classification||row.classification||'narcotic')
+  };
+  var saved={};Object.keys(row).forEach(function(key){saved[key]=row[key]});
+  saved.medId=id||saved.medId||'';
+  saved.catalogSnapshot=snapshot;
+  // Keep a denormalized copy for public/printed lists: department users are
+  // intentionally not required to read the central controlled catalogue.
+  saved.name=snapshot.name||saved.name||'';
+  saved.moh=snapshot.moh||saved.moh||'';
+  saved.nupco=snapshot.nupco||saved.nupco||'';
+  saved.classification=snapshot.classification||saved.classification||'narcotic';
+  return saved;
+}
+async function ctlSetDeptList(dept,v){
+  var canonical=(Array.isArray(v)?v:[]).map(ctlDeptMedicationSnapshot);
+  var out=await S.s('controlled_dept_list_'+dept,canonical);
+  try{if(window.FB_DB&&typeof ctlPublishDept==='function')await ctlPublishDept(dept)}catch(e){warnPublicSync('Controlled custody',e)}
+  return out;
+}
 function ctlMoves(){return S.g('controlled_moves')||[]}
 async function ctlSaveMovementLog(record,context){
   try{await ctlMove(record);return true}catch(e){console.error((context||'Controlled action')+' movement log failed',e);return false}

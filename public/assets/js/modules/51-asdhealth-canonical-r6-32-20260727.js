@@ -254,13 +254,13 @@ function fsR5ControlledDept(){
   return fsR5S(value,'');
 }
 function fsR5ControlledMedicine(id,row){
-  var m={};row=row||{};
+  var m={};row=row||{};var snapshot=row.catalogSnapshot||row.medicationSnapshot||row.catalog||{};
   try{if(typeof window.ctlMedicine==='function')m=window.ctlMedicine(id)||{}}catch(e){}
   return {
-    name:fsR5S(m.name||row.name||row.medName||row.medicineName,'Unknown medicine / دواء غير معروف'),
-    moh:fsR5S(m.moh||m.mohCode||row.moh||row.mohCode,''),
-    nupco:fsR5S(m.nupco||m.nupcoCode||row.nupco||row.nupcoCode,''),
-    classification:fsR5S(m.classification||row.classification,'narcotic')
+    name:fsR5S(m.name||snapshot.name||row.name||row.medName||row.medicineName||row.drugName||row.itemName,'Unknown medicine / دواء غير معروف'),
+    moh:fsR5S(m.moh||m.mohCode||snapshot.moh||snapshot.mohCode||row.moh||row.mohCode,''),
+    nupco:fsR5S(m.nupco||m.nupcoCode||snapshot.nupco||snapshot.nupcoCode||row.nupco||row.nupcoCode,''),
+    classification:fsR5S(m.classification||snapshot.classification||row.classification,'narcotic')
   };
 }
 function fsR5NormalizeControlled(rows,source){
