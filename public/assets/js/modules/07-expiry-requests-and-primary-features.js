@@ -2110,6 +2110,20 @@ async function ctlApplyBulkShelf(){
   try{await ctlSetDeptList(dept,list)}catch(e){console.error('Bulk department shelf assignment failed',e);return toast('Shelf assignment was not saved.','err')}
   CTL_DEPT_SELECTED[dept]={};CM('mctl-bulk-shelf');toast(ids.length+' medicines added to shelf ✓','succ');renderCtlDepartments();return true
 }
+function ctlSelectDepartmentForEdit(dept){
+  var select=el('ctl-dept');
+  if(select&&dept){select.value=String(dept);}
+}
+function ctlEditDeptMedicineFromAggregate(dept,medId){
+  if(!ctlCanEditDept())return toast('No permission','err');
+  ctlSelectDepartmentForEdit(dept);
+  return ctlEditDeptMedicine(medId);
+}
+function ctlRemoveDeptMedicineFromAggregate(dept,medId){
+  if(!ctlCanEditDept())return toast('No permission','err');
+  ctlSelectDepartmentForEdit(dept);
+  return ctlRemoveDeptMedicine(medId);
+}
 
 function renderCtlDepartments(){
   if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
@@ -2122,6 +2136,7 @@ function renderCtlDepartments(){
   }
   if(cur&&Array.from(sel.options).some(function(o){return o.value===cur}))sel.value=cur;
   var dept=ctlCurrentDept(),assignedList=ctlDeptList(dept),list=assignedList,can=ctlCanEditDept();
+  var aggregate=dept==='__all_inpatient__';
   if(dept==='__all_inpatient__'){
     list=[];
     ds.forEach(function(d){(ctlDeptList(d.id)||[]).forEach(function(row){list.push(Object.assign({},row,{_deptId:d.id,_deptName:d.name}));});});
@@ -2157,7 +2172,7 @@ function renderCtlDepartments(){
       '<td>'+ctlNum(x.qty)+'</td>'+
       '<td><span class="shelf-badge">'+(x._deptName?esc(x._deptName)+' · ': '')+esc(ctlDeptShelfName(x._deptId||dept,x.shelfId))+'</span></td>'+
       '<td>'+ctlBatchText(x.batches)+'</td>'+
-      '<td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td>'+
+      '<td>'+(aggregate&&ctlCanEditDept()?'<button class="btn bg bxs" data-dept="'+esc(x._deptId||'')+'" data-id="'+x.medId+'" onclick="ctlEditDeptMedicineFromAggregate(this.dataset.dept,this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-dept="'+esc(x._deptId||'')+'" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicineFromAggregate(this.dataset.dept,this.dataset.id)">Remove</button>':(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>'))+'</td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
 
@@ -2600,6 +2615,8 @@ const __asdhLegacyApi = {
   ctlOpenBulkShelf: ctlOpenBulkShelf,
   ctlApplyBulkShelf: ctlApplyBulkShelf,
   renderCtlDepartments: renderCtlDepartments,
+  ctlEditDeptMedicineFromAggregate: ctlEditDeptMedicineFromAggregate,
+  ctlRemoveDeptMedicineFromAggregate: ctlRemoveDeptMedicineFromAggregate,
   requestColdMarker: requestColdMarker,
   actualUser: actualUser,
   actualActorName: actualActorName,
@@ -2806,6 +2823,8 @@ export {
   ctlOpenBulkShelf,
   ctlApplyBulkShelf,
   renderCtlDepartments,
+  ctlEditDeptMedicineFromAggregate,
+  ctlRemoveDeptMedicineFromAggregate,
   requestColdMarker,
   actualUser,
   actualActorName,
