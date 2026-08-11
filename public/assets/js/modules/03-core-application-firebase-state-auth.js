@@ -322,6 +322,23 @@ async function fsStateLoadScoped(keys,loader,source,profile){
       });
     }
   }
+  /* Controlled-medicine officers can review custody across every inpatient
+     department.  These documents are individually authorized by the rules;
+     fetch them by the department directory instead of issuing a collection
+     LIST (which is intentionally denied to scoped roles). */
+  if(fsScopedRole(profile)==='controlled_pharmacy'){
+    var controlledDeptIds=(Array.isArray(cache.departments)?cache.departments:[])
+      .map(function(dept){return String(dept&&dept.id||'').trim()}).filter(Boolean);
+    var controlledKeys=controlledDeptIds.map(function(deptId){return 'controlled_dept_list_'+deptId});
+    if(controlledKeys.length){
+      var controlledResults=await Promise.allSettled(controlledKeys.map(function(key){return loader(key)}));
+      controlledKeys.forEach(function(key,index){
+        var result=controlledResults[index];
+        if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined)cache[key]=result.value;
+        else if(result.status==='rejected'){failedKeys.push(key);console.warn('Scoped controlled-department document was unavailable:',key,result.reason)}
+      });
+    }
+  }
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){

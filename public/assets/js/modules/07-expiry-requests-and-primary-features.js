@@ -2114,16 +2114,18 @@ async function ctlApplyBulkShelf(){
 function renderCtlDepartments(){
   if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
   var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
+  if((ctlIsOfficer()||ctlIsMaster())&&!sel.dataset.allDefaulted){cur='__all_inpatient__';sel.dataset.allDefaulted='1';}
   if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
-  else sel.innerHTML=ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+  else {
+    var allOption=(ctlIsOfficer()||ctlIsMaster())?'<option value="__all_inpatient__">All inpatient departments / كل أقسام التنويم</option>':'';
+    sel.innerHTML=allOption+ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+  }
   if(cur&&Array.from(sel.options).some(function(o){return o.value===cur}))sel.value=cur;
   var dept=ctlCurrentDept(),assignedList=ctlDeptList(dept),list=assignedList,can=ctlCanEditDept();
-  // The controlled officer must be able to review the complete shared catalogue
-  // even before medicines have been assigned to a particular inpatient unit.
-  // Keep these rows presentation-only; assigning still happens explicitly via
-  // the existing "Add from shared catalogue" action.
-  if(!list.length && (ctlIsOfficer() || ctlIsMaster())){
-    list=ctlCatalog().map(function(m){return {medId:m.id,qty:0,min:m.min,max:m.max,batches:[],_unassigned:true};});
+  if(dept==='__all_inpatient__'){
+    list=[];
+    ds.forEach(function(d){(ctlDeptList(d.id)||[]).forEach(function(row){list.push(Object.assign({},row,{_deptId:d.id,_deptName:d.name}));});});
+    can=false;
   }
   el('ctl-assign-btn').style.display=can?'inline-flex':'none';
   el('ctl-sign-btn').style.display=can?'inline-flex':'none';
@@ -2153,9 +2155,9 @@ function renderCtlDepartments(){
       '<td>'+ctlNum(x.min!=null?x.min:m.min)+'</td>'+
       '<td>'+ctlNum(x.max!=null?x.max:m.max)+'</td>'+
       '<td>'+ctlNum(x.qty)+'</td>'+
-      '<td><span class="shelf-badge">'+(x._unassigned?'Not assigned / غير مسند':esc(ctlDeptShelfName(dept,x.shelfId)))+'</span></td>'+
+      '<td><span class="shelf-badge">'+(x._deptName?esc(x._deptName)+' · ': '')+esc(ctlDeptShelfName(x._deptId||dept,x.shelfId))+'</span></td>'+
       '<td>'+ctlBatchText(x.batches)+'</td>'+
-      '<td>'+(x._unassigned?'<span class="chip">Add from catalogue / أضف من القائمة</span>':(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>'))+'</td>'+
+      '<td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
 
