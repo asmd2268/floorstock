@@ -1,5 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js';
 import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=R6.76.7';
+import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=R6.76.40';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
@@ -59,7 +60,7 @@ function ensureFirebaseFunctions(){
 // are reported as “Sign in first”. Refresh the token before every callable
 // operation instead of relying on a stale compat client context.
 async function ensureCallableAuth(){
-  await waitForFirebase(12000);
+  await waitForFirebase(5000);
   // Always read the live auth handle. Some module loads capture the handle
   // before initFirebase publishes it, which made valid sessions appear signed
   // out when a callable was invoked from the Users page.
@@ -1547,7 +1548,7 @@ async function doLogin(){
     var profile=profileSnapshot.data()||{};
     profile.role=normalizeRole(profile.role);
     if(profile.active===false)throw new Error('This account is inactive.');
-    if(typeof globalThis.isSupportedLoginRole!=='function'||!globalThis.isSupportedLoginRole(profile.role))throw new Error('This account has an invalid role.');
+    if(!isSupportedLoginRole(profile.role))throw new Error('This account has an invalid role.');
     if(profile.role==='department'){
       setLoginStage('Verifying department…');
       await fsHydrateDepartmentDirectoryForLogin(profile);
@@ -1602,15 +1603,9 @@ async function doLogout(){
   var logoutButtons=Array.from(document.querySelectorAll('[onclick*="doLogout"],#logout-btn,.logout-btn'));logoutButtons.forEach(function(button){button.disabled=true});
   function timeout(promise,ms,label){return Promise.race([Promise.resolve(promise),new Promise(function(_,reject){setTimeout(function(){reject(new Error(label||'Operation timed out'))},ms)})])}
   try{
-    // Do not persist page drafts while tearing down the authenticated session.
-    // The old persistence chain could re-enter itself during Safari pagehide,
-    // producing "Maximum call stack size exceeded" and preventing sign-out.
-    try{if(typeof window.resetFloorstockSessionFilters==='function')window.resetFloorstockSessionFilters();}
-    catch(filterError){console.warn('Session filter reset failed before logout; continuing sign out.',filterError)}
-    // Do not await the page-wide save tracker here.  Its draft/pagehide
-    // listeners can synchronously re-enter during Safari sign-out and cause
-    // "Maximum call stack size exceeded".  Firestore's pending-write barrier
-    // below is the single safe persistence checkpoint for logout.
+    if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
+    if(typeof window.resetFloorstockSessionFilters==='function')window.resetFloorstockSessionFilters();
+    try{if(typeof window.asdhWaitForAllSaves==='function')await timeout(window.asdhWaitForAllSaves(12000),13000,'Save confirmation timed out')}catch(e){console.warn('Save confirmation failed before logout; continuing sign out.',e)}
     if(typeof previewClear==='function')previewClear();
     try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){if(window.CU&&window.CU.master===true)toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.warn('Pending writes failed before logout; continuing sign out.',err)}
     S.stopRealtime();

@@ -10,9 +10,23 @@ function openAddExpiry(){return typeof canonicalOpenAddExpiry==='function'&&cano
 function openEditExpiry(btn){return typeof canonicalOpenEditExpiry==='function'&&canonicalOpenEditExpiry!==openEditExpiry?canonicalOpenEditExpiry(btn):undefined}
 // ── USERS
 // ── USERS ────────────────────────────────────────────────
+// R6.77 FIX: Role-scoped department list for inpatient_supervisor and pharmacy_staff
+function fsRoleScopedDepts(allDepts){
+  var r=window.fsEffectiveRole?window.fsEffectiveRole():String(window.CU&&window.CU.role||'');
+  if(r==='inpatient_supervisor'){
+    return allDepts.filter(function(d){
+      return !/outpatient\s+department/i.test(String(d.name||''))&&String(d.id||'').toLowerCase()!=='outpatient';
+    });
+  }
+  if(r==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){
+    var od=window.fsOutpatientDeptId();
+    return allDepts.filter(function(d){return String(d.id)===String(od);});
+  }
+  return allDepts;
+}
 function renderUsers(){
   if(typeof canManageUsers==='function'&&!canManageUsers()){el('utbl').innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px">User management is restricted to the Pharmacy Director.</td></tr>';return}
-  var us=gu(),ds=gd();
+  var us=gu(),ds=fsRoleScopedDepts(gd());
   if(!us.length&&typeof window.S!=='undefined'&&typeof S.loadUsers==='function'&&!window.__usersPageLoadPending){
     window.__usersPageLoadPending=true;
     window.__usersPageLoadError='';
@@ -166,7 +180,7 @@ function renderAn(){
   var p=el('aperiod').value;
   el('crange').style.display=p==='custom'?'flex':'none';
   var dsel=el('adept');
-  if(dsel.options.length<=1)gd().forEach(function(d){dsel.innerHTML+='<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'});
+  if(dsel.options.length<=1)fsRoleScopedDepts(gd()).forEach(function(d){dsel.innerHTML+='<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'});
   var df=dsel.value,now=new Date(),from;
   if(p==='month')from=new Date(now.getFullYear(),now.getMonth(),1);
   else if(p==='quarter')from=new Date(now.getFullYear(),Math.floor(now.getMonth()/3)*3,1);
@@ -1000,7 +1014,7 @@ function legacyRenderPharmNotes(){
   // Populate dept filter
   var dsel=el('notes-filter-dept');
   if(dsel&&dsel.options.length<=1){
-    var noteDeps=gd(),noteRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+    var noteRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''),noteDeps=fsRoleScopedDepts(gd());
     if(noteRole==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var od=window.fsOutpatientDeptId();noteDeps=noteDeps.filter(function(d){return String(d.id)===String(od)})}
     noteDeps.forEach(function(d){dsel.innerHTML+='<option value="'+noteEsc(d.id)+'">'+noteEsc(d.name)+'</option>';});
   }
