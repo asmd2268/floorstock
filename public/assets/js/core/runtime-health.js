@@ -41,6 +41,10 @@
     }),
   });
 
+  // One error boundary for feature modules.  Keep the existing runtime API
+  // intact while giving legacy handlers a safe, observable reporting hook.
+  window.fsError = window.fsError || ((error, source = 'feature') => record(error, source));
+
   window.addEventListener('error', event => record(event.error || event.message, 'window.error'));
   window.addEventListener('unhandledrejection', event => record(event.reason, 'unhandledrejection'));
   window.addEventListener('asdh:module-ready', event => {
