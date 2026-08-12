@@ -56,7 +56,11 @@ test('managed-user directory uses the authenticated callable before any legacy c
 
 test('the production entrypoint cache version advances with authenticated-operation fixes', () => {
   const index = fs.readFileSync('public/index.html', 'utf8');
-  assert.match(index, /assets\/js\/main\.js\?v=R6\.76\.30/);
+  const authBootstrap = fs.readFileSync('public/assets/js/auth-bootstrap.js', 'utf8');
+  assert.match(index, /assets\/js\/auth-bootstrap\.js/);
+  const mainVersion = authBootstrap.match(/import\('\.\/main\.js\?v=R6\.76\.(\d+)'\)/);
+  assert.ok(mainVersion, 'auth bootstrap must load the versioned main entrypoint');
+  assert.ok(Number(mainVersion[1]) >= 30, 'main entrypoint cache version must include authenticated-operation fixes');
   assert.match(core, /window\.__fsAuthenticatedUser=credential\.user/);
   assert.match(core, /rememberedMatchesCurrentProfile/);
   assert.match(core, /String\(remembered\.email\|\|''\)\.trim\(\)\.toLowerCase\(\)/);
