@@ -1,5 +1,6 @@
 /* ASDHealth R6.76.19 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js';
+import './core/dom-utils.js?v=R6.76.31';
 import './core/runtime-health.js';
 import './core/department-note-schema.js?v=R6.76.19';
 import './core/department-note-utils.js?v=R6.76.19';

@@ -1,7 +1,7 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var E=window.fsE;
+var esc=window.fsEsc;
 function num(v){v=Number(v);return isFinite(v)?v:0}
 function normalText(v){
   return typeof window.fsMedNorm==='function'

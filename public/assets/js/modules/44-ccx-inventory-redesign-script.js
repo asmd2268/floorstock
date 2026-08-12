@@ -20,8 +20,8 @@ var CCX_CATALOG=[
  {generic:'Sodium Bicarbonate',concentration:'4.2g/10ml',aliases:['sodiumbicarbonate']}
 ];
 var CCX_ORDER={};CCX_CATALOG.forEach(function(x,i){CCX_ORDER[x.generic]=i});
-function E(id){return document.getElementById(id)}
-function escx(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var E=window.fsE;
+var escx=window.fsEsc;
 function numx(v){var n=Number(v);return isFinite(n)?n:0}
 function norm(v){return window.fsMedNorm?window.fsMedNorm(v):String(v||'').toLowerCase().trim()}
 function actor(){return window.fsActor?window.fsActor():{name:'Unknown',user:'Unknown',id:''}}

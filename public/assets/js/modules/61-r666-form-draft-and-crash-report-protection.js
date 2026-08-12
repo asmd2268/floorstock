@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var restoring=false,dirty={newreq:false,bulk:false},timer=null;
-function E(id){return document.getElementById(id)}
+var E=window.fsE;
 function uid(){var u=window.FB_AUTH&&FB_AUTH.currentUser;return String(u&&u.uid||(window.CU&&(CU.id||CU.uid||CU.username))||'anonymous')}
 function key(type){return 'asdh_r666_draft_'+uid()+'_'+type}
 function read(type){try{var raw=sessionStorage.getItem(key(type))||localStorage.getItem(key(type))||'null';return JSON.parse(raw)}catch(e){return null}}

@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-function esc(value){return window.fsEsc?window.fsEsc(value):String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var esc=window.fsEsc;
 function qrPanel(url,alt){
   if(window.ASD_QR&&typeof window.ASD_QR.imageMarkup==='function'){
     return window.ASD_QR.imageMarkup(url,{width:260,height:260,alt:alt,errorCorrection:'H'});

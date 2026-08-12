@@ -2,14 +2,14 @@ import { SUBSCRIPTION_PLANS, planFor, subscriptionIsWritable } from '../core/sub
 
 (function(){
 'use strict';
-var E=function(id){return document.getElementById(id)},contextBusy=false,lastUid='',wrapped=false,navigationWrapped=false;
+var E=window.fsE,contextBusy=false,lastUid='',wrapped=false,navigationWrapped=false;
 var PAGE_FEATURES={
   'pg-analytics':'analytics','pg-crashcart':'crash_cart','pg-crash-ops':'crash_cart',
   'pg-controlled':'controlled','pg-ctl-analytics':'controlled','pg-med-accountability':'controlled',
   'pg-zebra-labels':'labels','pg-print':'printing','pg-deptprint':'printing'
 };
 window.FS_SUBSCRIPTION=null;window.FS_PLATFORM_ADMIN=false;window.FS_SAAS_READY=false;window.FS_SUBSCRIPTION_PLANS=SUBSCRIPTION_PLANS;
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var esc=window.fsEsc;
 function tenantId(){return String(window.CU&&CU.tenantId||'').trim()}
 function featureSet(){var sub=window.FS_SUBSCRIPTION||{},plan=planFor(sub.plan),list=Array.isArray(sub.features)&&sub.features.length?sub.features:plan.features;return new Set(list)}
 window.fsHasSubscriptionFeature=function(feature){return !tenantId()||featureSet().has(String(feature||''))};

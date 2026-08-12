@@ -1,7 +1,7 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
-function escX(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var E=window.fsE;
+var escX=window.fsEsc;
 function numX(v){var n=Number(v);return isFinite(n)?n:0}
 function toastX(m,t){if(typeof window.toast==='function')toast(m,t||'info');else alert(m)}
 function openX(id){var n=E(id);if(n)n.classList.add('on')}

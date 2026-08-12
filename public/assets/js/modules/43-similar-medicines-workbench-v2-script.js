@@ -3,8 +3,8 @@
 var MODAL_ID='similar-medicines-modal-v2';
 var state={groups:[],selected:new Set(),manualSelected:new Set(),query:'',mode:'similar'};
 var SEPARATION_KEY='similar_medicine_separations_v1',separationCache=null;
-function E(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var E=window.fsE;
+var esc=window.fsEsc;
 function norm(v){return window.fsMedNorm?window.fsMedNorm(v):String(v||'').toLowerCase().trim()}
 var FORM_WORDS={tablet:1,tablets:1,tab:1,tabs:1,capsule:1,capsules:1,cap:1,caps:1,injection:1,injections:1,inj:1,ampoule:1,ampoules:1,amp:1,amps:1,vial:1,vials:1,bottle:1,bottles:1,bag:1,bags:1,solution:1,solutions:1,soln:1,suspension:1,susp:1,syrup:1,cream:1,ointment:1,drops:1,drop:1,inhaler:1,inhalers:1,nebuliser:1,nebulisers:1,nebulizer:1,nebulizers:1,nebule:1,nebules:1,suppository:1,suppositories:1,oral:1,iv:1,im:1,sc:1,infusion:1,premix:1,pack:1,packs:1,for:1,of:1,unit:1,units:1,محلول:1,محاليل:1,حقن:1,حقنة:1,امبول:1,امبولات:1,فيال:1,فيالات:1,قرص:1,اقراص:1,كبسول:1,كبسولات:1};
 function tokens(v){return norm(v).split(/\s+/).filter(function(t){return t&&!FORM_WORDS[t]})}

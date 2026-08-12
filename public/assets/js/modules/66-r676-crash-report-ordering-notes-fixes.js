@@ -7,7 +7,7 @@ var crashReportSaving=false;
 var noteBadgeTimer=null;
 var scheduleFixBusy=false;
 
-function E(id){return document.getElementById(id)}
+var E=window.fsE;
 function numberValue(value){var parsed=Number(value);return isFinite(parsed)?parsed:0}
 function dateKey(value){return String(value||'').slice(0,10)}
 function crashItems(){return typeof window.crashCarts==='function'?(window.crashCarts()||[]):[]}

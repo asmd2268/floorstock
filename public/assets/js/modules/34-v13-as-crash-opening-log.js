@@ -1,7 +1,7 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
-function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var E=window.fsE;
+var esc=window.fsEsc;
 function allowed(){return window.fsHasCapability?window.fsHasCapability('crashCart.operate'):!!(window.CU&&['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(CU.role)>-1)}
 function departments(){return typeof window.gd==='function'?(gd()||[]):[]}
 function reports(){return typeof window.crashReports==='function'?(crashReports()||[]):[]}

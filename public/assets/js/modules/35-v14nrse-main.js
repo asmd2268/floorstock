@@ -1,7 +1,7 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+var E=window.fsE;
+var esc=window.fsEsc;
 function n(v){var x=Number(v);return isFinite(x)?x:0}
 function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
 function nowISO(){return window.fsNowISO?window.fsNowISO():new Date().toISOString()}

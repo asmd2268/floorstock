@@ -1303,14 +1303,7 @@ function rowCls(m){
 }
 function OM(id){document.getElementById(id).classList.add('on')}
 function el(id){return document.getElementById(id)}
-function esc(value){
-  return String(value==null?'':value)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
+var esc=window.fsEsc;
 
 /* R6.38 canonical shared helpers — one source of truth for permissions, names, audit actors and medicine matching. */
 window.fsEsc=function(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
