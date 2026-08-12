@@ -48,7 +48,7 @@ test('user management uses the central authenticated callable transport', () => 
 test('managed-user directory uses the authenticated callable before any legacy client fallback', () => {
   assert.match(core, /users=await fsStateLoadUsersViaCallable\(\)/);
   assert.match(core, /async function fsStateLoadLegacyUserDirectory\(\)/);
-  assert.match(core, /var loaders=\[fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest\]/);
+  assert.match(core, /var loaders=\[fsStateLoadUsersViaCallable,fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest\]/);
   assert.match(core, /Managed-user directory callable was unavailable; using a read-only fallback/);
   assert.doesNotMatch(core, /loadUsers:async function\(\)\{\s*var users=await fsStateFirstSuccess/);
   assert.match(core, /User-list refresh was unavailable/);
