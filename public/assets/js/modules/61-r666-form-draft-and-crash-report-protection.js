@@ -1,5 +1,7 @@
 (function(){
 'use strict';
+if(window.__asdhR666DraftProtectionInstalled)return;
+window.__asdhR666DraftProtectionInstalled=true;
 var restoring=false,dirty={newreq:false,bulk:false},timer=null;
 var E=window.fsE;
 function uid(){var u=window.FB_AUTH&&FB_AUTH.currentUser;return String(u&&u.uid||(window.CU&&(CU.id||CU.uid||CU.username))||'anonymous')}

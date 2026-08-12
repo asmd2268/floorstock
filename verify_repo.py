@@ -32,7 +32,7 @@ if normalize_html(root_html) != normalize_html(expected_root_html):
 
 if 'name="asdhealth-architecture"' not in public_html or 'content="es-modules-v3"' not in public_html:
     errors.append("public/index.html is not marked as the ES-module architecture")
-if len(re.findall(r'<script\b[^>]*\btype="module"[^>]*\bsrc="\./assets/js/main\.js', public_html)) != 1:
+if len(re.findall(r'<script\b[^>]*\btype="module"[^>]*\bsrc="\./assets/js/auth-bootstrap\.js', public_html)) != 1:
     errors.append("public/index.html must have exactly one ES-module application entrypoint")
 if re.search(r'\son[a-z]+\s*=', public_html, re.I):
     errors.append("static inline event handlers remain in public/index.html")

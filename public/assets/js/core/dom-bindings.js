@@ -80,13 +80,26 @@ function execute(source, element, event) {
 }
 
 export function installDomBindings(root = document) {
+  const missing = [];
   bindings.forEach((binding) => {
     const element = root.querySelector(`[data-asdh-binding~="${binding.id}"]`);
-    if (!element) throw new Error(`Missing bound element: ${binding.id}`);
+    // Responsive layouts legitimately omit bindings that belong to another view.
+    // A missing optional control must never abort application boot (Safari is
+    // particularly strict about an exception escaping a module evaluation).
+    if (!element) { missing.push(binding.id); return; }
     if (element.dataset.asdhBindingInstalled === '1') return;
     element.dataset.asdhBindingInstalled = '1';
-    element.addEventListener(binding.event, (event) => execute(binding.source, element, event));
+    element.addEventListener(binding.event, (event) => {
+      if (binding.id === 'b005' && event.__asdhLoginHandled) return;
+      if (binding.id === 'b005') event.__asdhLoginHandled = true;
+      try { execute(binding.source, element, event); }
+      catch (error) {
+        console.error(`[ASDHealth] binding ${binding.id} failed`, error);
+        if (typeof globalThis.fsError === 'function') globalThis.fsError(error, `binding:${binding.id}`);
+      }
+    });
   });
+  root.documentElement?.dataset && (root.documentElement.dataset.asdhMissingBindings = missing.join(','));
   return bindings.length;
 }
 

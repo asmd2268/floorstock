@@ -1602,9 +1602,15 @@ async function doLogout(){
   var logoutButtons=Array.from(document.querySelectorAll('[onclick*="doLogout"],#logout-btn,.logout-btn'));logoutButtons.forEach(function(button){button.disabled=true});
   function timeout(promise,ms,label){return Promise.race([Promise.resolve(promise),new Promise(function(_,reject){setTimeout(function(){reject(new Error(label||'Operation timed out'))},ms)})])}
   try{
-    if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
-    if(typeof window.resetFloorstockSessionFilters==='function')window.resetFloorstockSessionFilters();
-    try{if(typeof window.asdhWaitForAllSaves==='function')await timeout(window.asdhWaitForAllSaves(12000),13000,'Save confirmation timed out')}catch(e){console.warn('Save confirmation failed before logout; continuing sign out.',e)}
+    // Do not persist page drafts while tearing down the authenticated session.
+    // The old persistence chain could re-enter itself during Safari pagehide,
+    // producing "Maximum call stack size exceeded" and preventing sign-out.
+    try{if(typeof window.resetFloorstockSessionFilters==='function')window.resetFloorstockSessionFilters();}
+    catch(filterError){console.warn('Session filter reset failed before logout; continuing sign out.',filterError)}
+    // Do not await the page-wide save tracker here.  Its draft/pagehide
+    // listeners can synchronously re-enter during Safari sign-out and cause
+    // "Maximum call stack size exceeded".  Firestore's pending-write barrier
+    // below is the single safe persistence checkpoint for logout.
     if(typeof previewClear==='function')previewClear();
     try{if(FB_DB&&typeof FB_DB.waitForPendingWrites==='function'){if(window.CU&&window.CU.master===true)toast('جاري حفظ البيانات...\nSaving data...','info');await timeout(FB_DB.waitForPendingWrites(),7000,'Pending writes timed out')}}catch(err){console.warn('Pending writes failed before logout; continuing sign out.',err)}
     S.stopRealtime();

@@ -4,7 +4,9 @@ import { parse } from 'acorn';
 
 const root = process.cwd();
 const publicDir = path.join(root, 'public');
-const entry = path.join(publicDir, 'assets/js/main.js');
+// auth-bootstrap is the canonical browser entrypoint: it binds sign-in before
+// the larger application graph is evaluated, which keeps Safari responsive.
+const entry = path.join(publicDir, 'assets/js/auth-bootstrap.js');
 const errors = [];
 
 function read(file) { return fs.readFileSync(file, 'utf8'); }
@@ -27,6 +29,13 @@ function inspect(file) {
     const target = resolveImport(file, node.source.value);
     if (target) inspect(target);
   }
+  // auth-bootstrap loads the application graph after binding the login action.
+  // Acorn does not expose that string as a static ImportDeclaration, so follow
+  // local dynamic imports as part of verification too.
+  for (const match of read(file).matchAll(/import\(\s*["']([^"']+)["']\s*\)/g)) {
+    const target = resolveImport(file, match[1]);
+    if (target) inspect(target);
+  }
 }
 
 inspect(entry);
@@ -34,12 +43,12 @@ const html = read(path.join(publicDir, 'index.html'));
 const assetScripts = [...html.matchAll(/<script\b([^>]*)\bsrc=["']([^"']+)["'][^>]*><\/script>/gi)]
   .filter((match) => match[2].includes('assets/js/'));
 const appScripts = assetScripts.filter((match) => /\btype=["']module["']/.test(match[1] || ''));
-if (appScripts.length !== 1 || !/assets\/js\/main\.js/.test(appScripts[0]?.[2] || '')) {
+if (appScripts.length !== 1 || !/assets\/js\/auth-bootstrap\.js/.test(appScripts[0]?.[2] || '')) {
   errors.push('public/index.html must load exactly one ES-module application entrypoint.');
 }
 const qrVendorIndex = assetScripts.findIndex((match) => /assets\/js\/vendor\/qrcode-generator\.js/.test(match[2]));
-const mainIndex = assetScripts.findIndex((match) => /assets\/js\/main\.js/.test(match[2]));
-if (qrVendorIndex < 0 || mainIndex < 0 || qrVendorIndex > mainIndex) {
+const appIndex = assetScripts.findIndex((match) => /assets\/js\/auth-bootstrap\.js/.test(match[2]));
+if (qrVendorIndex < 0 || appIndex < 0 || qrVendorIndex > appIndex) {
   errors.push('The local QR vendor must load before the ES-module application entrypoint.');
 }
 if (/\son[a-z]+\s*=/.test(html)) errors.push('Static inline event handlers remain in public/index.html.');
