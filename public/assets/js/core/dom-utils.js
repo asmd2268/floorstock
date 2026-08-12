@@ -11,3 +11,7 @@ const fallbackEsc = function(value){
 export const fsEsc = globalThis.fsEsc || fallbackEsc;
 if(!globalThis.fsE) globalThis.fsE = fsE;
 if(!globalThis.fsEsc) globalThis.fsEsc = fsEsc;
+
+/* Canonical compatibility surface for legacy modules during migration. */
+if(!globalThis.E) globalThis.E = fsE;
+if(!globalThis.esc) globalThis.esc = fsEsc;
