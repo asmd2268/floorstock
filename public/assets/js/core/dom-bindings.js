@@ -83,6 +83,8 @@ export function installDomBindings(root = document) {
   bindings.forEach((binding) => {
     const element = root.querySelector(`[data-asdh-binding~="${binding.id}"]`);
     if (!element) throw new Error(`Missing bound element: ${binding.id}`);
+    if (element.dataset.asdhBindingInstalled === '1') return;
+    element.dataset.asdhBindingInstalled = '1';
     element.addEventListener(binding.event, (event) => execute(binding.source, element, event));
   });
   return bindings.length;
