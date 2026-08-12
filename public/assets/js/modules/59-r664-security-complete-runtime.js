@@ -2,7 +2,7 @@ import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteSta
 (function(){
 'use strict';
 
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function safe(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function currentUser(){return window.CU||{}}
 function actualUser(){return (window.fsActualUser&&window.fsActualUser())||window.MASTER_ACTUAL||currentUser()}

@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function escC(v){return typeof window.esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function numC(v){v=Number(v);return isFinite(v)?v:0}
 var ctlCleanFilterRoleC='';

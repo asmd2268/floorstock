@@ -1,7 +1,7 @@
 (function(){
   var ZDB_KEY='asdhealth_zebra_label_db_v12',ZPR_KEY='asdhealth_zebra_printer_v12';
   var zdb=[],zprinters=[],zebraDevice=null;
-  function E(id){return document.getElementById(id)}
+  const E=globalThis.E;
   function clean(v){return String(v==null?'':v).trim()}
   function htmlSafe(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function safeNum(v,d){v=Number(v);return isFinite(v)&&v>0?v:d}

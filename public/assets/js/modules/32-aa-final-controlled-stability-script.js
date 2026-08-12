@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function escA(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function numA(v){v=Number(v);return isFinite(v)?v:0}
 function roleA(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}

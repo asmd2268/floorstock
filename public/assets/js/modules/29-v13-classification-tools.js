@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function escV(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function canManage(){return window.fsCanManage?window.fsCanManage():false}
 var selectedRows=new Map();

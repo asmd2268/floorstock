@@ -1,6 +1,6 @@
 (function(){
   var ANN_KEY='pharmacy_department_announcements',ANN_EDIT_ID=null;
-  function E(id){return document.getElementById(id)}
+  const E=globalThis.E;
   function escA(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function canManage(){return (window.fsCanManage?window.fsCanManage():false)||(window.fsEffectiveRole&&window.fsEffectiveRole()==='outpatient_pharmacy_supervisor'&&window.CU&&window.CU.deptId)}
   function announcements(){var a=S.g(ANN_KEY);return Array.isArray(a)?a:[]}

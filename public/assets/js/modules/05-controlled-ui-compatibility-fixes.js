@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  function E(id){return document.getElementById(id)}
+  const E=globalThis.E;
   function norm(v){return String(v||'').trim().toLowerCase().replace(/\s+/g,' ')}
   function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
   function activeExpiry(deptId,medId){

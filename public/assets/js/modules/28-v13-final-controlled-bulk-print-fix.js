@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function escH(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function n(v){var x=Number(v);return isFinite(x)?x:0}
 function openM(id){var m=E(id);if(m)m.classList.add('on')}

@@ -1,5 +1,5 @@
 (function(){
-  function E(id){return document.getElementById(id)}
+  const E=globalThis.E;
   function esc2(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function n2(v){v=Number(v);return isFinite(v)?v:0}
   function dateTime(v){try{var d=v&&v.toDate?v.toDate():new Date(v||Date.now());return d.toLocaleString('en-GB',{calendar:'gregory',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit'})}catch(e){return '—'}}

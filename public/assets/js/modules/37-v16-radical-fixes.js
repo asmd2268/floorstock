@@ -2,7 +2,7 @@
 'use strict';
 
 /* ── Helpers ── */
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'')}
 window.isMaster=function(){
   try{

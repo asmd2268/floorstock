@@ -58,14 +58,13 @@ var MAX_FONT=13.5;
 var MIN_PAD=.65;
 var MAX_PAD=5.2;
 
-function esc(value){
-  return String(value==null?'':value)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;')
-    .replace(/'/g,'&#39;');
-}
+/* Reuse the canonical escaping helper; keep a tiny local fallback only for
+ * standalone print previews opened without the application bootstrap. */
+var esc=window.fsEsc||function(value){
+  return String(value==null?'':value).replace(/[&<>"']/g,function(ch){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch];
+  });
+};
 function clamp(value,min,max){return Math.max(min,Math.min(max,value));}
 function round1(value){return Math.round(value*10)/10;}
 function sourceSequence(){

@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function escF(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function nF(v){var n=Number(v);return isFinite(n)?n:0}
 function normF(v){return String(v==null?'':v).toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').trim().replace(/\s+/g,' ')}

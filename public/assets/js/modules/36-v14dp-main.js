@@ -1,7 +1,7 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
-function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+const E=globalThis.E;
+const esc=globalThis.esc;
 function n(v){var x=Number(v);return isFinite(x)?x:0}
 function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
 function annualReportAllowed(){var c=window.CU||{},r=role();return c.master===true||['pharmacy','pharmacy_manager','inpatient_supervisor'].indexOf(r)>=0}

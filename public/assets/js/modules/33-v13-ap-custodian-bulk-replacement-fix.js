@@ -1,6 +1,6 @@
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function isOfficer(){return !!(window.CU&&CU.role==='controlled_pharmacy')}
 function addBulkReplacement(){
   var old=E('v13-ap-bulk-replacement-btn');

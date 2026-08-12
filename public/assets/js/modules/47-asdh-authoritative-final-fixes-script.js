@@ -1,7 +1,7 @@
 (function(){
 'use strict';
 var PREVIEW_KEY='asdh_master_role_preview_v3';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function previewRead(){try{return JSON.parse(sessionStorage.getItem(PREVIEW_KEY)||'null')}catch(e){return null}}
 function previewWrite(v){try{sessionStorage.setItem(PREVIEW_KEY,JSON.stringify(v));return true}catch(e){console.error(e);return false}}
 function previewClear(){try{sessionStorage.removeItem(PREVIEW_KEY)}catch(e){}}

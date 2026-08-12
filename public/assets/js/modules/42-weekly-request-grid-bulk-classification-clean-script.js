@@ -2,7 +2,7 @@ import { canEditRequestWhileWindowIsOpen, requestWindowDeadlineFromGrid } from '
 
 (function(){
 'use strict';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function escH(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var GRID_KEY='request_hour_grids_v1';
 var DAYS_EN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];

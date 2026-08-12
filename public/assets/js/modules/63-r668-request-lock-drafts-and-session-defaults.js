@@ -3,7 +3,7 @@ import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=
 (function(){
 'use strict';
 var VERSION='R6.75.0';
-function E(id){return document.getElementById(id)}
+const E=globalThis.E;
 function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
 function isDepartment(){return !!(window.CU&&role()==='department')}
 function setValue(id,value){var node=E(id);if(!node)return;node.value=value;if(node.type==='checkbox'||node.type==='radio')node.checked=!!value}
