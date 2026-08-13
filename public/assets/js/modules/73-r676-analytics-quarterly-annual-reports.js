@@ -225,7 +225,8 @@ window.renderAnalyticsReports = function () {
   if (!root) {
     root = document.createElement('section');
     root.id = 'analytics-reports-card';
-    page.appendChild(root);
+    const panel = document.getElementById('anl-panel-period') || page;
+    panel.appendChild(root);
   }
 
   root.innerHTML = `

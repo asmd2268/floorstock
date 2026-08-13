@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.74 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.75 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -72,7 +72,7 @@ import './modules/46-r664-private-crash-cart-source-only.js?v=R6.76.19';
 import './modules/47-asdh-authoritative-final-fixes-script.js?v=R6.76.19';
 import './modules/48-asdh-final-request-completion-script.js?v=R6.76.19';
 import './modules/49-asdh-final-persistence-actions-20260725.js?v=R6.76.19';
-import './modules/50-r617-integrated-operations.js?v=R6.76.65';
+import './modules/50-r617-integrated-operations.js?v=R6.76.74';
 import './modules/51-asdhealth-canonical-r6-32-20260727.js?v=R6.76.65';
 import './modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.76.19';
 import './modules/54-r662-accountability-draft-protection.js?v=R6.76.19';
@@ -94,7 +94,7 @@ import './modules/69-r676-narcotic-catalog-restore-20260728.js?v=R6.76.19';
 import './modules/70-r676-accountability-regimen-roster-and-log.js?v=R6.76.19';
 import './modules/71-r676-accountability-review-and-retention.js?v=R6.76.19';
 import './modules/72-r676-accountability-handover-log-view.js?v=R6.76.19';
-import './modules/73-r676-analytics-quarterly-annual-reports.js?v=R6.76.19';
+import './modules/73-r676-analytics-quarterly-annual-reports.js?v=R6.76.75';
 import './modules/74-r676-analytics-department-print-comparison.js?v=R6.76.19';
 import './modules/79-r676-independent-regimen-database.js?v=R6.76.19';
 import './modules/75-r676-multi-year-department-comparison.js?v=R6.76.19';
