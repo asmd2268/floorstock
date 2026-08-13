@@ -658,7 +658,7 @@ globalThis.S = {
       fsStateScheduleManagedUserLoad(profileHint);
       setTimeout(function(){
         if(S.ready)S.pollRest();
-      },1500);
+      },0);
       if(statusCallback)statusCallback('Opening Floor Stock…');
       return true;
     }

@@ -477,9 +477,9 @@ test('QR print pages wait for decoded QR images and stop on non-scannable fallba
   assert.match(localQrRuntimeSource, /QR image load timed out/);
   assert.match(localQrRuntimeSource, /automatic printing was stopped/);
   assert.match(localQrRuntimeSource, /data-qr-state/);
-  assert.match(usersSource, /ASD_QR\.printRuntimeScript\(\{closeAfter:true\}\)/);
-  assert.match(usersSource, /shelfQrPrintRuntime/);
-  assert.match(accountabilitySource, /qrPrintRuntime/);
+  assert.match(usersSource, /openBlobPrint/);
+  assert.match(usersSource, /printShelfList/);
+  assert.match(accountabilitySource, /openBlobPrint|Blob URL bypasses/);
   assert.match(crashPrintSource, /data-qr-print-button disabled/);
   assert.match(crashPrintSource, /ASD_QR\.printRuntimeScript/);
   assert.doesNotMatch(crashPrintSource, /image\.onerror=go|setTimeout\(go,2200\)/);
@@ -613,8 +613,8 @@ test('department Shelves always exposes CSP-safe print controls for its own depa
   assert.match(usersSource, /shelfPrintTop\.onclick=printShelfList/);
   assert.match(usersSource, /printRole!=='department'/);
   assert.match(usersSource, /getMeds\(deptId\)/);
-  assert.match(usersSource, /shelfQrPrintRuntime/);
-  assert.match(usersSource, /ASD_QR\.printRuntimeScript/);
+  assert.match(usersSource, /openBlobPrint/);
+  assert.match(usersSource, /printShelfList/);
   assert.doesNotMatch(usersSource, /<script>setTimeout\(function\(\)\{window\.print/);
 });
 

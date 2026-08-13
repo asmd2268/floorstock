@@ -190,8 +190,9 @@
 </div>
 </div>
 <div class="pg" id="pg-analytics">
+<!-- Controls row -->
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
-<div><div class="stitle">Analytics</div><div class="ssub" style="margin:0">Consumption trends</div></div>
+<div><div class="stitle">Analytics / الإحصائيات</div><div class="ssub" style="margin:0">Consumption trends</div></div>
 <div class="fl g8 ic" style="flex-wrap:wrap">
 <select class="psel" id="aperiod" data-asdh-binding="b032">
 <option value="month">This Month</option><option value="quarter">This Quarter</option>
@@ -204,21 +205,43 @@
 <button class="btn bg bsm" data-asdh-binding="b033">Apply</button>
 </div>
 <select class="psel" id="adept" data-asdh-binding="b034"><option value="">All Departments</option></select>
-<button class="btn bg bsm" type="button" id="analytics-jump-zero">⚠ Zero Dispense</button><button class="btn bg bsm" type="button" id="analytics-jump-compare">🔎 Compare</button>
+<button class="btn bg bsm" type="button" id="analytics-jump-zero" style="display:none">⚠ Zero Dispense</button><button class="btn bg bsm" type="button" id="analytics-jump-compare" style="display:none">🔎 Compare</button>
 </div>
 </div>
+<!-- Tab navigation -->
+<div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--bd);padding-bottom:0;flex-wrap:wrap" id="anl-tabs">
+<button class="btn bp bsm anl-tab active" data-anl="top" style="border-bottom:3px solid var(--ac);border-radius:6px 6px 0 0;margin-bottom:-2px;font-size:12px">🏆 Top 10</button>
+<button class="btn bg bsm anl-tab" data-anl="alert" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">🔴 High Alert</button>
+<button class="btn bg bsm anl-tab" data-anl="compare" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">🔎 Compare</button>
+<button class="btn bg bsm anl-tab" data-anl="zero" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">⚠ Zero Dispense</button>
+<button class="btn bg bsm anl-tab" data-anl="crash" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">🚨 Crash Cart</button>
+<button class="btn bg bsm anl-tab" data-anl="period" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">📈 Period Compare</button>
+</div>
+<!-- Tab panels -->
+<div id="anl-panel-top">
 <div class="g2 mb14">
 <div class="card"><div class="ch"><span class="ct">🏆 Top 10 Most Dispensed</span></div><div class="cb"><div class="barchart" id="ctop"></div></div></div>
-<div class="card"><div class="ch"><span class="ct">🔴 Top High Alert Dispensed</span></div><div class="cb"><div class="barchart" id="cha"></div></div></div>
 </div>
+</div>
+<div id="anl-panel-alert" style="display:none">
+<div class="card mb14"><div class="ch"><span class="ct">🔴 Top High Alert Dispensed</span></div><div class="cb"><div class="barchart" id="cha"></div></div></div>
+</div>
+<div id="anl-panel-compare" style="display:none">
 <div class="card" id="analytics-compare-card" style="margin-bottom:14px"><div class="ch"><span class="ct">🔎 Compare item consumption by department</span><span class="ss">Search an item to see where it was dispensed</span></div><div class="cb"><input id="analytics-item-search" placeholder="Type medication name, e.g. Paracetamol inj / اكتب اسم الصنف" style="margin:0;max-width:520px" autocomplete="off"/><div id="analytics-item-compare"></div></div></div>
+</div>
+<div id="anl-panel-zero" style="display:none">
 <div class="card" id="analytics-zero-card">
 <div class="ch"><span class="ct">⚠ Zero Dispense</span></div>
 <div class="g3" style="padding:12px 12px 0"><div class="sc"><div class="sl">Zero-dispense medicines</div><div class="sv" id="azero-count">0</div></div><div class="sc"><div class="sl">Dispensed units</div><div class="sv" id="analytics-units">0</div></div><div class="sc"><div class="sl">Fulfilled requests</div><div class="sv" id="analytics-requests">0</div></div></div>
 <div class="tw"><table><thead><tr><th>Medication</th><th>Zero-dispense departments</th><th>Category</th><th>Classification</th><th>Min</th><th>Max</th></tr></thead><tbody id="ztbl"></tbody></table></div>
 </div>
-<div class="card" style="margin-top:14px"><div class="ch"><span class="ct">🚨 Crash Cart Medicines / أدوية عربة الطوارئ</span><span class="ss">Dispensed quantities for crash-cart medicines in the selected period</span></div><div class="cb"><div id="analytics-crash-cart-section"></div></div></div>
-<div style="margin-top:14px" id="analytics-period-compare"></div>
+</div>
+<div id="anl-panel-crash" style="display:none">
+<div class="card"><div class="ch"><span class="ct">🚨 Crash Cart Medicines / أدوية عربة الطوارئ</span><span class="ss">Dispensed quantities for crash-cart medicines in the selected period</span></div><div class="cb"><div id="analytics-crash-cart-section"></div></div></div>
+</div>
+<div id="anl-panel-period" style="display:none">
+<div id="analytics-period-compare"></div>
+</div>
 </div>
 <div class="pg" id="pg-print">
 <!-- Print page header -->

@@ -177,7 +177,9 @@ async function toggleMasterUser(id,isMaster){
   catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
 }
 // ── ANALYTICS ────────────────────────────────────────────
+function anlSwitchTab(name){var panels=['top','alert','compare','zero','crash','period'];panels.forEach(function(t){var p=el('anl-panel-'+t);if(p)p.style.display=t===name?'':'none'});document.querySelectorAll('#anl-tabs .anl-tab').forEach(function(b){var on=b.dataset.anl===name;b.classList.toggle('bp',on);b.classList.toggle('bg',!on);b.style.opacity=on?'1':'0.65';b.style.borderBottom=on?'3px solid var(--ac)':'none'})}
 function renderAn(){
+  if(!el('anl-tabs').__anlBound){el('anl-tabs').__anlBound=true;el('anl-tabs').addEventListener('click',function(ev){var b=ev.target.closest('.anl-tab');if(b)anlSwitchTab(b.dataset.anl)})}
   var p=el('aperiod').value;
   el('crange').style.display=p==='custom'?'flex':'none';
   var dsel=el('adept');
@@ -200,8 +202,8 @@ function renderAn(){
   var compare={};rs.forEach(function(r){(r.dispensed||[]).forEach(function(line){var qty=Number(line.qty)||0,meta=catalog[r.deptId+'|'+line.medId];if(qty<=0||!meta)return;var c=compare[meta.key]||(compare[meta.key]={name:meta.name,departments:{},total:0,orders:0});c.total+=qty;c.orders++;c.departments[r.deptId]=(c.departments[r.deptId]||0)+qty})});
   var search=el('analytics-item-search');if(search&&!search.dataset.bound){search.dataset.bound='1';search.addEventListener('input',renderAn)}
   var jumpZero=el('analytics-jump-zero'),jumpCompare=el('analytics-jump-compare');
-  if(jumpZero&&!jumpZero.dataset.bound){jumpZero.dataset.bound='1';jumpZero.addEventListener('click',function(){el('analytics-zero-card').scrollIntoView({behavior:'smooth',block:'start'})})}
-  if(jumpCompare&&!jumpCompare.dataset.bound){jumpCompare.dataset.bound='1';jumpCompare.addEventListener('click',function(){el('analytics-compare-card').scrollIntoView({behavior:'smooth',block:'start'})})}
+  if(jumpZero&&!jumpZero.dataset.bound){jumpZero.dataset.bound='1';jumpZero.addEventListener('click',function(){anlSwitchTab('zero')})}
+  if(jumpCompare&&!jumpCompare.dataset.bound){jumpCompare.dataset.bound='1';jumpCompare.addEventListener('click',function(){anlSwitchTab('compare')})}
   var needle=search?String(search.value||'').trim().toLowerCase():'';var matches=Object.keys(compare).map(function(k){return compare[k]}).filter(function(c){return !needle||c.name.toLowerCase().indexOf(needle)>=0});
   var compareHost=el('analytics-item-compare');if(compareHost){compareHost.innerHTML=matches.length?matches.sort(function(a,b){return b.total-a.total}).slice(0,20).map(function(c){var rows=Object.keys(c.departments).sort(function(a,b){return c.departments[b]-c.departments[a]}).map(function(d){var dep=gd().find(function(x){return String(x.id)===String(d)}),q=c.departments[d];return '<tr><td>'+esc(dep?dep.name:d)+'</td><td style="text-align:right;font-family:var(--mono)">'+q+'</td><td style="text-align:right;font-family:var(--mono)">'+(c.total?Math.round(q/c.total*1000)/10:0)+'%</td></tr>'}).join('');return '<div class="card" style="margin-top:10px"><div class="ch"><span class="ct">'+esc(c.name)+'</span><span class="ss">Total '+c.total+' · '+c.orders+' orders</span></div><div class="tw"><table><thead><tr><th>Department</th><th style="text-align:right">Quantity</th><th style="text-align:right">Share</th></tr></thead><tbody>'+rows+'</tbody></table></div></div>'}).join(''):'<div style="padding:12px;color:var(--tx2)">'+(needle?'No matching item in the selected period.':'Type an item name to compare department consumption.')+'</div>'}
   var tot={},totMeta={};
