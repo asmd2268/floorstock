@@ -75,13 +75,13 @@ function attach(root) {
   box.querySelectorAll('select,input').forEach(x => x.addEventListener('change', render));
   box.querySelector('#ar-my-print').addEventListener('click', () => {
     const tableEl = box.querySelector('#ar-my-table');
-    const css = 'body{font:11pt Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #9aa8bd;padding:7px}th{background:#dbeafe}@media print{button{display:none!important}}';
+    const css = 'body{font:11pt Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #9aa8bd;padding:7px}th{background:#dbeafe}.brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}@media print{button{display:none!important}}';
     if (typeof window.fsOfficialPrint === 'function') {
-      window.fsOfficialPrint({ title: 'Multi-year comparison', html: tableEl.outerHTML, css });
+      window.fsOfficialPrint({ title: 'Multi-year comparison', html: tableEl.outerHTML + '<div class="brand">By Ali Abudahash</div>', css });
     } else {
       const w = window.open('', '_blank');
       if (!w) return;
-      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Multi-year report</title><style>${css}</style></head><body>${tableEl.outerHTML}</body></html>`);
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Multi-year report</title><style>${css}</style></head><body>${tableEl.outerHTML}<div class="brand">By Ali Abudahash</div></body></html>`);
       w.document.close();
       w.print();
     }

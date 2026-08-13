@@ -512,9 +512,15 @@ function fsR5BatchText(batches,html,actualTotal){
   var total=actualTotal!=null?fsR5N(actualTotal):null;
   // If all batch qtys are zero but we have an actual total, distribute across batches.
   // Single batch: assign the full actual total.
-  // Multiple batches with all-zero: leave as-is (we can't split arbitrarily).
-  if(batchSum===0&&total!=null&&total>0&&batches.length===1){
-    batchQtys=[total];
+  // Multiple batches: distribute equally (floor each; last batch absorbs remainder).
+  if(batchSum===0&&total!=null&&total>0){
+    if(batches.length===1){
+      batchQtys=[total];
+    }else{
+      var base=Math.floor(total/batches.length);
+      batchQtys=batches.map(function(){return base;});
+      batchQtys[batches.length-1]=total-base*(batches.length-1);
+    }
     batchSum=total;
   }
   // If sum of stored batch qtys exceeds actual total, cap proportionally.
@@ -862,6 +868,7 @@ th{font-weight:900}
   unicode-bidi:plaintext
 }
 .footer{text-align:center;font-size:5.8pt;margin-top:.7mm}
+.brand{text-align:right;font-size:5.5pt;color:#94a3b8;margin-top:.5mm}
 .print-error{padding:15mm;text-align:center}
 @media print and (orientation:landscape){
   .landscape-layout{display:block!important}
@@ -919,6 +926,7 @@ th{font-weight:900}
       '<span class="cert-en">This list is electronically approved and certified and does not require a stamp.</span>'+
     '</div>'+
     '<div class="footer">Live list: '+fsR5Esc(url)+'</div>'+
+    '<div class="brand">By Ali Abudahash</div>'+
   '</div>';
 
   var runtime=`(function(){

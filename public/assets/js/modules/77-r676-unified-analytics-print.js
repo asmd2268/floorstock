@@ -24,9 +24,10 @@ function buildPrintHtml(detail) {
     .meter{height:9px;background:#e3eaf4;border-radius:5px;overflow:hidden;margin-top:2px}
     .meter i{display:block;height:100%;border-radius:5px}
     @media print{button{display:none!important}}
+    .brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}
   `;
   const root = document.getElementById('analytics-reports-card');
-  const html = root ? root.innerHTML : '';
+  const html = (root ? root.innerHTML : '') + '<div class="brand">By Ali Abudahash</div>';
   if (typeof window.fsOfficialPrint === 'function') {
     window.fsOfficialPrint({ title: 'Analytics report / التقرير الإحصائي', html, css });
   } else {

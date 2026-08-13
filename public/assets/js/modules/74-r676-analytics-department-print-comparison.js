@@ -19,6 +19,7 @@ function attach(root, stats) {
     th,td{border:1px solid #9aa8bd;padding:7px;text-align:left}
     th{background:#dbeafe;color:#102a5c}
     @media print{button{display:none!important}}
+    .brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}
   `;
 
   const section = document.createElement('div');
@@ -42,7 +43,7 @@ function attach(root, stats) {
           <tr><td>Fulfilled orders</td><td>${d.orders || 0}</td></tr>
           <tr><td>Dispensed units</td><td>${d.units || 0}</td></tr>
           <tr><td>Zero-dispense requests</td><td>${d.zeroDispenseReqs || 0}</td></tr>
-        </tbody></table>`;
+        </tbody></table><div class="brand">By Ali Abudahash</div>`;
       if (typeof window.fsOfficialPrint === 'function') {
         window.fsOfficialPrint({ title: `Dept report — ${name}`, html, css });
       } else {
