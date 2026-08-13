@@ -715,27 +715,15 @@ window.controlledStoragePrint=async function(id,mode){
     return false;
   }
 
-  var popup=window.open(
-    'about:blank',
-    'controlled_storage_'+String(id)+'_'+mode,
-    'width=1180,height=820'
-  );
-  if(!popup){
-    toast('Allow pop-ups to print the controlled storage list or map.','err');
-    return false;
-  }
-
   try{
     var base=new URL(location.href);
-    base.search='';
-    base.hash='';
+    base.search='';base.hash='';
     base.searchParams.set('view','controlled-storage-public');
     base.searchParams.set('scope','pharmacy');
     base.searchParams.set('unit',id);
     var tenant=window.fsTenantId&&fsTenantId();if(tenant)base.searchParams.set('tenant',tenant);
     var publicUrl=base.toString();
     var qr=window.makeReadableQR(publicUrl);
-    var qrPrintRuntime=void 0; // kept for compat; auto-print uses a simple inline script
     var date=new Date().toLocaleDateString('en-GB');
     var content='';
 
@@ -819,6 +807,7 @@ window.controlledStoragePrint=async function(id,mode){
         '</div>';
     }
 
+    var officialHdr=typeof window.officialPrintHeaderHTML==='function'?window.officialPrintHeaderHTML():'';
     var printHtml=
       '<!doctype html><html><head><meta charset="utf-8">'+
       '<title>'+esc(unit.name)+' — Controlled storage '+esc(mode)+'</title>'+
@@ -848,7 +837,10 @@ window.controlledStoragePrint=async function(id,mode){
       '.map-code{font-size:11px;line-height:1}.pcell span{font-weight:900;margin-top:5px;font-size:14px;line-height:1.08;overflow-wrap:anywhere}.pcell small{font-size:7.5px;line-height:1.2}.map-codes{margin-top:5px}.map-expiry{margin-top:auto;padding-top:3px}'+
       '.cert{text-align:center;font-size:7px;margin-top:4px;border-top:1px solid #000;padding-top:3px;flex:0 0 auto}'+
       '.public-url{text-align:center;font-size:6px;margin-top:1px;overflow-wrap:anywhere;flex:0 0 auto}'+
+      '.official-print-header{page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+      '.official-print-header img{max-width:31mm;max-height:25mm;object-fit:contain}'+
       '</style></head><body class="print-'+mode+'">'+
+      officialHdr+
       '<div class="head">'+
       '<div class="title">'+
       '<h2>'+esc(unit.name)+' — Controlled Pharmacy Custody</h2>'+
@@ -860,10 +852,6 @@ window.controlledStoragePrint=async function(id,mode){
       '<img class="asd-qr-image" id="controlled-expiry-qr" src="'+qr+'" alt="Live expiry QR">'+
       '<b>Live expiry / متابعة الصلاحية</b>'+
       '</div></div>'+
-      '<div id="controlled-sync-status" class="sync">'+
-      'QR expiry data is syncing in the background. Printing is ready. / '+
-      'تجري مزامنة بيانات الصلاحية في الخلفية والطباعة جاهزة.'+
-      '</div>'+
       '<div class="legend">'+
       '<span><span class="sw"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا</span>'+
       '<span>Print date / تاريخ الطباعة: '+esc(date)+'</span>'+
@@ -874,93 +862,31 @@ window.controlledStoragePrint=async function(id,mode){
       'This list is electronically approved and certified and does not require a stamp.'+
       '</div>'+
       '<div class="public-url">'+esc(publicUrl)+'</div>'+
-      '<script>(function(){var d=false;function p(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(p,200);else window.addEventListener("load",function(){setTimeout(p,200)},{once:true})})()\x3c/script>'+
+      '<script>(function(){var d=false;function p(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(p,250);else window.addEventListener("load",function(){setTimeout(p,250)},{once:true})})()</scr'+'ipt>'+
       '</body></html>';
 
-    popup.document.open();
-    popup.document.write(printHtml);
-    popup.document.close();
+    // Blob URL bypasses the app's CSP response headers so the inline auto-print script runs.
+    var blob=new Blob([printHtml],{type:'text/html;charset=utf-8'});
+    var blobUrl=URL.createObjectURL(blob);
+    var printPopup=window.open(blobUrl,'_blank','width=1180,height=820');
+    setTimeout(function(){URL.revokeObjectURL(blobUrl)},60000);
+    if(!printPopup){
+      toast('Allow pop-ups to print the controlled storage list or map.','err');
+      return false;
+    }
 
-    /*
-      Public QR publication is deliberately detached from printing.
-      A slow, denied, offline, or permanently pending Firestore write must never
-      leave the print window on a preparation screen.
-    */
-    var syncFinished=false;
-    var syncTimer=setTimeout(function(){
-      if(syncFinished)return;
-      try{
-        if(popup.closed)return;
-        var node=popup.document.getElementById('controlled-sync-status');
-        if(node){
-          node.className='sync warn';
-          node.textContent=
-            'QR expiry sync is taking longer than expected. The printed list is still valid. / '+
-            'تأخرت مزامنة رابط الصلاحية، ويمكن طباعة القائمة بشكل طبيعي.';
-        }
-      }catch(ignore){}
-    },8000);
-
+    // QR sync is fire-and-forget; popup document is a blob so cross-document access is skipped.
     Promise.resolve()
-      .then(function(){
-        return publishStorage(unit,medicines);
-      })
-      .then(function(published){
-        syncFinished=true;
-        clearTimeout(syncTimer);
-        try{
-          if(popup.closed)return;
-          var node=popup.document.getElementById('controlled-sync-status');
-          if(node){
-            node.className=published?'sync ok':'sync warn';
-            node.textContent=published
-              ?'Live expiry QR data synchronized. / تمت مزامنة بيانات QR للصلاحية.'
-              :'Printing is ready, but QR expiry data could not be synchronized. / الطباعة جاهزة، وتعذرت مزامنة بيانات QR.';
-          }
-        }catch(ignore){}
-        if(!published&&typeof warnPublicSync==='function'){
-          warnPublicSync(
-            'Controlled storage QR',
-            new Error('Firebase is unavailable.')
-          );
-        }
-      })
+      .then(function(){return publishStorage(unit,medicines)})
       .catch(function(syncError){
-        syncFinished=true;
-        clearTimeout(syncTimer);
-        try{
-          if(!popup.closed){
-            var node=popup.document.getElementById('controlled-sync-status');
-            if(node){
-              node.className='sync warn';
-              node.textContent=
-                'Printing is ready, but QR expiry data could not be synchronized. / '+
-                'الطباعة جاهزة، وتعذرت مزامنة بيانات QR.';
-            }
-          }
-        }catch(ignore){}
-        if(typeof warnPublicSync==='function'){
-          warnPublicSync('Controlled storage QR',syncError);
-        }else{
-          console.error('Controlled storage QR publication failed',syncError);
-        }
+        if(typeof warnPublicSync==='function'){warnPublicSync('Controlled storage QR',syncError)}
+        else{console.error('Controlled storage QR publication failed',syncError)}
       });
 
     return true;
   }catch(error){
     console.error('Controlled storage print failed',error);
-    try{
-      popup.document.open();
-      popup.document.write(
-        '<!doctype html><html><meta charset="utf-8">'+
-        '<body style="font-family:Arial,Tahoma,sans-serif;padding:24px">'+
-        '<h2>Print preparation failed / تعذر تجهيز الطباعة</h2>'+
-        '<p>'+esc(error&&error.message||error)+'</p>'+
-        '</body></html>'
-      );
-      popup.document.close();
-    }catch(ignore){}
-    toast('Could not prepare the controlled storage print.','err');
+    toast('Could not prepare the controlled storage print: '+String(error&&error.message||error),'err');
     return false;
   }
 };
