@@ -1591,6 +1591,12 @@ setTimeout(function(){
     if(/profile could not be reached|profile.*timed out|Firestore profile/i.test(message)){
       message+=' Open the file in Chrome or Safari with internet access, and verify that firestore.googleapis.com is not blocked by a firewall or content filter.';
     }
+    // Append a short stack-trace hint so the recursive frame is visible in the
+    // login UI even when the production console override hides native errors.
+    if(err&&err.stack&&/call stack/i.test(message)){
+      var frames=String(err.stack).split('\n').slice(1,6).join(' ← ').replace(/\s+/g,' ');
+      message+=' | stack: '+frames.slice(0,300);
+    }
     setLoginError(message);
     window.__fsAuthenticatedUser=null;
     try{if(credential&&FB_AUTH&&FB_AUTH.currentUser)await FB_AUTH.signOut();}catch(signOutError){console.warn('Could not clear the partial authentication session.',signOutError);}
