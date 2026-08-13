@@ -731,11 +731,7 @@ function renderDeptPrint(){
 async function doDeptPrint(){
   if(!CU)return;
 
-  var pw=window.open('about:blank','_dp_','width=820,height=700');
-  if(!pw){
-    toast('Allow pop-ups to print the department drug list.','err');
-    return false;
-  }
+  var pw=null; // opened later via blob URL
 
   pw.document.open();
   pw.document.write(
@@ -771,7 +767,7 @@ async function doDeptPrint(){
     var userName=CU.username;
     var qrUrl=window.makeReadableQR(getAppUrl());
     var qrExpUrl=window.makeReadableQR(getPublicExpiryUrl(deptId));
-    var qrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript({closeAfter:true}):'';
+    
     var expiryPrintBlock='<div style="text-align:center;max-width:260px;margin:18px auto 8px;padding:10px;border:1px solid #bbb;border-radius:6px;page-break-inside:avoid"><div style="font-size:8pt;font-weight:700;margin-bottom:5px">Expiry Monitor / متابعة الصلاحية</div><img class="asd-qr-image" src="'+qrExpUrl+'" width="110" height="110" alt="Expiry monitor QR code"><div style="font-size:7pt;color:#555;margin-top:3px">Scan to open the public expiry monitor</div></div>';
 
     var grp={};
@@ -852,9 +848,7 @@ async function doDeptPrint(){
     var footerNote=deptName+' — Floor Stock — '+today+
       ' — by: '+userName+' — Developed by Ali Abudahash';
 
-    pw.document.open();
-    pw.document.write(
-      '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+deptName+' Drug List</title><style>'
+    var dpHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+deptName+' Drug List</title><style>'
       +pageStyle
       +'body{font-family:Arial,sans-serif;font-size:8.5pt;color:#000;margin:0;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
       +'.page-title{font-size:13pt;font-weight:700;margin-bottom:2px}'
@@ -873,7 +867,7 @@ async function doDeptPrint(){
       +'<div class="page-sub">Print Date / تاريخ الطباعة: <b>'+today+'</b> &nbsp;|&nbsp; Total / الإجمالي: <b>'+ms.length+'</b> &nbsp;|&nbsp; By / بواسطة: <b>'+userName+'</b></div>'
       +'<div style="font-size:7pt;color:#666;margin-top:3px">Developed by Ali Abudahash | ASDHealth System</div>'
       +'</div>'
-      +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrUrl+'" width="150" height="150" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'
+      +'<div style="text-align:center"><img src="'+qrUrl+'" width="150" height="150" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'
       +'</div>'
       +'<table><thead><tr>'
       +'<th class="c">#</th>'
@@ -886,31 +880,16 @@ async function doDeptPrint(){
       +expiryPrintBlock
       +'<div id="footer" style="margin-top:20px;padding-top:8px;border-top:1px solid #ccc;font-size:7pt;color:#555;display:flex;justify-content:space-between;align-items:center">'
       +'<span>'+footerNote+'</span>'
-      +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76" alt="QR">'
+      +'<img src="'+qrUrl+'" width="76" height="76" alt="QR">'
       +'</div>'
-      +'<script>'
-      +'if(!('+fitOne+')){var s=document.createElement("style");s.textContent="'
-      +'@page{counter-increment:page;} @media print{'
-      +'#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}'
-      +'}";document.head.appendChild(s);}'
-      +qrPrintRuntime
-      +'<\/script></body></html>'
-    );
-    pw.document.close();
+      +'<script>(function(){var done=false;function go(){if(done)return;done=true;if(!('+fitOne+')){var s=document.createElement("style");s.textContent="@media print{#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}}";document.head.appendChild(s)}window.focus();window.print()}if(document.readyState==="complete")setTimeout(go,300);else window.addEventListener("load",function(){setTimeout(go,300)},{once:true})})()</sc'+'ript>'
+      +'</body></html>';
+    pw=openBlobPrint(dpHtml);
+    if(!pw){toast('Allow pop-ups to print the department drug list.','err');return false;}
     return true;
   }catch(error){
     console.error('Department drug list print failed',error);
-    try{
-      pw.document.open();
-      pw.document.write(
-        '<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">'+
-        '<h2>Print preparation failed / تعذر تجهيز الطباعة</h2>'+
-        '<p>'+esc(error&&error.message||error)+'</p>'+
-        '</body></html>'
-      );
-      pw.document.close();
-    }catch(ignore){}
-    toast('Could not prepare the department drug list for printing.','err');
+    toast('Could not prepare the department drug list: '+String(error&&error.message||error),'err');
     return false;
   }
 }
@@ -1001,7 +980,7 @@ function printShelfList(){
   });
   var qrUrl=window.makeReadableQR(getPublicExpiryUrl(deptId));
   var qrSiteUrl=window.makeReadableQR(getAppUrl());
-  var shelfQrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript():'';
+  
   var rows='';
   Object.keys(byShelf).sort().forEach(function(sid){
     var shelf=sid==='__none__'?{name:'Unassigned / &#x63A;&#x64A;&#x631; &#x645;&#x639;&#x64A;&#x646;'}:shelves.find(function(s){return s.id===sid});
@@ -1029,14 +1008,9 @@ function printShelfList(){
       });
     });
   });
-  var pw=window.open('about:blank','_sl_','width=820,height=700');
-  if(!pw){
-    toast('Allow pop-ups to print the shelf list.','err');
-    return false;
-  }
   var filterLabel=clsFilter==='all'?'All Classifications':clsFilter.replace(/_/g,' ').replace(/\b\w/g,function(c){return c.toUpperCase();});
   var shelfLabel=shelfId==='all'?'All Shelves':(shelves.find(function(s){return s.id===shelfId})||{name:'?'}).name;
-  pw.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+deptName+' — Shelf List</title><style>'
+  var slHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+deptName+' — Shelf List</title><style>'
     +'@page{size:A4;margin:10mm 10mm 18mm 10mm}'
     +'body{font-family:Arial,sans-serif;font-size:8.5pt;color:#000;margin:0}'
     +'table{width:100%;border-collapse:collapse}'
@@ -1054,8 +1028,8 @@ function printShelfList(){
     +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+(profile.username||profile.email||'Department')+' &nbsp;|&nbsp; Developed by Ali Abudahash | ASDHealth</div>'
     +'</div>'
     +'<div style="display:flex;gap:8px">'
-    +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrSiteUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">System</div></div>'
-    +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">Expiry Monitor</div></div>'
+    +'<div style="text-align:center"><img src="'+qrSiteUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">System</div></div>'
+    +'<div style="text-align:center"><img src="'+qrUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">Expiry Monitor</div></div>'
     +'</div>'
     +'</div>'
     +'<table><thead><tr>'
@@ -1066,10 +1040,11 @@ function printShelfList(){
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
     +'<div id="footer">'
     +'<span>'+deptName+' — Floor Stock — '+today+' — By Ali Abudahash</span>'
-    +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76">'
+    +'<img src="'+qrUrl+'" width="76" height="76">'
     +'</div>'
-    +'<script>'+shelfQrPrintRuntime+'<\/script></body></html>');
-  pw.document.close();
+    +'<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(g,300);else window.addEventListener("load",function(){setTimeout(g,300)},{once:true})})()</sc'+'ript></body></html>';
+  var pw=openBlobPrint(slHtml);
+  if(!pw){toast('Allow pop-ups to print the shelf list.','err');return false;}
   return true;
 }
 
@@ -1645,17 +1620,23 @@ function officialPrintHeaderHTML(){
     '<div dir="rtl" style="text-align:right">'+rows(arabic,'rtl')+'</div>'+
   '</div>';
 }
+function openBlobPrint(fullHtml){
+  var blob=new Blob([fullHtml],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var w=window.open(url,'_blank','width=1100,height=850');
+  setTimeout(function(){URL.revokeObjectURL(url)},60000);
+  if(!w){window.toast&&window.toast('Allow pop-ups to print.','err');}
+  return w;
+}
 window.fsOfficialPrint=function(opts){
   var title=String(opts&&opts.title||'ASDHealth');
   var html=String(opts&&opts.html||'');
   var css=String(opts&&opts.css||'');
-  var w=window.open('','_blank');
-  if(!w){window.toast&&window.toast('Allow pop-ups to print.','err');return;}
   var hdr=typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'';
   var brand='<div style="text-align:center;font-size:8.5pt;color:#555;margin-top:14px">By Ali Abudahash</div>';
   var pcss='@page{size:A4;margin:10mm}body{font-family:Arial,Tahoma,sans-serif;background:#fff;color:#111;margin:0}'+css;
-  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title.replace(/</g,'&lt;')+'</title><style>'+pcss+'</style></head><body>'+hdr+html+brand+'<script>(function(){var d=false;function g(){if(d)return;d=true;window.print()}window.addEventListener("load",function(){setTimeout(g,300)},{once:true});setTimeout(g,1500)})()</sc'+'ript></body></html>');
-  w.document.close();
+  var autoprint='<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(g,300);else window.addEventListener("load",function(){setTimeout(g,300)},{once:true})})()</sc'+'ript>';
+  openBlobPrint('<!doctype html><html><head><meta charset="utf-8"><title>'+title.replace(/</g,'&lt;')+'</title><style>'+pcss+'</style></head><body>'+hdr+html+brand+autoprint+'</body></html>');
 };
 
 // ── CATEGORY SELECTOR OPTIONS ────────────────────────────
