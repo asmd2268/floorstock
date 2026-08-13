@@ -1,4 +1,15 @@
-(function(){'use strict';
-function enhance(){var root=document.getElementById('analytics-reports-card'),detail=root&&root.querySelector('#analytics-report-detail');if(!root||!detail||detail.dataset.officialPrintBound)return;detail.dataset.officialPrintBound='1';var btn=document.createElement('button');btn.type='button';btn.className='btn bp bsm';btn.textContent='🖨 Official print / طباعة رسمية';btn.addEventListener('click',function(){var w=window.open('','_blank');if(!w)return;var header=typeof window.officialPrintHeaderHTML==='function'?window.officialPrintHeaderHTML():'';w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Official analytics report</title><style>body{font:14px Arial;padding:22px;color:#111}.official-print-header{page-break-after:avoid}.card{border:1px solid #555;padding:14px}.acc2-stats{display:flex;gap:10px}.sc{border:1px solid #9bb7d8;border-top:4px solid #2563eb;background:#f4f8ff;padding:10px;min-width:130px}.sv{font-size:25px;font-weight:bold;color:#123b6d}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #777;padding:7px;text-align:left}th{background:#dbeafe;color:#123b6d}.btn{display:none}</style></head><body>'+header+detail.outerHTML+'</body></html>');w.document.close();w.focus();w.print()});var ch=detail.querySelector('.ch');if(ch)ch.appendChild(btn)}var timer=setInterval(enhance,500);setTimeout(function(){clearInterval(timer)},30000)})();
+(function () {
+'use strict';
+
+// Injects official header HTML before print if window.officialPrintHeaderHTML is available.
+// Listens for the print event dispatched by module 73 instead of polling.
+window.addEventListener('floorstock:analytics-print', function () {
+  if (typeof window.fsOfficialPrint !== 'function') return;
+  if (typeof window.officialPrintHeaderHTML !== 'function') return;
+  // header is prepended by fsOfficialPrint itself when officialPrintHeaderHTML is defined;
+  // nothing extra to do here — this module kept for future header customisation.
+});
+
+})();
 
 export {};

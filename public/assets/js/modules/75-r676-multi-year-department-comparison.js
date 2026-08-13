@@ -1,10 +1,99 @@
-(function(){'use strict';
-function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function all(){return (typeof window.gr==='function'?window.gr():[]).concat((window.S&&window.S.g&&window.S.g('request_analytics_archive'))||[]).filter(function(r){return r&&r.status!=='pending'})}
-function date(r){var d=new Date(r.fulfilledAt||r.created||'');return isNaN(d)?null:d}
-function dept(id){var list=typeof window.gd==='function'?window.gd():[],d=list.find(function(x){return String(x.id)===String(id)});return d&&d.name||id||'—'}
-function calc(y){var out={};all().forEach(function(r){var d=date(r);if(!d||d.getFullYear()!==y)return;var n=dept(r.deptId),q=(r.dispensed||[]).reduce(function(a,x){return a+(Number(x.qty)||0)},0);out[n]=(out[n]||0)+q});return out}
-function enhance(){var root=document.getElementById('analytics-reports-card'),detail=root&&root.querySelector('#analytics-report-detail');if(!root||!detail||detail.dataset.multiYearBound)return;detail.dataset.multiYearBound='1';var cb=detail.querySelector('.cb');if(!cb)return;var years={};all().forEach(function(r){var d=date(r);if(d)years[d.getFullYear()]=1});var ys=Object.keys(years).map(Number).sort(function(a,b){return a-b});if(ys.length<2)return;var box=document.createElement('div');box.className='ar-multi-year';box.innerHTML='<h3 class="ar-title">Multi-year department comparison / مقارنة الأقسام متعددة السنوات</h3><div class="fl g8"><label>From / من <select id="ar-my-from">'+ys.map(function(y){return '<option value="'+y+'">'+y+'</option>'}).join('')+'</select></label><label>To / إلى <select id="ar-my-to">'+ys.map(function(y,i){return '<option value="'+y+'" '+(i===ys.length-1?'selected':'')+'>'+y+'</option>'}).join('')+'</select></label><label>Highlight ≥ / إبراز ≥ <input id="ar-my-threshold" type="number" min="0" max="10000" value="30" style="width:80px">%</label><button type="button" class="btn bsm" id="ar-my-print">🖨 Print full report</button></div><div class="tw" id="ar-my-table"></div>';cb.appendChild(box);function render(){var from=Number(box.querySelector('#ar-my-from').value),to=Number(box.querySelector('#ar-my-to').value);if(from>to){var t=from;from=to;to=t}var threshold=Math.max(0,Number(box.querySelector('#ar-my-threshold').value)||0),yearsIn=[];for(var y=from;y<=to&&yearsIn.length<20;y++)yearsIn.push(y);var maps=yearsIn.map(calc),names={};maps.forEach(function(m){Object.keys(m).forEach(function(n){names[n]=1})});var ns=Object.keys(names).sort(),html='<table class="acc2-table"><thead><tr><th>Department / القسم</th>'+yearsIn.map(function(y){return '<th>'+y+'</th>'}).join('')+'<th>Average / المتوسط</th><th>Trend / الاتجاه</th></tr></thead><tbody>';ns.forEach(function(n){var vals=maps.map(function(m){return m[n]||0}),first=vals[0]||0,last=vals[vals.length-1]||0,pct=first?Math.round((last-first)/first*1000)/10:null,avg=vals.reduce(function(a,v){return a+v},0)/vals.length,flag=pct!==null&&Math.abs(pct)>=threshold;html+='<tr'+(flag?' style="background:#fff7ed"':'')+'><td>'+esc(n)+'</td>'+vals.map(function(v){return '<td>'+v+'</td>'}).join('')+'<td>'+Math.round(avg*10)/10+'</td><td>'+(pct===null?'—':(pct>=0?'▲ +':'▼ ')+pct+'%')+'</td></tr>'});box.querySelector('#ar-my-table').innerHTML=html+'</tbody></table>'}box.querySelectorAll('select,input').forEach(function(x){x.addEventListener('change',render)});box.querySelector('#ar-my-print').addEventListener('click',function(){var w=window.open('','_blank');if(!w)return;w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>Multi-year analytics report</title><style>body{font:14px Arial;padding:24px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #94a3b8;padding:8px}th{background:#dbeafe}</style></head><body>'+box.outerHTML+'</body></html>');w.document.close();w.print()});render()}
-var timer=setInterval(enhance,500);setTimeout(function(){clearInterval(timer)},30000);
+import { allRows, rowDate, deptLabel } from '../core/analytics-engine.js';
+
+(function () {
+'use strict';
+
+function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function calcYear(y) {
+  const out = {};
+  allRows().forEach(r => {
+    const d = rowDate(r);
+    if (!d || d.getFullYear() !== y) return;
+    const n = deptLabel(r.deptId);
+    const q = (r.dispensed || []).reduce((a, x) => a + (Number(x.qty) || 0), 0);
+    out[n] = (out[n] || 0) + q;
+  });
+  return out;
+}
+
+function attach(root) {
+  if (!root || root.dataset.multiYearBound) return;
+  root.dataset.multiYearBound = '1';
+
+  const yearSet = {};
+  allRows().forEach(r => { const d = rowDate(r); if (d) yearSet[d.getFullYear()] = 1; });
+  const ys = Object.keys(yearSet).map(Number).sort((a, b) => a - b);
+  if (ys.length < 2) return;
+
+  const box = document.createElement('div');
+  box.className = 'anl-section';
+  box.innerHTML = `
+    <div class="anl-section-title">Multi-year department comparison / مقارنة الأقسام متعددة السنوات</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+      <label style="font-size:13px">From / من
+        <select id="ar-my-from" style="margin-right:4px">${ys.map(y => `<option value="${y}">${y}</option>`).join('')}</select>
+      </label>
+      <label style="font-size:13px">To / إلى
+        <select id="ar-my-to" style="margin-right:4px">${ys.map((y, i) => `<option value="${y}"${i === ys.length - 1 ? ' selected' : ''}>${y}</option>`).join('')}</select>
+      </label>
+      <label style="font-size:13px">Highlight ≥
+        <input id="ar-my-threshold" type="number" min="0" max="10000" value="30" style="width:70px;margin-right:4px">%
+      </label>
+      <button type="button" class="btn bsm" id="ar-my-print">🖨 Print</button>
+    </div>
+    <div style="overflow:auto" id="ar-my-table"></div>
+  `;
+  root.appendChild(box);
+
+  function render() {
+    let from = Number(box.querySelector('#ar-my-from').value);
+    let to   = Number(box.querySelector('#ar-my-to').value);
+    if (from > to) { const t = from; from = to; to = t; }
+    const threshold = Math.max(0, Number(box.querySelector('#ar-my-threshold').value) || 0);
+    const yearsIn = [];
+    for (let y = from; y <= to && yearsIn.length < 20; y++) yearsIn.push(y);
+    const maps = yearsIn.map(calcYear);
+    const names = {};
+    maps.forEach(m => Object.keys(m).forEach(n => { names[n] = 1; }));
+    const ns = Object.keys(names).sort();
+
+    let html = `<table class="anl-quarter-table"><thead><tr><th>Department / القسم</th>${yearsIn.map(y => `<th>${y}</th>`).join('')}<th>Average</th><th>Trend</th></tr></thead><tbody>`;
+    ns.forEach(n => {
+      const vals = maps.map(m => m[n] || 0);
+      const first = vals[0] || 0, last = vals[vals.length - 1] || 0;
+      const pct = first ? Math.round((last - first) / first * 1000) / 10 : null;
+      const avg = vals.reduce((a, v) => a + v, 0) / vals.length;
+      const flag = pct !== null && Math.abs(pct) >= threshold;
+      const rowStyle = flag ? (pct > 0 ? 'color:#f59e0b' : 'color:#10b981') : '';
+      const trendStr = pct === null ? '—' : (pct >= 0 ? `↑ +${pct}%` : `↓ ${pct}%`);
+      html += `<tr><td><b>${esc(n)}</b></td>${vals.map(v => `<td style="${rowStyle}">${v}</td>`).join('')}<td>${Math.round(avg * 10) / 10}</td><td style="${rowStyle}">${trendStr}</td></tr>`;
+    });
+    box.querySelector('#ar-my-table').innerHTML = html + '</tbody></table>';
+  }
+
+  box.querySelectorAll('select,input').forEach(x => x.addEventListener('change', render));
+  box.querySelector('#ar-my-print').addEventListener('click', () => {
+    const tableEl = box.querySelector('#ar-my-table');
+    const css = 'body{font:11pt Arial;padding:20px}table{width:100%;border-collapse:collapse}td,th{border:1px solid #9aa8bd;padding:7px}th{background:#dbeafe}@media print{button{display:none!important}}';
+    if (typeof window.fsOfficialPrint === 'function') {
+      window.fsOfficialPrint({ title: 'Multi-year comparison', html: tableEl.outerHTML, css });
+    } else {
+      const w = window.open('', '_blank');
+      if (!w) return;
+      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Multi-year report</title><style>${css}</style></head><body>${tableEl.outerHTML}</body></html>`);
+      w.document.close();
+      w.print();
+    }
+  });
+
+  render();
+}
+
+window.addEventListener('floorstock:analytics-rendered', function (e) {
+  attach(e.detail && e.detail.root);
+});
+
 })();
+
 export {};

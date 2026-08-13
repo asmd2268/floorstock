@@ -1,23 +1,298 @@
-import {buildAnalyticsMedicineIndex,resolveAnalyticsMedicine} from '../core/analytics-medicine-resolver.js?v=R6.76.42';
-(function(){
+import {
+  allRows, rowsForPeriod, computeStats, topMedicines,
+  availableYears, priorPeriod, sameQuarterPriorYear, periodLabel,
+  detectSpikes, zeroDispenseSummary, deptLabel
+} from '../core/analytics-engine.js';
+
+(function () {
 'use strict';
-function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function role(){return String(window.fsEffectiveRole?window.fsEffectiveRole():(window.CU&&window.CU.role)||'')}
-function permitted(){return ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor'].indexOf(role())>=0||!!(window.CU&&window.CU.master)}
-function allRows(){return (typeof window.gr==='function'?window.gr():[]).concat((window.S&&window.S.g&&window.S.g('request_analytics_archive'))||[]).filter(function(r){return r&&r.status!=='pending'})}
-function rowDate(row){var d=new Date(row.fulfilledAt||row.created||'');return isNaN(d)?null:d}
-function deptName(id){var d=(typeof window.gd==='function'?window.gd():[]).find(function(x){return String(x.id)===String(id)});return d&&d.name||id||'—'}
-function rowsFor(year,quarter){return allRows().filter(function(r){var d=rowDate(r);return d&&d.getFullYear()===year&&(quarter==='all'||Math.floor(d.getMonth()/3)+1===Number(quarter))})}
-function stats(rows){var medicines=buildAnalyticsMedicineIndex(),departments={},routine={},high={},units=0;rows.forEach(function(r){var name=deptName(r.deptId),bucket=departments[name]||(departments[name]={orders:0,units:0});bucket.orders++;(r.dispensed||[]).forEach(function(line){var qty=Number(line.qty)||0;if(qty<=0)return;var med=resolveAnalyticsMedicine(line,r.deptId,medicines,r);units+=qty;bucket.units+=qty;var target=med.high?high:routine;target[med.name]=(target[med.name]||0)+qty})});return {orders:rows.length,units:units,departments:departments,routine:routine,high:high}}
-function top(items){return Object.keys(items).map(function(name){return {name:name,qty:items[name]}}).sort(function(a,b){return b.qty-a.qty}).slice(0,10)}
-function qLabel(q){return 'Q'+q+' / الربع '+q}
-function currentYear(){var input=document.getElementById('analytics-report-year');return Number(input&&input.value)||new Date().getFullYear()}
-function currentQuarter(){var input=document.getElementById('analytics-report-quarter');return String(input&&input.value||'all')}
-function detail(year,quarter){var source=rowsFor(year,quarter),data=stats(source),names=Object.keys(data.departments).sort(function(a,b){return data.departments[b].units-data.departments[a].units}),title=quarter==='all'?'Annual report '+year+' / التقرير السنوي '+year:qLabel(quarter)+' '+year+' / تقرير '+qLabel(quarter)+' '+year;return '<div class="card" id="analytics-report-detail"><div class="ch"><div><span class="ct">'+esc(title)+'</span><div class="fhint">Completed requests only · fulfilled orders, units and department consumption.</div></div><button class="btn bp bsm" type="button" id="analytics-report-print">🖨 Print report / طباعة التقرير</button></div><div class="cb"><div class="acc2-stats"><div class="sc"><div class="sl">Fulfilled orders</div><div class="sv">'+data.orders+'</div></div><div class="sc"><div class="sl">Dispensed units</div><div class="sv">'+data.units+'</div></div><div class="sc"><div class="sl">Average units / order</div><div class="sv">'+(data.orders?Math.round(data.units/data.orders*10)/10:0)+'</div></div><div class="sc"><div class="sl">Departments</div><div class="sv">'+names.length+'</div></div></div><div class="tw" style="margin-top:14px"><table class="acc2-table"><thead><tr><th>Department / القسم</th><th>Orders / الطلبات</th><th>Units / الوحدات</th><th>Share / الحصة</th></tr></thead><tbody>'+(names.length?names.map(function(name){var d=data.departments[name];return '<tr><td>'+esc(name)+'</td><td>'+d.orders+'</td><td>'+d.units+'</td><td>'+(data.units?Math.round(d.units/data.units*1000)/10:0)+'%</td></tr>'}).join(''):'<tr><td colspan="4" style="text-align:center;padding:18px">No fulfilled requests in this period.</td></tr>')+'</tbody></table></div><div class="g2" style="margin-top:14px"><div><b>Top 10 routine medicines / الأكثر صرفًا</b><ol>'+top(data.routine).map(function(x){return '<li>'+esc(x.name)+' — '+x.qty+'</li>'}).join('')+'</ol></div><div><b>Top High Alert medicines / الأدوية عالية الخطورة</b><ol>'+top(data.high).map(function(x){return '<li>'+esc(x.name)+' — '+x.qty+'</li>'}).join('')+'</ol></div></div></div></div>'}
-function comparison(year){var out=[],last=null;for(var q=1;q<=4;q++){var data=stats(rowsFor(year,String(q))),difference=last===null?null:data.units-last;out.push({q:q,data:data,difference:difference,percent:last?Math.round(difference/last*1000)/10:null});last=data.units}return out}
-function enhanceAnnualVisuals(root){var detail=root.querySelector('#analytics-report-detail');if(!detail||detail.dataset.visualsBound)return;detail.dataset.visualsBound='1';var style=document.createElement('style');style.textContent='.ar-title{margin:18px 0 8px;color:#2563eb}.ar-depts{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px}.ar-dept{border:1px solid #cbd5e1;border-radius:8px;padding:10px;background:linear-gradient(135deg,#f8fbff,#eef6ff)}.ar-dept b{display:block;color:#123b6d}.ar-dept span{font-size:12px;color:#475569}.ar-bar{height:9px;background:#e2e8f0;border-radius:9px;margin-top:8px;overflow:hidden}.ar-bar i{display:block;height:100%;background:#2563eb}.ar-dept small{color:#123b6d;font-weight:700}';detail.appendChild(style);var table=detail.querySelector('table tbody');if(!table)return;var rows=[].slice.call(table.querySelectorAll('tr')).filter(function(r){return r.cells.length>=4});if(!rows.length)return;var total=rows.reduce(function(n,r){return n+(Number(r.cells[2].textContent)||0)},0),box=document.createElement('div');box.className='ar-depts';box.innerHTML=rows.map(function(r,i){var units=Number(r.cells[2].textContent)||0,pct=total?Math.round(units/total*1000)/10:0,color=['#2563eb','#059669','#d97706','#7c3aed','#dc2626'][i%5];return '<article class="ar-dept"><b>'+r.cells[0].textContent+'</b><span>'+r.cells[1].textContent+' orders · '+units+' units</span><div class="ar-bar"><i style="width:'+pct+'%;background:'+color+'"></i></div><small>'+pct+'% share</small></article>'}).join('');var title=document.createElement('h3');title.className='ar-title';title.textContent='Department consumption / استهلاك الأقسام';table.closest('.tw').parentNode.insertBefore(title,table.closest('.tw'));table.closest('.tw').parentNode.insertBefore(box,table.closest('.tw'))}
-function bind(root){['analytics-report-year','analytics-report-quarter'].forEach(function(id){var input=root.querySelector('#'+id);if(input&&!input.dataset.bound){input.dataset.bound='1';input.addEventListener('change',window.renderAnalyticsReports)}});enhanceAnnualVisuals(root);var print=root.querySelector('#analytics-report-print');if(print&&!print.dataset.bound){print.dataset.bound='1';print.addEventListener('click',function(){var report=root.querySelector('#analytics-report-detail');if(!report)return;var copy=report.cloneNode(true);[].slice.call(copy.querySelectorAll('.btn')).forEach(function(button){button.remove()});var css='body{font:14px Arial;color:#111}.card{border:1px solid #555;padding:14px}.acc2-stats{display:flex;gap:10px}.sc{border:1px solid #9bb7d8;border-top:4px solid #2563eb;background:#f4f8ff;padding:10px;min-width:130px}.sv{font-size:25px;font-weight:bold;color:#123b6d}.ar-depts{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.ar-dept{border:1px solid #cbd5e1;border-radius:8px;padding:10px;background:#f8fbff}.ar-dept b{display:block;color:#123b6d}.ar-bar{height:9px;background:#e2e8f0;margin-top:8px}.ar-bar i{display:block;height:100%}table{width:100%;border-collapse:collapse;margin-top:12px}th,td{border:1px solid #777;padding:7px;text-align:left}th{background:#dbeafe;color:#123b6d}';if(typeof window.fsOfficialPrint==='function')window.fsOfficialPrint({title:'Official analytics report',html:copy.outerHTML,css:css});else window.toast&&window.toast('Official printing is not ready. Reload the page and try again.','err')})}}
-window.renderAnalyticsReports=function(){var page=document.getElementById('pg-analytics');if(!page)return;var root=document.getElementById('analytics-reports-card');if(!permitted()){if(root)root.remove();return}var oldYear=root&&root.querySelector('#analytics-report-year'),oldQuarter=root&&root.querySelector('#analytics-report-quarter'),years={};allRows().forEach(function(r){var d=rowDate(r);if(d)years[d.getFullYear()]=true});years[new Date().getFullYear()]=true;var options=Object.keys(years).map(Number).sort(function(a,b){return b-a}),year=oldYear&&years[oldYear.value]?Number(oldYear.value):options[0],quarter=oldQuarter&&oldQuarter.value||'all',quarters=comparison(year);if(!root){root=document.createElement('section');root.id='analytics-reports-card';page.appendChild(root)}root.innerHTML='<div class="card"><div class="ch"><div><span class="ct">📈 Quarterly & annual analytics reports / التقارير الربع سنوية والسنوية</span><div class="fhint">Compare every quarter against the prior quarter and print a detailed consumption report.</div></div></div><div class="fl g8" style="padding:0 14px 14px"><select id="analytics-report-year">'+options.map(function(v){return '<option value="'+v+'" '+(v===year?'selected':'')+'>'+v+'</option>'}).join('')+'</select><select id="analytics-report-quarter"><option value="all" '+(quarter==='all'?'selected':'')+'>Full year / السنة كاملة</option><option value="1" '+(quarter==='1'?'selected':'')+'>Q1 / الربع الأول</option><option value="2" '+(quarter==='2'?'selected':'')+'>Q2 / الربع الثاني</option><option value="3" '+(quarter==='3'?'selected':'')+'>Q3 / الربع الثالث</option><option value="4" '+(quarter==='4'?'selected':'')+'>Q4 / الربع الرابع</option></select></div><div class="tw"><table class="acc2-table"><thead><tr><th>Quarter / الربع</th><th>Orders / الطلبات</th><th>Units / الوحدات</th><th>Avg / order</th><th>Change vs previous / الفرق</th></tr></thead><tbody>'+quarters.map(function(item){return '<tr><td>'+qLabel(item.q)+'</td><td>'+item.data.orders+'</td><td>'+item.data.units+'</td><td>'+(item.data.orders?Math.round(item.data.units/item.data.orders*10)/10:0)+'</td><td>'+(item.difference===null?'—':(item.difference>=0?'+':'')+item.difference+' ('+(item.percent>=0?'+':'')+item.percent+'%)')+'</td></tr>'}).join('')+'</tbody></table></div></div>'+detail(year,quarter);bind(root);window.dispatchEvent(new CustomEvent('floorstock:analytics-rendered',{detail:{root:root}}))};
+
+/* ── helpers ─────────────────────────────────────────────────────────────── */
+function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function permitted() {
+  const r = String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
+  return ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor'].includes(r) || !!(window.CU && window.CU.master);
+}
+function qLabel(q) { return `Q${q} / الربع ${['','الأول','الثاني','الثالث','الرابع'][q]||q}`; }
+function selectedYear()    { const el = document.getElementById('analytics-report-year');    return Number(el && el.value) || new Date().getFullYear(); }
+function selectedQuarter() { const el = document.getElementById('analytics-report-quarter'); return String(el && el.value || 'all'); }
+function pctArrow(pct) {
+  if (pct === null) return '';
+  return pct > 0 ? `<span class="arw up">↑${pct}%</span>` : pct < 0 ? `<span class="arw dn">↓${Math.abs(pct)}%</span>` : `<span class="arw eq">→ 0%</span>`;
+}
+function pctChange(a, b) { return b > 0 ? Math.round((a - b) / b * 1000) / 10 : null; }
+
+/* ── styles (injected once) ─────────────────────────────────────────────── */
+const STYLE_ID = 'asdh-analytics-style';
+function injectStyles() {
+  if (document.getElementById(STYLE_ID)) return;
+  const s = document.createElement('style');
+  s.id = STYLE_ID;
+  s.textContent = `
+#analytics-reports-card{padding:0}
+.anl-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 18px 10px}
+.anl-header h2{margin:0;font-size:18px;font-weight:700;color:var(--cl-text,#f1f5f9)}
+.anl-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.anl-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;padding:0 18px 14px}
+.anl-kpi{border:1px solid var(--cl-border,#334155);border-top:3px solid #2563eb;border-radius:10px;padding:12px 14px;background:var(--cl-card2,#111827)}
+.anl-kpi.spike{border-top-color:#f59e0b}
+.anl-kpi.zero{border-top-color:#ef4444}
+.anl-kpi.good{border-top-color:#10b981}
+.anl-kpi-label{font-size:11px;color:var(--cl-sub,#94a3b8);margin-bottom:4px}
+.anl-kpi-val{font-size:26px;font-weight:800;color:var(--cl-text,#f1f5f9);line-height:1}
+.anl-kpi-delta{font-size:12px;margin-top:4px;color:var(--cl-sub,#94a3b8)}
+.arw{font-size:12px;font-weight:700;padding:2px 6px;border-radius:4px}
+.arw.up{background:#fef3c7;color:#92400e}
+.arw.dn{background:#dcfce7;color:#166534}
+.arw.eq{background:#e2e8f0;color:#475569}
+.anl-section{padding:0 18px 18px}
+.anl-section-title{font-size:14px;font-weight:700;color:var(--cl-text,#f1f5f9);padding:8px 10px;border-left:4px solid #3b82f6;background:var(--cl-card2,#1e293b);margin-bottom:10px;border-radius:0 6px 6px 0}
+.anl-section-title.alert{border-left-color:#f59e0b;background:rgba(245,158,11,.1)}
+.anl-section-title.danger{border-left-color:#ef4444;background:rgba(239,68,68,.08)}
+.anl-quarter-table{width:100%;border-collapse:collapse;font-size:13px}
+.anl-quarter-table th{background:var(--cl-card2,#1e293b);color:var(--cl-sub,#94a3b8);padding:8px 10px;text-align:left;border-bottom:1px solid var(--cl-border,#334155)}
+.anl-quarter-table td{padding:8px 10px;border-bottom:1px solid var(--cl-border,#334155);color:var(--cl-text,#e2e8f0)}
+.anl-quarter-table tr:last-child td{border-bottom:none}
+.anl-dept-bars{display:grid;gap:8px}
+.anl-dept-bar{padding:10px 12px;border:1px solid var(--cl-border,#334155);border-radius:8px;background:var(--cl-card2,#111827)}
+.anl-dept-bar-head{display:flex;justify-content:space-between;gap:8px;font-size:13px;margin-bottom:6px}
+.anl-dept-bar-head b{color:var(--cl-text,#f1f5f9)}
+.anl-dept-bar-head span{color:var(--cl-sub,#94a3b8);white-space:nowrap}
+.anl-meter{height:10px;background:var(--cl-border,#334155);border-radius:10px;overflow:hidden}
+.anl-meter i{display:block;height:100%;border-radius:10px;transition:width .3s}
+.anl-med-table{width:100%;border-collapse:collapse;font-size:13px}
+.anl-med-table th{background:var(--cl-card2,#1e293b);color:var(--cl-sub,#94a3b8);padding:8px 10px;text-align:left;border-bottom:1px solid var(--cl-border,#334155)}
+.anl-med-table td{padding:8px 10px;border-bottom:1px solid var(--cl-border,#334155);color:var(--cl-text,#e2e8f0);vertical-align:top}
+.anl-med-table tr:last-child td{border-bottom:none}
+.anl-spike-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:#fef3c7;color:#92400e;margin-left:6px}
+.anl-zero-row{font-size:13px;color:var(--cl-sub,#94a3b8);padding:6px 0;border-bottom:1px solid var(--cl-border,#334155)}
+.anl-zero-row:last-child{border-bottom:none}
+.anl-empty{text-align:center;color:var(--cl-sub,#94a3b8);padding:20px;font-size:13px}
+@media print{.anl-controls button,.btn{display:none!important}}
+@media(max-width:640px){.anl-kpi-row{grid-template-columns:repeat(2,1fr)}}
+`;
+  document.head.appendChild(s);
+}
+
+/* ── section renderers ─────────────────────────────────────────────────── */
+function renderKpis(stats, priorStats) {
+  const avg = stats.orders ? Math.round(stats.units / stats.orders * 10) / 10 : 0;
+  const priorAvg = priorStats && priorStats.orders ? Math.round(priorStats.units / priorStats.orders * 10) / 10 : 0;
+  const depts = Object.keys(stats.departments).length;
+  const priorDepts = priorStats ? Object.keys(priorStats.departments).length : null;
+  const zeroCount = Object.values(stats.departments).reduce((s, d) => s + d.zeroDispenseReqs, 0);
+
+  function kpi(label, val, delta, cls = '') {
+    return `<div class="anl-kpi ${cls}"><div class="anl-kpi-label">${label}</div><div class="anl-kpi-val">${val}</div><div class="anl-kpi-delta">${delta}</div></div>`;
+  }
+
+  const orderDelta = priorStats ? pctArrow(pctChange(stats.orders, priorStats.orders)) : '';
+  const unitDelta  = priorStats ? pctArrow(pctChange(stats.units, priorStats.units)) : '';
+  const avgDelta   = priorStats && priorAvg ? pctArrow(pctChange(avg, priorAvg)) : '';
+  const deptDelta  = priorDepts !== null ? (depts !== priorDepts ? `<span style="color:#f59e0b">${depts > priorDepts ? '+' : ''}${depts - priorDepts} vs prior</span>` : '') : '';
+
+  return `<div class="anl-kpi-row">
+    ${kpi('Fulfilled orders / الطلبات', stats.orders, orderDelta || 'vs prior period')}
+    ${kpi('Dispensed units / الوحدات', stats.units.toLocaleString(), unitDelta || 'vs prior period', stats.units > (priorStats && priorStats.units || 0) ? 'spike' : 'good')}
+    ${kpi('Average units / order / متوسط', avg, avgDelta || 'per fulfilled request')}
+    ${kpi('Active departments / الأقسام', depts, deptDelta || `${depts} reporting`)}
+    ${kpi('Zero-dispense requests / صفر صرف', zeroCount, zeroCount > 0 ? `across ${Object.values(stats.departments).filter(d => d.zeroDispenseReqs > 0).length} dept(s)` : 'none this period', zeroCount > 0 ? 'zero' : 'good')}
+  </div>`;
+}
+
+function renderQuarterTable(year) {
+  const palette = ['#94a3b8','#3b82f6','#10b981','#f59e0b','#ef4444'];
+  let prev = null;
+  const rows = [1,2,3,4].map(q => {
+    const rows = rowsForPeriod(year, String(q));
+    const st = computeStats(rows);
+    const diff = prev !== null ? st.units - prev : null;
+    const pct  = prev !== null && prev > 0 ? Math.round((st.units - prev) / prev * 1000) / 10 : null;
+    const change = diff === null ? '—' : (diff >= 0 ? `+${diff}` : `${diff}`) + (pct !== null ? ` (${pct >= 0 ? '+' : ''}${pct}%)` : '');
+    const cls = diff === null ? '' : diff > 0 ? 'color:#f59e0b' : diff < 0 ? 'color:#10b981' : '';
+    prev = st.units;
+    return `<tr><td><b>${qLabel(q)}</b></td><td>${st.orders}</td><td>${st.units}</td><td>${st.orders ? Math.round(st.units/st.orders*10)/10 : 0}</td><td style="${cls}">${change}</td></tr>`;
+  });
+  return `<div class="anl-section">
+    <div class="anl-section-title">Quarterly comparison ${year} / المقارنة الربعية</div>
+    <div style="overflow:auto"><table class="anl-quarter-table">
+      <thead><tr><th>Quarter</th><th>Orders</th><th>Units</th><th>Avg/order</th><th>Δ vs prior quarter</th></tr></thead>
+      <tbody>${rows.join('')}</tbody>
+    </table></div>
+  </div>`;
+}
+
+function renderDeptBars(stats) {
+  const names = Object.keys(stats.departments).sort((a, b) => stats.departments[b].units - stats.departments[a].units);
+  const maxUnits = Math.max(1, ...names.map(n => stats.departments[n].units));
+  const colors = ['#1d4ed8','#059669','#d97706','#7c3aed','#dc2626','#0891b2','#84cc16','#ec4899'];
+  if (!names.length) return `<div class="anl-empty">No fulfilled dispensing data in this period.</div>`;
+  return `<div class="anl-dept-bars">${names.map((name, i) => {
+    const d = stats.departments[name];
+    const share = stats.units ? Math.round(d.units / stats.units * 1000) / 10 : 0;
+    const pct = Math.max(2, Math.round(d.units / maxUnits * 100));
+    return `<div class="anl-dept-bar">
+      <div class="anl-dept-bar-head"><b>${esc(name)}</b><span>${d.orders} orders · ${d.units} units · ${share}%</span></div>
+      <div class="anl-meter"><i style="width:${pct}%;background:${colors[i % colors.length]}"></i></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderMedTable(meds, emptyMsg) {
+  if (!meds.length) return `<div class="anl-empty">${emptyMsg}</div>`;
+  return `<div style="overflow:auto"><table class="anl-med-table">
+    <thead><tr><th>#</th><th>Medicine / الدواء</th><th>Total units</th><th>Top departments</th></tr></thead>
+    <tbody>${meds.map((m, i) => {
+      const topDepts = Object.entries(m.depts).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([dept, qty]) => `${esc(dept)}: ${qty}`).join(' · ');
+      return `<tr><td>${i + 1}</td><td><b>${esc(m.name)}</b></td><td>${m.qty}</td><td style="font-size:12px;color:var(--cl-sub,#94a3b8)">${topDepts || '—'}</td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+function renderSpikes(currentRows, priorRows, priorLabel) {
+  const spikes = detectSpikes(currentRows, priorRows, 30);
+  if (!spikes.overall.length && !spikes.perDept.length) {
+    return `<div class="anl-empty">No medicine exceeded a 30% consumption increase vs ${esc(priorLabel)}.</div>`;
+  }
+  let html = '';
+  if (spikes.overall.length) {
+    html += `<div style="margin-bottom:10px"><b style="font-size:13px;color:var(--cl-text,#f1f5f9)">Overall (all departments)</b>
+    <div style="overflow:auto;margin-top:6px"><table class="anl-med-table">
+      <thead><tr><th>Medicine</th><th>Current</th><th>Prior (${esc(priorLabel)})</th><th>Change</th></tr></thead>
+      <tbody>${spikes.overall.slice(0, 15).map(s =>
+        `<tr><td><b>${esc(s.medicine)}</b></td><td>${s.current}</td><td>${s.prior}</td><td><span class="anl-spike-badge">+${s.pctChange}%</span></td></tr>`
+      ).join('')}</tbody>
+    </table></div></div>`;
+  }
+  if (spikes.perDept.length) {
+    html += `<div style="margin-top:10px"><b style="font-size:13px;color:var(--cl-text,#f1f5f9)">By department / حسب القسم</b>
+    <div style="overflow:auto;margin-top:6px"><table class="anl-med-table">
+      <thead><tr><th>Medicine</th><th>Department</th><th>Current</th><th>Prior</th><th>Change</th></tr></thead>
+      <tbody>${spikes.perDept.slice(0, 20).map(s =>
+        `<tr><td><b>${esc(s.medicine)}</b></td><td>${esc(s.dept)}</td><td>${s.current}</td><td>${s.prior}</td><td><span class="anl-spike-badge">+${s.pctChange}%</span></td></tr>`
+      ).join('')}</tbody>
+    </table></div></div>`;
+  }
+  return html;
+}
+
+function renderZeroDispense(rows) {
+  const summary = zeroDispenseSummary(rows);
+  if (!summary.length) return `<div class="anl-empty">No zero-dispense requests in this period. ✓</div>`;
+  return summary.map(z =>
+    `<div class="anl-zero-row"><b>${esc(z.dept)}</b> — ${z.zeroReqs} request(s) fulfilled with 0 units dispensed (out of ${z.totalReqs} total requests)</div>`
+  ).join('');
+}
+
+/* ── main renderer ─────────────────────────────────────────────────────── */
+window.renderAnalyticsReports = function () {
+  const page = document.getElementById('pg-analytics');
+  if (!page) return;
+
+  if (!permitted()) {
+    const old = document.getElementById('analytics-reports-card');
+    if (old) old.remove();
+    return;
+  }
+
+  injectStyles();
+
+  const years = availableYears();
+  const year = selectedYear();
+  const quarter = selectedQuarter();
+
+  const currentRows = rowsForPeriod(year, quarter);
+  const prior = priorPeriod(year, quarter);
+  const priorRows = rowsForPeriod(prior.year, prior.quarter);
+  const sameLastYear = sameQuarterPriorYear(year, quarter);
+  const sameLastYearRows = rowsForPeriod(sameLastYear.year, sameLastYear.quarter);
+
+  const stats      = computeStats(currentRows);
+  const priorStats = computeStats(priorRows);
+
+  const title = quarter === 'all'
+    ? `Annual report ${year} / التقرير السنوي ${year}`
+    : `${qLabel(Number(quarter))} ${year}`;
+
+  const priorLbl = periodLabel(prior.year, prior.quarter);
+  const sameLastYearLbl = periodLabel(sameLastYear.year, sameLastYear.quarter);
+
+  const topRoutine = topMedicines(stats.routine, 10);
+  const topHigh    = topMedicines(stats.high, 10);
+
+  let root = document.getElementById('analytics-reports-card');
+  if (!root) {
+    root = document.createElement('section');
+    root.id = 'analytics-reports-card';
+    page.appendChild(root);
+  }
+
+  root.innerHTML = `
+    <div class="anl-header">
+      <h2>📊 ${esc(title)}</h2>
+      <div class="anl-controls">
+        <select id="analytics-report-year">${years.map(v => `<option value="${v}"${v === year ? ' selected' : ''}>${v}</option>`).join('')}</select>
+        <select id="analytics-report-quarter">
+          <option value="all"${quarter==='all'?' selected':''}>Full year / السنة كاملة</option>
+          ${[1,2,3,4].map(q => `<option value="${q}"${quarter===String(q)?' selected':''}>${qLabel(q)}</option>`).join('')}
+        </select>
+        <button class="btn bp bsm" id="analytics-report-print">🖨 Print / طباعة</button>
+      </div>
+    </div>
+
+    ${renderKpis(stats, priorStats)}
+
+    <div class="anl-section">
+      <div class="anl-section-title">Department consumption / استهلاك الأقسام</div>
+      ${renderDeptBars(stats)}
+    </div>
+
+    ${renderQuarterTable(year)}
+
+    <div class="anl-section">
+      <div class="anl-section-title">Top 10 routine medicines / الأكثر صرفًا (عادي)</div>
+      ${renderMedTable(topRoutine, 'No routine medicines dispensed in this period.')}
+    </div>
+
+    <div class="anl-section">
+      <div class="anl-section-title alert">⚠ Top High-Alert medicines / الأدوية عالية الخطورة</div>
+      ${renderMedTable(topHigh, 'No high-alert medicines dispensed in this period.')}
+    </div>
+
+    <div class="anl-section" id="analytics-spike-section">
+      <div class="anl-section-title alert">📈 Consumption spikes ≥30% vs prior period (${esc(priorLbl)}) / ارتفاع ≥30%</div>
+      ${renderSpikes(currentRows, priorRows, priorLbl)}
+    </div>
+
+    <div class="anl-section" id="analytics-spike-yoy-section">
+      <div class="anl-section-title alert">📈 Consumption spikes ≥30% vs same period last year (${esc(sameLastYearLbl)}) / مقارنة بنفس الفترة من العام الماضي</div>
+      ${renderSpikes(currentRows, sameLastYearRows, sameLastYearLbl)}
+    </div>
+
+    <div class="anl-section" id="analytics-zero-section">
+      <div class="anl-section-title danger">🔴 Zero-dispense fulfilled requests / طلبات مكتملة بصرف صفر</div>
+      ${renderZeroDispense(currentRows)}
+    </div>
+  `;
+
+  // Bind controls
+  ['analytics-report-year','analytics-report-quarter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.bound) { el.dataset.bound = '1'; el.addEventListener('change', window.renderAnalyticsReports); }
+  });
+
+  // Print button
+  const printBtn = document.getElementById('analytics-report-print');
+  if (printBtn && !printBtn.dataset.bound) {
+    printBtn.dataset.bound = '1';
+    printBtn.addEventListener('click', () => {
+      window.dispatchEvent(new CustomEvent('floorstock:analytics-print', { detail: { year, quarter, stats, topRoutine, topHigh, title } }));
+    });
+  }
+
+  window.dispatchEvent(new CustomEvent('floorstock:analytics-rendered', { detail: { root, year, quarter, stats } }));
+};
 })();
 
 export {};
