@@ -42,29 +42,51 @@ body.light #auth {
 body.light .acard { border: 1px solid var(--bd); box-shadow: var(--sh-md); }
 
 .alogo-ic {
+  width: 42px;
+  height: 42px;
   border-radius: 12px;
-  box-shadow: 0 4px 14px rgba(31,111,235,.5);
-  font-size: 22px;
+  box-shadow: 0 4px 16px rgba(31,111,235,.55), 0 0 0 1px rgba(31,111,235,.3);
+  font-size: 24px;
 }
-.alogo h1 { font-size: 22px; letter-spacing: -.4px; }
+.alogo h1 { font-size: 22px; letter-spacing: -.5px; font-weight: 800; }
+.alogo span { font-size: 12px; }
+
+/* Login card separator */
+.acard .fg label { font-size: 12.5px; font-weight: 600; }
+.acard input {
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.1);
+}
+body.light .acard input { background: var(--s2); border-color: var(--bd); }
+.acard input:focus { background: rgba(255,255,255,.08); }
+body.light .acard input:focus { background: var(--s); }
 
 /* ─── Topbar ─────────────────────────────────────────────────────── */
 .topbar {
-  box-shadow: 0 1px 0 var(--bd), 0 2px 12px rgba(0,0,0,.3);
-  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 0 var(--bd), 0 3px 16px rgba(0,0,0,.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  height: 54px;
 }
 body.light .topbar { box-shadow: 0 1px 0 var(--bd), 0 2px 8px rgba(0,0,0,.06); }
 
 .tlogo {
   font-size: 16px;
-  letter-spacing: -.4px;
+  letter-spacing: -.5px;
   font-weight: 800;
 }
+.tlogo span { color: var(--acl); }
 .trole {
-  font-size: 10.5px;
-  font-weight: 600;
-  letter-spacing: .3px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 20px;
 }
+/* Role badge colours - ensure specificity */
+.trole.rph { background: rgba(46,160,67,.18); color: var(--gnl); border-color: rgba(46,160,67,.4); }
+.trole.rdp { background: rgba(31,111,235,.15); color: var(--acl); border-color: rgba(31,111,235,.35); }
 
 /* ─── Navigation ─────────────────────────────────────────────────── */
 nav {
@@ -113,36 +135,53 @@ body.light .nb:hover { background: rgba(0,0,0,.03); }
 /* ─── Stat cards (.sc) ───────────────────────────────────────────── */
 .sc {
   border-radius: 14px;
+  border: 1px solid var(--bd2);
+  background: linear-gradient(145deg, var(--s2) 0%, var(--s) 100%);
   box-shadow: var(--sh-sm);
-  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease), border-color .2s;
   position: relative;
   overflow: hidden;
+}
+.sc::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--ac), var(--pu));
+  opacity: 0;
+  transition: opacity .2s var(--ease);
 }
 .sc::after {
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,.04) 0%, transparent 60%);
+  background: linear-gradient(135deg, rgba(255,255,255,.05) 0%, transparent 60%);
   pointer-events: none;
 }
 .sc:hover {
   transform: translateY(-3px);
   box-shadow: var(--sh-md);
+  border-color: var(--ac);
+}
+.sc:hover::before { opacity: 1; }
+body.light .sc {
+  background: linear-gradient(145deg, var(--s) 0%, var(--s2) 100%);
 }
 .sv {
-  font-size: 28px;
+  font-size: 30px;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -.5px;
+  letter-spacing: -.8px;
+  font-weight: 800;
 }
 .sl {
-  font-size: 11.5px;
-  text-transform: none;
-  letter-spacing: 0;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
   font-weight: 600;
-  opacity: .75;
-  margin-bottom: 6px;
+  color: var(--tx2);
+  margin-bottom: 8px;
 }
-.ss { font-size: 11px; margin-top: 6px; opacity: .7; }
+.ss { font-size: 11px; margin-top: 6px; color: var(--tx3); }
 
 /* ─── Tables ─────────────────────────────────────────────────────── */
 th {
@@ -253,11 +292,17 @@ body.light input:focus, body.light select:focus, body.light textarea:focus {
 
 /* ─── Section headings ───────────────────────────────────────────── */
 .stitle {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
-  letter-spacing: -.3px;
+  letter-spacing: -.4px;
+  color: var(--tx);
 }
-.ssub { font-size: 13px; line-height: 1.5; }
+.ssub {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--tx2);
+  margin-bottom: 16px;
+}
 
 /* ─── Scrollbar ──────────────────────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
