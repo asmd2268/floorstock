@@ -61,7 +61,7 @@ service cloud.firestore {
 
     function canReadScopedState(docId) {
       return (role() in ['department', 'outpatient_pharmacy_supervisor'] && canReadDepartmentState(docId))
-        || (role() == 'controlled_pharmacy' && (docId.matches('^controlled_.*$') || docId in ['departments', 'deleted_departments', 'custom_categories', 'facility_logo', 'theme', 'audit_log']))
+        || (role() == 'controlled_pharmacy' && (docId.matches('^(controlled_.*|psychotropic_.*)$') || docId in ['departments', 'deleted_departments', 'custom_categories', 'facility_logo', 'theme', 'audit_log']))
         || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'theme', 'audit_log']))
         || (role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'] && canReadPharmacyState(docId));
     }

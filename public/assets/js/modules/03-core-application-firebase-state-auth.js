@@ -392,7 +392,8 @@ async function fsStateLoadScoped(keys,loader,source,profile){
 var CONTROLLED_PHARMACY_BASE_KEYS=Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
-  'controlled_moves','controlled_pdf_receipts'
+  'controlled_moves','controlled_pdf_receipts',
+  'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only'
 ]);
 function fsControlledPharmacyDeptKeys(cache){
   return(Array.isArray(cache&&cache.departments)?cache.departments:[])
@@ -833,7 +834,7 @@ S.ready=true;
     var write=fsStateSetSmart(k,v).catch(function(error){
       if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
       console.error('Persistent save failed for key:',k,error);
-      toast('Save failed — Firebase rejected: '+String(k),'err');
+      toast('Save failed — Firebase rejected the update.','err');
       throw error;
     });
     return _trackSave(write,'floorstock_state/'+k);
