@@ -173,7 +173,8 @@ service cloud.firestore {
           'theme', 'facility_logo',
           'pharmacy_category_config', 'pharmacy_department_announcements',
           'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3',
-          'medication_visibility_rules_v3', 'shelves_anesthesia'
+          'medication_visibility_rules_v3', 'shelves_anesthesia',
+          'controlled_catalog'
         ]
         || docId == 'meds_' + departmentId()
         || docId == 'expiry_' + departmentId()

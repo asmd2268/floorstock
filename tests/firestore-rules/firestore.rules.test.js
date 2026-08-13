@@ -211,7 +211,7 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     await seed(`floorstock_state/controlled_dept_list_${OTHER_DEPARTMENT_ID}`, statePayload([{ id: 'other' }]));
     for (const role of ['department', 'custodian']) {
       const db = dbFor(role);
-      await assertFails(getDoc(doc(db, 'floorstock_state', 'controlled_catalog')));
+      await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'controlled_catalog')));
       await assertFails(getDoc(doc(db, 'floorstock_state', `controlled_dept_list_${OTHER_DEPARTMENT_ID}`)));
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_carts')));
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_cart_reports')));

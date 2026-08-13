@@ -303,7 +303,8 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
   'fulfillment_edit_settings_v1',
   'crash_carts','crash_cart_reports',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
-  'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3'
+  'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3',
+  'controlled_catalog'
 ]);
 // These roles are deliberately restricted by Firestore Rules to individual
 // document reads.  They must never fall back to collection.list()/onSnapshot(),
