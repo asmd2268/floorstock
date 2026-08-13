@@ -89,7 +89,7 @@ export function mayWriteState(role, key) {
     const allowed = new Set([
       'requests', 'dept_notes', 'notes', 'crash_cart_reports',
       'accountability_usage_v2', 'accountability_receipts_v2',
-      'audit_log', 'theme', `meds_${DEPARTMENT_ID}`, `expiry_${DEPARTMENT_ID}`, `shelves_${DEPARTMENT_ID}`,
+      'audit_log', 'theme', `meds_${DEPARTMENT_ID}`, `expiry_${DEPARTMENT_ID}`, `shelves_${DEPARTMENT_ID}`, `alerts_${DEPARTMENT_ID}`,
       `inventory_integrity_${DEPARTMENT_ID}`, `inventory_snapshot_index_${DEPARTMENT_ID}`,
       `inventory_snapshot_${DEPARTMENT_ID}_sample_meds`
     ]);

@@ -207,6 +207,7 @@ service cloud.firestore {
               'accountability_usage_v2', 'accountability_receipts_v2',
               'audit_log', 'theme',
               'meds_' + dept, 'expiry_' + dept, 'shelves_' + dept,
+              'alerts_' + dept,
               'inventory_integrity_' + dept,
               'inventory_snapshot_index_' + dept
             ]

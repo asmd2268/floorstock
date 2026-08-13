@@ -112,6 +112,7 @@ export function canWriteStateKey(profile, key) {
     return value === 'requests' || value === 'dept_notes' || value === 'notes' || value === 'crash_cart_reports' ||
       value === 'accountability_usage_v2' || value === 'accountability_receipts_v2' ||
       (!!deptId && (value === `meds_${deptId}` || value === `expiry_${deptId}` || value === `shelves_${deptId}` ||
+        value === `alerts_${deptId}` ||
         value === `inventory_integrity_${deptId}` || value === `inventory_snapshot_index_${deptId}` ||
         value.startsWith(ownSnapshotPrefix) ||
         (user.controlledCustodian === true && (value === `controlled_dept_list_${deptId}` || value === `controlled_dept_shelves_${deptId}` || value === `controlled_settings_${deptId}`))));

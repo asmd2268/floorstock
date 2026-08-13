@@ -87,8 +87,9 @@ export function installDomBindings(root = document) {
     // A missing optional control must never abort application boot (Safari is
     // particularly strict about an exception escaping a module evaluation).
     if (!element) { missing.push(binding.id); return; }
-    if (element.dataset.asdhBindingInstalled === '1') return;
-    element.dataset.asdhBindingInstalled = '1';
+    const boundKey = `asdhBound_${binding.event}`;
+    if (element.dataset[boundKey] === '1') return;
+    element.dataset[boundKey] = '1';
     element.addEventListener(binding.event, (event) => {
       if (binding.id === 'b005' && event.__asdhLoginHandled) return;
       if (binding.id === 'b005') event.__asdhLoginHandled = true;
