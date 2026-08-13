@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js';
 import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=R6.76.7';
-import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=R6.76.41';
+import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=R6.76.42';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
