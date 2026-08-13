@@ -324,6 +324,7 @@ function fsIsPharmacyScopedProfile(profile){
 function fsStateKeysForProfile(profile){
   if(!profile)return null;
   if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
+  if(String(profile.role||'')==='controlled_pharmacy')return['departments','deleted_departments','custom_categories','facility_logo','theme'];
   if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
