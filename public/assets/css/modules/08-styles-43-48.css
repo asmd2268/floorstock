@@ -65,7 +65,7 @@ body.role-pharmacy_staff #pg-inv .ch button{display:none!important}
 body.light .request-hour-grid .hour-cell.allowed{background:#c9efd2}body.light .request-hour-grid .hour-cell.blocked{background:#4b5563}
 .request-grid-day-summary{font-size:10px;color:var(--tx2);margin-top:3px;line-height:1.35}
 #pg-newreq.schedule-locked .rqi{cursor:not-allowed!important;opacity:.48!important;background:var(--s3)!important}
-#pg-newreq.schedule-locked button[onclick*="submitReq"]{cursor:not-allowed!important;opacity:.5!important;filter:grayscale(.5)}
+#pg-newreq.schedule-locked button[data-asdh-binding="b047"]{cursor:not-allowed!important;opacity:.5!important;filter:grayscale(.5)}
 .schedule-lock-banner{border:2px solid var(--rd);background:rgba(218,54,51,.13);border-radius:10px;padding:14px 16px;margin-bottom:12px;line-height:1.65}
 .schedule-lock-banner .title{font-size:15px;font-weight:800;color:var(--rdl)}
 .schedule-lock-banner .times{font-size:12px;color:var(--tx);margin-top:4px}

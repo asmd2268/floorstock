@@ -654,7 +654,7 @@ function applyRequestLock(){
   else info.innerHTML='<div class="schedule-open-banner">🟢 <b>الطلب متاح الآن / Ordering is available now.</b> &nbsp; حتى / Until <b>'+escH(check.window&&check.window.to||'')+'</b></div>'
  }
  pg.querySelectorAll('.rqi').forEach(function(i){if(!check.allowed){if(!i.disabled)i.dataset.scheduleLocked='1';i.disabled=true}else if(i.dataset.scheduleLocked==='1'){delete i.dataset.scheduleLocked;if((+i.dataset.max||0)>0)i.disabled=false}});
- var submit=pg.querySelector('button[onclick*="submitReq"]');if(submit){submit.disabled=!check.allowed;submit.setAttribute('aria-disabled',check.allowed?'false':'true');submit.title=check.allowed?'':('Next allowed: '+txt.next)}
+ var submit=pg.querySelector('button[data-asdh-binding="b047"]');if(submit){submit.disabled=!check.allowed;submit.setAttribute('aria-disabled',check.allowed?'false':'true');submit.title=check.allowed?'':('Next allowed: '+txt.next)}
 }
 window.refreshRequestScheduleMessage=applyRequestLock;
 

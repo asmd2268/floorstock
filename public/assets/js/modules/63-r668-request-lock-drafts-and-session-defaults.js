@@ -89,7 +89,7 @@ function applyNewRequestGate(){
       if((+input.dataset.max||0)>0&&!input.dataset.editLocked)input.disabled=false;
     }
   });
-  var submit=pg.querySelector('button[onclick*="submitReq"]');
+  var submit=pg.querySelector('button[data-asdh-binding="b047"]');
   if(submit){
     submit.disabled=blocked;
     submit.setAttribute('aria-disabled',blocked?'true':'false');
