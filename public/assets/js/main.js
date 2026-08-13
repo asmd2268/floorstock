@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.76 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.77 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -87,7 +87,7 @@ import './modules/62-r667-ui-text-and-icon-normalization.js?v=R6.76.19';
 import './modules/63-r668-request-lock-drafts-and-session-defaults.js?v=R6.76.76';
 import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.76.19';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.76.19';
-import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.19';
+import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.77';
 import './modules/67-r676-fulfillment-edit-settings.js?v=R6.76.19';
 import './modules/68-schedule-controller.js?v=R6.76.19';
 import './modules/69-r676-narcotic-catalog-restore-20260728.js?v=R6.76.19';
