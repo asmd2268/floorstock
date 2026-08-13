@@ -504,12 +504,29 @@ function fsR12BatchExpiryHtml(batches){
   }).join('');
 }
 
-function fsR5BatchText(batches,html){
+function fsR5BatchText(batches,html,actualTotal){
   if(!Array.isArray(batches)||!batches.length)return '—';
-  return batches.map(function(batch){
+  // Resolve qty per batch; batch.qty may be 0/missing while actualTotal is correct.
+  var batchQtys=batches.map(function(b){return b&&b.qty!=null&&b.qty!==''?fsR5N(b.qty):0});
+  var batchSum=batchQtys.reduce(function(a,b){return a+b},0);
+  var total=actualTotal!=null?fsR5N(actualTotal):null;
+  // If all batch qtys are zero but we have an actual total, distribute across batches.
+  // Single batch: assign the full actual total.
+  // Multiple batches with all-zero: leave as-is (we can't split arbitrarily).
+  if(batchSum===0&&total!=null&&total>0&&batches.length===1){
+    batchQtys=[total];
+    batchSum=total;
+  }
+  // If sum of stored batch qtys exceeds actual total, cap proportionally.
+  if(total!=null&&batchSum>total&&batchSum>0){
+    batchQtys=batchQtys.map(function(q){return Math.round(q/batchSum*total);});
+  }
+  return batches.map(function(batch,i){
     var lot=fsR5S(batch&&batch.lot,'');
     var expiry=fsR5DMY(batch&&batch.expiry);
+    var qty=batchQtys[i];
     var parts=[];
+    if(qty>0||batchSum>0)parts.push(String(qty));
     if(lot)parts.push('Lot '+lot);
     parts.push('Exp '+expiry);
     if(!html)return parts.join(' · ');
@@ -688,7 +705,7 @@ function fsR5ControlledPrintHtml(dept,rows){
       '<td>'+fsR5Esc(fsR5Class(row.classification))+'</td>'+
       '<td>'+fsR5Esc(row.required)+'</td>'+
       '<td>'+fsR5Esc(row.actual)+'</td>'+
-      '<td class="batch">'+fsR5BatchText(row.batches,true)+'</td>'+
+      '<td class="batch">'+fsR5BatchText(row.batches,true,row.actual)+'</td>'+
     '</tr>';
   }).join('');
 
@@ -892,7 +909,7 @@ th{font-weight:900}
       '<thead><tr>'+
         '<th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine / الدواء</th>'+
         '<th>Class / التصنيف</th><th>Required / المطلوب</th>'+
-        '<th>Actual / الفعلي</th><th>Expiry / الانتهاء</th>'+
+        '<th>Actual / الفعلي</th><th>Qty · Expiry / الكمية والانتهاء</th>'+
       '</tr></thead>'+
       '<tbody>'+body+'</tbody>'+
     '</table>'+
