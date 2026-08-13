@@ -370,21 +370,55 @@ function renderNarcoticSection() {
     </div>
   </div>`;
 
-  // Quarterly comparison (current vs prior year)
+  // Quarterly comparison (current vs prior quarter same year + vs prior year)
   html += `<div class="car-section">
-    <div class="car-section-title">Quarterly comparison / المقارنة الربعية — ${y} vs ${priorY}</div>
+    <div class="car-section-title">Quarterly comparison / المقارنة الربعية — ${y}</div>
     <div class="car-q-cmp">
-      ${st.quarterly.map(q => {
-        const priorQ = priorSt.quarterly.find(p => p.q === q.q) || { units: 0 };
-        const pc = pctChange(q.units, priorQ.units);
-        const color = pc === null ? '#64748b' : pc > 0 ? '#f59e0b' : '#10b981';
+      ${st.quarterly.map((q, idx) => {
+        const priorYQ = priorSt.quarterly.find(p => p.q === q.q) || { units: 0 };
+        const prevSameYQ = idx > 0 ? st.quarterly[idx - 1] : null;
+        const pcVsPriorY = pctChange(q.units, priorYQ.units);
+        const pcVsPrevQ = prevSameYQ !== null ? pctChange(q.units, prevSameYQ.units) : null;
+        const colY = pcVsPriorY === null ? '#64748b' : pcVsPriorY > 0 ? '#f59e0b' : '#10b981';
+        const colQ = pcVsPrevQ === null ? '#64748b' : pcVsPrevQ > 0 ? '#f59e0b' : '#10b981';
         return `<div class="car-q-item">
           <div style="font-size:12px;color:var(--cl-sub,#94a3b8)">Q${q.q} / الربع ${['','الأول','الثاني','الثالث','الرابع'][q.q]}</div>
           <div style="font-size:22px;font-weight:800;color:var(--cl-text,#f1f5f9);margin:4px 0">${q.units}</div>
-          <div style="font-size:12px;color:${color}">${pc !== null ? (pc >= 0 ? '↑ +' : '↓ ') + Math.abs(pc) + '% vs ' + priorY + ' Q' + q.q : 'No prior data'}</div>
-          <div style="font-size:11px;color:var(--cl-sub,#94a3b8)">${q.events} dispense events</div>
+          <div style="font-size:12px;color:${colY}">${pcVsPriorY !== null ? (pcVsPriorY >= 0 ? '↑ +' : '↓ ') + Math.abs(pcVsPriorY) + '% vs ' + priorY + ' Q' + q.q : 'No prior year data'}</div>
+          ${prevSameYQ ? `<div style="font-size:12px;color:${colQ};margin-top:3px">${pcVsPrevQ !== null ? (pcVsPrevQ >= 0 ? '↑ +' : '↓ ') + Math.abs(pcVsPrevQ) + '% vs Q' + prevSameYQ.q + ' ' + y : '—'}</div>` : ''}
+          <div style="font-size:11px;color:var(--cl-sub,#94a3b8);margin-top:3px">${q.events} dispense events</div>
         </div>`;
       }).join('')}
+    </div>
+  </div>`;
+
+  // Half-year comparison
+  const h1Units = st.quarterly.filter(q => q.q <= 2).reduce((s, q) => s + q.units, 0);
+  const h2Units = st.quarterly.filter(q => q.q >= 3).reduce((s, q) => s + q.units, 0);
+  const h1Events = st.quarterly.filter(q => q.q <= 2).reduce((s, q) => s + q.events, 0);
+  const h2Events = st.quarterly.filter(q => q.q >= 3).reduce((s, q) => s + q.events, 0);
+  const h1PriorUnits = priorSt.quarterly.filter(q => q.q <= 2).reduce((s, q) => s + q.units, 0);
+  const h2PriorUnits = priorSt.quarterly.filter(q => q.q >= 3).reduce((s, q) => s + q.units, 0);
+  const pcH1 = pctChange(h1Units, h2Units); // H1 vs H2 same year
+  const pcH2vsPrior = pctChange(h2Units, h2PriorUnits);
+  const pcH1vsPrior = pctChange(h1Units, h1PriorUnits);
+  html += `<div class="car-section">
+    <div class="car-section-title">Half-year comparison / مقارنة النصفين — ${y}</div>
+    <div class="car-q-cmp">
+      <div class="car-q-item">
+        <div style="font-size:12px;color:var(--cl-sub,#94a3b8)">H1 — Q1+Q2 / النصف الأول</div>
+        <div style="font-size:22px;font-weight:800;color:var(--cl-text,#f1f5f9);margin:4px 0">${h1Units}</div>
+        <div style="font-size:12px;color:${pcH1 === null ? '#64748b' : pcH1 <= 0 ? '#10b981' : '#f59e0b'}">${pcH1 !== null ? (pcH1 >= 0 ? '↑ +' : '↓ ') + Math.abs(pcH1) + '% vs H2 ' + y : '—'}</div>
+        <div style="font-size:12px;color:${pcH1vsPrior === null ? '#64748b' : pcH1vsPrior > 0 ? '#f59e0b' : '#10b981'};margin-top:3px">${pcH1vsPrior !== null ? (pcH1vsPrior >= 0 ? '↑ +' : '↓ ') + Math.abs(pcH1vsPrior) + '% vs H1 ' + priorY : 'No prior data'}</div>
+        <div style="font-size:11px;color:var(--cl-sub,#94a3b8);margin-top:3px">${h1Events} events</div>
+      </div>
+      <div class="car-q-item">
+        <div style="font-size:12px;color:var(--cl-sub,#94a3b8)">H2 — Q3+Q4 / النصف الثاني</div>
+        <div style="font-size:22px;font-weight:800;color:var(--cl-text,#f1f5f9);margin:4px 0">${h2Units}</div>
+        <div style="font-size:12px;color:${pcH1 === null ? '#64748b' : pcH1 >= 0 ? '#10b981' : '#f59e0b'}">${pcH1 !== null ? (pcH1 <= 0 ? '↑ +' : '↓ ') + Math.abs(pcH1) + '% vs H1 ' + y : '—'}</div>
+        <div style="font-size:12px;color:${pcH2vsPrior === null ? '#64748b' : pcH2vsPrior > 0 ? '#f59e0b' : '#10b981'};margin-top:3px">${pcH2vsPrior !== null ? (pcH2vsPrior >= 0 ? '↑ +' : '↓ ') + Math.abs(pcH2vsPrior) + '% vs H2 ' + priorY : 'No prior data'}</div>
+        <div style="font-size:11px;color:var(--cl-sub,#94a3b8);margin-top:3px">${h2Events} events</div>
+      </div>
     </div>
   </div>`;
 
@@ -636,24 +670,53 @@ function render() {
   }
 }
 
-// Render when the print page shows
+/* ── TAB SWITCHING ──────────────────────────────────────────────────────── */
+function activatePrintTab(tab) {
+  const ordersPanel    = document.getElementById('pg-print-panel-orders');
+  const analyticsPanel = document.getElementById('pg-print-panel-analytics');
+  const tabOrders      = document.getElementById('pg-print-tab-orders');
+  const tabAnalytics   = document.getElementById('pg-print-tab-analytics');
+  if (!ordersPanel || !analyticsPanel) return;
+
+  const isAnalytics = tab === 'analytics';
+  ordersPanel.style.display    = isAnalytics ? 'none' : '';
+  analyticsPanel.style.display = isAnalytics ? '' : 'none';
+
+  if (tabOrders) {
+    tabOrders.className = isAnalytics ? 'btn bg bsm' : 'btn bp bsm';
+    tabOrders.style.opacity = isAnalytics ? '0.65' : '1';
+    tabOrders.style.borderBottom = isAnalytics ? '' : '3px solid var(--ac)';
+  }
+  if (tabAnalytics) {
+    tabAnalytics.className = isAnalytics ? 'btn bp bsm' : 'btn bg bsm';
+    tabAnalytics.style.opacity = isAnalytics ? '1' : '0.65';
+    tabAnalytics.style.borderBottom = isAnalytics ? '3px solid var(--ac)' : '';
+  }
+
+  if (isAnalytics) setTimeout(render, 50);
+}
+
 document.addEventListener('click', function (e) {
-  const trigger = e.target.closest('[data-pg="pg-print"],[onclick*="pg-print"],[data-showpg="pg-print"]') ||
+  if (e.target.closest('#pg-print-tab-orders')) { activatePrintTab('orders'); return; }
+  if (e.target.closest('#pg-print-tab-analytics')) { activatePrintTab('analytics'); return; }
+
+  // Navigate-to-print-page triggers
+  const trigger = e.target.closest('[data-pg="pg-print"],[data-showpg="pg-print"]') ||
     (e.target.closest('[onclick]') && String(e.target.closest('[onclick]').getAttribute('onclick') || '').includes('pg-print'));
-  if (trigger) setTimeout(render, 150);
+  if (trigger) setTimeout(() => activatePrintTab('orders'), 150);
 });
 
 // Also render on showPg hook
 const _origShowPg = window.showPg;
 window.showPg = function (pg) {
   const r = typeof _origShowPg === 'function' ? _origShowPg(pg) : undefined;
-  if (String(pg) === 'pg-print') setTimeout(render, 100);
+  if (String(pg) === 'pg-print') setTimeout(() => activatePrintTab('orders'), 100);
   return r;
 };
 
 // Render immediately if pg-print is already visible
 if (document.getElementById('pg-print') && getComputedStyle(document.getElementById('pg-print')).display !== 'none') {
-  setTimeout(render, 300);
+  setTimeout(() => activatePrintTab('orders'), 300);
 }
 
 })();

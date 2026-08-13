@@ -3,7 +3,7 @@ import {
   DEFAULT_FULFILLMENT_EDIT_HOURS,
   MAX_FULFILLMENT_EDIT_HOURS,
   normalizeFulfillmentEditHours,
-} from '../core/fulfillment-edit-policy.js?v=R6.76.7';
+} from '../core/fulfillment-edit-policy.js?v=R6.76.58';
 
 (function(){
 'use strict';
@@ -17,7 +17,11 @@ function ensureCard(){
   var list=document.getElementById('rlist'),card=document.getElementById('fulfillment-edit-settings-card');
   if(!list)return null;
   if(!masterMayConfigure()){if(card)card.remove();return null}
-  if(card)return card;
+  if(card){
+    // Re-attach if parent was rebuilt and card is now detached
+    if(!list.parentNode.contains(card))list.parentNode.insertBefore(card,list);
+    return card;
+  }
   card=document.createElement('div');
   card.id='fulfillment-edit-settings-card';
   card.className='card';

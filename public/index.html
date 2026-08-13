@@ -221,7 +221,17 @@
 <div style="margin-top:14px" id="analytics-period-compare"></div>
 </div>
 <div class="pg" id="pg-print">
-<div id="comprehensive-annual-report-host" style="margin-bottom:14px"></div>
+<!-- Tab navigation -->
+<div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--bd);padding-bottom:0">
+<button class="btn bp bsm" id="pg-print-tab-orders" style="border-bottom:3px solid var(--ac);border-radius:6px 6px 0 0;margin-bottom:-2px">🖨 Print Orders / طباعة الطلبات</button>
+<button class="btn bg bsm" id="pg-print-tab-analytics" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">📊 Analytics / الإحصائيات</button>
+</div>
+<!-- Analytics panel -->
+<div id="pg-print-panel-analytics" style="display:none">
+<div id="comprehensive-annual-report-host"></div>
+</div>
+<!-- Orders panel -->
+<div id="pg-print-panel-orders">
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
 <div><div class="stitle">Print Orders</div><div class="ssub" style="margin:0">You may print any fulfilled request again whenever needed</div></div>
 <div class="fl g8 ic" style="flex-wrap:wrap">
@@ -285,7 +295,8 @@
 <div class="ch"><span class="ct">Fulfilled Requests</span><button class="btn bg bsm" data-asdh-binding="b037">Select All</button></div>
 <div class="tw"><table><thead><tr><th><input type="checkbox"data-asdh-binding="b038"></th><th>Department</th><th>Request Date</th><th>Fulfilled</th><th>Items</th><th>Printed</th></tr></thead><tbody id="ptbl"></tbody></table></div>
 </div>
-</div>
+</div><!-- /pg-print-panel-orders -->
+</div><!-- /pg-print -->
 <div class="pg" id="pg-import">
 <div class="stitle">Import Medications / استيراد الأدوية</div>
 <div class="ssub">Upload an Excel/CSV file or paste directly — colors, merged cells, and headers detected automatically</div>
