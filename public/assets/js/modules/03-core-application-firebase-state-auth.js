@@ -324,6 +324,7 @@ function fsIsPharmacyScopedProfile(profile){
 }
 function fsStateKeysForProfile(profile){
   if(!profile)return null;
+  if(profile.master===true)return null;
   if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
   if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.slice();
   if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
@@ -393,7 +394,7 @@ async function fsStateLoadScoped(keys,loader,source,profile){
 var CONTROLLED_PHARMACY_BASE_KEYS=Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
-  'controlled_moves','controlled_pdf_receipts',
+  'controlled_moves','controlled_pdf_receipts','controlled_pharmacy_storage_v1',
   'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
   'narcotic_restore_from_backup_20260728_v1',
   'controlled_dept_list_name_enrich_v1'
