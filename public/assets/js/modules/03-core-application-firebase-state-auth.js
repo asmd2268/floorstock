@@ -833,7 +833,7 @@ S.ready=true;
     var write=fsStateSetSmart(k,v).catch(function(error){
       if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
       console.error('Persistent save failed for key:',k,error);
-      toast('Save failed — Firebase rejected the update.','err');
+      toast('Save failed — Firebase rejected: '+String(k),'err');
       throw error;
     });
     return _trackSave(write,'floorstock_state/'+k);
