@@ -800,16 +800,16 @@ thead{display:table-header-group}
 tr{break-inside:avoid}
 th,td{
   border:1px solid #000;
-  padding:var(--py) .65mm;
-  line-height:1.05;
+  padding:var(--py) .8mm;
+  line-height:1.1;
   text-align:center;
   vertical-align:middle;
   overflow-wrap:anywhere
 }
 th{font-weight:900}
-.medicine,.batch{text-align:left}
-.medicine{font-weight:800}
-.ctl-batch-print-line{display:block;padding:.15mm 0}
+.medicine{text-align:left;font-weight:800}
+.batch{text-align:left;padding-left:1.2mm}
+.ctl-batch-print-line{display:block;padding:.18mm 0}
 .near-expiry-30 td,
 .near-expiry-30 td *,
 .near-expiry-30 .ctl-batch-print-line{
@@ -902,9 +902,9 @@ th{font-weight:900}
     legend+
     '<table>'+
       '<colgroup>'+
-        '<col style="width:4%"><col style="width:8%"><col style="width:9%">'+
-        '<col style="width:25%"><col style="width:11%"><col style="width:7%">'+
-        '<col style="width:7%"><col style="width:29%">'+
+        '<col style="width:3%"><col style="width:8%"><col style="width:8%">'+
+        '<col style="width:32%"><col style="width:10%"><col style="width:6%">'+
+        '<col style="width:6%"><col style="width:27%">'+
       '</colgroup>'+
       '<thead><tr>'+
         '<th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine / الدواء</th>'+
