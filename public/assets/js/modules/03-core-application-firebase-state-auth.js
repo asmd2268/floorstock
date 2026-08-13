@@ -1288,29 +1288,59 @@ globalThis.MEDS = [
 // Modern in-app dialogs — replaces all browser prompt/confirm/alert windows.
 function uiDialog(opts){
   opts=opts||{};
+  var isDanger=!!opts.danger,isPrompt=opts.type==='prompt',isConfirm=opts.type==='confirm';
+  var icon=opts.icon||(isDanger?'🗑️':isPrompt?'✏️':isConfirm?'❓':'ℹ️');
   return new Promise(function(resolve){
     var bg=document.createElement('div');bg.className='modal-bg on';bg.style.zIndex='3000';
-    var box=document.createElement('div');box.className='modal';box.style.width=opts.width||'520px';
-    var title=document.createElement('div');title.className='mh';title.innerHTML='<div class="mt">'+esc(opts.title||'ASDHealth')+'</div>';
-    var close=document.createElement('button');close.className='xbtn';close.type='button';close.innerHTML='&times;';title.appendChild(close);box.appendChild(title);
-    var msg=document.createElement('div');msg.style.cssText='font-size:13px;line-height:1.75;white-space:pre-wrap;unicode-bidi:plaintext;margin-bottom:14px;color:var(--tx2)';var dialogMessage=opts.message||'';if(typeof globalThis.formatBilingualText==='function')dialogMessage=globalThis.formatBilingualText(dialogMessage);msg.textContent=dialogMessage;box.appendChild(msg);
+    var box=document.createElement('div');box.className='modal';
+    box.style.cssText='width:'+( opts.width||'480px')+';max-width:95vw;padding:0;overflow:hidden;border-radius:18px';
+    /* Header */
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:18px 20px 0;gap:10px';
+    var htitle=document.createElement('div');
+    htitle.style.cssText='display:flex;align-items:center;gap:10px';
+    var ico=document.createElement('span');
+    ico.style.cssText='font-size:20px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:'+(isDanger?'rgba(218,54,51,.12)':'rgba(31,111,235,.1)');
+    ico.textContent=icon;
+    var titletxt=document.createElement('div');titletxt.className='mt';titletxt.textContent=opts.title||'ASDHealth';
+    htitle.appendChild(ico);htitle.appendChild(titletxt);
+    var close=document.createElement('button');close.className='xbtn';close.type='button';close.innerHTML='&times;';
+    hdr.appendChild(htitle);hdr.appendChild(close);box.appendChild(hdr);
+    /* Divider */
+    var hr=document.createElement('div');hr.style.cssText='height:1px;background:var(--bd);margin:14px 0 0';box.appendChild(hr);
+    /* Body */
+    var body=document.createElement('div');body.style.cssText='padding:18px 20px';
+    if(opts.message){
+      var msg=document.createElement('div');
+      msg.style.cssText='font-size:13.5px;line-height:1.75;white-space:pre-wrap;unicode-bidi:plaintext;margin-bottom:'+(isPrompt?'14px':'0')+'px;color:var(--tx2)';
+      var dialogMessage=opts.message;if(typeof globalThis.formatBilingualText==='function')dialogMessage=globalThis.formatBilingualText(dialogMessage);
+      msg.textContent=dialogMessage;body.appendChild(msg);
+    }
     var input=null;
-    if(opts.type==='prompt'){
+    if(isPrompt){
       input=opts.multiline?document.createElement('textarea'):document.createElement('input');
       if(!opts.multiline)input.type=opts.inputType||'text';
-      input.value=opts.value==null?'':String(opts.value);input.placeholder=opts.placeholder||'';input.style.marginBottom='16px';
-      if(opts.multiline)input.rows=7;box.appendChild(input);
+      input.value=opts.value==null?'':String(opts.value);
+      input.placeholder=opts.placeholder||'';
+      input.style.cssText='margin-bottom:0;font-size:14px';
+      if(opts.multiline)input.rows=7;
+      body.appendChild(input);
     }
-    var actions=document.createElement('div');actions.className='fl g8';actions.style.justifyContent='flex-end';
+    box.appendChild(body);
+    /* Footer */
+    var footer=document.createElement('div');
+    footer.style.cssText='display:flex;gap:8px;justify-content:flex-end;padding:12px 20px 18px;border-top:1px solid var(--bd);background:var(--s2)';
     var cancel=document.createElement('button');cancel.className='btn bg';cancel.type='button';cancel.textContent=opts.cancelText||'Cancel';
-    var ok=document.createElement('button');ok.className='btn '+(opts.danger?'bd2c':'bp');ok.type='button';ok.textContent=opts.okText||'OK';
-    actions.appendChild(cancel);actions.appendChild(ok);box.appendChild(actions);bg.appendChild(box);document.body.appendChild(bg);
-    function done(v){bg.remove();resolve(v)}
-    close.onclick=function(){done(opts.type==='confirm'?false:null)};cancel.onclick=close.onclick;
+    var ok=document.createElement('button');ok.className='btn '+(isDanger?'bd2c':'bp');ok.type='button';
+    ok.textContent=opts.okText||(isPrompt?'OK':'Confirm');
+    footer.appendChild(cancel);footer.appendChild(ok);box.appendChild(footer);
+    bg.appendChild(box);document.body.appendChild(bg);
+    function done(v){bg.style.opacity='0';bg.style.transition='opacity .15s';setTimeout(function(){bg.remove();resolve(v)},150)}
+    close.onclick=function(){done(isConfirm?false:null)};cancel.onclick=close.onclick;
     bg.onclick=function(e){if(e.target===bg)close.onclick()};
-    ok.onclick=function(){done(opts.type==='confirm'?true:(input?input.value:true))};
+    ok.onclick=function(){done(isConfirm?true:(input?input.value:true))};
     box.onkeydown=function(e){if(e.key==='Escape')close.onclick();if(e.key==='Enter'&&!opts.multiline&&e.target===input){e.preventDefault();ok.click()}};
-    setTimeout(function(){(input||ok).focus();if(input&&input.select)input.select()},20);
+    setTimeout(function(){(input||ok).focus();if(input&&input.select)input.select()},30);
   });
 }
 function uiPrompt(message,value,options){options=options||{};return uiDialog(Object.assign({type:'prompt',title:options.title||'Enter information',message:message||'',value:value==null?'':value},options))}
