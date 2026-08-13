@@ -393,7 +393,8 @@ var CONTROLLED_PHARMACY_BASE_KEYS=Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
   'controlled_moves','controlled_pdf_receipts',
-  'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only'
+  'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
+  'narcotic_restore_from_backup_20260728_v1'
 ]);
 function fsControlledPharmacyDeptKeys(cache){
   return(Array.isArray(cache&&cache.departments)?cache.departments:[])

@@ -80,7 +80,7 @@ export function mayWriteState(role, key) {
     return /^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
   }
   if (role === 'controlled_pharmacy') {
-    return /^(controlled_.*|accountability_.*|psychotropic_.*|audit_log|theme)$/.test(key);
+    return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|audit_log|theme)$/.test(key);
   }
   if (role === 'warehouse') {
     return /^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|audit_log|theme)$/.test(key);
