@@ -735,7 +735,7 @@ window.controlledStoragePrint=async function(id,mode){
     var tenant=window.fsTenantId&&fsTenantId();if(tenant)base.searchParams.set('tenant',tenant);
     var publicUrl=base.toString();
     var qr=window.makeReadableQR(publicUrl);
-    var qrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript():'';
+    var qrPrintRuntime=void 0; // kept for compat; auto-print uses a simple inline script
     var date=new Date().toLocaleDateString('en-GB');
     var content='';
 
@@ -874,7 +874,7 @@ window.controlledStoragePrint=async function(id,mode){
       'This list is electronically approved and certified and does not require a stamp.'+
       '</div>'+
       '<div class="public-url">'+esc(publicUrl)+'</div>'+
-      '<script>'+qrPrintRuntime+'<\/script>'+
+      '<script>(function(){var d=false;function p(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(p,200);else window.addEventListener("load",function(){setTimeout(p,200)},{once:true})})()\x3c/script>'+
       '</body></html>';
 
     popup.document.open();

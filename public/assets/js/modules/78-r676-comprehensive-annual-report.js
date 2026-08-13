@@ -594,7 +594,7 @@ function render() {
 
   const y = currentYear();
   const years = [];
-  for (let i = 2020; i <= y; i++) years.push(i);
+  for (let i = 2026; i <= y; i++) years.push(i);
   const selY = reportYear();
 
   host.innerHTML = `
@@ -639,7 +639,7 @@ function renderCrash() {
 
   const y = currentYear();
   const years = [];
-  for (let i = 2020; i <= y; i++) years.push(i);
+  for (let i = 2026; i <= y; i++) years.push(i);
   const fromY = reportYearFrom(), toY = reportYearTo();
 
   host.innerHTML = `
@@ -738,15 +738,13 @@ document.addEventListener('click', function (e) {
   if (trigger) setTimeout(() => activatePrintTab('orders'), 150);
 });
 
-// Also render on showPg hook
-const _origShowPg = window.showPg;
-window.showPg = function (pg) {
-  const r = typeof _origShowPg === 'function' ? _origShowPg(pg) : undefined;
-  if (String(pg) === 'pg-print') setTimeout(() => activatePrintTab('orders'), 100);
-  return r;
-};
+// Intercept pg-print navigation via a delegated listener on the nav (no showPg wrapper)
+document.addEventListener('click', function (ev) {
+  var btn = ev.target.closest('[data-pg="pg-print"]');
+  if (btn) setTimeout(() => activatePrintTab('orders'), 100);
+}, true);
 
-// Render immediately if pg-print is already visible
+// Render immediately if pg-print is already visible on load
 if (document.getElementById('pg-print') && getComputedStyle(document.getElementById('pg-print')).display !== 'none') {
   setTimeout(() => activatePrintTab('orders'), 300);
 }
