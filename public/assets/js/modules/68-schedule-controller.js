@@ -20,3 +20,5 @@
   window.addDispSlot=function(){q('mdisp-title').textContent='Add Dispense Slot';q('dslot-label').value='';q('dslot-time').value='10:00';q('dslot-notes').value='';q('dslot-edit-id').value='';globalThis.setScheduleDepartmentSelect(q('dslot-dept'),'all');globalThis.setScheduleDays(q('dslot-days'),[0,1,2,3,4]);globalThis.OM('mdisp-slot')};
   window.editDispSlot=function(i){var s=globalThis.getDispSlots()[i];if(!s)return;q('mdisp-title').textContent='Edit Dispense Slot';q('dslot-label').value=s.label||'';q('dslot-time').value=s.time||'';q('dslot-notes').value=s.notes||'';q('dslot-edit-id').value=i;globalThis.setScheduleDepartmentSelect(q('dslot-dept'),s.dept||'all');globalThis.setScheduleDays(q('dslot-days'),s.days||[]);globalThis.OM('mdisp-slot')};
 })();
+
+export {};

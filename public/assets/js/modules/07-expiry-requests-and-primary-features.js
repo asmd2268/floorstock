@@ -1,10 +1,11 @@
 import { publishLegacy } from '../core/legacy-registry.js';
+
 import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js';
 
 // ── EXPIRY DATES ─────────────────────────────────────────
-var canonicalRenderShelfAlertSettings=globalThis.renderShelfAlertSettings;
-var canonicalOpenAddExpiry=globalThis.openAddExpiry;
-var canonicalOpenEditExpiry=globalThis.openEditExpiry;
+globalThis.canonicalRenderShelfAlertSettings = globalThis.renderShelfAlertSettings;
+globalThis.canonicalOpenAddExpiry = globalThis.openAddExpiry;
+globalThis.canonicalOpenEditExpiry = globalThis.openEditExpiry;
 function renderShelfAlertSettings(){return typeof canonicalRenderShelfAlertSettings==='function'&&canonicalRenderShelfAlertSettings!==renderShelfAlertSettings?canonicalRenderShelfAlertSettings():undefined}
 function openAddExpiry(){return typeof canonicalOpenAddExpiry==='function'&&canonicalOpenAddExpiry!==openAddExpiry?canonicalOpenAddExpiry():undefined}
 function openEditExpiry(btn){return typeof canonicalOpenEditExpiry==='function'&&canonicalOpenEditExpiry!==openEditExpiry?canonicalOpenEditExpiry(btn):undefined}
@@ -332,16 +333,16 @@ function renderAn(){
 // Capture canonical references at module evaluation time.  publishLegacy()
 // later overwrites globalThis with these wrapper functions; resolving through
 // globalThis at call time would point back to the wrapper and recurse forever.
-var canonicalOrderRetentionCutoff=globalThis.orderRetentionCutoff;
-var canonicalRequestArchiveRecord=globalThis.requestArchiveRecord;
-var canonicalCleanupOldOrders=globalThis.cleanupOldOrders;
-var canonicalScheduleAutomaticOrderCleanup=globalThis.scheduleAutomaticOrderCleanup;
-var canonicalGetNextDispSlot=globalThis.getNextDispSlot;
-var canonicalFmt12=globalThis.fmt12;
-var canonicalDayBits=globalThis.dayBits;
-var canonicalTimeToMins=globalThis.timeToMins;
-var canonicalEnsureXLSX=globalThis.ensureXLSX;
-var canonicalGetCatOptions=globalThis.getCatOptions;
+globalThis.canonicalOrderRetentionCutoff = globalThis.orderRetentionCutoff;
+globalThis.canonicalRequestArchiveRecord = globalThis.requestArchiveRecord;
+globalThis.canonicalCleanupOldOrders = globalThis.cleanupOldOrders;
+globalThis.canonicalScheduleAutomaticOrderCleanup = globalThis.scheduleAutomaticOrderCleanup;
+globalThis.canonicalGetNextDispSlot = globalThis.getNextDispSlot;
+globalThis.canonicalFmt12 = globalThis.fmt12;
+globalThis.canonicalDayBits = globalThis.dayBits;
+globalThis.canonicalTimeToMins = globalThis.timeToMins;
+globalThis.canonicalEnsureXLSX = globalThis.ensureXLSX;
+globalThis.canonicalGetCatOptions = globalThis.getCatOptions;
 function orderRetentionCutoff(){return typeof canonicalOrderRetentionCutoff==='function'?canonicalOrderRetentionCutoff():undefined}
 function requestArchiveRecord(r){return typeof canonicalRequestArchiveRecord==='function'?canonicalRequestArchiveRecord(r):undefined}
 async function cleanupOldOrders(autoMode){return typeof canonicalCleanupOldOrders==='function'?canonicalCleanupOldOrders(autoMode):undefined}
@@ -352,8 +353,8 @@ function scheduleAutomaticOrderCleanup(){return typeof canonicalScheduleAutomati
 // Delegate to the canonical print-page state module without resolving through
 // globalThis at call time (publishing this legacy API would otherwise point
 // globalThis back to these wrappers and recurse forever).
-var canonicalSetPPP = globalThis.setPPP;
-var canonicalResetPrintPageState = globalThis.resetPrintPageState;
+globalThis.canonicalSetPPP = globalThis.setPPP;
+globalThis.canonicalResetPrintPageState = globalThis.resetPrintPageState;
 function setPPP(n,btn){
   if(typeof canonicalSetPPP==='function'&&canonicalSetPPP!==setPPP)return canonicalSetPPP(n,btn);
   globalThis.PPP=n;
@@ -1666,7 +1667,7 @@ function timeToMins(t){return typeof canonicalTimeToMins==='function'?canonicalT
 
 // ── Check monthly request count ───────────────────────────
 function getMonthlyReqCount(deptId){return canonicalMonthlyReqCount(deptId)}
-var canonicalGetMonthlyLimit=globalThis.getMonthlyLimit;
+globalThis.canonicalGetMonthlyLimit = globalThis.getMonthlyLimit;
 function getMonthlyLimit(deptId){return typeof canonicalGetMonthlyLimit==='function'&&canonicalGetMonthlyLimit!==getMonthlyLimit?canonicalGetMonthlyLimit(deptId):0}
 
 // ── RENDER schedule page ──────────────────────────────────
@@ -2342,7 +2343,9 @@ const __asdhLegacyApi = {
   renderShelfAlertSettings: renderShelfAlertSettings,
   openAddExpiry: openAddExpiry,
   openEditExpiry: openEditExpiry,
+  fsRoleScopedDepts: fsRoleScopedDepts,
   renderUsers: renderUsers,
+  bindUserPageActions: bindUserPageActions,
   updateUserRoleFields: updateUserRoleFields,
   openAddUser: openAddUser,
   saveUser: saveUser,
@@ -2440,6 +2443,7 @@ const __asdhLegacyApi = {
   applyBulkLimit: applyBulkLimit,
   getNextDispSlot: getNextDispSlot,
   ctlIsMaster: ctlIsMaster,
+  ctlCanManage: ctlCanManage,
   ctlCanEditCatalog: ctlCanEditCatalog,
   ctlCanAddCatalog: ctlCanAddCatalog,
   ctlCanEditDept: ctlCanEditDept,
@@ -2526,16 +2530,27 @@ const __asdhLegacyApi = {
   crashCart: crashCart,
   ctlSettingsGlobal: ctlSettingsGlobal,
   boot: boot,
-  _orderCleanupStarted: globalThis._orderCleanupStarted,
-  PPP: globalThis.PPP,
-  NOTE_TYPE_LABELS: globalThis.NOTE_TYPE_LABELS,
-  NOTE_STATUS_LABELS: globalThis.NOTE_STATUS_LABELS,
+  canonicalRenderShelfAlertSettings: globalThis.canonicalRenderShelfAlertSettings,
+  canonicalOpenAddExpiry: globalThis.canonicalOpenAddExpiry,
+  canonicalOpenEditExpiry: globalThis.canonicalOpenEditExpiry,
+  canonicalOrderRetentionCutoff: globalThis.canonicalOrderRetentionCutoff,
+  canonicalRequestArchiveRecord: globalThis.canonicalRequestArchiveRecord,
+  canonicalCleanupOldOrders: globalThis.canonicalCleanupOldOrders,
+  canonicalScheduleAutomaticOrderCleanup: globalThis.canonicalScheduleAutomaticOrderCleanup,
+  canonicalGetNextDispSlot: globalThis.canonicalGetNextDispSlot,
+  canonicalFmt12: globalThis.canonicalFmt12,
+  canonicalDayBits: globalThis.canonicalDayBits,
+  canonicalTimeToMins: globalThis.canonicalTimeToMins,
+  canonicalEnsureXLSX: globalThis.canonicalEnsureXLSX,
+  canonicalGetCatOptions: globalThis.canonicalGetCatOptions,
+  canonicalSetPPP: globalThis.canonicalSetPPP,
+  canonicalResetPrintPageState: globalThis.canonicalResetPrintPageState,
   _scanReader: globalThis._scanReader,
   _scanStream: globalThis._scanStream,
   _parsedScan: globalThis._parsedScan,
   _parsedType: globalThis._parsedType,
   DEFAULT_CATS: globalThis.DEFAULT_CATS,
-  DAY_NAMES: globalThis.DAY_NAMES,
+  canonicalGetMonthlyLimit: globalThis.canonicalGetMonthlyLimit,
   CTL_PDF_REVIEW: globalThis.CTL_PDF_REVIEW,
   CTL_BATCH_CTX: globalThis.CTL_BATCH_CTX,
   CTL_DEPT_SELECTED: globalThis.CTL_DEPT_SELECTED,
@@ -2548,7 +2563,9 @@ export {
   renderShelfAlertSettings,
   openAddExpiry,
   openEditExpiry,
+  fsRoleScopedDepts,
   renderUsers,
+  bindUserPageActions,
   updateUserRoleFields,
   openAddUser,
   saveUser,
@@ -2646,6 +2663,7 @@ export {
   applyBulkLimit,
   getNextDispSlot,
   ctlIsMaster,
+  ctlCanManage,
   ctlCanEditCatalog,
   ctlCanAddCatalog,
   ctlCanEditDept,
@@ -2733,8 +2751,5 @@ export {
   ctlSettingsGlobal,
   boot
 };
-function printCtlCustodyReport(){if(!CU||(['controlled_pharmacy','pharmacy'].indexOf(CU.role)<0&&!CU.master))return toast('Not authorized.','err');var rows=ctlMoves().slice(),disp=rows.filter(function(x){return x.type==='dispense'}),total=disp.reduce(function(s,x){return s+ctlNum(x.qty)},0),byDept={};disp.forEach(function(x){var k=x.deptName||x.dept||'Unknown';byDept[k]=(byDept[k]||0)+ctlNum(x.qty)});var deptRows=Object.keys(byDept).sort(function(a,b){return byDept[b]-byDept[a]}).map(function(k){return '<tr><td>'+esc(k)+'</td><td>'+byDept[k]+'</td><td>'+ (total?Math.round(byDept[k]/total*1000)/10:0)+'%</td></tr>'}).join('');ctlPrintHTML('Controlled custody report','<h1>Controlled Medicines Custody Report</h1><h2>تقرير عهدة الأدوية المخدرة والمقيدة</h2><p>Transactions: '+disp.length+' · Total dispensed: '+total+' · Movement records: '+rows.length+'</p><h3>Inpatient department consumption</h3><table><tr><th>Department</th><th>Units</th><th>Share</th></tr>'+deptRows+'</table><h3>Custody and movement log</h3>'+el('ctl-an-table').closest('table').outerHTML)}
-function ensureCtlCustodyReportButton(){var host=el('ctl-an-table');if(!host||el('ctl-custody-report-btn'))return;var b=document.createElement('button');b.id='ctl-custody-report-btn';b.className='btn bp bsm';b.type='button';b.textContent='📊 Custody report / تقرير العهدة';b.onclick=printCtlCustodyReport;var h=host.closest('.card')&&host.closest('.card').querySelector('.ch');if(h)h.appendChild(b)}
-if(typeof document!=='undefined')document.addEventListener('DOMContentLoaded',function(){setInterval(ensureCtlCustodyReportButton,1500)});
-export const legacyVariableNames = Object.freeze(["_orderCleanupStarted", "PPP", "NOTE_TYPE_LABELS", "NOTE_STATUS_LABELS", "_scanReader", "_scanStream", "_parsedScan", "_parsedType", "DEFAULT_CATS", "DAY_NAMES", "CTL_PDF_REVIEW", "CTL_BATCH_CTX", "CTL_DEPT_SELECTED", "MASTER_ACTUAL", "MASTER_EFFECTIVE", "SHELF_MED_SELECTED"]);
+export const legacyVariableNames = Object.freeze(["canonicalRenderShelfAlertSettings", "canonicalOpenAddExpiry", "canonicalOpenEditExpiry", "canonicalOrderRetentionCutoff", "canonicalRequestArchiveRecord", "canonicalCleanupOldOrders", "canonicalScheduleAutomaticOrderCleanup", "canonicalGetNextDispSlot", "canonicalFmt12", "canonicalDayBits", "canonicalTimeToMins", "canonicalEnsureXLSX", "canonicalGetCatOptions", "canonicalSetPPP", "canonicalResetPrintPageState", "_scanReader", "_scanStream", "_parsedScan", "_parsedType", "DEFAULT_CATS", "canonicalGetMonthlyLimit", "CTL_PDF_REVIEW", "CTL_BATCH_CTX", "CTL_DEPT_SELECTED", "MASTER_ACTUAL", "MASTER_EFFECTIVE", "SHELF_MED_SELECTED"]);
 export default __asdhLegacyApi;

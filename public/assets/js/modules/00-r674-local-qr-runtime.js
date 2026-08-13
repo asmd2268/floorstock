@@ -119,4 +119,5 @@ var api=Object.freeze({
 window.ASD_QR=api;
 window.makeReadableQR=createQrDataUrl;
 })();
+
 export {};

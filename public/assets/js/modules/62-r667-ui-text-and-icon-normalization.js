@@ -7,3 +7,5 @@ import {
 globalThis.decodeLegacySymbolEntities = decodeLegacySymbolEntities;
 globalThis.formatBilingualText = formatBilingualText;
 installUiTextNormalization();
+
+export {};

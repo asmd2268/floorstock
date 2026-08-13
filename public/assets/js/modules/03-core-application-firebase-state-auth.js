@@ -1,28 +1,29 @@
 import { publishLegacy } from '../core/legacy-registry.js';
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=R6.76.7';
-import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=R6.76.42';
+
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js';
+import { isSupportedLoginRole } from '../core/auth-role-policy.js';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
   fulfillmentEditReason,
-} from '../core/fulfillment-edit-policy.js?v=R6.76.7';
-import { loadScriptOnce } from '../core/script-loader.js?v=R6.76.7';
-import { debounce } from '../core/timing.js?v=R6.76.7';
-import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=R6.76.7';
-import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=R6.76.7';
-import { withTimeout } from '../core/promise-timeout.js?v=R6.76.7';
-import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=R6.76.7';
-import { tenantIdFromProfile, stateCollectionPath } from '../core/firestore-scope.js?v=R6.76.7';
-import { stateCollectionRef } from '../core/firestore-sdk-scope.js?v=R6.76.7';
-import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=R6.76.7';
+} from '../core/fulfillment-edit-policy.js';
+import { loadScriptOnce } from '../core/script-loader.js';
+import { debounce } from '../core/timing.js';
+import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js';
+import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js';
+import { withTimeout } from '../core/promise-timeout.js';
+import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js';
+import { tenantIdFromProfile, stateCollectionPath } from '../core/firestore-scope.js';
+import { stateCollectionRef } from '../core/firestore-sdk-scope.js';
+import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.
-var FB_APP=window.FB_APP||null;
-var FB_AUTH=window.FB_AUTH||null;
-var FB_DB=window.FB_DB||null;
-var FB_FUNCTIONS=window.FB_FUNCTIONS||null;
-var FB_APPCHECK=window.FB_APPCHECK||null;
+globalThis.FB_APP = window.FB_APP||null;
+globalThis.FB_AUTH = window.FB_AUTH||null;
+globalThis.FB_DB = window.FB_DB||null;
+globalThis.FB_FUNCTIONS = window.FB_FUNCTIONS||null;
+globalThis.FB_APPCHECK = window.FB_APPCHECK||null;
 // Keep an already-initialized Firebase session intact. Replacing these handles
 // during a module reload races Safari's auth restoration and makes protected
 // operations look anonymous ("Sign in first").
@@ -259,7 +260,7 @@ async function fsStateToken(forceRefresh){
     'Firebase data-access token timed out.'
   );
 }
-const fsTenantId = tenantIdFromProfile;
+globalThis.fsTenantId = tenantIdFromProfile;
 function fsStateCollectionPath(profile){return stateCollectionPath(profile||(globalThis.S&&S.scopeProfile))}
 function fsStateSdkCollection(profile){return stateCollectionRef(FB_DB,profile||(globalThis.S&&S.scopeProfile))}
 window.fsTenantId=function(){var profileId=fsTenantId(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
@@ -296,7 +297,7 @@ async function fsStateLoadFloorstockViaRest(){
   });
   return {cache:cache,source:'rest'};
 }
-var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
+globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','daily_limits_v2',
   'weekly_limits_v2','monthly_limits','rate_limits_v2','req_windows','disp_slots',
   'request_count_limits_v1','request_hour_grids_v1','requests','dept_notes','notes',
@@ -310,7 +311,7 @@ var DEPARTMENT_SHARED_STATE_KEYS=Object.freeze([
 // document reads.  They must never fall back to collection.list()/onSnapshot(),
 // otherwise their permitted state appears empty even though each document is
 // readable. Keep this list aligned with canReadPharmacyState() in firestore.rules.
-var PHARMACY_SCOPED_STATE_KEYS=Object.freeze([
+globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','requests','dept_notes','notes',
   'crash_carts','crash_cart_reports','accountability_assignments_v2','accountability_usage_v2',
   'accountability_receipts_v2','theme','facility_logo','pharmacy_category_config',
@@ -391,7 +392,7 @@ async function fsStateLoadScoped(keys,loader,source,profile){
   if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
-var CONTROLLED_PHARMACY_BASE_KEYS=Object.freeze([
+globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
   'controlled_moves','controlled_pdf_receipts','controlled_pharmacy_storage_v1',
@@ -1342,7 +1343,7 @@ function rowCls(m){
 }
 function OM(id){document.getElementById(id).classList.add('on')}
 function el(id){return document.getElementById(id)}
-var esc=window.fsEsc;
+globalThis.esc = window.fsEsc;
 
 /* R6.38 canonical shared helpers — one source of truth for permissions, names, audit actors and medicine matching. */
 window.fsEsc=function(value){return String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
@@ -1447,7 +1448,7 @@ function fillDS(){
   var sel=el('dsel');if(!sel)return;
   sel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
 }
-const fsLoginTimeout = withTimeout;
+globalThis.fsLoginTimeout = withTimeout;
 function fsLoginRestValue(value){
   if(!value||typeof value!=='object')return null;
   if(Object.prototype.hasOwnProperty.call(value,'nullValue'))return null;
@@ -1641,7 +1642,7 @@ setTimeout(function(){
     if(loginBtn){loginBtn.disabled=false;loginBtn.innerHTML=oldLoginText||'Sign In / دخول';}
   }
 }
-var logoutBusy=false;
+globalThis.logoutBusy = false;
 async function doLogout(){
   if(logoutBusy)return;logoutBusy=true;
   var logoutButtons=Array.from(document.querySelectorAll('[onclick*="doLogout"],#logout-btn,.logout-btn'));logoutButtons.forEach(function(button){button.disabled=true});
@@ -2239,24 +2240,39 @@ function ctlImportMasterText(){var t=el('ctl-import-text').value.trim();if(!t)re
 
 
 const __asdhLegacyApi = {
-  loadScriptOnce: loadScriptOnce,
-  ensurePDFJS: ensurePDFJS,
-  ensureZXing: ensureZXing,
   ensureFirebaseFunctions: ensureFirebaseFunctions,
-  debounce,
+  ensureCallableAuth: ensureCallableAuth,
+  fsCallableUrl: fsCallableUrl,
+  fsCallFunction: fsCallFunction,
+  hasPendingRequestDraft: hasPendingRequestDraft,
   initFirebase: initFirebase,
   waitForFirebase: waitForFirebase,
   _trackSave: _trackSave,
-  stateValueEqual: stateValueEqual,
-  fsStateRestEncode: fsStateRestEncode,
   fsStateToken: fsStateToken,
-  fsStateRestBase: fsStateRestBase,
+  fsStateCollectionPath: fsStateCollectionPath,
+  fsStateSdkCollection: fsStateSdkCollection,
   fsStateRestRequest: fsStateRestRequest,
   fsStateRestListCollection: fsStateRestListCollection,
   fsStateLoadFloorstockViaRest: fsStateLoadFloorstockViaRest,
+  fsIsPharmacyScopedProfile: fsIsPharmacyScopedProfile,
+  fsStateKeysForProfile: fsStateKeysForProfile,
+  fsStateLoadDocumentViaRest: fsStateLoadDocumentViaRest,
+  fsStateLoadDocumentViaSdk: fsStateLoadDocumentViaSdk,
+  fsStateScopeCacheForProfile: fsStateScopeCacheForProfile,
+  fsStateLoadScoped: fsStateLoadScoped,
+  fsControlledPharmacyDeptKeys: fsControlledPharmacyDeptKeys,
+  fsStateLoadControlledPharmacyScoped: fsStateLoadControlledPharmacyScoped,
+  fsPharmacyDepartmentStateKeys: fsPharmacyDepartmentStateKeys,
+  fsStateLoadPharmacyScoped: fsStateLoadPharmacyScoped,
+  fsStateLoadFloorstockForProfileViaRest: fsStateLoadFloorstockForProfileViaRest,
+  fsStateLoadFloorstockForProfileViaSdk: fsStateLoadFloorstockForProfileViaSdk,
   fsStateLoadUsersViaRest: fsStateLoadUsersViaRest,
   fsStateLoadFloorstockViaSdk: fsStateLoadFloorstockViaSdk,
+  fsHydrateDepartmentDirectoryForLogin: fsHydrateDepartmentDirectoryForLogin,
   fsStateLoadUsersViaSdk: fsStateLoadUsersViaSdk,
+  fsStateLoadUsersViaCallable: fsStateLoadUsersViaCallable,
+  fsStateIsLegacyMasterProfile: fsStateIsLegacyMasterProfile,
+  fsStateLoadLegacyUserDirectory: fsStateLoadLegacyUserDirectory,
   fsStateFirstSuccess: fsStateFirstSuccess,
   fsStateRestSetDocument: fsStateRestSetDocument,
   fsStateRestDeleteDocument: fsStateRestDeleteDocument,
@@ -2265,6 +2281,7 @@ const __asdhLegacyApi = {
   fsStateSetSmart: fsStateSetSmart,
   fsStateDeleteSmart: fsStateDeleteSmart,
   fsStateApplyCache: fsStateApplyCache,
+  fsStateScheduleManagedUserLoad: fsStateScheduleManagedUserLoad,
   warnPublicSync: warnPublicSync,
   syncPublicExpiry: syncPublicExpiry,
   fsR17Now: fsR17Now,
@@ -2315,7 +2332,6 @@ const __asdhLegacyApi = {
   rowCls: rowCls,
   OM: OM,
   el: el,
-  esc: esc,
   getAppUrl: getAppUrl,
   getPublicExpiryUrl: getPublicExpiryUrl,
   getMobileRequestUrl: getMobileRequestUrl,
@@ -2324,7 +2340,6 @@ const __asdhLegacyApi = {
   autoDetectCat: autoDetectCat,
   selRole: selRole,
   fillDS: fillDS,
-  fsLoginTimeout: fsLoginTimeout,
   fsLoginRestValue: fsLoginRestValue,
   fsLoginDecodeRestDocument: fsLoginDecodeRestDocument,
   fsLoginSnapshot: fsLoginSnapshot,
@@ -2349,6 +2364,7 @@ const __asdhLegacyApi = {
   deleteSelected: deleteSelected,
   filterR: filterR,
   renderReqs: renderReqs,
+  installRequestActionBindings: installRequestActionBindings,
   rcard: rcard,
   viewReq: viewReq,
   openFulfill: openFulfill,
@@ -2362,6 +2378,7 @@ const __asdhLegacyApi = {
   ctlPharmacy: ctlPharmacy,
   ctlSetPharmacy: ctlSetPharmacy,
   ctlDeptList: ctlDeptList,
+  ctlEnrichDeptList: ctlEnrichDeptList,
   ctlSetDeptList: ctlSetDeptList,
   ctlMoves: ctlMoves,
   ctlSaveMovementLog: ctlSaveMovementLog,
@@ -2382,7 +2399,11 @@ const __asdhLegacyApi = {
   ctlImportRows: ctlImportRows,
   ctlImportMasterFile: ctlImportMasterFile,
   ctlImportMasterText: ctlImportMasterText,
-  FIREBASE_CONFIG: globalThis.FIREBASE_CONFIG,
+  FB_APP: globalThis.FB_APP,
+  FB_AUTH: globalThis.FB_AUTH,
+  FB_DB: globalThis.FB_DB,
+  FB_FUNCTIONS: globalThis.FB_FUNCTIONS,
+  FB_APPCHECK: globalThis.FB_APPCHECK,
   _lazyScripts: globalThis._lazyScripts,
   renderInvDebounced: globalThis.renderInvDebounced,
   renderReqFormDebounced: globalThis.renderReqFormDebounced,
@@ -2392,6 +2413,10 @@ const __asdhLegacyApi = {
   _pendingWrites: globalThis._pendingWrites,
   _trackedSaves: globalThis._trackedSaves,
   _lastSaveFailure: globalThis._lastSaveFailure,
+  fsTenantId: globalThis.fsTenantId,
+  DEPARTMENT_SHARED_STATE_KEYS: globalThis.DEPARTMENT_SHARED_STATE_KEYS,
+  PHARMACY_SCOPED_STATE_KEYS: globalThis.PHARMACY_SCOPED_STATE_KEYS,
+  CONTROLLED_PHARMACY_BASE_KEYS: globalThis.CONTROLLED_PHARMACY_BASE_KEYS,
   S: globalThis.S,
   _publicSyncWarningAt: globalThis._publicSyncWarningAt,
   FS_R17_MED_MIGRATION_PENDING: globalThis.FS_R17_MED_MIGRATION_PENDING,
@@ -2401,34 +2426,52 @@ const __asdhLegacyApi = {
   _gdFiltered: globalThis._gdFiltered,
   _deletedDeptRepairBusy: globalThis._deletedDeptRepairBusy,
   MEDS: globalThis.MEDS,
+  esc: globalThis.esc,
   CU: globalThis.CU,
   RFS: globalThis.RFS,
   EDID: globalThis.EDID,
   FRID: globalThis.FRID,
   IROWS: globalThis.IROWS,
   SROLE: globalThis.SROLE,
+  fsLoginTimeout: globalThis.fsLoginTimeout,
+  logoutBusy: globalThis.logoutBusy,
   CTL_VIEW: globalThis.CTL_VIEW
 };
 publishLegacy("03-core-application-firebase-state-auth.js", __asdhLegacyApi);
 export {
-  loadScriptOnce,
-  ensurePDFJS,
-  ensureZXing,
   ensureFirebaseFunctions,
-  debounce,
+  ensureCallableAuth,
+  fsCallableUrl,
+  fsCallFunction,
+  hasPendingRequestDraft,
   initFirebase,
   waitForFirebase,
   _trackSave,
-  stateValueEqual,
-  fsStateRestEncode,
   fsStateToken,
-  fsStateRestBase,
+  fsStateCollectionPath,
+  fsStateSdkCollection,
   fsStateRestRequest,
   fsStateRestListCollection,
   fsStateLoadFloorstockViaRest,
+  fsIsPharmacyScopedProfile,
+  fsStateKeysForProfile,
+  fsStateLoadDocumentViaRest,
+  fsStateLoadDocumentViaSdk,
+  fsStateScopeCacheForProfile,
+  fsStateLoadScoped,
+  fsControlledPharmacyDeptKeys,
+  fsStateLoadControlledPharmacyScoped,
+  fsPharmacyDepartmentStateKeys,
+  fsStateLoadPharmacyScoped,
+  fsStateLoadFloorstockForProfileViaRest,
+  fsStateLoadFloorstockForProfileViaSdk,
   fsStateLoadUsersViaRest,
   fsStateLoadFloorstockViaSdk,
+  fsHydrateDepartmentDirectoryForLogin,
   fsStateLoadUsersViaSdk,
+  fsStateLoadUsersViaCallable,
+  fsStateIsLegacyMasterProfile,
+  fsStateLoadLegacyUserDirectory,
   fsStateFirstSuccess,
   fsStateRestSetDocument,
   fsStateRestDeleteDocument,
@@ -2437,6 +2480,7 @@ export {
   fsStateSetSmart,
   fsStateDeleteSmart,
   fsStateApplyCache,
+  fsStateScheduleManagedUserLoad,
   warnPublicSync,
   syncPublicExpiry,
   fsR17Now,
@@ -2487,7 +2531,6 @@ export {
   rowCls,
   OM,
   el,
-  esc,
   getAppUrl,
   getPublicExpiryUrl,
   getMobileRequestUrl,
@@ -2496,7 +2539,6 @@ export {
   autoDetectCat,
   selRole,
   fillDS,
-  fsLoginTimeout,
   fsLoginRestValue,
   fsLoginDecodeRestDocument,
   fsLoginSnapshot,
@@ -2521,6 +2563,7 @@ export {
   deleteSelected,
   filterR,
   renderReqs,
+  installRequestActionBindings,
   rcard,
   viewReq,
   openFulfill,
@@ -2534,6 +2577,7 @@ export {
   ctlPharmacy,
   ctlSetPharmacy,
   ctlDeptList,
+  ctlEnrichDeptList,
   ctlSetDeptList,
   ctlMoves,
   ctlSaveMovementLog,
@@ -2555,5 +2599,5 @@ export {
   ctlImportMasterFile,
   ctlImportMasterText
 };
-export const legacyVariableNames = Object.freeze(["FIREBASE_CONFIG", "_lazyScripts", "renderInvDebounced", "renderReqFormDebounced", "renderControlledDebounced", "_firebasePersistenceAttempted", "_firebaseReadyPromise", "_pendingWrites", "_trackedSaves", "_lastSaveFailure", "S", "_publicSyncWarningAt", "FS_R17_MED_MIGRATION_PENDING", "FS_R18_EXPIRY_MIGRATION_PENDING", "_gdRawRef", "_gdDeletedRef", "_gdFiltered", "_deletedDeptRepairBusy", "MEDS", "CU", "RFS", "EDID", "FRID", "IROWS", "SROLE", "CTL_VIEW"]);
+export const legacyVariableNames = Object.freeze(["FB_APP", "FB_AUTH", "FB_DB", "FB_FUNCTIONS", "FB_APPCHECK", "_lazyScripts", "renderInvDebounced", "renderReqFormDebounced", "renderControlledDebounced", "_firebasePersistenceAttempted", "_firebaseReadyPromise", "_pendingWrites", "_trackedSaves", "_lastSaveFailure", "fsTenantId", "DEPARTMENT_SHARED_STATE_KEYS", "PHARMACY_SCOPED_STATE_KEYS", "CONTROLLED_PHARMACY_BASE_KEYS", "S", "_publicSyncWarningAt", "FS_R17_MED_MIGRATION_PENDING", "FS_R18_EXPIRY_MIGRATION_PENDING", "_gdRawRef", "_gdDeletedRef", "_gdFiltered", "_deletedDeptRepairBusy", "MEDS", "esc", "CU", "RFS", "EDID", "FRID", "IROWS", "SROLE", "fsLoginTimeout", "logoutBusy", "CTL_VIEW"]);
 export default __asdhLegacyApi;

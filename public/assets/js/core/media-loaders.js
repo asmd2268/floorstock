@@ -1,4 +1,4 @@
-import { loadScriptOnce } from './script-loader.js?v=R6.76.7';
+import { loadScriptOnce } from './script-loader.js';
 
 export function ensurePDFJS() {
   return loadScriptOnce('PDF', 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js', () => typeof pdfjsLib !== 'undefined')

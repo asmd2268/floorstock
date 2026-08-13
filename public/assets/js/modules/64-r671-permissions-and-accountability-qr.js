@@ -40,4 +40,5 @@ setTimeout(installPermissionUi,0);
 var previousStart=window.startApp;if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(installPermissionUi,500);return result};
 document.addEventListener('click',function(event){var action=event.target.closest('[data-acc2-qr-action]');if(action){var dept=action.getAttribute('data-dept'),kind=action.getAttribute('data-acc2-qr-action');if(kind==='select'){document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(dept))+'"]:not(:disabled)').forEach(function(x){x.checked=true})}else if(kind==='create')createHandover(dept,action);return}if(event.target.closest('[data-r671-close]')){closeModal();return}var copy=event.target.closest('[data-r671-copy]');if(copy){var value=copy.getAttribute('data-r671-copy')||'';navigator.clipboard&&navigator.clipboard.writeText(value).then(function(){window.toast&&toast('Link copied ✓','succ')}).catch(function(){window.prompt('Copy link',value)})}},true);
 })();
+
 export {};

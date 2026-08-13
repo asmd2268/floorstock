@@ -1,4 +1,4 @@
-import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=R6.76.7';
+import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js';
 
 (function(){
 'use strict';
@@ -134,4 +134,5 @@ if(typeof previousStart==='function')window.startApp=function(){window.resetFloo
 // recurse until the browser reports “Maximum call stack size exceeded”.
 document.documentElement.dataset.asdhSessionDefaults=VERSION;
 })();
+
 export {};

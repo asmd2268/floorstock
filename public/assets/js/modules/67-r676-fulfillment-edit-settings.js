@@ -3,7 +3,7 @@ import {
   DEFAULT_FULFILLMENT_EDIT_HOURS,
   MAX_FULFILLMENT_EDIT_HOURS,
   normalizeFulfillmentEditHours,
-} from '../core/fulfillment-edit-policy.js?v=R6.76.58';
+} from '../core/fulfillment-edit-policy.js';
 
 (function(){
 'use strict';
@@ -56,4 +56,5 @@ async function save(){
 }
 
 })();
+
 export {};

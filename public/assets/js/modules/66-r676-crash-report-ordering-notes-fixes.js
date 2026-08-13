@@ -1,4 +1,4 @@
-import { formatOrderingUnavailable } from '../core/bilingual-ordering-message.js?v=R6.76.7';
+import { formatOrderingUnavailable } from '../core/bilingual-ordering-message.js';
 
 (function(){
 'use strict';
