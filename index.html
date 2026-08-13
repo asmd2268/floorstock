@@ -224,11 +224,16 @@
 <!-- Tab navigation -->
 <div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--bd);padding-bottom:0">
 <button class="btn bp bsm" id="pg-print-tab-orders" style="border-bottom:3px solid var(--ac);border-radius:6px 6px 0 0;margin-bottom:-2px">🖨 Print Orders / طباعة الطلبات</button>
-<button class="btn bg bsm" id="pg-print-tab-analytics" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">📊 Analytics / الإحصائيات</button>
+<button class="btn bg bsm" id="pg-print-tab-analytics" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">💊 Narcotic Analytics / إحصائيات المخدرات</button>
+<button class="btn bg bsm" id="pg-print-tab-crashcart" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">🚑 Crash Cart Analytics / إحصاءات عربات الطوارئ</button>
 </div>
-<!-- Analytics panel -->
+<!-- Narcotic analytics panel -->
 <div id="pg-print-panel-analytics" style="display:none">
 <div id="comprehensive-annual-report-host"></div>
+</div>
+<!-- Crash cart analytics panel -->
+<div id="pg-print-panel-crashcart" style="display:none">
+<div id="car-crash-host"></div>
 </div>
 <!-- Orders panel -->
 <div id="pg-print-panel-orders">
@@ -761,6 +766,12 @@ Furosemide 40mg tab	5	20</pre>
 <div class="pg" id="pg-schedule">
 <div class="stitle">⏰ Schedule &amp; Limits / جدول الطلبيات</div>
 <div class="ssub">Control when departments can submit requests and when pharmacy dispenses. Set monthly order limits per department.</div>
+<div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--bd);padding-bottom:0">
+<button class="btn bp bsm" id="sched-tab-windows" style="border-bottom:3px solid var(--ac);border-radius:6px 6px 0 0;margin-bottom:-2px">📥 Request Windows / أوقات الطلبيات</button>
+<button class="btn bg bsm" id="sched-tab-slots" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">📤 Dispense Slots / مواعيد الصرف</button>
+<button class="btn bg bsm" id="sched-tab-limits" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">📊 Monthly Limits / الحد الشهري</button>
+</div>
+<div id="sched-panel-windows">
 <div class="card mb14" id="request-hour-grid-card">
 <div class="ch">
 <div><span class="ct">📥 Request Windows / أوقات قبول الطلبيات</span><div class="fhint">Weekly 24-hour schedule per department. Light cells are allowed; dark cells are blocked.</div></div>
@@ -779,6 +790,8 @@ Furosemide 40mg tab	5	20</pre>
 <div class="fl jb ic" style="margin-top:12px;gap:8px;flex-wrap:wrap"><span class="fhint">The New Request form remains visible outside allowed hours, but quantity fields and submission are locked.</span><button class="btn bs request-grid-save-btn schedule-manage-only" type="button" data-asdh-binding="b086">Save and apply / حفظ وتطبيق</button></div><div aria-live="polite" class="fhint" id="request-grid-save-status" role="status" style="margin-top:8px"></div>
 </div>
 </div>
+</div>
+<div id="sched-panel-slots" style="display:none">
 <div class="card mb14">
 <div class="ch">
 <span class="ct">📤 Dispense Slots / مواعيد الصرف</span>
@@ -789,6 +802,8 @@ Furosemide 40mg tab	5	20</pre>
 <div id="disp-slots-list"></div>
 </div>
 </div>
+</div>
+<div id="sched-panel-limits" style="display:none">
 <div class="card">
 <div class="ch">
 <span class="ct">📊 Monthly Order Limits / الحد الشهري للطلبيات</span>
@@ -800,6 +815,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="cb">
 <p style="font-size:12px;color:var(--tx2);margin-bottom:14px">Max number of requests each department can submit per calendar month.</p>
 <div id="monthly-limits-list"></div>
+</div>
 </div>
 </div>
 </div>

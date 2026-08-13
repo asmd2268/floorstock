@@ -582,20 +582,63 @@ function printNarcoticReport() {
   openPrintWindow('Narcotic Analytics', body);
 }
 
-/* ── MAIN RENDER ────────────────────────────────────────────────────────── */
+/* ── RENDER: narcotic analytics (in its own tab) ────────────────────────── */
 function render() {
   const host = document.getElementById('comprehensive-annual-report-host');
   if (!host || !permitted()) return;
-
   injectStyles();
 
   const y = currentYear();
   const years = [];
   for (let i = 2020; i <= y + 1; i++) years.push(i);
-  const fromY = reportYearFrom(), toY = reportYearTo(), selY = reportYear();
+  const selY = reportYear();
 
   host.innerHTML = `
-    <!-- CRASH CART ANALYTICS CARD -->
+    <div class="car-card">
+      <div class="car-header">
+        <div>
+          <div class="car-title">💊 Narcotic &amp; Controlled Dispensing / إحصاءات المخدرات</div>
+          <div class="car-sub">Master · Pharmacy Director · Inpatient Supervisor</div>
+        </div>
+        <div class="car-controls">
+          <label style="font-size:12px">Year / السنة
+            <select id="car-year">${years.map(v => `<option value="${v}"${v === selY ? ' selected' : ''}>${v}</option>`).join('')}</select>
+          </label>
+          <button class="btn bp bsm" id="car-narc-print">🖨 Print / طباعة</button>
+        </div>
+      </div>
+      <div id="car-narc-body">${renderNarcoticSection()}</div>
+      <div class="car-brand">${BRAND}</div>
+    </div>
+  `;
+
+  const yearEl = document.getElementById('car-year');
+  if (yearEl && !yearEl.dataset.bound) {
+    yearEl.dataset.bound = '1';
+    yearEl.addEventListener('change', () => {
+      const body = document.getElementById('car-narc-body');
+      if (body) body.innerHTML = renderNarcoticSection();
+    });
+  }
+  const narcPrint = document.getElementById('car-narc-print');
+  if (narcPrint && !narcPrint.dataset.bound) {
+    narcPrint.dataset.bound = '1';
+    narcPrint.addEventListener('click', printNarcoticReport);
+  }
+}
+
+/* ── RENDER: crash cart analytics (dedicated tab) ───────────────────────── */
+function renderCrash() {
+  const host = document.getElementById('car-crash-host');
+  if (!host || !permitted()) return;
+  injectStyles();
+
+  const y = currentYear();
+  const years = [];
+  for (let i = 2020; i <= y + 1; i++) years.push(i);
+  const fromY = reportYearFrom(), toY = reportYearTo();
+
+  host.innerHTML = `
     <div class="car-card">
       <div class="car-header">
         <div>
@@ -615,27 +658,8 @@ function render() {
       <div id="car-crash-body">${renderCrashSection()}</div>
       <div class="car-brand">${BRAND}</div>
     </div>
-
-    <!-- NARCOTIC ANALYTICS CARD -->
-    <div class="car-card">
-      <div class="car-header">
-        <div>
-          <div class="car-title">💊 Narcotic & Controlled Dispensing / إحصاءات المخدرات</div>
-          <div class="car-sub">Master · Pharmacy Director · Inpatient Supervisor</div>
-        </div>
-        <div class="car-controls">
-          <label style="font-size:12px">Year / السنة
-            <select id="car-year">${years.map(v => `<option value="${v}"${v === selY ? ' selected' : ''}>${v}</option>`).join('')}</select>
-          </label>
-          <button class="btn bp bsm" id="car-narc-print">🖨 Print / طباعة</button>
-        </div>
-      </div>
-      <div id="car-narc-body">${renderNarcoticSection()}</div>
-      <div class="car-brand">${BRAND}</div>
-    </div>
   `;
 
-  // Bind crash cart controls
   ['car-year-from','car-year-to'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.dataset.bound) {
@@ -646,59 +670,47 @@ function render() {
       });
     }
   });
-
   const crashPrint = document.getElementById('car-crash-print');
   if (crashPrint && !crashPrint.dataset.bound) {
     crashPrint.dataset.bound = '1';
     crashPrint.addEventListener('click', printCrashReport);
   }
-
-  // Bind narcotic controls
-  const yearEl = document.getElementById('car-year');
-  if (yearEl && !yearEl.dataset.bound) {
-    yearEl.dataset.bound = '1';
-    yearEl.addEventListener('change', () => {
-      const body = document.getElementById('car-narc-body');
-      if (body) body.innerHTML = renderNarcoticSection();
-    });
-  }
-
-  const narcPrint = document.getElementById('car-narc-print');
-  if (narcPrint && !narcPrint.dataset.bound) {
-    narcPrint.dataset.bound = '1';
-    narcPrint.addEventListener('click', printNarcoticReport);
-  }
 }
 
 /* ── TAB SWITCHING ──────────────────────────────────────────────────────── */
 function activatePrintTab(tab) {
-  const ordersPanel    = document.getElementById('pg-print-panel-orders');
-  const analyticsPanel = document.getElementById('pg-print-panel-analytics');
-  const tabOrders      = document.getElementById('pg-print-tab-orders');
-  const tabAnalytics   = document.getElementById('pg-print-tab-analytics');
-  if (!ordersPanel || !analyticsPanel) return;
+  const panels = {
+    orders:    document.getElementById('pg-print-panel-orders'),
+    analytics: document.getElementById('pg-print-panel-analytics'),
+    crashcart: document.getElementById('pg-print-panel-crashcart'),
+  };
+  const tabs = {
+    orders:    document.getElementById('pg-print-tab-orders'),
+    analytics: document.getElementById('pg-print-tab-analytics'),
+    crashcart: document.getElementById('pg-print-tab-crashcart'),
+  };
+  if (!panels.orders) return;
 
-  const isAnalytics = tab === 'analytics';
-  ordersPanel.style.display    = isAnalytics ? 'none' : '';
-  analyticsPanel.style.display = isAnalytics ? '' : 'none';
+  Object.keys(panels).forEach(k => {
+    const p = panels[k], t = tabs[k];
+    if (!p) return;
+    const active = k === tab;
+    p.style.display = active ? '' : 'none';
+    if (t) {
+      t.className = active ? 'btn bp bsm' : 'btn bg bsm';
+      t.style.opacity = active ? '1' : '0.65';
+      t.style.borderBottom = active ? '3px solid var(--ac)' : '';
+    }
+  });
 
-  if (tabOrders) {
-    tabOrders.className = isAnalytics ? 'btn bg bsm' : 'btn bp bsm';
-    tabOrders.style.opacity = isAnalytics ? '0.65' : '1';
-    tabOrders.style.borderBottom = isAnalytics ? '' : '3px solid var(--ac)';
-  }
-  if (tabAnalytics) {
-    tabAnalytics.className = isAnalytics ? 'btn bp bsm' : 'btn bg bsm';
-    tabAnalytics.style.opacity = isAnalytics ? '1' : '0.65';
-    tabAnalytics.style.borderBottom = isAnalytics ? '3px solid var(--ac)' : '';
-  }
-
-  if (isAnalytics) setTimeout(render, 50);
+  if (tab === 'analytics') setTimeout(render, 50);
+  if (tab === 'crashcart') setTimeout(renderCrash, 50);
 }
 
 document.addEventListener('click', function (e) {
   if (e.target.closest('#pg-print-tab-orders')) { activatePrintTab('orders'); return; }
   if (e.target.closest('#pg-print-tab-analytics')) { activatePrintTab('analytics'); return; }
+  if (e.target.closest('#pg-print-tab-crashcart')) { activatePrintTab('crashcart'); return; }
 
   // Navigate-to-print-page triggers
   const trigger = e.target.closest('[data-pg="pg-print"],[data-showpg="pg-print"]') ||

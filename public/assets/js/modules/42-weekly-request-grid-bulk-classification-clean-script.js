@@ -665,6 +665,17 @@ window.v13ApplyBulkClassification=async function(){var modal=E('v13q-bulk-class-
 window.floorstockDeleteUiRefresh=floorstockDeleteUiRefresh;
 window.floorstockPurgeDepartmentState=floorstockPurgeDepartmentState;
 
+function activateSchedTab(tab){
+  ['windows','slots','limits'].forEach(function(k){
+    var p=E('sched-panel-'+k),t=E('sched-tab-'+k);if(!p)return;
+    var active=k===tab;
+    p.style.display=active?'':'none';
+    if(t){t.className=active?'btn bp bsm':'btn bg bsm';t.style.opacity=active?'1':'0.65';t.style.borderBottom=active?'3px solid var(--ac)':'';}
+  });
+}
+document.addEventListener('click',function(e){
+  ['windows','slots','limits'].forEach(function(k){if(e.target.closest('#sched-tab-'+k)){activateSchedTab(k);}});
+});
 function boot(){if(E('pg-schedule'))window.renderRequestHourGridUI();if(window.CU&&String(CU.role)==='department')applyRequestLock()}
 boot();
 })();
