@@ -394,7 +394,8 @@ var CONTROLLED_PHARMACY_BASE_KEYS=Object.freeze([
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
   'controlled_moves','controlled_pdf_receipts',
   'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
-  'narcotic_restore_from_backup_20260728_v1'
+  'narcotic_restore_from_backup_20260728_v1',
+  'controlled_dept_list_name_enrich_v1'
 ]);
 function fsControlledPharmacyDeptKeys(cache){
   return(Array.isArray(cache&&cache.departments)?cache.departments:[])
@@ -2108,7 +2109,16 @@ function ctlSetWarehouse(v){return S.s('controlled_warehouse',v)}
 function ctlPharmacy(){return S.g('controlled_pharmacy_stock')||{}}
 function ctlSetPharmacy(v){return S.s('controlled_pharmacy_stock',v)}
 function ctlDeptList(dept){return S.g('controlled_dept_list_'+dept)||[]}
-async function ctlSetDeptList(dept,v){var out=await S.s('controlled_dept_list_'+dept,v);try{if(window.FB_DB&&typeof ctlPublishDept==='function')await ctlPublishDept(dept)}catch(e){warnPublicSync('Controlled custody',e)}return out}
+function ctlEnrichDeptList(list){
+  var cat=ctlCatalog();
+  return list.map(function(row){
+    if(row.name)return row;
+    var m=cat.find(function(m){return m.id===row.medId})||{};
+    if(!m.name)return row;
+    return Object.assign({},row,{name:m.name,moh:m.moh||row.moh||'',nupco:m.nupco||row.nupco||'',classification:m.classification||row.classification||'narcotic'});
+  });
+}
+async function ctlSetDeptList(dept,v){var out=await S.s('controlled_dept_list_'+dept,ctlEnrichDeptList(v||[]));try{if(window.FB_DB&&typeof ctlPublishDept==='function')await ctlPublishDept(dept)}catch(e){warnPublicSync('Controlled custody',e)}return out}
 function ctlMoves(){return S.g('controlled_moves')||[]}
 async function ctlSaveMovementLog(record,context){
   try{await ctlMove(record);return true}catch(e){console.error((context||'Controlled action')+' movement log failed',e);return false}
