@@ -1055,26 +1055,24 @@ window.addEventListener('load',start,{once:true});
     '<main class="sheet">'+layoutHtml('landscape')+layoutHtml('portrait')+'</main>'+
     '<script>'+runtime+'<\/script></body></html>';
 }
+function openBlobPrintR5(html){
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var w=window.open(url,'_blank');
+  setTimeout(function(){URL.revokeObjectURL(url);},60000);
+  return !!w;
+}
 window.printDepartmentCustodyExact=async function(dept,options){
   options=options||{};
   dept=fsR5S(dept||fsR5ControlledDept(),'');
-  var popup=options.printWindow||window.open('about:blank','_blank');
-  if(!popup){fsR5Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');return false;}
-  popup.document.open();
-  popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px">Preparing My controlled list… / جاري تجهيز عهدتي…</body></html>');
-  popup.document.close();
+  if(options.printWindow){try{options.printWindow.close();}catch(e){}}
   try{
     var result=await fsLoginTimeout(fsR5ControlledRows(dept),18000,'Controlled custody print data timed out.');
     if(!result.rows||!result.rows.length){
-      popup.document.open();
-      popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px"><h2>No controlled medicines were found for this department.</h2><h2>لم يتم العثور على أدوية مخدرة أو مقيدة لهذا القسم.</h2><p>Checked department identifiers: '+fsR5Esc((result.candidates||[dept]).join(', '))+'</p></body></html>');
-      popup.document.close();
       fsR5Toast('My controlled list is empty / قائمة عهدتي فارغة','err');
       return false;
     }
-    popup.document.open();
-    popup.document.write(fsR5ControlledPrintHtml(result.dept||dept,result.rows));
-    popup.document.close();
+    openBlobPrintR5(fsR5ControlledPrintHtml(result.dept||dept,result.rows));
     setTimeout(function(){
       try{
         if(typeof window.ctlPublishDept==='function')Promise.resolve(window.ctlPublishDept(result.dept||dept)).catch(function(error){console.warn('Background controlled public publish skipped.',error);});
@@ -1083,10 +1081,7 @@ window.printDepartmentCustodyExact=async function(dept,options){
     return true;
   }catch(error){
     console.error('Controlled list print failed',error);
-    popup.document.open();
-    popup.document.write('<!doctype html><html><meta charset="utf-8"><body style="font-family:Arial,Tahoma,sans-serif;padding:24px"><h2>Unable to prepare My controlled list</h2><h2>تعذر تجهيز عهدتي</h2><pre style="white-space:pre-wrap">'+fsR5Esc(error&&error.message||error)+'</pre></body></html>');
-    popup.document.close();
-    fsR5Toast('Unable to prepare My controlled list / تعذر تجهيز عهدتي','err');
+    fsR5Toast('Unable to prepare My controlled list: '+String(error&&error.message||error),'err');
     return false;
   }
 };
@@ -1094,9 +1089,7 @@ window.ctlConfirmDepartmentPrint=async function(event){
   if(event&&typeof event.preventDefault==='function')event.preventDefault();
   var dept=fsR5ControlledDept();
   if(!dept)return fsR5Toast('Department is not assigned / لم يتم تحديد القسم','err');
-  var popup=window.open('about:blank','_blank');
-  if(!popup)return fsR5Toast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');
-  return window.printDepartmentCustodyExact(dept,{printWindow:popup});
+  return window.printDepartmentCustodyExact(dept,{});
 };
 window.printControlledCurrent=function(){return window.ctlConfirmDepartmentPrint()};
 window.finalControlledPrintRun=function(){return window.ctlConfirmDepartmentPrint()};
