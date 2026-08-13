@@ -1642,7 +1642,18 @@ function officialPrintHeaderHTML(){
     '<div dir="rtl" style="text-align:right">'+rows(arabic,'rtl')+'</div>'+
   '</div>';
 }
-
+window.fsOfficialPrint=function(opts){
+  var title=String(opts&&opts.title||'ASDHealth');
+  var html=String(opts&&opts.html||'');
+  var css=String(opts&&opts.css||'');
+  var w=window.open('','_blank');
+  if(!w){window.toast&&window.toast('Allow pop-ups to print.','err');return;}
+  var hdr=typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'';
+  var brand='<div style="text-align:center;font-size:8.5pt;color:#555;margin-top:14px">By Ali Abudahash</div>';
+  var pcss='@page{size:A4;margin:10mm}body{font-family:Arial,Tahoma,sans-serif;background:#fff;color:#111;margin:0}'+css;
+  w.document.write('<!doctype html><html><head><meta charset="utf-8"><title>'+title.replace(/</g,'&lt;')+'</title><style>'+pcss+'</style></head><body>'+hdr+html+brand+'<script>(function(){var d=false;function g(){if(d)return;d=true;window.print()}window.addEventListener("load",function(){setTimeout(g,300)},{once:true});setTimeout(g,1500)})()</sc'+'ript></body></html>');
+  w.document.close();
+};
 
 // ── CATEGORY SELECTOR OPTIONS ────────────────────────────
 function getCatOptions(selected){return typeof canonicalGetCatOptions==='function'?canonicalGetCatOptions(selected):undefined}

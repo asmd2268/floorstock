@@ -496,6 +496,10 @@ th{background:#dbeafe;color:#102a5c}
 `;
 
 function openPrintWindow(title, bodyHtml) {
+  if (typeof window.fsOfficialPrint === 'function') {
+    window.fsOfficialPrint({ title, html: bodyHtml, css: PRINT_CSS });
+    return;
+  }
   const w = window.open('', '_blank');
   if (!w) { window.toast && window.toast('Allow pop-ups to print.', 'err'); return; }
   const footer = `<div class="brand">${BRAND}</div>`;
@@ -589,8 +593,11 @@ function render() {
   injectStyles();
 
   const y = currentYear();
-  const years = [];
-  for (let i = 2020; i <= y + 1; i++) years.push(i);
+  const moveYears = new Set((typeof window.ctlMoves === 'function' ? (window.ctlMoves() || []) : [])
+    .map(m => { const d = m.at ? new Date(m.at) : null; return d && d.getFullYear(); })
+    .filter(Boolean));
+  moveYears.add(y);
+  const years = Array.from(moveYears).filter(yr => yr >= 2020 && yr <= y).sort((a, b) => a - b);
   const selY = reportYear();
 
   host.innerHTML = `
@@ -634,8 +641,11 @@ function renderCrash() {
   injectStyles();
 
   const y = currentYear();
-  const years = [];
-  for (let i = 2020; i <= y + 1; i++) years.push(i);
+  const crashYears = new Set((typeof window.crashReports === 'function' ? (window.crashReports() || []) : [])
+    .map(r => { const d = r.at ? new Date(r.at) : null; return d && d.getFullYear(); })
+    .filter(Boolean));
+  crashYears.add(y);
+  const years = Array.from(crashYears).filter(yr => yr >= 2020 && yr <= y).sort((a, b) => a - b);
   const fromY = reportYearFrom(), toY = reportYearTo();
 
   host.innerHTML = `
@@ -683,11 +693,13 @@ function activatePrintTab(tab) {
     orders:    document.getElementById('pg-print-panel-orders'),
     analytics: document.getElementById('pg-print-panel-analytics'),
     crashcart: document.getElementById('pg-print-panel-crashcart'),
+    drugs:     document.getElementById('pg-print-panel-drugs'),
   };
   const tabs = {
     orders:    document.getElementById('pg-print-tab-orders'),
     analytics: document.getElementById('pg-print-tab-analytics'),
     crashcart: document.getElementById('pg-print-tab-crashcart'),
+    drugs:     document.getElementById('pg-print-tab-drugs'),
   };
   if (!panels.orders) return;
 
@@ -711,6 +723,12 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('#pg-print-tab-orders')) { activatePrintTab('orders'); return; }
   if (e.target.closest('#pg-print-tab-analytics')) { activatePrintTab('analytics'); return; }
   if (e.target.closest('#pg-print-tab-crashcart')) { activatePrintTab('crashcart'); return; }
+  if (e.target.closest('#pg-print-tab-drugs')) { activatePrintTab('drugs'); return; }
+  if (e.target.closest('#drug-analytics-print-trigger')) {
+    if (typeof window.renderAnalyticsReports === 'function') window.renderAnalyticsReports();
+    setTimeout(() => window.dispatchEvent(new CustomEvent('floorstock:analytics-print')), 300);
+    return;
+  }
 
   // Navigate-to-print-page triggers
   const trigger = e.target.closest('[data-pg="pg-print"],[data-showpg="pg-print"]') ||

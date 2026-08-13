@@ -226,6 +226,7 @@
 <button class="btn bp bsm" id="pg-print-tab-orders" style="border-bottom:3px solid var(--ac);border-radius:6px 6px 0 0;margin-bottom:-2px">🖨 Print Orders / طباعة الطلبات</button>
 <button class="btn bg bsm" id="pg-print-tab-analytics" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">💊 Narcotic Analytics / إحصائيات المخدرات</button>
 <button class="btn bg bsm" id="pg-print-tab-crashcart" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">🚑 Crash Cart Analytics / إحصاءات عربات الطوارئ</button>
+<button class="btn bg bsm" id="pg-print-tab-drugs" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">📊 Drug Analytics / إحصائيات الأدوية</button>
 </div>
 <!-- Narcotic analytics panel -->
 <div id="pg-print-panel-analytics" style="display:none">
@@ -234,6 +235,16 @@
 <!-- Crash cart analytics panel -->
 <div id="pg-print-panel-crashcart" style="display:none">
 <div id="car-crash-host"></div>
+</div>
+<!-- Drug analytics panel -->
+<div id="pg-print-panel-drugs" style="display:none">
+<div class="card">
+<div class="ch"><span class="ct">📊 Drug Analytics / إحصائيات الأدوية العامة</span><span class="ss">Fulfilled request statistics — top medicines, department consumption, quarterly trends</span></div>
+<div class="cb">
+<p style="font-size:13px;color:var(--tx2);margin-bottom:14px">Generates a full analytics report from all fulfilled medication requests, then opens a print-ready window with the official header.</p>
+<button class="btn bp" id="drug-analytics-print-trigger">🖨 Generate &amp; Print Report / إنشاء وطباعة التقرير</button>
+</div>
+</div>
 </div>
 <!-- Orders panel -->
 <div id="pg-print-panel-orders">
