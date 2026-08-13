@@ -2226,15 +2226,64 @@ async function ctlReceiveDelivery(moveId,accept){
 
 async function ctlAssignMedicineToDept(){
   if(!ctlCanEditDept())return;
-  var dept=ctlCurrentDept(),cat=ctlCatalog(),term=await uiPrompt('Enter medicine name, MOH code or NUPCO code');if(!term)return;
-  var q=term.toLowerCase(),matches=cat.filter(function(m){return [m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)});
-  if(!matches.length)return toast('Medicine not found in shared catalogue','err');
-  var med=matches.length===1?matches[0]:matches[ctlNum(await uiPrompt(matches.map(function(m,i){return (i+1)+'. '+m.name}).join('\n')+'\nChoose number','1'))-1];if(!med)return;
-  var list=ctlDeptList(dept).slice();if(list.some(function(x){return x.medId===med.id}))return toast('Already assigned','err');
-  list.push({medId:med.id,min:med.min,max:med.max,qty:0,batches:[]});
-  try{await ctlSetDeptList(dept,list)}catch(e){console.error('Department medicine assignment failed',e);return toast('Medicine assignment was not saved.','err')}
-  var movementSaved=await ctlSaveMovementLog({type:'dept_list_add',dept:dept,medId:med.id,note:'Added to inpatient department list'},'Department medicine assignment');
-  renderControlled();if(!movementSaved)toast('Medicine was assigned, but the movement log was not saved.','info');return true
+  var dept=ctlCurrentDept(),cat=ctlCatalog(),assigned=new Set(ctlDeptList(dept).map(function(x){return x.medId}));
+  return new Promise(function(resolve){
+    var existing=document.getElementById('ctl-assign-modal');if(existing)existing.remove();
+    var bg=document.createElement('div');bg.id='ctl-assign-modal';bg.className='modal-bg on';bg.style.zIndex='3000';
+    var box=document.createElement('div');box.className='modal';
+    box.style.cssText='width:560px;max-width:95vw;padding:0;overflow:hidden;border-radius:18px;display:flex;flex-direction:column;max-height:80vh';
+    var hdr=document.createElement('div');
+    hdr.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;gap:10px;flex-shrink:0';
+    hdr.innerHTML='<div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px;width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:10px;background:rgba(31,111,235,.1)">💊</span><span style="font-size:15px;font-weight:700">Add from shared catalogue / إضافة من القائمة المشتركة</span></div><button class="xbtn" style="flex-shrink:0">✕</button>';
+    var body=document.createElement('div');body.style.cssText='padding:0 20px;flex:1;overflow:hidden;display:flex;flex-direction:column;gap:10px';
+    var searchWrap=document.createElement('div');searchWrap.style.cssText='flex-shrink:0';
+    var srch=document.createElement('input');srch.type='text';srch.placeholder='Search by name, MOH code, or NUPCO code / ابحث بالاسم أو كود MOH أو NUPCO';srch.style.cssText='width:100%;margin:0';
+    searchWrap.appendChild(srch);
+    var listWrap=document.createElement('div');listWrap.style.cssText='overflow-y:auto;flex:1;border:1px solid var(--bd);border-radius:10px;background:var(--s2)';
+    var hint=document.createElement('div');hint.style.cssText='padding:10px 14px;font-size:11.5px;color:var(--tx2);flex-shrink:0';hint.textContent='Click a medicine to select it, then press Add.';
+    body.appendChild(searchWrap);body.appendChild(listWrap);body.appendChild(hint);
+    var footer=document.createElement('div');
+    footer.style.cssText='display:flex;gap:8px;justify-content:flex-end;padding:14px 20px 18px;border-top:1px solid var(--bd);background:var(--s2);flex-shrink:0';
+    var cancelBtn=document.createElement('button');cancelBtn.className='btn bg';cancelBtn.textContent='Cancel';
+    var addBtn=document.createElement('button');addBtn.className='btn bp';addBtn.textContent='Add / إضافة';addBtn.disabled=true;
+    footer.appendChild(cancelBtn);footer.appendChild(addBtn);
+    box.appendChild(hdr);box.appendChild(body);box.appendChild(footer);bg.appendChild(box);document.body.appendChild(bg);
+    var selected=null;
+    function renderList(q){
+      var filt=cat.filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q.toLowerCase())});
+      if(!filt.length){listWrap.innerHTML='<div style="padding:20px;text-align:center;color:var(--tx2)">No matching medicines.</div>';selected=null;addBtn.disabled=true;return;}
+      listWrap.innerHTML='<table style="width:100%;border-collapse:collapse"><tbody>'+
+        filt.map(function(m){
+          var already=assigned.has(m.id);
+          return '<tr data-id="'+esc(m.id)+'" style="cursor:'+(already?'default':'pointer')+'"><td style="padding:9px 14px;border-bottom:1px solid var(--bd)'+( already?';opacity:.45':'')+'">'+(selected&&selected.id===m.id?'<b style="color:var(--acl)">▶ '+esc(m.name)+'</b>':'<b>'+esc(m.name)+'</b>')+'<div class="fhint">'+esc(m.classification||'narcotic')+' · MOH: '+esc(m.moh||'—')+' · NUPCO: '+esc(m.nupco||'—')+(already?' · <span style="color:var(--yll)">Already assigned</span>':'')+'</div></td></tr>';
+        }).join('')+
+      '</tbody></table>';
+      listWrap.querySelectorAll('tr[data-id]').forEach(function(row){
+        var id=row.dataset.id,med=filt.find(function(m){return m.id===id});
+        if(!med||assigned.has(id))return;
+        row.addEventListener('click',function(){selected=med;addBtn.disabled=false;renderList(srch.value);});
+      });
+    }
+    renderList('');
+    srch.addEventListener('input',function(){selected=null;addBtn.disabled=true;renderList(srch.value);});
+    setTimeout(function(){srch.focus();},50);
+    function close(){bg.style.opacity='0';bg.style.transition='opacity .15s';setTimeout(function(){bg.remove();resolve(false);},150);}
+    hdr.querySelector('.xbtn').addEventListener('click',close);
+    cancelBtn.addEventListener('click',close);
+    bg.addEventListener('click',function(e){if(e.target===bg)close();});
+    addBtn.addEventListener('click',async function(){
+      if(!selected)return;
+      var list=ctlDeptList(dept).slice();
+      if(list.some(function(x){return x.medId===selected.id})){toast('Already assigned','err');return;}
+      list.push({medId:selected.id,min:selected.min,max:selected.max,qty:0,batches:[]});
+      addBtn.disabled=true;addBtn.textContent='Saving…';
+      try{await ctlSetDeptList(dept,list)}catch(e){console.error('Department medicine assignment failed',e);toast('Medicine assignment was not saved.','err');addBtn.disabled=false;addBtn.textContent='Add / إضافة';return;}
+      var movementSaved=await ctlSaveMovementLog({type:'dept_list_add',dept:dept,medId:selected.id,note:'Added to inpatient department list'},'Department medicine assignment');
+      bg.remove();resolve(true);renderControlled();
+      if(!movementSaved)toast('Medicine was assigned, but the movement log was not saved.','info');
+      else toast('Medicine added to department list ✓','succ');
+    });
+  });
 }
 async function ctlRemoveDeptMedicine(id){
   if(!ctlCanEditDept()||!await uiConfirm('Remove this medicine from the department list?'))return;
