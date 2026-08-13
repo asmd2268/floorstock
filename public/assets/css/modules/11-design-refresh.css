@@ -1,0 +1,305 @@
+/* ASDHealth Design Refresh — R6.76.63
+   Visual polish layer: shadows, depth, motion, typography, form states.
+   Overrides are additive — no structural changes to existing layout. */
+
+/* ─── Design tokens ─────────────────────────────────────────────── */
+:root {
+  --sh-xs: 0 1px 3px rgba(0,0,0,.45), 0 1px 2px rgba(0,0,0,.3);
+  --sh-sm: 0 2px 10px rgba(0,0,0,.4),  0 1px 3px rgba(0,0,0,.25);
+  --sh-md: 0 6px 24px rgba(0,0,0,.5),  0 2px 6px rgba(0,0,0,.3);
+  --sh-lg: 0 12px 48px rgba(0,0,0,.6), 0 4px 12px rgba(0,0,0,.35);
+  --ac-sub: rgba(31,111,235,.12);
+  --gn-sub: rgba(46,160,67,.12);
+  --rd-sub: rgba(218,54,51,.12);
+  --yl-sub: rgba(210,153,34,.12);
+  --ease: cubic-bezier(.4,0,.2,1);
+}
+body.light {
+  --sh-xs: 0 1px 3px rgba(0,0,0,.07), 0 1px 2px rgba(0,0,0,.04);
+  --sh-sm: 0 2px 10px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.05);
+  --sh-md: 0 6px 24px rgba(0,0,0,.1),  0 2px 6px rgba(0,0,0,.06);
+  --sh-lg: 0 12px 48px rgba(0,0,0,.14),0 4px 12px rgba(0,0,0,.08);
+}
+
+/* ─── Login page ─────────────────────────────────────────────────── */
+#auth {
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 50%, rgba(31,111,235,.22) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 40% at 85% 15%, rgba(14,165,233,.15) 0%, transparent 100%),
+    radial-gradient(ellipse 40% 50% at 70% 85%, rgba(88,28,135,.12) 0%, transparent 100%),
+    var(--bg);
+}
+body.light #auth {
+  background:
+    radial-gradient(ellipse 70% 60% at 15% 50%, rgba(31,111,235,.1) 0%, transparent 100%),
+    radial-gradient(ellipse 50% 40% at 85% 15%, rgba(14,165,233,.08) 0%, transparent 100%),
+    var(--bg);
+}
+.acard {
+  box-shadow: var(--sh-lg);
+  border: 1px solid rgba(255,255,255,.07);
+}
+body.light .acard { border: 1px solid var(--bd); box-shadow: var(--sh-md); }
+
+.alogo-ic {
+  border-radius: 12px;
+  box-shadow: 0 4px 14px rgba(31,111,235,.5);
+  font-size: 22px;
+}
+.alogo h1 { font-size: 22px; letter-spacing: -.4px; }
+
+/* ─── Topbar ─────────────────────────────────────────────────────── */
+.topbar {
+  box-shadow: 0 1px 0 var(--bd), 0 2px 12px rgba(0,0,0,.3);
+  backdrop-filter: blur(8px);
+}
+body.light .topbar { box-shadow: 0 1px 0 var(--bd), 0 2px 8px rgba(0,0,0,.06); }
+
+.tlogo {
+  font-size: 16px;
+  letter-spacing: -.4px;
+  font-weight: 800;
+}
+.trole {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+
+/* ─── Navigation ─────────────────────────────────────────────────── */
+nav {
+  box-shadow: 0 1px 0 var(--bd);
+  gap: 0;
+}
+.nb {
+  padding: 11px 14px;
+  border-radius: 0;
+  font-size: 12.5px;
+  position: relative;
+  transition: color .15s var(--ease), background .15s var(--ease);
+}
+.nb:hover { color: var(--tx); background: rgba(255,255,255,.04); }
+body.light .nb:hover { background: rgba(0,0,0,.03); }
+.nb.on {
+  color: var(--acl);
+  border-bottom-color: transparent;
+}
+.nb.on::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 6px; right: 6px;
+  height: 2.5px;
+  background: var(--ac);
+  border-radius: 2px 2px 0 0;
+  animation: nb-slide-in .18s var(--ease);
+}
+@keyframes nb-slide-in {
+  from { transform: scaleX(0); opacity: 0; }
+  to   { transform: scaleX(1); opacity: 1; }
+}
+
+/* ─── Cards ──────────────────────────────────────────────────────── */
+.card {
+  box-shadow: var(--sh-sm);
+  border-radius: 14px;
+  transition: box-shadow .2s var(--ease);
+}
+.ch {
+  border-radius: 14px 14px 0 0;
+  padding: 14px 18px;
+}
+.ct { font-size: 13.5px; font-weight: 600; }
+
+/* ─── Stat cards (.sc) ───────────────────────────────────────────── */
+.sc {
+  border-radius: 14px;
+  box-shadow: var(--sh-sm);
+  transition: transform .2s var(--ease), box-shadow .2s var(--ease);
+  position: relative;
+  overflow: hidden;
+}
+.sc::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.04) 0%, transparent 60%);
+  pointer-events: none;
+}
+.sc:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--sh-md);
+}
+.sv {
+  font-size: 28px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.5px;
+}
+.sl {
+  font-size: 11.5px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 600;
+  opacity: .75;
+  margin-bottom: 6px;
+}
+.ss { font-size: 11px; margin-top: 6px; opacity: .7; }
+
+/* ─── Tables ─────────────────────────────────────────────────────── */
+th {
+  background: var(--s2);
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  color: var(--tx2);
+  padding: 10px 12px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+td { padding: 10px 12px; font-size: 13.5px; }
+tr { transition: background .1s; }
+tr:not(.rha):not(.rhz):not(.rls):nth-child(even) td {
+  background: rgba(255,255,255,.018);
+}
+body.light tr:not(.rha):not(.rhz):not(.rls):nth-child(even) td {
+  background: rgba(0,0,0,.018);
+}
+tr:not(.rha):not(.rhz):not(.rls):hover td {
+  background: rgba(31,111,235,.06) !important;
+}
+body.light tr:not(.rha):not(.rhz):not(.rls):hover td {
+  background: rgba(31,111,235,.05) !important;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────── */
+.btn {
+  font-weight: 600;
+  letter-spacing: .01em;
+  transition: all .15s var(--ease);
+  border-radius: 8px;
+}
+.bp {
+  box-shadow: 0 1px 5px rgba(31,111,235,.35);
+}
+.bp:hover {
+  box-shadow: 0 4px 14px rgba(31,111,235,.5);
+  transform: translateY(-1px);
+}
+.bp:active { transform: translateY(0); box-shadow: none; }
+
+.bs { box-shadow: 0 1px 5px rgba(46,160,67,.3); }
+.bs:hover { box-shadow: 0 4px 14px rgba(46,160,67,.45); transform: translateY(-1px); }
+.bs:active { transform: translateY(0); box-shadow: none; }
+
+.bd2c { box-shadow: 0 1px 5px rgba(218,54,51,.3); }
+.bd2c:hover { box-shadow: 0 4px 14px rgba(218,54,51,.45); transform: translateY(-1px); }
+.bd2c:active { transform: translateY(0); box-shadow: none; }
+
+.bg:hover { transform: translateY(-1px); background: var(--s2); }
+.bg:active { transform: translateY(0); }
+
+/* ─── Form inputs ────────────────────────────────────────────────── */
+input, select, textarea {
+  transition: border-color .15s, box-shadow .15s var(--ease);
+  border-radius: 8px;
+}
+input:focus, select:focus, textarea:focus {
+  box-shadow: 0 0 0 3px rgba(31,111,235,.22);
+  border-color: var(--ac);
+}
+body.light input:focus, body.light select:focus, body.light textarea:focus {
+  box-shadow: 0 0 0 3px rgba(31,111,235,.15);
+}
+
+/* ─── Badges ─────────────────────────────────────────────────────── */
+.badge {
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-weight: 700;
+  letter-spacing: .3px;
+}
+
+/* ─── Modals ─────────────────────────────────────────────────────── */
+.modal {
+  box-shadow: var(--sh-lg);
+  border-radius: 18px;
+  animation: modal-pop .2s var(--ease);
+}
+.modal-bg { backdrop-filter: blur(4px); }
+@keyframes modal-pop {
+  from { transform: scale(.95) translateY(8px); opacity: 0; }
+  to   { transform: scale(1) translateY(0);    opacity: 1; }
+}
+.mh { margin-bottom: 20px; }
+.mt { font-size: 16px; font-weight: 700; letter-spacing: -.2px; }
+
+/* ─── Toast ──────────────────────────────────────────────────────── */
+#toast {
+  box-shadow: var(--sh-md);
+  border-radius: 12px;
+  font-size: 13.5px;
+}
+#toast.tsucc { border-left: 3px solid var(--gn); }
+#toast.terr   { border-left: 3px solid var(--rd); }
+#toast.tinfo  { border-left: 3px solid var(--ac); }
+
+/* ─── Alert banners ──────────────────────────────────────────────── */
+.alert-banner, .alert-banner-y {
+  border-radius: 10px;
+  box-shadow: var(--sh-xs);
+}
+
+/* ─── Section headings ───────────────────────────────────────────── */
+.stitle {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -.3px;
+}
+.ssub { font-size: 13px; line-height: 1.5; }
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--bd2);
+  border-radius: 6px;
+  transition: background .15s;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--tx3); }
+
+/* ─── Bar chart (analytics) ──────────────────────────────────────── */
+.bfil { transition: width .6s var(--ease); border-radius: 4px; }
+.btrk { border-radius: 6px; }
+
+/* ─── Tab group ──────────────────────────────────────────────────── */
+.tbtn {
+  border-radius: 6px 6px 0 0;
+  transition: color .15s, background .15s;
+}
+.tbtn:hover:not(.on) { background: rgba(255,255,255,.04); color: var(--tx); }
+body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
+.tbtn.on { font-weight: 600; }
+
+/* ─── Page transition ────────────────────────────────────────────── */
+.pg.on {
+  animation: pg-fade-in .18s var(--ease);
+}
+@keyframes pg-fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Chip ───────────────────────────────────────────────────────── */
+.chip {
+  border-radius: 6px;
+  font-weight: 500;
+}
+
+/* ─── Category header in tables ─────────────────────────────────── */
+.cath {
+  font-size: 10.5px;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+}
