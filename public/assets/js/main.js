@@ -1,5 +1,6 @@
-/* ASDHealth R6.76.19 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.68 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
+import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
 import './core/department-note-schema.js?v=R6.76.19';
 import './core/department-note-utils.js?v=R6.76.19';
@@ -23,7 +24,7 @@ import './core/schedule-form-utils.js?v=R6.76.19';
 import './modules/00-r674-local-qr-runtime.js?v=R6.76.19';
 import './modules/01-firebase-global-bootstrap.js?v=R6.76.19';
 import './modules/02-r664-early-production-console-policy.js?v=R6.76.19';
-import './modules/03-core-application-firebase-state-auth.js?v=R6.76.67';
+import './modules/03-core-application-firebase-state-auth.js?v=R6.76.68';
 import './modules/04-v13-complete-clean-fix-script.js?v=R6.76.19';
 import './modules/05-controlled-ui-compatibility-fixes.js?v=R6.76.19';
 import './modules/06-zebra-label-printing.js?v=R6.76.19';
