@@ -231,10 +231,17 @@ function renderAn(){
 }
 
 // ── ORDER RETENTION (6 MONTHS) ───────────────────────────
-function orderRetentionCutoff(){return globalThis.orderRetentionCutoff()}
-function requestArchiveRecord(r){return globalThis.requestArchiveRecord(r)}
-async function cleanupOldOrders(autoMode){return globalThis.cleanupOldOrders(autoMode)}
-function scheduleAutomaticOrderCleanup(){return globalThis.scheduleAutomaticOrderCleanup()}
+// Capture canonical references at module evaluation time.  publishLegacy()
+// later overwrites globalThis with these wrapper functions; resolving through
+// globalThis at call time would point back to the wrapper and recurse forever.
+var canonicalOrderRetentionCutoff=globalThis.orderRetentionCutoff;
+var canonicalRequestArchiveRecord=globalThis.requestArchiveRecord;
+var canonicalCleanupOldOrders=globalThis.cleanupOldOrders;
+var canonicalScheduleAutomaticOrderCleanup=globalThis.scheduleAutomaticOrderCleanup;
+function orderRetentionCutoff(){return typeof canonicalOrderRetentionCutoff==='function'?canonicalOrderRetentionCutoff():undefined}
+function requestArchiveRecord(r){return typeof canonicalRequestArchiveRecord==='function'?canonicalRequestArchiveRecord(r):undefined}
+async function cleanupOldOrders(autoMode){return typeof canonicalCleanupOldOrders==='function'?canonicalCleanupOldOrders(autoMode):undefined}
+function scheduleAutomaticOrderCleanup(){return typeof canonicalScheduleAutomaticOrderCleanup==='function'?canonicalScheduleAutomaticOrderCleanup():undefined}
 
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
 // Final Print Orders renderer/engine is installed later in one canonical module.
