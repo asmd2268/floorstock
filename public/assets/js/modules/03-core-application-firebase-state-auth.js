@@ -324,7 +324,7 @@ function fsIsPharmacyScopedProfile(profile){
 function fsStateKeysForProfile(profile){
   if(!profile)return null;
   if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
-  if(String(profile.role||'')==='controlled_pharmacy')return['departments','deleted_departments','custom_categories','facility_logo','theme'];
+  if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.slice();
   if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
@@ -389,6 +389,25 @@ async function fsStateLoadScoped(keys,loader,source,profile){
   if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
+var CONTROLLED_PHARMACY_BASE_KEYS=Object.freeze([
+  'departments','deleted_departments','custom_categories','theme','facility_logo',
+  'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
+  'controlled_moves','controlled_pdf_receipts'
+]);
+function fsControlledPharmacyDeptKeys(cache){
+  return(Array.isArray(cache&&cache.departments)?cache.departments:[])
+    .map(function(d){return String(d&&d.id||'').trim();}).filter(Boolean)
+    .map(function(id){return 'controlled_dept_list_'+id;});
+}
+async function fsStateLoadControlledPharmacyScoped(profile,loader,source){
+  var initial=await fsStateLoadScoped(CONTROLLED_PHARMACY_BASE_KEYS,loader,source,profile);
+  var deptKeys=fsControlledPharmacyDeptKeys(initial.cache);
+  if(!deptKeys.length)return initial;
+  var dynamic=await fsStateLoadScoped(deptKeys,loader,source,profile);
+  Object.assign(initial.cache,dynamic.cache);
+  initial.failedKeys=(initial.failedKeys||[]).concat(dynamic.failedKeys||[]);
+  return initial;
+}
 function fsPharmacyDepartmentStateKeys(cache){
   var departments=Array.isArray(cache&&cache.departments)?cache.departments:[];
   var prefixes=['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'];
@@ -410,11 +429,13 @@ async function fsStateLoadPharmacyScoped(profile,loader,source){
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){
   if(fsIsPharmacyScopedProfile(profile))return fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped');
+  if(String(profile&&profile.role||'')==='controlled_pharmacy')return fsStateLoadControlledPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped');
   var keys=fsStateKeysForProfile(profile);
   return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped',profile):fsStateLoadFloorstockViaRest();
 }
 function fsStateLoadFloorstockForProfileViaSdk(profile){
   if(fsIsPharmacyScopedProfile(profile))return fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaSdk,'sdk-scoped');
+  if(String(profile&&profile.role||'')==='controlled_pharmacy')return fsStateLoadControlledPharmacyScoped(profile,fsStateLoadDocumentViaSdk,'sdk-scoped');
   var keys=fsStateKeysForProfile(profile);
   return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-scoped',profile):fsStateLoadFloorstockViaSdk();
 }
