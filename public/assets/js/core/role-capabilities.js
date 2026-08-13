@@ -69,7 +69,7 @@ export function canAccessDepartment(profile, departmentId) {
   const own = String(user.deptId || user.departmentId || '').trim().toLowerCase();
   if (role === 'department') return !!own && own === target;
   if (role === 'outpatient_pharmacy_supervisor') return target === 'outpatient' || target === 'outpatient department' || (!!own && own === target);
-  if (role === 'inpatient_supervisor') return target !== 'outpatient' && target !== 'outpatient department';
+  if (role === 'inpatient_supervisor') return true;
   return false;
 }
 

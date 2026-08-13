@@ -416,7 +416,7 @@ async function fsStateLoadControlledPharmacyScoped(profile,loader,source){
 function fsPharmacyDepartmentStateKeys(cache,profile){
   var departments=Array.isArray(cache&&cache.departments)?cache.departments:[];
   var role=String(profile&&profile.role||'');
-  var isInpatient=role==='inpatient_supervisor'||role==='inpatient_pharmacy_supervisor';
+  var isInpatient=false;
   var prefixes=['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'];
   var keys=[];
   departments.forEach(function(dept){
@@ -1722,8 +1722,7 @@ function populateInvDeptSel(){
 // ── DASHBOARD ────────────────────────────────────────────
 function renderDash(){
   var allDs=gd(),dashRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''),ds=allDs;
-  if(dashRole==='inpatient_supervisor')ds=allDs.filter(function(d){return !/outpatient\s+department/i.test(String(d.name||''))&&String(d.id)!=='outpatient'});
-  else if(dashRole==='outpatient_pharmacy_supervisor')ds=allDs.filter(function(d){return /outpatient\s+department/i.test(String(d.name||''))||String(d.id)==='outpatient'});
+  if(dashRole==='outpatient_pharmacy_supervisor')ds=allDs.filter(function(d){return /outpatient\s+department/i.test(String(d.name||''))||String(d.id)==='outpatient'});
   var allowedDash={};ds.forEach(function(d){allowedDash[String(d.id)]=true});
   var rs=gr().filter(function(r){return !r.deptId||allowedDash[String(r.deptId)]});
   var pend=rs.filter(function(r){return r.status==='pending'});
