@@ -593,11 +593,8 @@ function render() {
   injectStyles();
 
   const y = currentYear();
-  const moveYears = new Set((typeof window.ctlMoves === 'function' ? (window.ctlMoves() || []) : [])
-    .map(m => { const d = m.at ? new Date(m.at) : null; return d && d.getFullYear(); })
-    .filter(Boolean));
-  moveYears.add(y);
-  const years = Array.from(moveYears).filter(yr => yr >= 2020 && yr <= y).sort((a, b) => a - b);
+  const years = [];
+  for (let i = 2020; i <= y; i++) years.push(i);
   const selY = reportYear();
 
   host.innerHTML = `
@@ -641,11 +638,8 @@ function renderCrash() {
   injectStyles();
 
   const y = currentYear();
-  const crashYears = new Set((typeof window.crashReports === 'function' ? (window.crashReports() || []) : [])
-    .map(r => { const d = r.at ? new Date(r.at) : null; return d && d.getFullYear(); })
-    .filter(Boolean));
-  crashYears.add(y);
-  const years = Array.from(crashYears).filter(yr => yr >= 2020 && yr <= y).sort((a, b) => a - b);
+  const years = [];
+  for (let i = 2020; i <= y; i++) years.push(i);
   const fromY = reportYearFrom(), toY = reportYearTo();
 
   host.innerHTML = `
@@ -717,9 +711,17 @@ function activatePrintTab(tab) {
 
   if (tab === 'analytics') setTimeout(render, 50);
   if (tab === 'crashcart') setTimeout(renderCrash, 50);
+
+  // Show header settings button for master only
+  const hdrBtn = document.getElementById('pg-print-header-settings-btn');
+  if (hdrBtn) hdrBtn.style.display = permitted() ? 'inline-flex' : 'none';
 }
 
 document.addEventListener('click', function (e) {
+  if (e.target.closest('#pg-print-header-settings-btn')) {
+    if (typeof window.openLogoSettings === 'function') window.openLogoSettings();
+    return;
+  }
   if (e.target.closest('#pg-print-tab-orders')) { activatePrintTab('orders'); return; }
   if (e.target.closest('#pg-print-tab-analytics')) { activatePrintTab('analytics'); return; }
   if (e.target.closest('#pg-print-tab-crashcart')) { activatePrintTab('crashcart'); return; }

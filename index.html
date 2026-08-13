@@ -221,12 +221,17 @@
 <div style="margin-top:14px" id="analytics-period-compare"></div>
 </div>
 <div class="pg" id="pg-print">
+<!-- Print page header -->
+<div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px">
+<div style="font-size:15px;font-weight:700;color:var(--tx)">🖨 Print &amp; Analytics / الطباعة والإحصائيات</div>
+<button id="pg-print-header-settings-btn" class="btn" style="display:none;background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;gap:6px;align-items:center">⚙️ إعدادات الترويسة / Header Settings</button>
+</div>
 <!-- Tab navigation -->
-<div style="display:flex;gap:6px;margin-bottom:16px;border-bottom:2px solid var(--bd);padding-bottom:0">
-<button class="btn bp bsm" id="pg-print-tab-orders" style="border-bottom:3px solid var(--ac);border-radius:6px 6px 0 0;margin-bottom:-2px">🖨 Print Orders / طباعة الطلبات</button>
-<button class="btn bg bsm" id="pg-print-tab-analytics" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">💊 Narcotic Analytics / إحصائيات المخدرات</button>
-<button class="btn bg bsm" id="pg-print-tab-crashcart" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">🚑 Crash Cart Analytics / إحصاءات عربات الطوارئ</button>
-<button class="btn bg bsm" id="pg-print-tab-drugs" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65">📊 Drug Analytics / إحصائيات الأدوية</button>
+<div style="display:flex;gap:4px;margin-bottom:16px;border-bottom:2px solid var(--bd);padding-bottom:0;flex-wrap:wrap">
+<button class="btn bp bsm" id="pg-print-tab-orders" style="border-bottom:3px solid var(--ac);border-radius:6px 6px 0 0;margin-bottom:-2px;font-size:12px">🖨 طباعة الطلبات</button>
+<button class="btn bg bsm" id="pg-print-tab-analytics" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">💊 إحصائيات المخدرات</button>
+<button class="btn bg bsm" id="pg-print-tab-crashcart" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">🚑 إحصاءات الطوارئ</button>
+<button class="btn bg bsm" id="pg-print-tab-drugs" style="border-radius:6px 6px 0 0;margin-bottom:-2px;opacity:.65;font-size:12px">📊 إحصائيات الأدوية</button>
 </div>
 <!-- Narcotic analytics panel -->
 <div id="pg-print-panel-analytics" style="display:none">

@@ -1618,11 +1618,14 @@ async function clearLogo(){
   el('logo-preview-none').style.display='';
   toast('Logo removed; header text retained','info');
 }
+var DEFAULT_EN=['Riyadh First Health Cluster','Wadi Al-Dawasir General Hospital','Pharmacy Care Department'];
+var DEFAULT_AR=['تجمع الرياض الصحي الأول','مستشفى وادي الدواسر العام','قسم الرعاية الصيدلية'];
 function officialPrintHeaderHTML(){
   var header=getLogo();
   var english=header.enLines.filter(function(value){return String(value||'').trim();});
   var arabic=header.arLines.filter(function(value){return String(value||'').trim();});
-  if(!header.img&&!english.length&&!arabic.length)return '';
+  if(!english.length)english=DEFAULT_EN;
+  if(!arabic.length)arabic=DEFAULT_AR;
   function headerEscape(value){
     return String(value==null?'':value).replace(/[&<>"']/g,function(character){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];
