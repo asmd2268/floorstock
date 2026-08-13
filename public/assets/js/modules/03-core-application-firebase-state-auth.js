@@ -412,19 +412,24 @@ async function fsStateLoadControlledPharmacyScoped(profile,loader,source){
   initial.failedKeys=(initial.failedKeys||[]).concat(dynamic.failedKeys||[]);
   return initial;
 }
-function fsPharmacyDepartmentStateKeys(cache){
+function fsPharmacyDepartmentStateKeys(cache,profile){
   var departments=Array.isArray(cache&&cache.departments)?cache.departments:[];
+  var role=String(profile&&profile.role||'');
+  var isInpatient=role==='inpatient_supervisor'||role==='inpatient_pharmacy_supervisor';
   var prefixes=['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'];
   var keys=[];
   departments.forEach(function(dept){
     var id=String(dept&&dept.id||'').trim();
-    if(id)prefixes.forEach(function(prefix){keys.push(prefix+id)});
+    if(!id)return;
+    // inpatient_supervisor has no access to outpatient department data
+    if(isInpatient){var n=String(dept.name||id).toLowerCase().trim();if(n==='outpatient'||n==='outpatient department'||id.toLowerCase()==='outpatient')return;}
+    prefixes.forEach(function(prefix){keys.push(prefix+id)});
   });
   return keys;
 }
 async function fsStateLoadPharmacyScoped(profile,loader,source){
   var initial=await fsStateLoadScoped(PHARMACY_SCOPED_STATE_KEYS,loader,source,profile);
-  var dynamicKeys=fsPharmacyDepartmentStateKeys(initial.cache);
+  var dynamicKeys=fsPharmacyDepartmentStateKeys(initial.cache,profile);
   if(!dynamicKeys.length)return initial;
   var dynamic=await fsStateLoadScoped(dynamicKeys,loader,source,profile);
   Object.assign(initial.cache,dynamic.cache);
@@ -628,7 +633,7 @@ globalThis.S = {
       if(cached){
         var parsed=JSON.parse(cached),allowed=fsStateKeysForProfile(profileHint);
         if(allowed){
-          if(fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(fsPharmacyDepartmentStateKeys(parsed));
+          if(fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(fsPharmacyDepartmentStateKeys(parsed,profileHint));
           var allowedSet=new Set(allowed),scoped={};
           Object.keys(parsed||{}).forEach(function(key){if(allowedSet.has(key))scoped[key]=parsed[key]});
           parsed=scoped;
