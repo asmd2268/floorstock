@@ -628,6 +628,7 @@ globalThis.S = {
       if(cached){
         var parsed=JSON.parse(cached),allowed=fsStateKeysForProfile(profileHint);
         if(allowed){
+          if(fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(fsPharmacyDepartmentStateKeys(parsed));
           var allowedSet=new Set(allowed),scoped={};
           Object.keys(parsed||{}).forEach(function(key){if(allowedSet.has(key))scoped[key]=parsed[key]});
           parsed=scoped;
@@ -795,6 +796,11 @@ S.ready=true;
       (state.failedKeys||[]).forEach(function(key){
         if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previousCache,key))incoming[key]=previousCache[key];
       });
+      if(fsIsPharmacyScopedProfile(S.scopeProfile)&&!Object.prototype.hasOwnProperty.call(incoming,'departments')&&Array.isArray(previousCache.departments)&&previousCache.departments.length){
+        fsPharmacyDepartmentStateKeys(previousCache).forEach(function(key){
+          if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previousCache,key))incoming[key]=previousCache[key];
+        });
+      }
       var changed=fsStateApplyCache(incoming);
       if(changed)S.scheduleRefresh();
       if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
