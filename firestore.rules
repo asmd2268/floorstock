@@ -238,7 +238,7 @@ service cloud.firestore {
             )
             || (
               r == 'controlled_pharmacy'
-              && docId.matches('^(controlled_.*|accountability_.*|audit_log|theme)$')
+              && docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|audit_log|theme)$')
             )
             || (
               r == 'warehouse'
