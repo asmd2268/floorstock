@@ -101,6 +101,7 @@ import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.50';
 import './modules/67-r676-fulfillment-edit-settings.js?v=R6.76.50';
 import './modules/68-schedule-controller.js?v=R6.76.50';
 import './modules/69-r676-narcotic-catalog-restore-20260728.js?v=R6.76.50';
+import './modules/75-r676-multi-year-department-comparison.js?v=R6.76.50';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.50';
 installDomBindings();
 document.documentElement.dataset.asdhModules = 'ready';

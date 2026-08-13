@@ -209,7 +209,8 @@ function renderAn(){
   // Keep the medication catalog in the same department scope as the request filter.
   // Without this, Zero Dispense mixed every department's catalog into the selected one.
   var allMs=df?getMeds(df).map(function(m){return Object.assign({deptId:df},m)}):gd().reduce(function(acc,d){return acc.concat(getMeds(d.id).map(function(m){return Object.assign({deptId:d.id},m)}));},[]);
-  var t10=srt.slice(0,10),mx1=t10[0]?t10[0][1]:1;
+  var srtNonHA=srt.filter(function(e){return !(totMeta[e[0]]&&totMeta[e[0]].high_alert)});
+  var t10=srtNonHA.slice(0,10),mx1=t10[0]?t10[0][1]:1;
   el('ctop').innerHTML=t10.length
     ?t10.map(function(e){var m=totMeta[e[0]];return '<div class="brow"><div class="blbl" title="'+(m?m.name:e[0])+'">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx1*100)+'%;background:var(--ac)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
@@ -228,6 +229,103 @@ function renderAn(){
   el('ztbl').innerHTML=zero.length
     ?zero.map(function(z){var m=z.med;return '<tr><td>'+m.name+'</td><td>'+z.departments.join(', ')+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
     :'<tr><td colspan="6" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
+
+  /* ── Crash Cart Medicines ── */
+  (function(){
+    var host=el('analytics-crash-cart-section');
+    if(!host)return;
+    var carts=typeof window.crashCarts==='function'?window.crashCarts():[];
+    if(!carts.length){host.innerHTML='<div style="padding:14px;color:var(--tx2)">No crash carts configured.</div>';return;}
+    var allMeds={};
+    carts.forEach(function(cart){
+      (cart.items||cart.medicines||[]).forEach(function(item){
+        var name=String(item.name||item.medName||item.med||'').trim();
+        if(!name)return;
+        var key=name.toLowerCase();
+        if(!allMeds[key])allMeds[key]={name:name,carts:[],dispensed:0};
+        if(allMeds[key].carts.indexOf(cart.name||cart.id)<0)allMeds[key].carts.push(cart.name||cart.id);
+        var medKey=name.toLowerCase().replace(/\s+/g,' ')+'|';
+        allMeds[key].dispensed=(allMeds[key].dispensed||0)+(tot[medKey]||0);
+      });
+    });
+    var rows=Object.keys(allMeds).map(function(k){return allMeds[k]}).sort(function(a,b){return b.dispensed-a.dispensed});
+    host.innerHTML='<div class="tw"><table><thead><tr><th>Medicine</th><th>Carts</th><th>Dispensed (period)</th></tr></thead><tbody>'+
+      (rows.length?rows.map(function(r){return '<tr><td>'+esc(r.name)+'</td><td>'+esc(r.carts.join(', '))+'</td><td style="text-align:right;font-family:var(--mono)">'+r.dispensed+'</td></tr>'}).join(''):'<tr><td colspan="3" style="text-align:center;color:var(--tx2)">No crash cart medicines found.</td></tr>')+
+      '</tbody></table></div>';
+  })();
+
+  /* ── Quarter & Year comparisons + print charts ── */
+  (function(){
+    var host=el('analytics-period-compare');
+    if(!host)return;
+    var allRs=gr().concat(S.g('request_analytics_archive')||[]).filter(function(r){return r.status!=='pending'});
+    var nowD=new Date(),cy=nowD.getFullYear(),cm=nowD.getMonth();
+    var cq=Math.floor(cm/3);
+    /* Current quarter */
+    var cqFrom=new Date(cy,cq*3,1),cqTo=nowD;
+    /* Previous quarter */
+    var pqFrom=new Date(cy,cq*3-3,1),pqTo=new Date(cy,cq*3,0,23,59,59);
+    if(pqFrom.getFullYear()<cy-1)pqFrom=new Date(cy-1,9,1);
+    /* Current year */
+    var cyFrom=new Date(cy,0,1),cyTo=nowD;
+    /* Previous year */
+    var pyFrom=new Date(cy-1,0,1),pyTo=new Date(cy-1,11,31,23,59,59);
+
+    function sumPeriod(from,to,deptFilter){
+      return allRs.filter(function(r){
+        var d=new Date(r.created||0);
+        return d>=from&&d<=to&&(!deptFilter||r.deptId===deptFilter);
+      }).reduce(function(s,r){return s+(r.dispensed||[]).reduce(function(a,x){return a+(Number(x.qty)||0)},0)},0);
+    }
+    function deptSumPeriod(from,to){
+      var out={};
+      allRs.filter(function(r){var d=new Date(r.created||0);return d>=from&&d<=to;}).forEach(function(r){
+        var q=(r.dispensed||[]).reduce(function(a,x){return a+(Number(x.qty)||0)},0);
+        var dep=gd().find(function(x){return String(x.id)===String(r.deptId)});
+        var name=dep?dep.name:(r.deptId||'Unknown');
+        out[name]=(out[name]||0)+q;
+      });
+      return out;
+    }
+
+    var cqTotal=sumPeriod(cqFrom,cqTo),pqTotal=sumPeriod(pqFrom,pqTo);
+    var cyTotal=sumPeriod(cyFrom,cyTo),pyTotal=sumPeriod(pyFrom,pyTo);
+    var cqDepts=deptSumPeriod(cqFrom,cqTo),pyDepts=deptSumPeriod(pyFrom,pyTo);
+    var deptNames=Array.from(new Set(Object.keys(cqDepts).concat(Object.keys(pyDepts)))).sort();
+
+    function pct(a,b){if(!b)return a?'New':'—';return (a>=b?'▲ +':'▼ ')+Math.round(Math.abs(a-b)/b*1000)/10+'%';}
+    function svgBar(val,max,color){
+      var w=max?Math.round(val/max*160):0;
+      return '<svg width="180" height="20" style="vertical-align:middle" aria-hidden="true"><rect x="0" y="4" width="'+w+'" height="12" rx="3" fill="'+color+'"/><text x="'+(w+4)+'" y="14" font-size="11" fill="currentColor">'+val+'</text></svg>';
+    }
+
+    var maxQBars=Math.max(cqTotal,pqTotal,1),maxYBars=Math.max(cyTotal,pyTotal,1);
+    var deptMax=Math.max.apply(null,deptNames.map(function(n){return Math.max(cqDepts[n]||0,pyDepts[n]||0)}).concat([1]));
+
+    var html='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px">'
+      +'<div class="card"><div class="ch"><span class="ct">Quarter comparison / مقارنة الربع</span></div><div class="cb">'
+      +'<div style="margin-bottom:8px"><b>Current quarter (Q'+(cq+1)+' '+cy+')</b><br>'+svgBar(cqTotal,maxQBars,'#3b82f6')+'</div>'
+      +'<div style="margin-bottom:8px"><b>Previous quarter (Q'+(cq===0?4:cq)+' '+(cq===0?cy-1:cy)+')</b><br>'+svgBar(pqTotal,maxQBars,'#94a3b8')+'</div>'
+      +'<div><b>Change:</b> '+pct(cqTotal,pqTotal)+'</div>'
+      +'</div></div>'
+      +'<div class="card"><div class="ch"><span class="ct">Year comparison / مقارنة السنة</span></div><div class="cb">'
+      +'<div style="margin-bottom:8px"><b>Current year ('+cy+')</b><br>'+svgBar(cyTotal,maxYBars,'#3b82f6')+'</div>'
+      +'<div style="margin-bottom:8px"><b>Previous year ('+(cy-1)+')</b><br>'+svgBar(pyTotal,maxYBars,'#94a3b8')+'</div>'
+      +'<div><b>Change:</b> '+pct(cyTotal,pyTotal)+'</div>'
+      +'</div></div>'
+      +'</div>'
+      +'<div class="card"><div class="ch"><span class="ct">Department vs same period last year / مقارنة الأقسام مع نفس الفترة</span></div><div class="tw"><table><thead><tr><th>Department</th><th>'+cy+'</th><th>'+(cy-1)+'</th><th>Change</th></tr></thead><tbody>'
+      +deptNames.map(function(n){
+        var c=cqDepts[n]||0,pp=pyDepts[n]||0;
+        return '<tr><td>'+esc(n)+'</td>'
+          +'<td>'+svgBar(c,deptMax,'#3b82f6')+'</td>'
+          +'<td>'+svgBar(pp,deptMax,'#94a3b8')+'</td>'
+          +'<td>'+(c>pp?'<span style="color:#16a34a">':'<span style="color:#dc2626">')+pct(c,pp)+'</span></td></tr>';
+      }).join('')
+      +'</tbody></table></div></div>';
+
+    host.innerHTML=html;
+  })();
 }
 
 // ── ORDER RETENTION (6 MONTHS) ───────────────────────────
