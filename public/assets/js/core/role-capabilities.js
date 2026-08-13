@@ -101,7 +101,7 @@ export function canWriteStateKey(profile, key) {
     return /^(crash_carts$|crash_cart_reports$|requests$|notes$|dept_notes$|request_analytics_archive$|audit_log$|theme$)/.test(value);
   }
   if (role === 'controlled_pharmacy') {
-    return /^(controlled_.*|accountability_.*|psychotropic_.*|audit_log$|theme$)/.test(value);
+    return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|audit_log$|theme$)/.test(value);
   }
   if (role === 'warehouse') {
     return /^(controlled_warehouse$|controlled_moves$|controlled_pdf_receipts$|audit_log$|theme$)/.test(value);
