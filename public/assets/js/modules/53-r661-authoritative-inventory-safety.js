@@ -182,7 +182,7 @@ if(typeof previousStart==='function')window.startApp=function(){
       showSafety();
       setTimeout(verifyStartup,2600);
     }
-  },1200);
+  },0);
 
   return result;
 };
