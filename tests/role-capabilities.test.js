@@ -11,12 +11,13 @@ test('role aliases normalize without widening privileges', () => {
 
 test('department scope is exact and outpatient supervisor is single-department only', () => {
   const outpatient = { role: 'outpatient_pharmacy_supervisor', deptId: 'outpatient' };
+  // inpatient_supervisor sees ALL departments including outpatient (R6.76.52 policy change)
   const inpatient = { role: 'inpatient_supervisor', deptId: 'male-medical' };
   const employee = { role: 'department', deptId: 'anesthesia' };
   assert.equal(canAccessDepartment(outpatient, 'outpatient'), true);
   assert.equal(canAccessDepartment(outpatient, 'male-medical'), false);
   assert.equal(canAccessDepartment(inpatient, 'male-medical'), true);
-  assert.equal(canAccessDepartment(inpatient, 'outpatient'), false);
+  assert.equal(canAccessDepartment(inpatient, 'outpatient'), true);
   assert.equal(canAccessDepartment(employee, 'anesthesia'), true);
   assert.equal(canAccessDepartment(employee, 'emergency'), false);
 });

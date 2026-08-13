@@ -97,7 +97,6 @@ import './modules/73-r676-analytics-quarterly-annual-reports.js?v=R6.76.19';
 import './modules/74-r676-analytics-department-print-comparison.js?v=R6.76.19';
 import './modules/79-r676-independent-regimen-database.js?v=R6.76.19';
 import './modules/75-r676-multi-year-department-comparison.js?v=R6.76.19';
-import './modules/76-r676-analytics-official-print-header.js?v=R6.76.19';
 import './modules/77-r676-unified-analytics-print.js?v=R6.76.19';
 import './modules/78-r676-comprehensive-annual-report.js?v=R6.76.19';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.19';

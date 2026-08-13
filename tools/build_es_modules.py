@@ -30,6 +30,12 @@ PROVIDERS = {
     "08-controlled-shared-list-filters.js",
     "51-asdhealth-canonical-r6-32-20260727.js",
 }
+# Functions in PROVIDERS that must NOT be published in the legacy API.
+# These are internal implementation helpers — their names appear exactly once
+# in the source (the definition) and the test suite enforces that invariant.
+PROVIDER_PRIVATE = {
+    "07-expiry-requests-and-primary-features.js": {"legacyRenderPharmNotes"},
+}
 EVENT_RE = re.compile(r"\s(on[a-z]+)=(['\"])(.*?)\2", re.I | re.S)
 SCRIPT_RE = re.compile(r"\s*<script\b[^>]*\bsrc=(['\"])\./assets/js/modules/[^'\"]+\1[^>]*></script>", re.I)
 MAIN_SCRIPT_RE = re.compile(r"\s*<script\b[^>]*\bsrc=(['\"])\./assets/js/main\.js[^'\"]*\1[^>]*></script>", re.I)
@@ -195,7 +201,8 @@ def main() -> None:
         if path.name in PROVIDERS:
             provider = transform_provider(source)
             source = str(provider['source'])
-            functions = list(provider['functions'])
+            private_fns = PROVIDER_PRIVATE.get(path.name, set())
+            functions = [f for f in provider['functions'] if f not in private_fns]
             variables = list(provider['variables'])
             provider_report[path.name] = {"functions": functions, "variables": variables}
             source = "import { publishLegacy } from '../core/legacy-registry.js';\n\n" + source

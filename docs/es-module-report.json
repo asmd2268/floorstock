@@ -261,7 +261,6 @@
         "noteStatus",
         "noteType",
         "renderDeptNotes",
-        "legacyRenderPharmNotes",
         "renderPharmNotes",
         "openNoteReply",
         "updateNotesBadge",
@@ -552,5 +551,5 @@
     }
   },
   "staticEventBindings": 214,
-  "modules": 80
+  "modules": 79
 }
