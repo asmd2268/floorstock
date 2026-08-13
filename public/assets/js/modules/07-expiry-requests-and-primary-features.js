@@ -238,6 +238,12 @@ var canonicalOrderRetentionCutoff=globalThis.orderRetentionCutoff;
 var canonicalRequestArchiveRecord=globalThis.requestArchiveRecord;
 var canonicalCleanupOldOrders=globalThis.cleanupOldOrders;
 var canonicalScheduleAutomaticOrderCleanup=globalThis.scheduleAutomaticOrderCleanup;
+var canonicalGetNextDispSlot=globalThis.getNextDispSlot;
+var canonicalFmt12=globalThis.fmt12;
+var canonicalDayBits=globalThis.dayBits;
+var canonicalTimeToMins=globalThis.timeToMins;
+var canonicalEnsureXLSX=globalThis.ensureXLSX;
+var canonicalGetCatOptions=globalThis.getCatOptions;
 function orderRetentionCutoff(){return typeof canonicalOrderRetentionCutoff==='function'?canonicalOrderRetentionCutoff():undefined}
 function requestArchiveRecord(r){return typeof canonicalRequestArchiveRecord==='function'?canonicalRequestArchiveRecord(r):undefined}
 async function cleanupOldOrders(autoMode){return typeof canonicalCleanupOldOrders==='function'?canonicalCleanupOldOrders(autoMode):undefined}
@@ -281,7 +287,7 @@ function clearImport(){
 }
 
 // Excel loader is shared by the import and controlled-import workflows.
-async function ensureXLSX(){return globalThis.ensureXLSX()}
+async function ensureXLSX(){return typeof canonicalEnsureXLSX==='function'?canonicalEnsureXLSX():undefined}
 
 // ── XLSX UPLOAD HANDLER ──────────────────────────────────
 function handleXlsxDrop(e){
@@ -1540,7 +1546,7 @@ function officialPrintHeaderHTML(){
 
 
 // ── CATEGORY SELECTOR OPTIONS ────────────────────────────
-function getCatOptions(selected){return globalThis.getCatOptions(selected)}
+function getCatOptions(selected){return typeof canonicalGetCatOptions==='function'?canonicalGetCatOptions(selected):undefined}
 
 // ════════════════════════════════════════════════════════
 // SCHEDULE & LIMITS
@@ -1554,11 +1560,11 @@ function getMonthlyLimits(){return globalThis.scheduleGetMonthlyLimits()}
 function setMonthlyLimits(o){return globalThis.scheduleSetMonthlyLimits(o)}
 
 // ── Helpers ───────────────────────────────────────────────
-function fmt12(t){return globalThis.fmt12(t)}
-function dayBits(days){return globalThis.dayBits(days)}
+function fmt12(t){return typeof canonicalFmt12==='function'?canonicalFmt12(t):undefined}
+function dayBits(days){return typeof canonicalDayBits==='function'?canonicalDayBits(days):undefined}
 
 // ── Check if request is currently allowed ─────────────────
-function timeToMins(t){return globalThis.timeToMins(t)}
+function timeToMins(t){return typeof canonicalTimeToMins==='function'?canonicalTimeToMins(t):undefined}
 
 // ── Check monthly request count ───────────────────────────
 function getMonthlyReqCount(deptId){return canonicalMonthlyReqCount(deptId)}
@@ -1605,7 +1611,7 @@ function applyBulkLimit(){return globalThis.applyBulkLimit()}
 
 
 // ── DEPT: Show window info + block if outside window ──────
-function getNextDispSlot(deptId){return globalThis.getNextDispSlot(deptId)}
+function getNextDispSlot(deptId){return typeof canonicalGetNextDispSlot==='function'?canonicalGetNextDispSlot(deptId):undefined}
 // Single global exit lifecycle: persist transient UI state, close public listeners, then warn on pending writes.
 window.addEventListener('beforeunload',function(e){
   if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();

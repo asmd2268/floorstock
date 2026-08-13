@@ -37,10 +37,10 @@ window.bulkChangeCategory=async function(){var ids=typeof getSelectedMedIds==='f
 /* Request submission and fulfillment: no early success message. */
 var requestSaving=false;
 window.submitReq=async function(){
-  if(requestSaving)return toast('[DBG] requestSaving locked','err');
-  if(!window.CU||String(CU.role)!=='department')return toast('[DBG] CU='+JSON.stringify(window.CU&&{role:CU.role,deptId:CU.deptId}),'err');
+  if(requestSaving)return;
+  if(!window.CU||String(CU.role)!=='department')return;
   if(typeof window.getNewRequestGateState==='function'){
-    var gate;try{gate=window.getNewRequestGateState(CU.deptId)}catch(gateErr){return toast('[DBG] gate threw: '+String(gateErr&&gateErr.message||gateErr),'err')}
+    var gate=window.getNewRequestGateState(CU.deptId);
     if(gate&&gate.blocked)return toast((gate.reasonAr||'')+'\n'+(gate.reasonEn||''),'err');
   }else{
     var windowCheck=typeof isRequestAllowed==='function'?isRequestAllowed(CU.deptId):{allowed:true};if(!windowCheck.allowed){var next=windowCheck.next?(windowCheck.next.day+' '+windowCheck.next.time):'';return toast('Ordering is currently unavailable.'+(next?' Next: '+next:''),'err')}
