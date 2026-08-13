@@ -562,7 +562,7 @@ window.renderControlledStorage=async function(){
   notice.style.display='none';workspace.style.display='block';if(createButton)createButton.style.display='inline-flex';
   var data=storageState();var mode=E('controlled-storage-mode');if(mode)mode.value=data.mode||'map';
   var filter=E('controlled-storage-filter'),oldFilter=filter.value;
-  filter.innerHTML='<option value="all">All controlled & psychotropic medicines / كل الأدوية المخدرة والنفسية</option><option value="unassigned">Not assigned / غير مضافة لخانة</option>'+data.units.map(function(unit){return '<option value="unit:'+esc(unit.id)+'">'+esc(unit.name)+'</option>';}).join('');
+  filter.innerHTML='<option value="all">All controlled & psychotropic medicines / كل الأدوية المخدرة والنفسية</option><option value="unassigned">Not assigned / غير مضافة لخانة</option><option value="near_expiry_30">Near expiry (≤30 days) / قريبة الانتهاء (≤30 يوم)</option>'+data.units.map(function(unit){return '<option value="unit:'+esc(unit.id)+'">'+esc(unit.name)+'</option>';}).join('');
   if(Array.from(filter.options).some(function(option){return option.value===oldFilter;}))filter.value=oldFilter;
   var medicines=controlledMeds(),assigned=storageAssignedMap(data),unitFilter=filter.value;
   var oldList=E('controlled-storage-medicine-list');if(oldList)oldList.remove();
@@ -598,6 +598,27 @@ window.renderControlledStorage=async function(){
       }).join(''):
       '<span class="fhint">Every controlled and psychotropic medicine is assigned to a cell.</span>')+
       '</div></div></div>';
+    return;
+  }
+  if(unitFilter==='near_expiry_30'){
+    var cutoffMs=Date.now()+30*24*60*60*1000;
+    function batchNearExpiry(m){return (m.batches||[]).some(function(b){var d=new Date(b.expiry||b.date||'');return !isNaN(d.getTime())&&d.getTime()<=cutoffMs;});}
+    var nearExpMeds=medicines.filter(batchNearExpiry);
+    var cellMap={};
+    data.units.forEach(function(u){(u.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(cell.medId)cellMap[String(cell.medId)]={unit:u.name,code:cell.code};});});});
+    E('controlled-storage-root').innerHTML='<div class="card"><div class="ch"><span class="ct">Near-expiry medicines (≤30 days) / الأدوية القريبة من الانتهاء (خلال 30 يومًا)</span></div>'+
+      '<div class="cb">'+
+      (nearExpMeds.length?
+        '<div class="tw"><table><thead><tr><th>Medicine</th><th>Expiry</th><th>Cell / الخانة</th></tr></thead><tbody>'+
+        nearExpMeds.map(function(m){
+          var cell=cellMap[String(m.id)];
+          var batches=(m.batches||[]).filter(function(b){var d=new Date(b.expiry||b.date||'');return !isNaN(d.getTime())&&d.getTime()<=cutoffMs;});
+          var expiryText=batches.map(function(b){return (b.expiry||b.date||'—')+(b.lot?' · '+b.lot:'');}).join(' | ');
+          return '<tr style="background:rgba(210,153,34,.08)"><td><b>'+esc(m.name)+'</b></td><td style="color:var(--yl)"><b>'+esc(expiryText)+'</b></td><td>'+(cell?esc(cell.unit)+' — '+esc(cell.code):'<span class="fhint">Unassigned</span>')+'</td></tr>';
+        }).join('')+
+        '</tbody></table></div>':
+        '<div class="fhint" style="padding:16px">No medicines expiring within 30 days.</div>')+
+      '</div></div>';
     return;
   }
   if(!data.units.length){E('controlled-storage-root').innerHTML='<div class="r21-storage-empty"><b>No cabinets or safes yet / لا توجد دواليب أو خزائن</b><div style="margin-top:6px">Use the form above to define the first unit for the controlled-pharmacy custody.</div></div>';return;}

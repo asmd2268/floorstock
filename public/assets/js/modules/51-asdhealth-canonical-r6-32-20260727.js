@@ -725,7 +725,7 @@ function fsR5ControlledPrintHtml(dept,rows){
       '<span>'+fsR5Esc(signature[1]||'')+'</span></div>';
   }).join('');
 
-  var css=`@page{size:auto;margin:3mm}
+  var css=`@page{size:A4 landscape;margin:6mm}
 *{
   box-sizing:border-box;
   -webkit-print-color-adjust:exact!important;
@@ -816,16 +816,19 @@ th{font-weight:900}
 .medicine{text-align:left;font-weight:800}
 .batch{text-align:left;padding-left:1.2mm}
 .ctl-batch-print-line{display:block;padding:.18mm 0}
-.near-expiry-30 td,
-.near-expiry-30 td *,
-.near-expiry-30 .ctl-batch-print-line{
-  background:#000!important;
-  background-color:#000!important;
-  color:#fff!important;
-  -webkit-text-fill-color:#fff!important;
-  forced-color-adjust:none!important;
+.near-expiry-30 td{
+  font-weight:700!important;
+  background:#f0f0f0!important;
+  background-color:#f0f0f0!important;
   -webkit-print-color-adjust:exact!important;
   print-color-adjust:exact!important
+}
+.near-expiry-30 td:first-child{
+  border-left:3px solid #000!important
+}
+.near-expiry-30 .ctl-batch-print-line{
+  font-weight:900!important;
+  text-decoration:underline
 }
 .signatures{
   display:grid;
