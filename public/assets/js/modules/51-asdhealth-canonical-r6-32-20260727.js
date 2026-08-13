@@ -506,14 +506,11 @@ function fsR12BatchExpiryHtml(batches){
 
 function fsR5BatchText(batches,html){
   if(!Array.isArray(batches)||!batches.length)return '—';
-  return batches.map(function(batch,index){
+  return batches.map(function(batch){
     var lot=fsR5S(batch&&batch.lot,'');
     var expiry=fsR5DMY(batch&&batch.expiry);
-    var qty=batch&&batch.qty!==''&&batch.qty!=null?fsR5N(batch.qty):'';
     var parts=[];
     if(lot)parts.push('Lot '+lot);
-    else parts.push('Batch '+(index+1));
-    if(qty!=='')parts.push('Qty '+qty);
     parts.push('Exp '+expiry);
     if(!html)return parts.join(' · ');
     return '<div class="ctl-batch-print-line">'+parts.map(fsR5Esc).join(' · ')+'</div>';
@@ -895,7 +892,7 @@ th{font-weight:900}
       '<thead><tr>'+
         '<th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine / الدواء</th>'+
         '<th>Class / التصنيف</th><th>Required / المطلوب</th>'+
-        '<th>Actual / الفعلي</th><th>Batch & Expiry / الدفعة والانتهاء</th>'+
+        '<th>Actual / الفعلي</th><th>Expiry / الانتهاء</th>'+
       '</tr></thead>'+
       '<tbody>'+body+'</tbody>'+
     '</table>'+
