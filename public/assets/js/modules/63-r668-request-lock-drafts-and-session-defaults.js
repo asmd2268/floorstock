@@ -102,6 +102,9 @@ window.refreshNewRequestGate=applyNewRequestGate;
 window.refreshRequestLimitPageLock=applyNewRequestGate;
 var previousCountWarning=window.refreshRequestCountLimitWarning;
 window.refreshRequestCountLimitWarning=function(){
+  // Always remove legacy warning first to prevent position drift between
+  // two separate insertions before #rfbody.
+  removeLegacyBlockingWarnings();
   var result=typeof previousCountWarning==='function'?previousCountWarning.apply(this,arguments):undefined;
   applyNewRequestGate();
   return result;
