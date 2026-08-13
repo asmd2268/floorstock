@@ -290,6 +290,7 @@ function repairControlledSharedC(){
     .then(function(){return typeof window.ensureNarcoticSharedList==='function'?window.ensureNarcoticSharedList():false})
     .then(function(v){results.push(!!v);return typeof window.ensurePsychotropicSharedList==='function'?window.ensurePsychotropicSharedList():false})
     .then(function(v){results.push(!!v);return typeof window.applyPsychotropicPharmacyStockR664==='function'?window.applyPsychotropicPharmacyStockR664():false})
+    .then(function(v){results.push(!!v);return typeof window.restoreNarcoticCatalogFromBackup==='function'?window.restoreNarcoticCatalogFromBackup():false})
     .then(function(v){results.push(!!v);var changed=results.some(Boolean),active=document.querySelector('.pg.on');if(changed&&active&&active.id==='pg-controlled'&&typeof window.renderControlled==='function')window.renderControlled();return changed})
     .catch(function(e){console.warn('Controlled shared catalogue repair failed',e);return false});
 }
