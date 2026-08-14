@@ -263,7 +263,7 @@ async function fsStateToken(forceRefresh){
 globalThis.fsTenantId = tenantIdFromProfile;
 function fsStateCollectionPath(profile){return stateCollectionPath(profile||(globalThis.S&&S.scopeProfile))}
 function fsStateSdkCollection(profile){return stateCollectionRef(FB_DB,profile||(globalThis.S&&S.scopeProfile))}
-window.fsTenantId=function(){var profileId=fsTenantId(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
+window.fsTenantId=function(){var profileId=tenantIdFromProfile(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
 window.fsTenantCollection=function(name){var tenantId=window.fsTenantId();return tenantId?FB_DB.collection('tenants').doc(tenantId).collection(name):FB_DB.collection(name)};
 async function fsStateRestRequest(url,options,timeoutMs){
   var token=await fsStateToken(false);
