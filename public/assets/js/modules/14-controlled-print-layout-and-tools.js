@@ -3,7 +3,7 @@
   function val(id){return (q(id)||{}).value||''}
   function n(v){v=Number(v);return isFinite(v)?v:0}
   function medKey(it){return String((it&&it.name)||'').trim().toLowerCase()}
-  function openReports(){return (crashReports()||[]).filter(function(r){return r.status==='open'})}
+  function openReports(){return (crashReports()||[]).filter(function(r){return r.status==='open'||r.status==='pending'})}
   function isPharmacyCrashRole(){if(window.fsHasCapability)return window.fsHasCapability('crashCart.operate');var rRole=String((window.CU&&CU.role)||'');return !!window.CU&&['pharmacy','inpatient_supervisor','pharmacy_staff'].includes(rRole)}
 
   /* Role menus exactly as requested. */
@@ -73,7 +73,7 @@
   window.crashReportOpen=function(id){
     var effectiveRole=window.fsEffectiveRole?window.fsEffectiveRole():String(window.CU&&CU.role||'');
     var c=crashCart(id);if(!c||!window.CU||['department','department_employee'].indexOf(String(effectiveRole))<0||String(c.deptId)!==String(CU.deptId))return toast('No permission','err');
-    var existing=(crashReports()||[]).find(function(report){return String(report.cartId)===String(id)&&report.status==='open'})||null,reasonInput=q('ccr-reason'),otherInput=q('v16-crash-other');
+    var existing=(crashReports()||[]).find(function(report){return String(report.cartId)===String(id)&&(report.status==='open'||report.status==='pending')})||null,reasonInput=q('ccr-reason'),otherInput=q('v16-crash-other');
     q('ccr-cart-id').value=id;q('ccr-old-seal').value=existing&&existing.oldSeal||c.seal||'';
     if(reasonInput){var savedReason=String(existing&&existing.reason||'');if(savedReason.indexOf('Other / سبب آخر: ')===0){reasonInput.value='other';if(otherInput){otherInput.value=savedReason.slice('Other / سبب آخر: '.length);otherInput.style.display=''}}else{reasonInput.value=savedReason;if(otherInput){otherInput.value='';otherInput.style.display='none'}}}
     q('ccr-items').innerHTML=(c.items||[]).map(function(it){

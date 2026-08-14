@@ -2,7 +2,12 @@
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const { applyCrashCartReport, publicCrashCartPayload } = require('./crash-cart-report-core');
+const {
+  applyCrashCartReport,
+  acceptCrashCartReport,
+  rejectCrashCartReport,
+  publicCrashCartPayload,
+} = require('./crash-cart-report-core');
 
 const CALLABLE_OPTIONS = {
   region: 'us-central1',
@@ -15,12 +20,27 @@ async function callerProfile(db, request) {
   if (!snapshot.exists) throw new HttpsError('permission-denied', 'User profile not found.');
   const profile = snapshot.data() || {};
   if (profile.active === false) throw new HttpsError('permission-denied', 'Account is inactive.');
+  return { ...profile, uid: request.auth.uid };
+}
+
+async function callerDepartmentProfile(db, request) {
+  const profile = await callerProfile(db, request);
   if (String(profile.role || '') !== 'department') {
     throw new HttpsError('permission-denied', 'Only a department employee can submit this report.');
   }
   const departmentId = String(profile.deptId || profile.departmentId || '').trim();
   if (!departmentId) throw new HttpsError('failed-precondition', 'The account is not linked to a department.');
-  return { ...profile, uid: request.auth.uid, departmentId };
+  return { ...profile, departmentId };
+}
+
+async function callerPharmacyProfile(db, request) {
+  const profile = await callerProfile(db, request);
+  const role = String(profile.role || '');
+  const allowed = ['master', 'pharmacy', 'pharmacy_supervisor'];
+  if (!allowed.includes(role)) {
+    throw new HttpsError('permission-denied', 'Only pharmacy staff can accept or reject crash cart reports.');
+  }
+  return profile;
 }
 
 async function assertWritableTenant(db, profile) {
@@ -65,9 +85,23 @@ function cleanConsumed(value) {
   }));
 }
 
+function wrapError(error) {
+  if (error instanceof HttpsError) throw error;
+  const message = String(error && error.message || 'Operation could not be completed.');
+  const code = /not assigned|another department|belongs to another/i.test(message)
+    ? 'permission-denied'
+    : /not found/i.test(message)
+      ? 'not-found'
+      : /quantity|medicine|reason|report line|too many|pending|accepted|rejected/i.test(message)
+        ? 'invalid-argument'
+        : 'internal';
+  throw new HttpsError(code, message);
+}
+
+// Department submits a crash cart report — creates a pending report, no inventory deduction.
 exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
   const db = getFirestore();
-  const profile = await callerProfile(db, request);
+  const profile = await callerDepartmentProfile(db, request);
   const tenantId = await assertWritableTenant(db, profile);
   const data = request.data || {};
   const cartId = String(data.cartId || '').trim();
@@ -108,28 +142,13 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
       const updatedAt = FieldValue.serverTimestamp();
       transaction.set(refs.carts, { value: result.carts, updatedAt }, { merge: false });
       transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
-      transaction.set(
-        refs.publicCollection.doc(`crash_${cartId}`),
-        { ...publicCrashCartPayload(result.cart), updatedAt },
-        { merge: false },
-      );
     });
   } catch (error) {
-    if (error instanceof HttpsError) throw error;
-    console.error('submitDepartmentCrashCartReport failed', error);
-    const message = String(error && error.message || 'Crash Cart report could not be saved.');
-    const code = /not assigned|another department|belongs to another/i.test(message)
-      ? 'permission-denied'
-      : /not found/i.test(message)
-        ? 'not-found'
-        : /quantity|medicine|reason|report line|too many/i.test(message)
-          ? 'invalid-argument'
-          : 'internal';
-    throw new HttpsError(code, message);
+    wrapError(error);
   }
 
   db.collection('audit_logs').add({
-    action: 'crash_cart_open_report',
+    action: 'crash_cart_report_submitted',
     actorUid: profile.uid,
     actorEmail: profile.email || null,
     targetUid: null,
@@ -138,8 +157,7 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
       cartId,
       departmentId: profile.departmentId,
       consumedCount: result.report.consumed.length,
-      inventoryDeductedAtReport: true,
-      publicQrUpdated: true,
+      status: 'pending',
     },
     createdAt: FieldValue.serverTimestamp(),
   }).catch((error) => console.warn('Crash Cart report audit could not be saved.', error));
@@ -148,8 +166,113 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
     ok: true,
     cart: result.cart,
     report: result.report,
-    publicQrUpdated: true,
-    publicSynced: true,
     updatedExisting: result.updatedExisting,
+  };
+});
+
+// Pharmacy accepts a pending report — executes inventory deduction.
+exports.acceptCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
+  const db = getFirestore();
+  const profile = await callerPharmacyProfile(db, request);
+  const tenantId = await assertWritableTenant(db, profile);
+  const data = request.data || {};
+  const reportId = String(data.reportId || '').trim();
+  if (!reportId) throw new HttpsError('invalid-argument', 'Report ID is required.');
+
+  const actorName = String(profile.displayName || profile.name || profile.email || profile.username || profile.uid);
+  const stamp = new Date().toISOString();
+  const refs = stateRefs(db, tenantId);
+  let result;
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const [cartSnapshot, reportSnapshot] = await Promise.all([
+        transaction.get(refs.carts),
+        transaction.get(refs.reports),
+      ]);
+      const carts = cartSnapshot.exists && Array.isArray(cartSnapshot.data().value)
+        ? cartSnapshot.data().value
+        : [];
+      const reports = reportSnapshot.exists && Array.isArray(reportSnapshot.data().value)
+        ? reportSnapshot.data().value
+        : [];
+      result = acceptCrashCartReport({ carts, reports, reportId, actorName, stamp });
+      const updatedAt = FieldValue.serverTimestamp();
+      transaction.set(refs.carts, { value: result.carts, updatedAt }, { merge: false });
+      transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
+      transaction.set(
+        refs.publicCollection.doc(`crash_${result.cart.id}`),
+        { ...publicCrashCartPayload(result.cart), updatedAt },
+        { merge: false },
+      );
+    });
+  } catch (error) {
+    wrapError(error);
+  }
+
+  db.collection('audit_logs').add({
+    action: 'crash_cart_report_accepted',
+    actorUid: profile.uid,
+    actorEmail: profile.email || null,
+    targetUid: null,
+    details: {
+      reportId,
+      cartId: result.cart.id,
+      inventoryDeductedAt: stamp,
+    },
+    createdAt: FieldValue.serverTimestamp(),
+  }).catch((error) => console.warn('Crash Cart accept audit could not be saved.', error));
+
+  return {
+    ok: true,
+    cart: result.cart,
+    report: result.report,
+  };
+});
+
+// Pharmacy rejects a pending report — no inventory change.
+exports.rejectCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
+  const db = getFirestore();
+  const profile = await callerPharmacyProfile(db, request);
+  const tenantId = await assertWritableTenant(db, profile);
+  const data = request.data || {};
+  const reportId = String(data.reportId || '').trim();
+  const rejectionNote = String(data.rejectionNote || '').trim();
+  if (!reportId) throw new HttpsError('invalid-argument', 'Report ID is required.');
+
+  const actorName = String(profile.displayName || profile.name || profile.email || profile.username || profile.uid);
+  const stamp = new Date().toISOString();
+  const refs = stateRefs(db, tenantId);
+  let result;
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const reportSnapshot = await transaction.get(refs.reports);
+      const reports = reportSnapshot.exists && Array.isArray(reportSnapshot.data().value)
+        ? reportSnapshot.data().value
+        : [];
+      result = rejectCrashCartReport({ reports, reportId, rejectionNote, actorName, stamp });
+      const updatedAt = FieldValue.serverTimestamp();
+      transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
+    });
+  } catch (error) {
+    wrapError(error);
+  }
+
+  db.collection('audit_logs').add({
+    action: 'crash_cart_report_rejected',
+    actorUid: profile.uid,
+    actorEmail: profile.email || null,
+    targetUid: null,
+    details: {
+      reportId,
+      rejectionNote: rejectionNote || null,
+    },
+    createdAt: FieldValue.serverTimestamp(),
+  }).catch((error) => console.warn('Crash Cart reject audit could not be saved.', error));
+
+  return {
+    ok: true,
+    report: result.report,
   };
 });

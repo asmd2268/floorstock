@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.91 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.92 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -66,7 +66,7 @@ import './modules/40-v16-clean-optimized-script.js?v=R6.76.65';
 import './modules/41-v16-inventory-status-merge-clean-script.js?v=R6.76.19';
 import './modules/42-weekly-request-grid-bulk-classification-clean-script.js?v=R6.76.66';
 import './modules/43-similar-medicines-workbench-v2-script.js?v=R6.76.19';
-import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.19';
+import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.92';
 import './modules/45-asdh-final-department-controlled-fix-script.js?v=R6.76.19';
 import './modules/46-r664-private-crash-cart-source-only.js?v=R6.76.19';
 import './modules/47-asdh-authoritative-final-fixes-script.js?v=R6.76.19';
@@ -81,13 +81,13 @@ import './modules/56-r664-security-idle-timeout.js?v=R6.76.19';
 import './modules/57-r664-production-console-policy.js?v=R6.76.19';
 import './modules/58-r664-public-privacy-rewrite.js?v=R6.76.19';
 import './modules/59-r664-security-complete-runtime.js?v=R6.76.19';
-import './modules/60-csp-legacy-event-bridge.js?v=R6.76.89';
+import './modules/60-csp-legacy-event-bridge.js?v=R6.76.92';
 import './modules/61-r666-form-draft-and-crash-report-protection.js?v=R6.76.19';
 import './modules/62-r667-ui-text-and-icon-normalization.js?v=R6.76.19';
 import './modules/63-r668-request-lock-drafts-and-session-defaults.js?v=R6.76.89';
 import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.76.19';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.76.19';
-import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.77';
+import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.92';
 import './modules/67-r676-fulfillment-edit-settings.js?v=R6.76.19';
 import './modules/68-schedule-controller.js?v=R6.76.83';
 import './modules/69-r676-narcotic-catalog-restore-20260728.js?v=R6.76.19';

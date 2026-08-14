@@ -103,6 +103,7 @@ function deductReported(item, qty, reportedExpiry, stamp, actorName) {
   };
 }
 
+// Phase 7a: Submit creates a pending report — NO deduction until pharmacy accepts.
 function applyCrashCartReport({
   carts,
   reports,
@@ -122,15 +123,34 @@ function applyCrashCartReport({
     throw new Error('This Crash Cart is not assigned to the authenticated department.');
   }
 
-  const existingIndex = nextReports.findIndex((entry) => (
+  // Block new submission if a pending report already exists for this cart.
+  const pendingIndex = nextReports.findIndex((entry) => (
+    String(entry && entry.cartId || '') === String(cartId || '')
+    && String(entry && entry.status || '') === 'pending'
+  ));
+  if (pendingIndex >= 0) {
+    const pending = nextReports[pendingIndex];
+    if (String(pending.deptId || '') !== String(departmentId || '')) {
+      throw new Error('The existing report belongs to another department.');
+    }
+    // Allow re-submission by the same department: replace the pending report.
+    // No restore needed — no deduction was made yet.
+  }
+
+  // Also handle legacy open reports (created before Phase 7a) — restore their deduction.
+  const openIndex = nextReports.findIndex((entry) => (
     String(entry && entry.cartId || '') === String(cartId || '')
     && String(entry && entry.status || '') === 'open'
+    && pendingIndex < 0
   ));
-  const previous = existingIndex >= 0 ? nextReports[existingIndex] : null;
-  if (previous && String(previous.deptId || '') !== String(departmentId || '')) {
-    throw new Error('The existing report belongs to another department.');
+  const previousOpen = openIndex >= 0 ? nextReports[openIndex] : null;
+  if (previousOpen) {
+    if (String(previousOpen.deptId || '') !== String(departmentId || '')) {
+      throw new Error('The existing report belongs to another department.');
+    }
+    if (previousOpen.inventoryDeductedAtReport === true) restoreReported(cart, previousOpen);
+    nextReports.splice(openIndex, 1);
   }
-  if (previous && previous.inventoryDeductedAtReport === true) restoreReported(cart, previous);
 
   const rows = Array.isArray(consumed) ? consumed : [];
   if (!rows.length) throw new Error('Select at least one medication and enter its quantity.');
@@ -144,42 +164,130 @@ function applyCrashCartReport({
     const item = (cart.items || []).find((entry) => String(entry && entry.id || '') === itemId);
     if (!item) throw new Error('A selected medicine no longer exists in the Crash Cart.');
     const qty = number(row.qty);
+    if (!(qty > 0)) throw new Error('Consumed quantity must be greater than zero.');
+    const present = itemPresent(item);
+    if (qty > present + 0.000001) throw new Error('Reported quantity exceeds the current cart quantity.');
     const reportedExpiry = dateKey(row.reportedExpiry);
-    const max = itemPresent(item);
-    const deduction = deductReported(item, qty, reportedExpiry, stamp, actorName);
     return {
       itemId,
       name: String(item.name || item.genericName || ''),
       strength: String(item.strength || item.concentration || ''),
       qty,
-      max,
+      max: present,
       reportedExpiry: reportedExpiry || '',
-      ...deduction,
+      // No deduction yet — deductionBatches filled when pharmacy accepts.
+      deductionBatches: [],
+      deductedQty: 0,
+      deductedAtReport: false,
     };
   });
 
+  const existingId = pendingIndex >= 0 ? nextReports[pendingIndex].id : null;
   const report = {
-    id: previous && previous.id || `ccr_${randomUUID()}`,
+    id: existingId || `ccr_${randomUUID()}`,
     cartId: String(cartId),
     deptId: String(departmentId),
     reason: String(reason || '').trim(),
-    oldSeal: String(oldSeal || '').trim() || (previous && previous.oldSeal) || String(cart.seal || ''),
+    oldSeal: String(oldSeal || '').trim() || (pendingIndex >= 0 ? nextReports[pendingIndex].oldSeal : '') || String(cart.seal || ''),
     consumed: normalized,
-    status: 'open',
-    openedAt: previous && previous.openedAt || stamp,
-    openedBy: previous && previous.openedBy || actorName,
+    status: 'pending',
+    openedAt: (pendingIndex >= 0 ? nextReports[pendingIndex].openedAt : null) || stamp,
+    openedBy: (pendingIndex >= 0 ? nextReports[pendingIndex].openedBy : null) || actorName,
     lastReportedAt: stamp,
     lastReportedBy: actorName,
-    inventoryDeductedAtReport: true,
-    inventoryDeductedAt: stamp,
+    inventoryDeductedAtReport: false,
   };
   if (!report.reason) throw new Error('Select a reason for opening the Crash Cart.');
   if (report.reason.length > 500) throw new Error('Crash Cart report reason is too long.');
 
-  if (existingIndex >= 0) nextReports[existingIndex] = report;
+  if (pendingIndex >= 0) nextReports[pendingIndex] = report;
   else nextReports.push(report);
 
-  return { carts: nextCarts, reports: nextReports, cart, report, updatedExisting: existingIndex >= 0 };
+  return {
+    carts: nextCarts,
+    reports: nextReports,
+    cart,
+    report,
+    updatedExisting: pendingIndex >= 0,
+  };
+}
+
+// Phase 7a: Pharmacy accepts a pending report — execute deduction now.
+function acceptCrashCartReport({
+  carts,
+  reports,
+  reportId,
+  actorName,
+  stamp = new Date().toISOString(),
+}) {
+  const nextCarts = clone(Array.isArray(carts) ? carts : []);
+  const nextReports = clone(Array.isArray(reports) ? reports : []);
+
+  const reportIndex = nextReports.findIndex((entry) => String(entry && entry.id || '') === String(reportId || ''));
+  if (reportIndex < 0) throw new Error('Report not found.');
+  const report = nextReports[reportIndex];
+  if (String(report.status || '') !== 'pending') {
+    throw new Error('Only pending reports can be accepted.');
+  }
+
+  const cart = nextCarts.find((entry) => String(entry && entry.id || '') === String(report.cartId || ''));
+  if (!cart) throw new Error('Crash Cart not found.');
+
+  const consumedUpdated = (Array.isArray(report.consumed) ? report.consumed : []).map((row) => {
+    const item = (cart.items || []).find((entry) => String(entry && entry.id || '') === String(row && row.itemId || ''));
+    if (!item) throw new Error('A medicine in this report no longer exists in the Crash Cart.');
+    const deduction = deductReported(item, row.qty, row.reportedExpiry, stamp, actorName);
+    return { ...row, ...deduction };
+  });
+
+  nextReports[reportIndex] = {
+    ...report,
+    consumed: consumedUpdated,
+    status: 'accepted',
+    inventoryDeductedAtReport: true,
+    inventoryDeductedAt: stamp,
+    acceptedAt: stamp,
+    acceptedBy: actorName,
+  };
+
+  return {
+    carts: nextCarts,
+    reports: nextReports,
+    cart,
+    report: nextReports[reportIndex],
+  };
+}
+
+// Phase 7a: Pharmacy rejects a pending report — no inventory change.
+function rejectCrashCartReport({
+  reports,
+  reportId,
+  rejectionNote,
+  actorName,
+  stamp = new Date().toISOString(),
+}) {
+  const nextReports = clone(Array.isArray(reports) ? reports : []);
+
+  const reportIndex = nextReports.findIndex((entry) => String(entry && entry.id || '') === String(reportId || ''));
+  if (reportIndex < 0) throw new Error('Report not found.');
+  const report = nextReports[reportIndex];
+  if (String(report.status || '') !== 'pending') {
+    throw new Error('Only pending reports can be rejected.');
+  }
+
+  nextReports[reportIndex] = {
+    ...report,
+    status: 'rejected',
+    inventoryDeductedAtReport: false,
+    rejectedAt: stamp,
+    rejectedBy: actorName,
+    rejectionNote: String(rejectionNote || '').slice(0, 500),
+  };
+
+  return {
+    reports: nextReports,
+    report: nextReports[reportIndex],
+  };
 }
 
 function publicCrashCartPayload(cart) {
@@ -225,6 +333,8 @@ function publicCrashCartPayload(cart) {
 
 module.exports = {
   applyCrashCartReport,
+  acceptCrashCartReport,
+  rejectCrashCartReport,
   publicCrashCartPayload,
   restoreReported,
   deductReported,

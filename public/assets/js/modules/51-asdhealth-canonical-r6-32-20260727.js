@@ -1612,7 +1612,7 @@ function fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled){
   var carts=fsR6CrashClone(originalCarts),reports=fsR6CrashClone(originalReports),actor=fsR6Actor(),stamp=fsR6Now(),bulkId='ccsmart_'+Date.now().toString(36),verification=[],createdReports=[];
   compiled.carts.forEach(function(cartPlan,index){
     var cart=carts.find(function(c){return String(c.id)===String(cartPlan.cartId)});if(!cart)throw new Error('Crash Cart not found: '+cartPlan.cartId);
-    if(reports.some(function(r){return String(r.cartId)===String(cart.id)&&r.status==='open'}))throw new Error((cart.name||'Crash Cart')+' has an open report. Close it first.');
+    if(reports.some(function(r){return String(r.cartId)===String(cart.id)&&(r.status==='open'||r.status==='pending')}))throw new Error((cart.name||'Crash Cart')+' has an open report. Close it first.');
     var oldSeal=String(cart.seal||''),reportId='ccr_smart_'+Date.now().toString(36)+'_'+index+'_'+Math.random().toString(36).slice(2,7),replacements=[];
     cartPlan.lines.forEach(function(line){
       var item=(cart.items||[]).find(function(x){return String(x.id)===String(line.itemId)});if(!item)throw new Error('Medicine no longer exists in '+(cart.name||cart.id));
