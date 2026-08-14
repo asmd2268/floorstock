@@ -1,0 +1,389 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userPath() {
+      return /databases/$(database)/documents/users/$(request.auth.uid);
+    }
+
+    function hasProfile() {
+      return signedIn() && exists(userPath());
+    }
+
+    function profile() {
+      return get(userPath()).data;
+    }
+
+    function activeUser() {
+      return hasProfile() && profile().active == true;
+    }
+
+    function role() {
+      return activeUser() ? profile().role : '';
+    }
+
+    function masterUser() {
+      return activeUser() && profile().master == true
+        && role() in ['master', 'pharmacy', 'pharmacy_director'];
+    }
+
+    function pharmacyDirector() {
+      return activeUser() && role() in ['master', 'pharmacy', 'pharmacy_director'];
+    }
+
+    function inpatientSupervisor() {
+      return activeUser() && role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor'];
+    }
+
+    function pharmacyStaff() {
+      return activeUser() && role() == 'pharmacy_staff';
+    }
+
+    function controlledOfficer() {
+      return activeUser() && role() == 'controlled_pharmacy';
+    }
+
+    function warehouseOfficer() {
+      return activeUser() && role() == 'warehouse';
+    }
+
+    function departmentUser() {
+      return activeUser() && role() == 'department';
+    }
+
+    function scopedStateUser() {
+      return activeUser() && role() in ['department', 'outpatient_pharmacy_supervisor', 'warehouse', 'controlled_pharmacy', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'];
+    }
+
+    function canReadScopedState(docId) {
+      return (role() in ['department', 'outpatient_pharmacy_supervisor'] && canReadDepartmentState(docId))
+        || (role() == 'controlled_pharmacy' && (docId.matches('^(controlled_.*|psychotropic_.*|narcotic_.*)$') || docId in ['departments', 'deleted_departments', 'custom_categories', 'facility_logo', 'theme', 'audit_log']))
+        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'theme', 'audit_log']))
+        || (role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'] && canReadPharmacyState(docId));
+    }
+
+    function canReadPharmacyState(docId) {
+      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia']
+        || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
+    }
+
+    function departmentId() {
+      return profile().deptId != null
+        ? profile().deptId
+        : profile().departmentId;
+    }
+
+    function tenantId() {
+      // Older profiles may contain tenantId: null. The client correctly treats
+      // that as a legacy (non-tenant) account, so rules must normalize it too.
+      return activeUser() && profile().get('tenantId', '') is string
+        ? profile().get('tenantId', '')
+        : '';
+    }
+
+    function sameTenant(id) {
+      return activeUser() && tenantId() != '' && tenantId() == id;
+    }
+
+    function sameUserTenant(userData) {
+      return activeUser() && (
+        userData.get('tenantId', '') is string
+          ? userData.get('tenantId', '')
+          : ''
+      ) == tenantId();
+    }
+
+    // The original FloorStock installation predates tenant records.  Its
+    // master profile and user directory therefore have no tenantId.  A Firestore
+    // collection LIST cannot safely use resource.data to inspect every user,
+    // which left that legitimate master unable to load the directory whenever
+    // the callable path was temporarily unavailable.  Keep this narrowly
+    // limited to the non-tenant legacy installation; tenant administrators
+    // continue to use the server-side directory callable.
+    function legacyMasterDirectoryReader() {
+      return masterUser() && tenantId() == '';
+    }
+
+    function platformAdmin() {
+      return signedIn() && request.auth.token.get('platformAdmin', false) == true;
+    }
+
+    function tenantWritable(id) {
+      return exists(/databases/$(database)/documents/tenants/$(id))
+        && get(/databases/$(database)/documents/tenants/$(id)).data.status in ['active', 'trialing']
+        && (
+          get(/databases/$(database)/documents/tenants/$(id)).data.get('currentPeriodEnd', null) == null
+          || get(/databases/$(database)/documents/tenants/$(id)).data.get('currentPeriodEnd', null) > request.time
+        );
+    }
+
+    function tenantFeature(id, feature) {
+      return feature in get(/databases/$(database)/documents/tenants/$(id)).data.features;
+    }
+
+    function stateFeatureAllowed(id, docId) {
+      return (docId.matches('^crash_.*$') && tenantFeature(id, 'crash_cart'))
+        || (docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*)$') && tenantFeature(id, 'controlled'))
+        || (docId.matches('^(requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$') && tenantFeature(id, 'requests'))
+        || (
+          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
+          && tenantFeature(id, 'inventory')
+        );
+    }
+
+    function departmentLimitAllowed(id, docId) {
+      return docId != 'departments'
+        || get(/databases/$(database)/documents/tenants/$(id)).data.plan == 'enterprise'
+        || (
+          request.resource.data.value is list
+          && (
+            (get(/databases/$(database)/documents/tenants/$(id)).data.plan == 'starter' && request.resource.data.value.size() <= 10)
+            || (get(/databases/$(database)/documents/tenants/$(id)).data.plan == 'professional' && request.resource.data.value.size() <= 50)
+          )
+        );
+    }
+
+    function validStateShape() {
+      return request.resource.data.keys().hasOnly(['value', 'updatedAt'])
+        && request.resource.data.updatedAt is timestamp;
+    }
+
+    function validFulfillmentEditSettings(docId) {
+      return docId != 'fulfillment_edit_settings_v1' || (
+        request.resource.data.value is map
+        && request.resource.data.value.keys().hasOnly(['hours', 'updatedAt', 'updatedBy', 'updatedById'])
+        && request.resource.data.value.hours is number
+        && request.resource.data.value.hours >= 0
+        && request.resource.data.value.hours <= 8760
+      );
+    }
+
+    function canReadDepartmentState(docId) {
+      return docId in [
+          'departments', 'deleted_departments', 'custom_categories',
+          'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2',
+          'req_windows', 'disp_slots', 'request_count_limits_v1', 'request_hour_grids_v1',
+          'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports',
+          'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2',
+          'fulfillment_edit_settings_v1',
+          'theme', 'facility_logo',
+          'pharmacy_category_config', 'pharmacy_department_announcements',
+          'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3',
+          'medication_visibility_rules_v3', 'shelves_anesthesia',
+          'controlled_catalog'
+        ]
+        || docId == 'meds_' + departmentId()
+        || docId == 'expiry_' + departmentId()
+        || docId == 'shelves_' + departmentId()
+        || docId == 'alerts_' + departmentId()
+        || docId == 'inventory_integrity_' + departmentId()
+        || docId == 'inventory_snapshot_index_' + departmentId()
+        || docId == 'controlled_dept_list_' + departmentId()
+        || (
+          profile().get('controlledCustodian', false) == true
+          && (
+            docId == 'controlled_dept_shelves_' + departmentId()
+            || docId == 'controlled_settings_' + departmentId()
+          )
+        );
+    }
+
+    function canWriteState(docId) {
+      // Keep this decision compact. Re-evaluating activeUser()/profile() across every
+      // role branch can exceed Firestore's 1,000-expression limit for department
+      // custodians, especially on their controlled-department keys.
+      let p = profile();
+      let r = p.role;
+      let dept = p.deptId != null ? p.deptId : p.departmentId;
+      return (docId != 'fulfillment_edit_settings_v1' || masterUser()) && (
+          r == 'department'
+          && (
+            docId in [
+              'requests', 'dept_notes', 'notes', 'crash_cart_reports',
+              'accountability_usage_v2', 'accountability_receipts_v2',
+              'audit_log', 'theme',
+              'meds_' + dept, 'expiry_' + dept, 'shelves_' + dept,
+              'alerts_' + dept,
+              'inventory_integrity_' + dept,
+              'inventory_snapshot_index_' + dept
+            ]
+            || docId.matches('^inventory_snapshot_' + dept + '_.*$')
+            || (
+              p.get('controlledCustodian', false) == true
+              && docId in [
+                'controlled_dept_list_' + dept,
+                'controlled_dept_shelves_' + dept,
+                'controlled_settings_' + dept
+              ]
+            )
+          )
+        )
+        || (
+          r != 'department'
+          && (
+            r in ['pharmacy', 'pharmacy_director']
+            || (
+              r in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']
+              && docId.matches('^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|audit_log|theme)$')
+            )
+            || (
+              r == 'outpatient_pharmacy_supervisor'
+              && docId.matches('^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$')
+            )
+            || (
+              r == 'pharmacy_staff'
+              && docId.matches('^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$')
+            )
+            || (
+              r == 'controlled_pharmacy'
+              && docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|audit_log|theme)$')
+            )
+            || (
+              r == 'warehouse'
+              && docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|audit_log|theme)$')
+            )
+          )
+        );
+    }
+
+    match /users/{uid} {
+      allow get: if signedIn() && (
+        request.auth.uid == uid
+        || ((masterUser() || pharmacyDirector()) && sameUserTenant(resource.data))
+        || platformAdmin()
+      );
+      allow list: if platformAdmin()
+        || legacyMasterDirectoryReader()
+        || ((masterUser() || pharmacyDirector()) && sameUserTenant(resource.data));
+      allow create, update, delete: if false;
+    }
+
+    match /tenants/{tenant}/state/{docId} {
+      allow get: if sameTenant(tenant) && (!scopedStateUser() || canReadScopedState(docId));
+      allow list: if sameTenant(tenant) && !scopedStateUser();
+      allow create, update: if sameTenant(tenant)
+        && tenantWritable(tenant)
+        && stateFeatureAllowed(tenant, docId)
+        && departmentLimitAllowed(tenant, docId)
+        && canWriteState(docId)
+        && validStateShape()
+        && validFulfillmentEditSettings(docId);
+      allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (
+        masterUser() || pharmacyDirector()
+        || (inpatientSupervisor() && docId.matches('^inventory_snapshot_.*$'))
+        || (departmentUser() && docId.matches('^inventory_snapshot_' + departmentId() + '_.*$'))
+      );
+    }
+
+    match /tenants/{tenant} {
+      allow get: if sameTenant(tenant) || platformAdmin();
+      allow list: if platformAdmin();
+      allow create, update, delete: if false;
+
+      match /public_expiry/{docId} {
+        allow get: if true;
+        allow list: if sameTenant(tenant) && masterUser();
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && tenantFeature(tenant, 'expiry') && (
+          masterUser() || pharmacyDirector() || inpatientSupervisor() || (departmentUser() && docId == departmentId())
+        );
+        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
+      }
+
+      match /public_controlled_expiry/{docId} {
+        allow get: if true;
+        allow list: if sameTenant(tenant) && masterUser();
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && (
+          ((docId.matches('^crash_.*$') && tenantFeature(tenant, 'crash_cart')) ||
+           (!docId.matches('^crash_.*$') && tenantFeature(tenant, 'controlled'))) && (
+          masterUser() || pharmacyDirector() || inpatientSupervisor()
+          || (pharmacyStaff() && docId.matches('^crash_.*$'))
+          || controlledOfficer() || warehouseOfficer()
+          || (departmentUser() && docId == departmentId())
+        ));
+        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
+      }
+    }
+
+    // Department sessions use explicit document reads. Crash Cart state is read so
+    // the client can retain only the authenticated department's carts and reports.
+    match /floorstock_state/{docId} {
+      allow get: if activeUser() && tenantId() == '' && (
+        !scopedStateUser() || canReadScopedState(docId)
+      );
+      allow list: if activeUser() && tenantId() == '' && !scopedStateUser();
+      allow create, update: if activeUser() && tenantId() == ''
+        && canWriteState(docId)
+        && (docId != 'fulfillment_edit_settings_v1' || (role() in ['pharmacy', 'pharmacy_director'] && profile().master == true))
+        && validStateShape()
+        && validFulfillmentEditSettings(docId);
+      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector()
+        || (inpatientSupervisor() && docId.matches('^inventory_snapshot_.*$'))
+        || (departmentUser() && docId.matches('^inventory_snapshot_' + departmentId() + '_.*$')));
+    }
+
+    match /public_expiry/{docId} {
+      allow get: if true;
+      allow list: if tenantId() == '' && masterUser();
+      allow create, update: if activeUser() && tenantId() == '' && (
+        masterUser()
+        || pharmacyDirector()
+        || inpatientSupervisor()
+        || (departmentUser() && docId == departmentId())
+      );
+      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector());
+    }
+
+    match /public_controlled_expiry/{docId} {
+      allow get: if true;
+      allow list: if tenantId() == '' && masterUser();
+      allow create, update: if activeUser() && tenantId() == '' && (
+        masterUser()
+        || pharmacyDirector()
+        || inpatientSupervisor()
+        || (pharmacyStaff() && docId.matches('^crash_.*$'))
+        || controlledOfficer()
+        || warehouseOfficer()
+        || (departmentUser() && docId == departmentId())
+      );
+      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector());
+    }
+
+    match /public_crash_carts/{docId} {
+      allow read: if false;
+      allow create, update, delete: if tenantId() == '' && masterUser();
+    }
+
+    match /floorstock_backups/{uid}/snapshots/{snapshotId} {
+      allow read, create, update, delete: if masterUser()
+        && request.auth.uid == uid;
+
+      match /chunks/{chunkId} {
+        allow read, create, update, delete: if masterUser()
+          && request.auth.uid == uid;
+      }
+    }
+
+    // Raw temporary handover token hashes are server-only. Public confirmation
+    // goes through Cloud Functions and never through direct Firestore access.
+    match /accountability_handover_sessions/{sessionId} {
+      allow read, write: if false;
+    }
+
+    match /audit_logs/{logId} {
+      allow read: if tenantId() == '' && (masterUser() || pharmacyDirector());
+      allow write: if false;
+    }
+
+    match /system/{docId} {
+      allow read, write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
