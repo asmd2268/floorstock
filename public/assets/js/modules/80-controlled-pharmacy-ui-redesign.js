@@ -462,43 +462,26 @@ function patchRenderCtlDepartments(){
 var __preOpenedPW=null;
 
 function patchPrintFunctions(){
-  /* Patch openBlobPrint first so doDeptPrint's call uses the pre-opened window */
-  var _origBlob=window.openBlobPrint;
-  if(_origBlob&&!_origBlob.__r688Wrapped){
-    window.openBlobPrint=function(fullHtml){
-      var pw=__preOpenedPW;__preOpenedPW=null;
-      if(pw&&!pw.closed){
-        var blob=new Blob([fullHtml],{type:'text/html;charset=utf-8'});
-        var url=URL.createObjectURL(blob);
-        pw.location.href=url;
-        setTimeout(function(){URL.revokeObjectURL(url);},60000);
-        return pw;
-      }
-      return _origBlob.apply(this,arguments);
-    };
-    window.openBlobPrint.__r688Wrapped=true;
-  }
-
-  /* Patch doDeptPrint: open window synchronously BEFORE the async work */
+  /* Pre-open the popup synchronously (before the async doDeptPrint breaks the gesture).
+     Module 07's local openBlobPrint reads window.__preOpenedPW to reuse this window. */
   var _origDeptPrint=window.doDeptPrint;
-  if(_origDeptPrint&&!_origDeptPrint.__r688Wrapped){
-    window.doDeptPrint=function(){
-      __preOpenedPW=window.open('about:blank','_blank','width=1200,height=880');
-      if(!__preOpenedPW){
-        window.toast&&window.toast('Allow pop-ups to print the drug list. / اسمح بالنوافذ المنبثقة','err');
-        return Promise.resolve(false);
-      }
-      try{
-        __preOpenedPW.document.write(
-          '<html><body style="font-family:Arial,Tahoma,sans-serif;text-align:center;padding:60px 40px;color:#666">'+
-          '<div style="font-size:40px;margin-bottom:14px">💊</div>'+
-          '<h3 style="margin:0 0 8px;color:#333">Preparing drug list…</h3>'+
-          '<p style="font-size:13px;color:#888">جاري تحضير قائمة الأدوية</p></body></html>');
-      }catch(e){}
-      return _origDeptPrint.apply(this,arguments);
-    };
-    window.doDeptPrint.__r688Wrapped=true;
-  }
+  if(!_origDeptPrint||_origDeptPrint.__r689Wrapped)return;
+  window.doDeptPrint=function(){
+    window.__preOpenedPW=window.open('about:blank','_blank','width=1200,height=880');
+    if(!window.__preOpenedPW){
+      window.toast&&window.toast('السماح بالنوافذ المنبثقة مطلوب للطباعة / Allow pop-ups to print','err');
+      return Promise.resolve(false);
+    }
+    try{
+      window.__preOpenedPW.document.write(
+        '<html><body style="font-family:Arial,Tahoma,sans-serif;text-align:center;padding:60px 40px;color:#666">'+
+        '<div style="font-size:40px;margin-bottom:14px">💊</div>'+
+        '<h3 style="margin:0 0 8px;color:#333">Preparing drug list…</h3>'+
+        '<p style="font-size:13px;color:#888">جاري تحضير قائمة الأدوية</p></body></html>');
+    }catch(e){}
+    return _origDeptPrint.apply(this,arguments);
+  };
+  window.doDeptPrint.__r689Wrapped=true;
 }
 
 /* ══════════════════════════════════════════════════════════

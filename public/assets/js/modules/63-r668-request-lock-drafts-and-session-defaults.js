@@ -100,16 +100,6 @@ function applyNewRequestGate(){
 }
 window.refreshNewRequestGate=applyNewRequestGate;
 window.refreshRequestLimitPageLock=applyNewRequestGate;
-var previousCountWarning=window.refreshRequestCountLimitWarning;
-window.refreshRequestCountLimitWarning=function(){
-  removeLegacyBlockingWarnings();
-  var result=typeof previousCountWarning==='function'?previousCountWarning.apply(this,arguments):undefined;
-  positionR18Banner();
-  // req-sched-info may not exist yet on first render — retry once after it renders
-  setTimeout(positionR18Banner,0);
-  applyNewRequestGate();
-  return result;
-};
 function positionR18Banner(){
   var r18=document.getElementById('r18-request-limit-warning');
   var schedInfo=document.getElementById('req-sched-info');
@@ -117,6 +107,15 @@ function positionR18Banner(){
     schedInfo.parentNode&&schedInfo.parentNode.insertBefore(r18,schedInfo.nextSibling);
   }
 }
+var previousCountWarning=window.refreshRequestCountLimitWarning;
+window.refreshRequestCountLimitWarning=function(){
+  removeLegacyBlockingWarnings();
+  var result=typeof previousCountWarning==='function'?previousCountWarning.apply(this,arguments):undefined;
+  positionR18Banner();
+  setTimeout(positionR18Banner,0);
+  applyNewRequestGate();
+  return result;
+};
 var previousScheduleMessage=window.refreshRequestScheduleMessage;
 window.refreshRequestScheduleMessage=function(){
   var result=typeof previousScheduleMessage==='function'?previousScheduleMessage.apply(this,arguments):undefined;

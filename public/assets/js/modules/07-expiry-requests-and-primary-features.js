@@ -1613,6 +1613,13 @@ function officialPrintHeaderHTML(){
 function openBlobPrint(fullHtml){
   var blob=new Blob([fullHtml],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
+  var pw=window.__preOpenedPW;
+  if(pw&&!pw.closed){
+    window.__preOpenedPW=null;
+    pw.location.href=url;
+    setTimeout(function(){URL.revokeObjectURL(url);},60000);
+    return pw;
+  }
   var w=window.open(url,'_blank','width=1100,height=850');
   setTimeout(function(){URL.revokeObjectURL(url)},60000);
   if(!w){window.toast&&window.toast('Allow pop-ups to print.','err');}
