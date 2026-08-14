@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.93 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.94 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -56,7 +56,7 @@ import './modules/30-v13-w-supervisor-inventory-main.js?v=R6.76.19';
 import './modules/31-v13-x-controlled-request-fix.js?v=R6.76.19';
 import './modules/32-aa-final-controlled-stability-script.js?v=R6.76.19';
 import './modules/33-v13-ap-custodian-bulk-replacement-fix.js?v=R6.76.19';
-import './modules/34-v13-as-crash-opening-log.js?v=R6.76.19';
+import './modules/34-v13-as-crash-opening-log.js?v=R6.76.94';
 import './modules/35-v14nrse-main.js?v=R6.76.19';
 import './modules/36-v14dp-main.js?v=R6.76.19';
 import './modules/37-v16-radical-fixes.js?v=R6.76.19';
@@ -68,7 +68,6 @@ import './modules/42-weekly-request-grid-bulk-classification-clean-script.js?v=R
 import './modules/43-similar-medicines-workbench-v2-script.js?v=R6.76.19';
 import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.92';
 import './modules/45-asdh-final-department-controlled-fix-script.js?v=R6.76.19';
-import './modules/46-r664-private-crash-cart-source-only.js?v=R6.76.19';
 import './modules/47-asdh-authoritative-final-fixes-script.js?v=R6.76.19';
 import './modules/48-asdh-final-request-completion-script.js?v=R6.76.19';
 import './modules/49-asdh-final-persistence-actions-20260725.js?v=R6.76.19';
@@ -76,7 +75,6 @@ import './modules/50-r617-integrated-operations.js?v=R6.76.74';
 import './modules/51-asdhealth-canonical-r6-32-20260727.js?v=R6.76.89';
 import './modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.76.19';
 import './modules/54-r662-accountability-draft-protection.js?v=R6.76.19';
-import './modules/55-r647-crash-cart-authoritative-boot.js?v=R6.76.19';
 import './modules/56-r664-security-idle-timeout.js?v=R6.76.19';
 import './modules/58-r664-public-privacy-rewrite.js?v=R6.76.19';
 import './modules/59-r664-security-complete-runtime.js?v=R6.76.19';
