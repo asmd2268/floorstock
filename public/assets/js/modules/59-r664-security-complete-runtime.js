@@ -231,4 +231,59 @@ var previousStart=window.startApp;
 if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(boot,900);return result};
 })();
 
+// --- Merged from 56-r664-security-idle-timeout.js (Phase 6 consolidation) ---
+(function(){
+  'use strict';
+  var WARNING_MS=28*60*1000,LOGOUT_MS=30*60*1000;
+  var warningTimer=null,logoutTimer=null,lastActivity=Date.now(),warningOpen=false,lastReset=0;
+  function signedIn(){return !!(window.FB_AUTH&&FB_AUTH.currentUser)}
+  function clearTimers(){if(warningTimer)clearTimeout(warningTimer);if(logoutTimer)clearTimeout(logoutTimer);warningTimer=logoutTimer=null}
+  async function forceLogout(){clearTimers();warningOpen=false;try{if(window.FB_AUTH&&FB_AUTH.currentUser)await FB_AUTH.signOut()}catch(ignore){}try{sessionStorage.clear()}catch(ignore){}location.reload()}
+  function showWarning(){
+    if(!signedIn()||warningOpen)return;
+    warningOpen=true;
+    if(typeof window.uiConfirm==='function'){
+      window.uiConfirm('Your session will close in 2 minutes because no activity was detected.\n\nستنتهي الجلسة خلال دقيقتين بسبب عدم النشاط.\n\nContinue this session?',{title:'Session timeout / انتهاء الجلسة',okText:'Continue / متابعة',cancelText:'Sign out / تسجيل الخروج'}).then(function(continueSession){warningOpen=false;if(continueSession)reset(true);else forceLogout()});
+    }else if(typeof window.toast==='function')window.toast('ستنتهي الجلسة خلال دقيقتين بسبب عدم النشاط.\nThe session will close in 2 minutes because no activity was detected.','info');
+  }
+  function schedule(){clearTimers();if(!signedIn())return;var elapsed=Date.now()-lastActivity;warningTimer=setTimeout(showWarning,Math.max(0,WARNING_MS-elapsed));logoutTimer=setTimeout(forceLogout,Math.max(0,LOGOUT_MS-elapsed))}
+  function reset(force){if(warningOpen&&!force)return;var now=Date.now();if(!force&&now-lastReset<15000)return;lastReset=now;lastActivity=now;schedule()}
+  ['pointerdown','keydown','touchstart','scroll'].forEach(function(name){document.addEventListener(name,function(){reset(false)},{capture:true,passive:true})});
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){if(signedIn()&&Date.now()-lastActivity>=LOGOUT_MS)forceLogout();else schedule()}});
+  function attach(){if(window.FB_AUTH&&typeof FB_AUTH.onAuthStateChanged==='function')FB_AUTH.onAuthStateChanged(function(user){if(user)reset(true);else clearTimers()});else setTimeout(attach,500)}
+  attach();
+})();
+
+// --- Merged from 58-r664-public-privacy-rewrite.js (Phase 6 consolidation) ---
+(function(){
+  'use strict';
+  var attempts=0,running=false;
+  function allowed(){var u=window.CU||{};return u.active!==false&&(u.master===true||String(u.role||'')==='pharmacy'||String(u.role||'')==='inpatient_supervisor')}
+  async function rewrite(){
+    if(running||sessionStorage.getItem('r664_public_privacy_rewritten')==='1')return;
+    if(!allowed()||!window.S||!S.ready||!window.FB_DB){if(++attempts<40)setTimeout(rewrite,750);return}
+    if(typeof publishPublic!=='function'){if(++attempts<40)setTimeout(rewrite,750);return}
+    running=true;
+    try{
+      var carts=typeof crashCarts==='function'?(crashCarts()||[]):[];
+      if(Array.isArray(carts)&&carts.length)await publishPublic(carts);
+      var departments=typeof gd==='function'?(gd()||[]):[];
+      for(var i=0;i<departments.length;i++){
+        var id=String(departments[i]&&departments[i].id||'');if(!id)continue;
+        if(typeof ctlPublishDept==='function')await ctlPublishDept(id);
+        if(typeof syncPublicExpiry==='function'&&typeof getExpiry==='function')await syncPublicExpiry(id,getExpiry(id)||[]);
+      }
+      if(typeof storageState==='function'&&typeof controlledMeds==='function'&&typeof publishStorage==='function'){
+        var state=storageState(),medicines=controlledMeds();
+        for(var j=0;j<(state.units||[]).length;j++)await publishStorage(state.units[j],medicines);
+      }
+      sessionStorage.setItem('r664_public_privacy_rewritten','1');
+    }catch(error){console.warn('Public privacy rewrite will retry on the next authorized session.',error)}
+    finally{running=false}
+  }
+  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(rewrite,1200)},{once:true});else setTimeout(rewrite,1200);
+  var previousStart=window.startApp;
+  if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(rewrite,1500);return result};
+})();
+
 export {};
