@@ -489,8 +489,7 @@ function fsR12BatchLotHtml(batches){
   return batches.map(function(batch,index){
     var lot=fsR5S(batch&&batch.lot,'');
     var qty=batch&&batch.qty!==''&&batch.qty!=null?fsR5N(batch.qty):'';
-    var label=lot||('Batch '+(index+1));
-    return '<div class="ctl-batch-line"><b>'+fsR5Esc(label)+'</b>'+
+    return '<div class="ctl-batch-line">'+(lot?'<b>'+fsR5Esc(lot)+'</b>':'')+
       (qty!==''?' <span class="chip">'+fsR5Esc(qty)+'</span>':'')+'</div>';
   }).join('');
 }

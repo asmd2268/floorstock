@@ -247,6 +247,16 @@
 /* ══════════════════════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════════════════════ */
+/* Print patch runs immediately — does NOT wait for ctlTabs/renderControlled */
+var _printAttempts=0;
+function tryPatchPrint(){
+  if(window.doDeptPrint&&window.openBlobPrint){
+    patchPrintFunctions();return;
+  }
+  if(++_printAttempts<120)setTimeout(tryPatchPrint,250);
+}
+tryPatchPrint();
+
 var _attempts=0;
 function tryPatch(){
   if(!window.ctlTabs||!window.renderControlled){if(++_attempts<80)setTimeout(tryPatch,250);return;}
@@ -254,7 +264,6 @@ function tryPatch(){
   patchCtlTabs();
   patchRenderControlled();
   ensureAnalyticsDiv();
-  patchPrintFunctions();
 }
 tryPatch();
 /* Dept patch needs renderCtlDepartments from module 07 — retry separately */
