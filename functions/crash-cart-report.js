@@ -65,7 +65,7 @@ function cleanConsumed(value) {
   }));
 }
 
-exports.submitDepartmentCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
+exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
   const db = getFirestore();
   const profile = await callerProfile(db, request);
   const tenantId = await assertWritableTenant(db, profile);

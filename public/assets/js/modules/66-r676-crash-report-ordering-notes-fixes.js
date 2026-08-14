@@ -72,13 +72,6 @@ function collectCrashReport(){
   return {cartId:id,reason:reason,oldSeal:oldSeal,consumed:consumed};
 }
 
-function nowISO(){return new Date().toISOString()}
-function actorName(){var u=window.CU||{};return typeof window.actualActorName==='function'?window.actualActorName():(u.name||u.username||u.email||'Unknown')}
-function setReports(rs){
-  if(typeof window.setCrashReports==='function')return window.setCrashReports(rs);
-  if(window.S&&typeof S.s==='function')return S.s('crash_cart_reports',rs);
-  throw new Error('Crash reports writer is unavailable.');
-}
 window.ccSubmitReport=async function(){
   if(crashReportSaving)return false;
   var button=document.querySelector('#mcc-report .fl.g8 .btn.bd2c'),oldText=button&&button.textContent;
@@ -87,48 +80,24 @@ window.ccSubmitReport=async function(){
     var effectiveRole=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(CU&&CU.role||'');
     var canReport=typeof window.fsHasCapability==='function'?window.fsHasCapability('crashCart.report'):['department','department_employee'].indexOf(String(effectiveRole))>=0;
     if(!window.CU||!canReport)throw new Error('Only a department employee can submit this report.');
-    var payload=collectCrashReport();
-    var originalCarts=JSON.parse(JSON.stringify(crashItems()));
-    var originalReports=JSON.parse(JSON.stringify(crashReportsList()));
-    var carts=JSON.parse(JSON.stringify(originalCarts));
-    var reports=JSON.parse(JSON.stringify(originalReports));
-    var cart=carts.find(function(c){return String(c.id)===String(payload.cartId)});
-    if(!cart)throw new Error('Crash Cart not found.');
-    var actor=window.CU||{},stamp=nowISO(),name=actorName(),login=actor.username||actor.email||actor.id||'Unknown',actorId=actor.id||actor.uid||'';
-    var reportId='ccr_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8);
-    var report={
-      id:reportId,cartId:payload.cartId,
-      deptId:cart.deptId||(actor&&actor.deptId)||'',
-      status:'open',reason:payload.reason,oldSeal:payload.oldSeal,
-      consumed:payload.consumed.map(function(row){
-        var it=(cart.items||[]).find(function(x){return String(x.id)===String(row.itemId)})||{};
-        return Object.assign({},row,{name:it.name||''});
-      }),
-      inventoryDeductedAtReport:false,
-      openedAt:stamp,openedBy:name,openedByUser:login,openedById:actorId,
-      updatedAt:stamp,updatedBy:name
-    };
-    var existingIdx=reports.findIndex(function(r){return String(r.cartId)===String(payload.cartId)&&r.status==='open'});
-    if(existingIdx>=0)reports[existingIdx]=report;else reports.push(report);
-    if(typeof window.setCrashCarts==='function')await window.setCrashCarts(carts);
-    try{await setReports(reports)}catch(reportError){
-      if(typeof window.setCrashCarts==='function')await window.setCrashCarts(originalCarts);
-      throw reportError;
-    }
-    replaceCachedCrashState(cart,report);
+    if(typeof window.fsCallFunction!=='function')throw new Error('Secure Crash Cart service is still loading. Please retry.');
+    var payload=collectCrashReport(),data=await window.fsCallFunction('submitCrashCartReport',payload)||{};
+    if(!data.ok||!data.cart||!data.report)throw new Error('The server did not confirm the Crash Cart report save.');
+    replaceCachedCrashState(data.cart,data.report);
     if(typeof window.CM==='function')window.CM('mcc-report');
     if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
     if(typeof window.ccUpdateBadges==='function')window.ccUpdateBadges();
-    callToast('تم إرسال البلاغ بنجاح، وستقوم الصيدلية باستكمال الإجراء ✓','Report submitted. The pharmacist will complete the response and update the cart ✓','succ');
+    callToast('تم إرسال البلاغ وخصم الكميات وتحديث عرض QR بنجاح ✓','Report saved, quantities deducted, and the public QR view refreshed ✓','succ');
     return true;
   }catch(error){
-    console.error('Crash Cart report save failed',error);
-    callToast('لم يتم حفظ البلاغ. حاول مرة أخرى.','Report was not saved. Please retry.\n'+errorMessage(error),'err');
+    console.error('Secure Crash Cart report save failed',error);
+    callToast('لم يتم حفظ البلاغ، ولم تتغير كميات العربة. حاول مرة أخرى.','Report was not saved, and no cart quantity was changed. Please retry.\n'+errorMessage(error),'err');
     return false;
   }finally{
     crashReportSaving=false;if(button){button.disabled=false;button.textContent=oldText||'Submit report / إرسال البلاغ'}
   }
 };
+window.ccSubmitReport.__r676SecureCallable=true;
 
 // Seal-must-match policy (master-only toggle)
 function getSealPolicy(){return !!(window.S&&typeof S.g==='function'&&S.g('crash_cart_seal_must_match'))}
