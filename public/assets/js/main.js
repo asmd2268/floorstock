@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.95 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.96 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -28,7 +28,7 @@ import './modules/03-core-application-firebase-state-auth.js?v=R6.76.91';
 import './modules/04-v13-complete-clean-fix-script.js?v=R6.76.19';
 import './modules/05-controlled-ui-compatibility-fixes.js?v=R6.76.19';
 import './modules/06-zebra-label-printing.js?v=R6.76.19';
-import './modules/07-expiry-requests-and-primary-features.js?v=R6.76.89';
+import './modules/07-expiry-requests-and-primary-features.js?v=R6.76.96';
 import './modules/53-r661-authoritative-inventory-safety.js?v=R6.76.75';
 import './modules/08-controlled-shared-list-filters.js?v=R6.76.19';
 import './modules/09-warehouse-batch-editor.js?v=R6.76.19';

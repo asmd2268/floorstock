@@ -1515,6 +1515,7 @@ function getLogo(){
   var legacy=Array.isArray(data.lines)?data.lines.slice(0,4):[data.name||'','','',''];
   while(legacy.length<4)legacy.push('');
   var english=Array.isArray(data.enLines)?data.enLines.slice(0,4):legacy.slice(0,4);
+  // If arLines not saved (old format), default to empty — officialPrintHeaderHTML will mirror English.
   var arabic=Array.isArray(data.arLines)?data.arLines.slice(0,4):['','','',''];
   while(english.length<4)english.push('');
   while(arabic.length<4)arabic.push('');
@@ -1583,14 +1584,12 @@ async function clearLogo(){
   el('logo-preview-none').style.display='';
   toast('Logo removed; header text retained','info');
 }
-var DEFAULT_EN=['Riyadh First Health Cluster','Wadi Al-Dawasir General Hospital','Pharmacy Care Department'];
-var DEFAULT_AR=['تجمع الرياض الصحي الأول','مستشفى وادي الدواسر العام','قسم الرعاية الصيدلية'];
 function officialPrintHeaderHTML(){
   var header=getLogo();
   var english=header.enLines.filter(function(value){return String(value||'').trim();});
   var arabic=header.arLines.filter(function(value){return String(value||'').trim();});
-  if(!english.length)english=DEFAULT_EN;
-  if(!arabic.length)arabic=DEFAULT_AR;
+  // No hardcoded defaults — if Arabic is empty but English is set, mirror English for Arabic.
+  if(!arabic.length&&english.length)arabic=english.slice();
   function headerEscape(value){
     return String(value==null?'':value).replace(/[&<>"']/g,function(character){
       return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character];
