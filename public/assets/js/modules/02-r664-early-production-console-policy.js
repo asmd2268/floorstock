@@ -1,6 +1,6 @@
 (function(){
   'use strict';
-  if(!window.console)return;
+  if(!window.console||window.__ASDH_DEBUG)return;
   var nativeError=typeof console.error==='function'?console.error.bind(console):function(){};
   var nativeWarn=typeof console.warn==='function'?console.warn.bind(console):function(){};
   ['log','info','debug','trace'].forEach(function(method){try{console[method]=function(){}}catch(ignore){}});
