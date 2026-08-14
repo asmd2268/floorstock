@@ -26,10 +26,20 @@ function cartName(id) {
   const c = list.find(x => String(x.id) === String(id));
   return (c && c.name) || id || '—';
 }
+function currentRole() {
+  return String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
+}
+function isMaster() { return !!(window.CU && window.CU.master); }
 function permitted() {
-  if (window.CU && window.CU.master) return true;
-  const r = String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
-  return ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor'].includes(r);
+  // analytics (narcotics) panel - kept for backwards compatibility usage at line 592/637
+  return isMaster() || ['controlled_pharmacy'].includes(currentRole());
+}
+function tabAllowed(tab) {
+  const r = currentRole(), master = isMaster();
+  if (tab === 'orders') return true;
+  if (tab === 'analytics') return master || r === 'controlled_pharmacy';
+  if (tab === 'crashcart' || tab === 'drugs') return master || ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor'].includes(r);
+  return false;
 }
 function currentYear() { return new Date().getFullYear(); }
 function reportYear() { const el = document.getElementById('car-year'); return Number(el && el.value) || currentYear(); }
@@ -189,7 +199,7 @@ function renderCrashSection() {
 
   let html = `
     <div class="car-kpi-row">
-      <div class="car-kpi"><div class="car-kpi-label">Total openings / إجمالي الفتحات</div><div class="car-kpi-val">${st.totalOpenings}</div></div>
+      <div class="car-kpi"><div class="car-kpi-label">Opening count / عدد مرات الفتح</div><div class="car-kpi-val">${st.totalOpenings}</div></div>
       <div class="car-kpi warn"><div class="car-kpi-label">Medicines replaced / أدوية استُبدلت</div><div class="car-kpi-val">${st.totalReplacements}</div></div>
       <div class="car-kpi"><div class="car-kpi-label">Avg replacements / opening / متوسط لكل فتحة</div><div class="car-kpi-val">${st.avgReplacementsPerOpening}</div></div>
       <div class="car-kpi"><div class="car-kpi-label">Active carts / العربات النشطة</div><div class="car-kpi-val">${allCarts.length}</div></div>
@@ -697,12 +707,18 @@ function activatePrintTab(tab) {
   };
   if (!panels.orders) return;
 
+  // If requested tab is not allowed for this role, fall back to orders
+  if (!tabAllowed(tab)) tab = 'orders';
+
   Object.keys(panels).forEach(k => {
     const p = panels[k], t = tabs[k];
+    const allowed = tabAllowed(k);
+    // Hide the tab button completely when not permitted for this role
+    if (t) t.style.display = allowed ? '' : 'none';
     if (!p) return;
     const active = k === tab;
     p.style.display = active ? '' : 'none';
-    if (t) {
+    if (t && allowed) {
       t.className = active ? 'btn bp bsm' : 'btn bg bsm';
       t.style.opacity = active ? '1' : '0.65';
       t.style.borderBottom = active ? '3px solid var(--ac)' : '';
@@ -712,9 +728,9 @@ function activatePrintTab(tab) {
   if (tab === 'analytics') setTimeout(render, 50);
   if (tab === 'crashcart') setTimeout(renderCrash, 50);
 
-  // Show header settings button for master only
+  // Header settings button is master-only
   const hdrBtn = document.getElementById('pg-print-header-settings-btn');
-  if (hdrBtn) hdrBtn.style.display = permitted() ? 'inline-flex' : 'none';
+  if (hdrBtn) hdrBtn.style.display = isMaster() ? 'inline-flex' : 'none';
 }
 
 document.addEventListener('click', function (e) {
