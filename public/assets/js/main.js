@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.79 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.85 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -100,6 +100,7 @@ import './modules/79-r676-independent-regimen-database.js?v=R6.76.19';
 import './modules/75-r676-multi-year-department-comparison.js?v=R6.76.19';
 import './modules/77-r676-unified-analytics-print.js?v=R6.76.19';
 import './modules/78-r676-comprehensive-annual-report.js?v=R6.76.73';
+import './modules/80-controlled-pharmacy-ui-redesign.js?v=R6.76.85';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.19';
 const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];
 const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');
