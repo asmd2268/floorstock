@@ -733,18 +733,6 @@ function renderDeptPrint(){
 async function doDeptPrint(){
   if(!CU)return;
 
-  var pw=null; // opened later via blob URL
-
-  pw.document.open();
-  pw.document.write(
-    '<!doctype html><html><head><meta charset="utf-8">'+
-    '<title>Preparing department drug list</title></head>'+
-    '<body style="font-family:Arial,Tahoma,sans-serif;padding:24px">'+
-    'Preparing department drug list… / جاري تجهيز قائمة أدوية القسم…'+
-    '</body></html>'
-  );
-  pw.document.close();
-
   try{
     var deptId=String(CU.deptId||'');
     var ms=getMeds(deptId);

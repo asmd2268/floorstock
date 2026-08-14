@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.85 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.86 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -28,7 +28,7 @@ import './modules/03-core-application-firebase-state-auth.js?v=R6.76.82';
 import './modules/04-v13-complete-clean-fix-script.js?v=R6.76.19';
 import './modules/05-controlled-ui-compatibility-fixes.js?v=R6.76.19';
 import './modules/06-zebra-label-printing.js?v=R6.76.19';
-import './modules/07-expiry-requests-and-primary-features.js?v=R6.76.79';
+import './modules/07-expiry-requests-and-primary-features.js?v=R6.76.86';
 import './modules/53-r661-authoritative-inventory-safety.js?v=R6.76.75';
 import './modules/08-controlled-shared-list-filters.js?v=R6.76.19';
 import './modules/09-warehouse-batch-editor.js?v=R6.76.19';
@@ -84,7 +84,7 @@ import './modules/59-r664-security-complete-runtime.js?v=R6.76.19';
 import './modules/60-csp-legacy-event-bridge.js?v=R6.76.19';
 import './modules/61-r666-form-draft-and-crash-report-protection.js?v=R6.76.19';
 import './modules/62-r667-ui-text-and-icon-normalization.js?v=R6.76.19';
-import './modules/63-r668-request-lock-drafts-and-session-defaults.js?v=R6.76.76';
+import './modules/63-r668-request-lock-drafts-and-session-defaults.js?v=R6.76.86';
 import './modules/64-r671-permissions-and-accountability-qr.js?v=R6.76.19';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.76.19';
 import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.77';
@@ -100,7 +100,7 @@ import './modules/79-r676-independent-regimen-database.js?v=R6.76.19';
 import './modules/75-r676-multi-year-department-comparison.js?v=R6.76.19';
 import './modules/77-r676-unified-analytics-print.js?v=R6.76.19';
 import './modules/78-r676-comprehensive-annual-report.js?v=R6.76.73';
-import './modules/80-controlled-pharmacy-ui-redesign.js?v=R6.76.85';
+import './modules/80-controlled-pharmacy-ui-redesign.js?v=R6.76.86';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.19';
 const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];
 const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');

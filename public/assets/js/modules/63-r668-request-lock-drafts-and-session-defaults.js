@@ -102,10 +102,17 @@ window.refreshNewRequestGate=applyNewRequestGate;
 window.refreshRequestLimitPageLock=applyNewRequestGate;
 var previousCountWarning=window.refreshRequestCountLimitWarning;
 window.refreshRequestCountLimitWarning=function(){
-  // Always remove legacy warning first to prevent position drift between
-  // two separate insertions before #rfbody.
+  // Remove legacy warning first so the re-insertion is consistent.
   removeLegacyBlockingWarnings();
   var result=typeof previousCountWarning==='function'?previousCountWarning.apply(this,arguments):undefined;
+  // Fix position drift: req-sched-info is created on first render, so on re-renders
+  // r18-request-limit-warning ends up after it while on first render it's before.
+  // Normalise: always move r18 to immediately after req-sched-info when both exist.
+  var r18=document.getElementById('r18-request-limit-warning');
+  var schedInfo=document.getElementById('req-sched-info');
+  if(r18&&schedInfo&&schedInfo.nextSibling!==r18){
+    schedInfo.parentNode&&schedInfo.parentNode.insertBefore(r18,schedInfo.nextSibling);
+  }
   applyNewRequestGate();
   return result;
 };

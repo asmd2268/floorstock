@@ -195,38 +195,38 @@ function patchRenderControlled(){
 }
 
 /* ── Render analytics inline inside ctl-analytics-view ── */
+/* Uses namespaced IDs (ctl-an-inline-*) to avoid colliding with pg-ctl-analytics IDs */
 function renderAnalyticsInline(container){
   var esc=typeof window.esc==='function'?window.esc:function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})};
+  var Q=function(id){return container.querySelector('#'+id)};
 
-  /* Build the filter bar and table, mirroring pg-ctl-analytics */
   var depts=(typeof gd==='function'?gd():[]).map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   container.innerHTML=
     '<div class="stitle">Controlled Dispensing Analytics / إحصائيات الصرف</div>'+
     '<div class="ssub">Quantities, recipients, departments and dispensing types by date range.</div>'+
     '<div class="ctl-an-header">'+
       '<div class="ctl-an-filters">'+
-        '<input id="ctl-an-from" type="date" style="width:145px;margin:0">'+
-        '<input id="ctl-an-to" type="date" style="width:145px;margin:0">'+
-        '<select class="psel" id="ctl-an-type"><option value="">All types</option><option value="inpatient">Inpatient</option><option value="outpatient">Outpatient</option></select>'+
-        '<select class="psel" id="ctl-an-dept"><option value="">All departments</option>'+depts+'</select>'+
-        '<input id="ctl-an-recipient" placeholder="Recipient name" style="width:180px;margin:0">'+
-        '<button class="btn bp" onclick="window.ctlAnApply&&window.ctlAnApply()">Apply</button>'+
+        '<input id="ctl-an-inline-from" type="date" style="width:145px;margin:0">'+
+        '<input id="ctl-an-inline-to" type="date" style="width:145px;margin:0">'+
+        '<select class="psel" id="ctl-an-inline-type"><option value="">All types</option><option value="inpatient">Inpatient</option><option value="outpatient">Outpatient</option></select>'+
+        '<select class="psel" id="ctl-an-inline-dept"><option value="">All departments</option>'+depts+'</select>'+
+        '<input id="ctl-an-inline-recipient" placeholder="Recipient name" style="width:180px;margin:0">'+
+        '<button class="btn bp" onclick="ctlAnApply()">Apply</button>'+
       '</div>'+
-      '<button class="btn bg bsm" onclick="window.ctlAnPrint&&window.ctlAnPrint()">🖨 Print</button>'+
+      '<button class="btn bg bsm" onclick="ctlAnPrint()">🖨 Print</button>'+
     '</div>'+
-    '<div id="ctl-an-stats" class="g4 mb14"></div>'+
+    '<div id="ctl-an-inline-stats" class="g4 mb14"></div>'+
     '<div class="card"><div class="ch"><span class="ct">Dispensing records / سجل الصرف</span></div>'+
       '<div class="tw"><table><thead><tr><th>Date</th><th>Medicine</th><th>Qty</th><th>Source</th><th>Type</th><th>Department</th><th>Recipient</th><th>By</th></tr></thead>'+
-      '<tbody id="ctl-an-table"></tbody>'+
+      '<tbody id="ctl-an-inline-table"></tbody>'+
     '</table></div></div>';
 
-  /* Wire up apply helper and run it */
-  window.ctlAnApply=function(){
-    var from=(document.getElementById('ctl-an-from')||{}).value||'';
-    var to=(document.getElementById('ctl-an-to')||{}).value||'';
-    var type=(document.getElementById('ctl-an-type')||{}).value||'';
-    var dept=(document.getElementById('ctl-an-dept')||{}).value||'';
-    var rec=((document.getElementById('ctl-an-recipient')||{}).value||'').toLowerCase();
+  function applyFilters(){
+    var from=(Q('ctl-an-inline-from')||{}).value||'';
+    var to=(Q('ctl-an-inline-to')||{}).value||'';
+    var type=(Q('ctl-an-inline-type')||{}).value||'';
+    var dept=(Q('ctl-an-inline-dept')||{}).value||'';
+    var rec=((Q('ctl-an-inline-recipient')||{}).value||'').toLowerCase();
     var ctlMoves2=typeof ctlMoves==='function'?ctlMoves():[];
     var rows=ctlMoves2.filter(function(x){
       if(x.type!=='dispense')return false;
@@ -236,7 +236,7 @@ function renderAnalyticsInline(container){
     var total=rows.reduce(function(s,x){var n=Number(x.qty);return s+(isFinite(n)?n:0)},0);
     var recipients=new Set(rows.map(function(x){return x.recipient}).filter(Boolean)).size;
     var depts2=new Set(rows.map(function(x){return x.dept}).filter(Boolean)).size;
-    var statsEl=document.getElementById('ctl-an-stats');
+    var statsEl=Q('ctl-an-inline-stats');
     if(statsEl)statsEl.innerHTML=
       '<div class="sc"><div class="sl">Transactions</div><div class="ctl-stat-number">'+rows.length+'</div></div>'+
       '<div class="sc"><div class="sl">Total quantity</div><div class="ctl-stat-number">'+total+'</div></div>'+
@@ -244,23 +244,22 @@ function renderAnalyticsInline(container){
       '<div class="sc"><div class="sl">Departments</div><div class="ctl-stat-number">'+depts2+'</div></div>';
     var fmtDT=typeof fmtDateTime==='function'?fmtDateTime:function(v){return String(v||'').slice(0,16).replace('T',' ')};
     var ctlMed=typeof ctlMedicine==='function'?ctlMedicine:function(){return {}};
-    var tbody=document.getElementById('ctl-an-table');
+    var tbody=Q('ctl-an-inline-table');
     if(tbody)tbody.innerHTML=rows.slice().reverse().map(function(x){
       var m=ctlMed(x.medId)||{};
       return '<tr><td>'+fmtDT(x.at)+'</td><td>'+esc(m.name||'')+'</td><td>'+(isFinite(Number(x.qty))?Number(x.qty):0)+'</td><td>'+esc(x.source||'')+'</td><td>'+esc(x.dispenseType||'')+'</td><td>'+esc(x.deptName||'—')+'</td><td>'+esc(x.recipient||'')+'</td><td>'+esc(x.by||'')+'</td></tr>';
     }).join('')||'<tr><td colspan="8" style="text-align:center;padding:20px">No matching records</td></tr>';
-  };
+  }
+  window.ctlAnApply=applyFilters;
 
   window.ctlAnPrint=function(){
-    var pg=document.getElementById('pg-ctl-analytics');
-    if(pg&&typeof window.showPg==='function')window.showPg('pg-ctl-analytics');
+    if(typeof window.showPg==='function')window.showPg('pg-ctl-analytics');
     setTimeout(function(){if(typeof window.renderCtlAnalytics==='function')window.renderCtlAnalytics();},100);
   };
 
-  /* Add input listeners */
-  ['ctl-an-from','ctl-an-to','ctl-an-type','ctl-an-dept','ctl-an-recipient'].forEach(function(id){
-    var el=document.getElementById(id);
-    if(el)el.addEventListener(id.includes('recipient')||id.includes('from')||id.includes('to')?'input':'change',function(){window.ctlAnApply&&window.ctlAnApply()});
+  ['ctl-an-inline-from','ctl-an-inline-to','ctl-an-inline-type','ctl-an-inline-dept','ctl-an-inline-recipient'].forEach(function(id){
+    var el=Q(id);
+    if(el)el.addEventListener(id.indexOf('recipient')>=0||id.indexOf('from')>=0||id.indexOf('to')>=0?'input':'change',applyFilters);
   });
 
   window.ctlAnApply();
