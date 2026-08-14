@@ -14,7 +14,7 @@ function openEditExpiry(btn){return typeof canonicalOpenEditExpiry==='function'&
 // R6.77 FIX: Role-scoped department list for inpatient_supervisor and pharmacy_staff
 function fsRoleScopedDepts(allDepts){
   var r=window.fsEffectiveRole?window.fsEffectiveRole():String(window.CU&&window.CU.role||'');
-  if(r==='inpatient_supervisor'){
+  if(r==='inpatient_supervisor'||r==='pharmacy_staff'){
     return allDepts.filter(function(d){
       return !/outpatient\s+department/i.test(String(d.name||''))&&String(d.id||'').toLowerCase()!=='outpatient';
     });

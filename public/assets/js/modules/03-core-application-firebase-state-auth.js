@@ -1752,8 +1752,7 @@ function populateInvDeptSel(){
 
 // ── DASHBOARD ────────────────────────────────────────────
 function renderDash(){
-  var allDs=gd(),dashRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''),ds=allDs;
-  if(dashRole==='outpatient_pharmacy_supervisor')ds=allDs.filter(function(d){return /outpatient\s+department/i.test(String(d.name||''))||String(d.id)==='outpatient'});
+  var allDs=gd(),ds=typeof window.fsRoleScopedDepts==='function'?window.fsRoleScopedDepts(allDs):allDs;
   var allowedDash={};ds.forEach(function(d){allowedDash[String(d.id)]=true});
   var rs=gr().filter(function(r){return !r.deptId||allowedDash[String(r.deptId)]});
   var pend=rs.filter(function(r){return r.status==='pending'});
