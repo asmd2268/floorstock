@@ -200,12 +200,13 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   }
   if(!_firebasePersistenceAttempted&&FB_DB&&typeof FB_DB.enablePersistence==='function'){
     _firebasePersistenceAttempted=true;
-    FB_DB.enablePersistence({synchronizeTabs:true}).then(function(){
-    }).catch(function(err){
+    var isMobile=/iPhone|iPad|iPod|Android|webOS|BlackBerry|Windows Phone/i.test(navigator.userAgent);
+    FB_DB.enablePersistence({synchronizeTabs:!isMobile}).catch(function(err){
       var code=err&&err.code||'unknown';
-      if(code==='failed-precondition')console.warn('Firestore offline cache is unavailable because another tab owns persistence. Online operation continues normally.');
-      else if(code==='unimplemented')console.warn('Firestore offline cache is not supported by this browser. Online operation continues normally.');
-      else console.warn('Firestore offline cache could not be enabled. Online operation continues normally.',err);
+      if(code==='failed-precondition')
+        FB_DB.enablePersistence({synchronizeTabs:false}).catch(function(){});
+      else if(code!=='unimplemented')
+        console.warn('Firestore offline cache could not be enabled. Online operation continues normally.',err);
     });
   }
   FB_FUNCTIONS=null;
