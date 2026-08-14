@@ -38,4 +38,92 @@ window.renderReqForm=function(){function after(){if(typeof window.refreshRequest
 
 })();
 
+// --- Merged from 13-pilot-controlled-public-expiry-fixes.js (Phase 6 consolidation) ---
+(function(){
+  function byId(id){return document.getElementById(id)}
+  function isMasterUser(){return !!(window.CU&&CU.master===true)}
+
+  function syncOfficialHeaderButton(){
+    var b=byId('print-branding-btn');
+    if(!b)return;
+    b.style.display=isMasterUser()?'inline-flex':'none';
+    b.textContent='⚙ Official Print Header';
+    b.title='Master only: logo and four official print-header lines';
+  }
+
+  window.masterDeleteRequestNow=async function(id){
+    if(!isMasterUser())return toast('Master permission required','err');
+    var all=gr(),r=all.find(function(x){return x.id===id});
+    if(!r)return;
+    var dept=(gd().find(function(d){return d.id===r.deptId})||{}).name||r.deptId||'';
+    if(!await uiConfirm('Delete this request now?\n\nDepartment: '+dept+'\nDate: '+fmtDate(r.created||r.fulfilledAt)+'\n\nFulfilled quantities will remain in Analytics.'))return;
+    if(r.status!=='pending'){
+      var archive=(S.g('request_analytics_archive')||[]).slice();
+      if(!archive.some(function(x){return x.id===r.id}))archive.push(requestArchiveRecord(r));
+      await S.s('request_analytics_archive',archive);
+    }
+    await S.s('requests',all.filter(function(x){return x.id!==id}));
+    toast('Request deleted; analytics preserved ✓','succ');
+    if(typeof renderReqs==='function')renderReqs();
+    if(typeof renderPrint==='function')renderPrint();
+    if(typeof renderDash==='function')renderDash();
+  };
+
+  window.syncOfficialHeaderButton=syncOfficialHeaderButton;
+})();
+
+// --- Merged from 29-v13-classification-tools.js (Phase 6 consolidation) ---
+(function(){
+'use strict';
+const E=globalThis.E;
+function escV(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+function canManage(){return window.fsCanManage?window.fsCanManage():false}
+
+function extendBulkReplacement(){var modal=E('mbulk-replacement');if(!modal||E('v13q-br-class-only'))return;var preview=E('br-preview');if(!preview)return;var box=document.createElement('div');box.className='card';box.style.marginBottom='12px';box.innerHTML='<div class="cb" style="padding:12px"><label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="v13q-br-class-only" style="width:auto;margin:0"> Classifications only — keep medication names</label><div class="v13q-flags"><label><input type="checkbox" class="v13q-br-flag" value="high_alert"> High Alert</label><label><input type="checkbox" class="v13q-br-flag" value="lasa"> LASA</label><label><input type="checkbox" class="v13q-br-flag" value="refrigerated"> Refrigerator</label><label><input type="checkbox" class="v13q-br-flag" value="hazard"> Hazard</label></div><button type="button" class="btn bp bsm" onclick="v13BulkReplacementClassOnly()">Apply classifications only</button></div>';preview.parentNode.insertBefore(box,preview)}
+window.extendBulkReplacementUi=extendBulkReplacement;
+window.v13BulkReplacementClassOnly=async function(){var old=(E('br-old')||{}).value;if(!old)return toast('Choose a medication first.','err');var chosen=Array.from(document.querySelectorAll('.v13q-br-flag:checked')).map(function(x){return x.value});if(!chosen.length)return toast('Select at least one classification.','err');var count=0;for(var d of (gd()||[])){var meds=(getMeds(d.id)||[]).slice(),changed=false;meds=meds.map(function(m){var k=String(m.name||'').trim().toLowerCase()+'|'+String(m.strength||m.dose||'').trim().toLowerCase();if(k!==old)return m;var n=Object.assign({},m);['high_alert','lasa','refrigerated','hazard'].forEach(function(f){n[f]=chosen.indexOf(f)>-1});changed=true;count++;return n});if(changed)await setMeds(d.id,meds)}CM('mbulk-replacement');toast(count+' medication record(s) reclassified; names unchanged.','succ');if(typeof renderInv==='function')renderInv()};
+
+function extendControlledBulk(){var modal=E('v13-final-bulk-modal');if(!modal||E('v13q-ctl-class-op'))return;var scope=E('v13-final-bulk-scope');if(!scope)return;var box=document.createElement('div');box.className='card';box.style.marginTop='10px';box.innerHTML='<div class="cb" style="padding:12px"><label>Classification operation</label><select id="v13q-ctl-class-op"><option value="keep">Keep classification</option><option value="replace">Replace classification</option></select><select id="v13q-ctl-class-value"><option value="narcotic">Narcotic</option><option value="psychotropic">Psychotropic</option></select><button type="button" class="btn bg bsm" onclick="v13ApplyControlledClassification()">Apply classification to selected medication</button></div>';scope.parentNode.insertBefore(box,scope)}
+window.extendControlledBulkUi=extendControlledBulk;
+window.v13ApplyControlledClassification=async function(){
+  var med=(E('v13-final-bulk-med')||{}).value,op=(E('v13q-ctl-class-op')||{}).value,val=(E('v13q-ctl-class-value')||{}).value;
+  if(!med)return toast('Select a medication.','err');if(op==='keep')return toast('Choose Replace classification first.','info');
+  var cat=(ctlCatalog()||[]).map(function(m){return String(m.id)===String(med)?Object.assign({},m,{classification:val}):m});
+  try{await ctlSetCatalog(cat)}catch(e){console.error('Controlled classification save failed',e);return toast('Classification was not saved.','err')}
+  toast('Controlled medication classification updated.','succ');if(typeof renderControlled==='function')renderControlled();return true
+};
+})();
+
+// --- Merged from 33-v13-ap-custodian-bulk-replacement-fix.js (Phase 6 consolidation) ---
+(function(){
+'use strict';
+const E=globalThis.E;
+function isOfficer(){return !!(window.CU&&CU.role==='controlled_pharmacy')}
+function addBulkReplacement(){
+  var old=E('v13-ap-bulk-replacement-btn');
+  if(!isOfficer()||String(window.CTL_VIEW||'')!=='departments'){
+    if(old)old.remove();
+    return;
+  }
+  var table=E('ctl-dept-table');
+  var card=table&&table.closest('.card');
+  if(!card)return;
+  var header=card.querySelector('.ch .fl')||card.querySelector('.ch');
+  if(!header)return;
+  if(!old){
+    old=document.createElement('button');
+    old.id='v13-ap-bulk-replacement-btn';
+    old.type='button';
+    old.className='btn bg bsm';
+    old.innerHTML='⇄ Bulk Replacement';
+    old.onclick=function(){
+      if(typeof window.openBulkReplacement==='function')return window.openBulkReplacement();
+      if(typeof window.toast==='function')toast('Bulk Replacement is unavailable.','err');
+    };
+    header.appendChild(old);
+  }
+}
+window.ensureControlledBulkReplacementButton=addBulkReplacement;
+})();
+
 export {};
