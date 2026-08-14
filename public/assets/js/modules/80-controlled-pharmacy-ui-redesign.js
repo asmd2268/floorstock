@@ -247,12 +247,10 @@
 /* ══════════════════════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════════════════════ */
-/* Print patch runs immediately — does NOT wait for ctlTabs/renderControlled */
+/* Print patch: only needs window.doDeptPrint (openBlobPrint is a closure-private local) */
 var _printAttempts=0;
 function tryPatchPrint(){
-  if(window.doDeptPrint&&window.openBlobPrint){
-    patchPrintFunctions();return;
-  }
+  if(window.doDeptPrint){patchPrintFunctions();return;}
   if(++_printAttempts<120)setTimeout(tryPatchPrint,250);
 }
 tryPatchPrint();

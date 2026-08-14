@@ -328,6 +328,7 @@ function fsStateKeysForProfile(profile){
   if(profile.master===true)return null;
   if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
   if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.slice();
+  if(String(profile.role||'')==='warehouse')return WAREHOUSE_STATE_KEYS.slice();
   if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
@@ -392,6 +393,12 @@ async function fsStateLoadScoped(keys,loader,source,profile){
   if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
+// Warehouse role is a scopedStateUser — it cannot LIST the collection.
+// It reads only the specific documents permitted by canReadScopedState() in firestore.rules.
+globalThis.WAREHOUSE_STATE_KEYS = Object.freeze([
+  'departments','deleted_departments','theme','audit_log',
+  'controlled_warehouse','controlled_moves','controlled_pdf_receipts'
+]);
 globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
@@ -2495,6 +2502,7 @@ const __asdhLegacyApi = {
   DEPARTMENT_SHARED_STATE_KEYS: globalThis.DEPARTMENT_SHARED_STATE_KEYS,
   PHARMACY_SCOPED_STATE_KEYS: globalThis.PHARMACY_SCOPED_STATE_KEYS,
   CONTROLLED_PHARMACY_BASE_KEYS: globalThis.CONTROLLED_PHARMACY_BASE_KEYS,
+  WAREHOUSE_STATE_KEYS: globalThis.WAREHOUSE_STATE_KEYS,
   S: globalThis.S,
   _publicSyncWarningAt: globalThis._publicSyncWarningAt,
   FS_R17_MED_MIGRATION_PENDING: globalThis.FS_R17_MED_MIGRATION_PENDING,
@@ -2677,5 +2685,5 @@ export {
   ctlImportMasterFile,
   ctlImportMasterText
 };
-export const legacyVariableNames = Object.freeze(["FB_APP", "FB_AUTH", "FB_DB", "FB_FUNCTIONS", "FB_APPCHECK", "_lazyScripts", "renderInvDebounced", "renderReqFormDebounced", "renderControlledDebounced", "_firebasePersistenceAttempted", "_firebaseReadyPromise", "_pendingWrites", "_trackedSaves", "_lastSaveFailure", "fsTenantId", "DEPARTMENT_SHARED_STATE_KEYS", "PHARMACY_SCOPED_STATE_KEYS", "CONTROLLED_PHARMACY_BASE_KEYS", "S", "_publicSyncWarningAt", "FS_R17_MED_MIGRATION_PENDING", "FS_R18_EXPIRY_MIGRATION_PENDING", "_gdRawRef", "_gdDeletedRef", "_gdFiltered", "_deletedDeptRepairBusy", "MEDS", "esc", "CU", "RFS", "EDID", "FRID", "IROWS", "SROLE", "fsLoginTimeout", "logoutBusy", "CTL_VIEW"]);
+export const legacyVariableNames = Object.freeze(["FB_APP", "FB_AUTH", "FB_DB", "FB_FUNCTIONS", "FB_APPCHECK", "_lazyScripts", "renderInvDebounced", "renderReqFormDebounced", "renderControlledDebounced", "_firebasePersistenceAttempted", "_firebaseReadyPromise", "_pendingWrites", "_trackedSaves", "_lastSaveFailure", "fsTenantId", "DEPARTMENT_SHARED_STATE_KEYS", "PHARMACY_SCOPED_STATE_KEYS", "CONTROLLED_PHARMACY_BASE_KEYS", "WAREHOUSE_STATE_KEYS", "S", "_publicSyncWarningAt", "FS_R17_MED_MIGRATION_PENDING", "FS_R18_EXPIRY_MIGRATION_PENDING", "_gdRawRef", "_gdDeletedRef", "_gdFiltered", "_deletedDeptRepairBusy", "MEDS", "esc", "CU", "RFS", "EDID", "FRID", "IROWS", "SROLE", "fsLoginTimeout", "logoutBusy", "CTL_VIEW"]);
 export default __asdhLegacyApi;

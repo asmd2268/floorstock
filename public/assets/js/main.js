@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.89 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.90 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -24,7 +24,7 @@ import './core/schedule-form-utils.js?v=R6.76.19';
 import './modules/00-r674-local-qr-runtime.js?v=R6.76.19';
 import './modules/01-firebase-global-bootstrap.js?v=R6.76.19';
 import './modules/02-r664-early-production-console-policy.js?v=R6.76.19';
-import './modules/03-core-application-firebase-state-auth.js?v=R6.76.82';
+import './modules/03-core-application-firebase-state-auth.js?v=R6.76.90';
 import './modules/04-v13-complete-clean-fix-script.js?v=R6.76.19';
 import './modules/05-controlled-ui-compatibility-fixes.js?v=R6.76.19';
 import './modules/06-zebra-label-printing.js?v=R6.76.19';
@@ -100,7 +100,7 @@ import './modules/79-r676-independent-regimen-database.js?v=R6.76.19';
 import './modules/75-r676-multi-year-department-comparison.js?v=R6.76.19';
 import './modules/77-r676-unified-analytics-print.js?v=R6.76.19';
 import './modules/78-r676-comprehensive-annual-report.js?v=R6.76.73';
-import './modules/80-controlled-pharmacy-ui-redesign.js?v=R6.76.89';
+import './modules/80-controlled-pharmacy-ui-redesign.js?v=R6.76.90';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.19';
 const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];
 const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');
