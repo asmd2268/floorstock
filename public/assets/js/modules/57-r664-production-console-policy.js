@@ -1,7 +1,2 @@
-(function(){
-  'use strict';
-  if(!window.console||window.__ASDH_DEBUG)return;
-  ['log','info','debug'].forEach(function(method){try{console[method]=function(){}}catch(ignore){}});
-})();
-
+// Merged into 02-r664-early-production-console-policy.js (Phase 6 consolidation).
 export {};

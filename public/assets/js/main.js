@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.92 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.93 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -78,7 +78,6 @@ import './modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.76.1
 import './modules/54-r662-accountability-draft-protection.js?v=R6.76.19';
 import './modules/55-r647-crash-cart-authoritative-boot.js?v=R6.76.19';
 import './modules/56-r664-security-idle-timeout.js?v=R6.76.19';
-import './modules/57-r664-production-console-policy.js?v=R6.76.19';
 import './modules/58-r664-public-privacy-rewrite.js?v=R6.76.19';
 import './modules/59-r664-security-complete-runtime.js?v=R6.76.19';
 import './modules/60-csp-legacy-event-bridge.js?v=R6.76.92';
