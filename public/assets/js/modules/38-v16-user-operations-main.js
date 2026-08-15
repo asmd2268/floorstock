@@ -694,6 +694,7 @@ window.refreshRequestCountLimitWarning=function(){
   if(!window.CU||role()!=='department')return;
   var old=E('r18-request-limit-warning');if(old)old.remove();
   var host=E('rfbody');if(!host)return;
+  var pg=E('pg-newreq');if(!pg||!pg.classList.contains('on'))return;
   var check=window.checkRequestCountLimits(CU.deptId);
   if(!check.blocked&&!check.limit24&&!check.limit7)return;
   var warning=document.createElement('div');

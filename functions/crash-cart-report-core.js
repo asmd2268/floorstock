@@ -153,7 +153,6 @@ function applyCrashCartReport({
   }
 
   const rows = Array.isArray(consumed) ? consumed : [];
-  if (!rows.length) throw new Error('Select at least one medication and enter its quantity.');
   if (rows.length > 100) throw new Error('Too many Crash Cart report lines.');
 
   const seen = new Set();
