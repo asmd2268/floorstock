@@ -837,6 +837,7 @@ window.controlledStoragePrint=async function(id,mode){
       '.map-code{font-size:11px;line-height:1}.pcell span{font-weight:900;margin-top:5px;font-size:14px;line-height:1.08;overflow-wrap:anywhere}.pcell small{font-size:7.5px;line-height:1.2}.map-codes{margin-top:5px}.map-expiry{margin-top:auto;padding-top:3px}'+
       '.cert{text-align:center;font-size:7px;margin-top:4px;border-top:1px solid #000;padding-top:3px;flex:0 0 auto}'+
       '.public-url{text-align:center;font-size:6px;margin-top:1px;overflow-wrap:anywhere;flex:0 0 auto}'+
+      '.brand{text-align:center;font-size:6px;color:#555;margin-top:1px;flex:0 0 auto}'+
       '.official-print-header{page-break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
       '.official-print-header img{max-width:31mm;max-height:25mm;object-fit:contain}'+
       '</style></head><body class="print-'+mode+'">'+
@@ -862,6 +863,7 @@ window.controlledStoragePrint=async function(id,mode){
       'This list is electronically approved and certified and does not require a stamp.'+
       '</div>'+
       '<div class="public-url">'+esc(publicUrl)+'</div>'+
+      '<div class="brand">By Ali Abudahash</div>'+
       '<script>(function(){var d=false;function p(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(p,250);else window.addEventListener("load",function(){setTimeout(p,250)},{once:true})})()</scr'+'ipt>'+
       '</body></html>';
 
