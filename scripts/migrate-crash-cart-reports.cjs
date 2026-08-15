@@ -2,15 +2,16 @@
 /**
  * Phase 7b migration: crash_cart_reports state-doc array → individual collection docs.
  *
- * Usage:
+ * Usage (from the repo root; firebase-admin is resolved from
+ * functions/node_modules automatically regardless of cwd):
  *   # Dry run (prints what would be written, no writes):
- *   node scripts/migrate-crash-cart-reports.js --dry-run
+ *   node scripts/migrate-crash-cart-reports.cjs --dry-run
  *
  *   # Legacy (non-tenant) installation:
- *   node scripts/migrate-crash-cart-reports.js
+ *   node scripts/migrate-crash-cart-reports.cjs
  *
  *   # Tenant installation (replace TENANT_ID):
- *   node scripts/migrate-crash-cart-reports.js --tenant TENANT_ID
+ *   node scripts/migrate-crash-cart-reports.cjs --tenant TENANT_ID
  *
  * Prerequisites:
  *   GOOGLE_APPLICATION_CREDENTIALS env var pointing to a service-account JSON
@@ -22,7 +23,10 @@
 
 'use strict';
 
-const admin = require('firebase-admin');
+const path = require('node:path');
+// firebase-admin is only installed under functions/node_modules, not at the
+// repo root — resolve it explicitly so this script works from any cwd.
+const admin = require(require.resolve('firebase-admin', { paths: [path.join(__dirname, '../functions')] }));
 
 const args = process.argv.slice(2);
 const dryRun = args.includes('--dry-run');
