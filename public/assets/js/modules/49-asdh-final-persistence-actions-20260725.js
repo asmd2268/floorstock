@@ -440,22 +440,19 @@ function positionR18Banner(){
     schedInfo.parentNode&&schedInfo.parentNode.insertBefore(r18,schedInfo.nextSibling);
   }
 }
-var previousCountWarning=window.refreshRequestCountLimitWarning;
-window.refreshRequestCountLimitWarning=function(){
-  removeLegacyBlockingWarnings();
-  var result=typeof previousCountWarning==='function'?previousCountWarning.apply(this,arguments):undefined;
+window.__refreshRequestCountLimitWarningBeforeExtensions=window.__refreshRequestCountLimitWarningBeforeExtensions||[];
+window.__refreshRequestCountLimitWarningBeforeExtensions.push(removeLegacyBlockingWarnings);
+window.__refreshRequestCountLimitWarningExtensions=window.__refreshRequestCountLimitWarningExtensions||[];
+window.__refreshRequestCountLimitWarningExtensions.push(function(){
   positionR18Banner();
   setTimeout(positionR18Banner,0);
   applyNewRequestGate();
-  return result;
-};
-var previousScheduleMessage=window.refreshRequestScheduleMessage;
-window.refreshRequestScheduleMessage=function(){
-  var result=typeof previousScheduleMessage==='function'?previousScheduleMessage.apply(this,arguments):undefined;
+});
+window.__refreshRequestScheduleMessageExtensions=window.__refreshRequestScheduleMessageExtensions||[];
+window.__refreshRequestScheduleMessageExtensions.push(function(){
   positionR18Banner();
   applyNewRequestGate();
-  return result;
-};
+});
 function preserveDraftAround(name,pageId){
   var previous=window[name];if(typeof previous!=='function'||previous.__r668DraftWrapped)return;
   function wrapped(){
@@ -521,9 +518,10 @@ function restoreBulk(draft){if(!draft||!E('r17-cr-source-med'))return;restoring=
 function hasNewRequestData(draft){return !!(draft&&(draft.search||Object.keys(draft.quantities||{}).length))}
 function hasBulkData(draft){return !!(draft&&(draft.source||draft.expiry||draft.qty||draft.note||(draft.selected||[]).length||(draft.replacements||[]).some(function(r){return r.name||r.concentration||r.expiry||r.lot||Number(r.qty)!==1})))}
 function persist(){var active=document.querySelector('.pg.on'),id=active&&active.id;if(id==='pg-newreq'){var d=captureNewRequest();if(hasNewRequestData(d)){write('newreq',d);dirty.newreq=true}else if(dirty.newreq)clear('newreq')}else if(id==='pg-crash-ops'){var b=captureBulk();if(hasBulkData(b)){write('bulk',b);dirty.bulk=true}else if(dirty.bulk)clear('bulk')}}
-var previousPersist=window.persistTransientUiState,previousRestore=window.restorePageTransientUi;
-window.persistTransientUiState=function(){if(typeof previousPersist==='function')previousPersist();persist()};
-window.restorePageTransientUi=function(id){if(typeof previousRestore==='function')previousRestore(id);setTimeout(function(){if(id==='pg-newreq')restoreNewRequest(read('newreq'));if(id==='pg-crash-ops')restoreBulk(read('bulk'))},0)};
+window.__persistTransientUiExtensions=window.__persistTransientUiExtensions||[];
+window.__persistTransientUiExtensions.push(persist);
+window.__restorePageTransientUiExtensions=window.__restorePageTransientUiExtensions||[];
+window.__restorePageTransientUiExtensions.push(function(id){setTimeout(function(){if(id==='pg-newreq')restoreNewRequest(read('newreq'));if(id==='pg-crash-ops')restoreBulk(read('bulk'))},0)});
 document.addEventListener('input',function(event){if(restoring)return;var page=event.target.closest&&event.target.closest('.pg');if(!page)return;if(page.id==='pg-newreq'){dirty.newreq=true}else if(page.id==='pg-crash-ops'){dirty.bulk=true}else return;clearTimeout(timer);timer=setTimeout(persist,120)});
 document.addEventListener('change',function(event){if(restoring)return;var page=event.target.closest&&event.target.closest('.pg');if(page&&(page.id==='pg-newreq'||page.id==='pg-crash-ops')){dirty[page.id==='pg-newreq'?'newreq':'bulk']=true;persist()}});
 window.addEventListener('beforeunload',persist);window.addEventListener('pagehide',persist);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')persist()});
@@ -531,8 +529,15 @@ window.floorstockShouldProtectAutoRefresh=function(pageId){var type=pageId==='pg
 var originalRefresh=window.refreshCurrentPage;
 if(typeof originalRefresh==='function')window.refreshCurrentPage=function(){var active=document.querySelector('.pg.on'),type=active&&active.id==='pg-newreq'?'newreq':active&&active.id==='pg-crash-ops'?'bulk':'';if(type&&dirty[type]){persist();notice('Unsaved form protected from automatic refresh / تم حماية البيانات غير المرسلة من التحديث التلقائي');return}return originalRefresh.apply(this,arguments)};
 var originalSubmit=window.submitReq;if(typeof originalSubmit==='function')window.submitReq=async function(){var before=(typeof gr==='function'?(gr()||[]):[]).length,result=await originalSubmit.apply(this,arguments),after=(typeof gr==='function'?(gr()||[]):[]).length;if(after>before)clear('newreq');return result};
-var originalBulk=window.r17CrashExecuteBulk;if(typeof originalBulk==='function')window.r17CrashExecuteBulk=async function(){var before=(typeof crashReports==='function'?(crashReports()||[]):[]).length,result=await originalBulk.apply(this,arguments),after=(typeof crashReports==='function'?(crashReports()||[]):[]).length;if(after>before)clear('bulk');return result};
-var originalClose=window.crashCloseReport;if(typeof originalClose==='function')window.crashCloseReport=function(reportId){var result=originalClose.apply(this,arguments);setTimeout(function(){var report=(typeof crashReports==='function'?(crashReports()||[]):[]).find(function(r){return String(r.id)===String(reportId)});if(!report||!report.inventoryDeductedAtReport)return;document.querySelectorAll('#ccc-items tr').forEach(function(row){var action=row.querySelector('.ccc-action'),source=row.querySelector('.ccc-source-exp');if(action){action.value='add';action.disabled=true}if(source){source.value='';source.disabled=true}});var box=E('ccc-validation');if(box&&!E('ccc-deducted-notice')){box.insertAdjacentHTML('beforebegin','<div id="ccc-deducted-notice" class="alert-banner-y">Reported quantities were already deducted when the department submitted the report. This step adds replacements only. / تم خصم الكميات عند إرسال البلاغ، وهذه الخطوة للتعويض فقط.</div>');}else if(box&&E('ccc-deducted-notice')){/*idempotent — notice already present*/}if(typeof window.ccCrashResponsePreview==='function')window.ccCrashResponsePreview()},0);return result};
+var r17BulkBeforeCount=0;
+window.__r17CrashExecuteBulkBeforeExtensions=window.__r17CrashExecuteBulkBeforeExtensions||[];
+window.__r17CrashExecuteBulkBeforeExtensions.push(function(){r17BulkBeforeCount=(typeof crashReports==='function'?(crashReports()||[]):[]).length});
+window.__r17CrashExecuteBulkExtensions=window.__r17CrashExecuteBulkExtensions||[];
+window.__r17CrashExecuteBulkExtensions.push(function(){var after=(typeof crashReports==='function'?(crashReports()||[]):[]).length;if(after>r17BulkBeforeCount)clear('bulk')});
+// crashCloseReport is defined by module 80, which loads after this module, so a
+// wrapper here would always find window.crashCloseReport undefined and never run.
+// Left removed rather than kept as unreachable code (confirmed dead via
+// TRACE_COMPENSATION_NOTICE_DUP.md investigation).
 window.clearFloorstockFormDraft=function(type){clear(type)};
 })();
 

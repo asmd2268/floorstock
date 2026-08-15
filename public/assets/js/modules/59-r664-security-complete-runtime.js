@@ -163,8 +163,8 @@ function installSealButtons(){
     b.onclick=function(){window.r664OpenSealCorrection(cartId)};actions.appendChild(b);
   });
 }
-var originalRenderCrashOperations=window.renderCrashOperations;
-if(typeof originalRenderCrashOperations==='function')window.renderCrashOperations=function(){var result=originalRenderCrashOperations.apply(this,arguments);setTimeout(installSealButtons,0);return result};
+window.__renderCrashOperationsAfterExtensions=window.__renderCrashOperationsAfterExtensions||[];
+window.__renderCrashOperationsAfterExtensions.push(function(){setTimeout(installSealButtons,0)});
 
 /* Master cloud backup: authenticated, chunked Firestore snapshots, latest seven retained.
    Local IndexedDB backup remains as a second layer. */

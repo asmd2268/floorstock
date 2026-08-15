@@ -212,6 +212,17 @@ function scheduleV16Refresh(id){
    MASTER showPg — Clean navigation and page isolation
 ──────────────────────────────────────────────────────────────── */
 window.showPg = function(id){
+  var guards=window.__showPgGuards||[];
+  for(var gi=0;gi<guards.length;gi++){
+    var allowed=true;
+    try{allowed=guards[gi](id)}catch(e){console.error('showPg guard failed',e)}
+    if(allowed===false)return false;
+  }
+  var res=showPgCore(id);
+  (window.__showPgAfterExtensions||[]).forEach(function(fn){try{fn(id)}catch(e){console.error('showPg after-extension failed',e)}});
+  return res;
+};
+function showPgCore(id){
   id=String(id||'');
   window.FS_CURRENT_PAGE=id;
   if(id==='pg-controlled'&&window.CU&&['pharmacy','inpatient_supervisor'].indexOf(CU.role)>-1){if(typeof window.toast==='function')toast('Controlled Custody is not available for this role.','info');id='pg-dash'}
@@ -275,7 +286,7 @@ window.showPg = function(id){
   if(id==='pg-controlled'&&typeof window.renderDepartmentControlledPanel==='function')window.renderDepartmentControlledPanel();
   if(typeof window.enforceRoleUi==='function')window.enforceRoleUi();
   return res;
-};
+}
 
 /* ────────────────────────────────────────────────────────────────
    Ensure New Request nav button is ONLY present for department accounts
@@ -625,26 +636,34 @@ window.saveRequestCountLimits=async function(){
   }
 };
 window.refreshRequestCountLimitWarning=function(){
-  if(!window.CU||role()!=='department')return;
-  var old=E('r18-request-limit-warning');if(old)old.remove();
-  var host=E('rfbody');if(!host)return;
-  var pg=E('pg-newreq');if(!pg||!pg.classList.contains('on'))return;
-  var check=window.checkRequestCountLimits(CU.deptId);
-  if(!check.blocked&&!check.limit24&&!check.limit7)return;
-  var warning=document.createElement('div');
-  warning.id='r18-request-limit-warning';
-  warning.className='r18-request-limit-warn'+(check.blocked?' blocked':'');
-  if(check.blocked)warning.textContent='🚫 '+check.reason;
-  else{
-    var parts=[];
-    if(check.limit24)parts.push('24h: '+check.used24+'/'+check.limit24+' · remaining '+check.remaining24);
-    if(check.limit7)parts.push('7d: '+check.used7+'/'+check.limit7+' · remaining '+check.remaining7);
-    var arParts=[];
-    if(check.limit24)arParts.push('خلال 24 ساعة: '+check.used24+' من '+check.limit24+' · المتبقي '+check.remaining24);
-    if(check.limit7)arParts.push('خلال 7 أيام: '+check.used7+' من '+check.limit7+' · المتبقي '+check.remaining7);
-    warning.textContent='📋 '+arParts.join(' | ')+'\n'+parts.join(' | ');
+  (window.__refreshRequestCountLimitWarningBeforeExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('refreshRequestCountLimitWarning before-extension failed',e)}});
+  if(!window.CU||role()!=='department'){
+    (window.__refreshRequestCountLimitWarningExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('refreshRequestCountLimitWarning extension failed',e)}});
+    return;
   }
-  host.insertAdjacentElement('beforebegin',warning);
+  var old=E('r18-request-limit-warning');if(old)old.remove();
+  var host=E('rfbody');
+  var pg=E('pg-newreq');
+  if(host&&pg&&pg.classList.contains('on')){
+    var check=window.checkRequestCountLimits(CU.deptId);
+    if(check.blocked||check.limit24||check.limit7){
+      var warning=document.createElement('div');
+      warning.id='r18-request-limit-warning';
+      warning.className='r18-request-limit-warn'+(check.blocked?' blocked':'');
+      if(check.blocked)warning.textContent='🚫 '+check.reason;
+      else{
+        var parts=[];
+        if(check.limit24)parts.push('24h: '+check.used24+'/'+check.limit24+' · remaining '+check.remaining24);
+        if(check.limit7)parts.push('7d: '+check.used7+'/'+check.limit7+' · remaining '+check.remaining7);
+        var arParts=[];
+        if(check.limit24)arParts.push('خلال 24 ساعة: '+check.used24+' من '+check.limit24+' · المتبقي '+check.remaining24);
+        if(check.limit7)arParts.push('خلال 7 أيام: '+check.used7+' من '+check.limit7+' · المتبقي '+check.remaining7);
+        warning.textContent='📋 '+arParts.join(' | ')+'\n'+parts.join(' | ');
+      }
+      host.insertAdjacentElement('beforebegin',warning);
+    }
+  }
+  (window.__refreshRequestCountLimitWarningExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('refreshRequestCountLimitWarning extension failed',e)}});
 };
 
 /* Compatibility entry point: request editing now has one authoritative policy.

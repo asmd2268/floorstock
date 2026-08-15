@@ -176,8 +176,14 @@ window.ensureControlledBulkReplacementButton=addBulkReplacement;
 
   window.clearImportDraftState=function(){try{sessionStorage.removeItem(IMP_KEY)}catch(e){}window.IROWS=[]};
 
-  window.persistTransientUiState=function(){captureInventorySelection();saveImportDraft()};
-  window.restorePageTransientUi=function(id){moveAnnouncementHostToTop();if(id==='pg-import')restoreImportDraft()};
+  window.persistTransientUiState=function(){
+    captureInventorySelection();saveImportDraft();
+    (window.__persistTransientUiExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('persistTransientUiState extension failed',e)}});
+  };
+  window.restorePageTransientUi=function(id){
+    moveAnnouncementHostToTop();if(id==='pg-import')restoreImportDraft();
+    (window.__restorePageTransientUiExtensions||[]).forEach(function(fn){try{fn(id)}catch(e){console.error('restorePageTransientUi extension failed',e)}});
+  };
 
 })();
 

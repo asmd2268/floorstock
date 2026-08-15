@@ -387,8 +387,12 @@ function fixOrderingBanner(){
 function wrapScheduleRender(name){var original=window[name];if(typeof original!=='function'||original.__r676Schedule)return;var wrapped=function(){var result=original.apply(this,arguments);setTimeout(fixOrderingBanner,0);return result};wrapped.__r676Schedule=true;window[name]=wrapped}
 ['renderReqForm','refreshNewRequestGate','showPg'].forEach(wrapScheduleRender);
 
-function wrapCrashRender(name){var original=window[name];if(typeof original!=='function'||original.__r676SealPolicy)return;var wrapped=function(){var result=original.apply(this,arguments);setTimeout(renderSealPolicyToggle,0);return result};wrapped.__r676SealPolicy=true;window[name]=wrapped}
-['renderCrashCarts','renderCrashOperations','showPg'].forEach(wrapCrashRender);
+window.__renderCrashCartsAfterExtensions=window.__renderCrashCartsAfterExtensions||[];
+window.__renderCrashCartsAfterExtensions.push(function(){setTimeout(renderSealPolicyToggle,0)});
+window.__renderCrashOperationsAfterExtensions=window.__renderCrashOperationsAfterExtensions||[];
+window.__renderCrashOperationsAfterExtensions.push(function(){setTimeout(renderSealPolicyToggle,0)});
+window.__showPgAfterExtensions=window.__showPgAfterExtensions||[];
+window.__showPgAfterExtensions.push(function(){setTimeout(renderSealPolicyToggle,0)});
 
 function install(){
   startNotesBadgeRefresh();fixOrderingBanner();renderSealPolicyToggle();
