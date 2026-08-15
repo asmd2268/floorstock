@@ -227,8 +227,8 @@ function boot(){
   setTimeout(function(){dailyCloudBackup().catch(function(){})},3000);
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot,{once:true});else boot();
-var previousStart=window.startApp;
-if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(boot,900);return result};
+window.__startAppExtensions=window.__startAppExtensions||[];
+window.__startAppExtensions.push(function(){setTimeout(boot,900)});
 })();
 
 // --- Merged from 56-r664-security-idle-timeout.js (Phase 6 consolidation) ---
@@ -282,8 +282,8 @@ if(typeof previousStart==='function')window.startApp=function(){var result=previ
     finally{running=false}
   }
   if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',function(){setTimeout(rewrite,1200)},{once:true});else setTimeout(rewrite,1200);
-  var previousStart=window.startApp;
-  if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(rewrite,1500);return result};
+  window.__startAppExtensions=window.__startAppExtensions||[];
+  window.__startAppExtensions.push(function(){setTimeout(rewrite,1500)});
 })();
 
 

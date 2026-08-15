@@ -2550,6 +2550,34 @@ const __asdhLegacyApi = {
   SHELF_MED_SELECTED: globalThis.SHELF_MED_SELECTED
 };
 publishLegacy("07-expiry-requests-and-primary-features.js", __asdhLegacyApi);
+// Must run AFTER publishLegacy: __asdhLegacyApi.startApp captured the raw
+// named function by reference at object-literal time, and publishLegacy
+// reassigns globalThis[name] for every entry — wrapping window.startApp
+// before this point would get silently overwritten back to the raw function.
+//
+// Other modules used to each capture the previous startApp and reassign the
+// global with their own wrapper — one such reassignment per extension. That
+// pattern grew to 7 nested layers across 5 files, which made the boot
+// sequence hard to read and each layer a candidate to silently break the
+// chain. Replaced with a single wrapper here plus an explicit registry:
+// extensions call window.__startAppExtensions.push(fn) (after core startApp
+// runs) or window.__startAppBeforeExtensions.push(fn) (before it runs)
+// instead of reassigning window.startApp themselves. Execution order is
+// preserved exactly — extensions still run in the same module-load order as
+// before, since each module's top-level push() runs at exactly the point
+// its old reassignment used to.
+window.__startAppBeforeExtensions=window.__startAppBeforeExtensions||[];
+window.__startAppExtensions=window.__startAppExtensions||[];
+(function(){
+  var core=window.startApp;
+  window.startApp=function(){
+    var self=this,args=arguments;
+    window.__startAppBeforeExtensions.forEach(function(fn){try{fn.apply(self,args)}catch(e){console.error('startApp before-extension failed',e)}});
+    var result=core.apply(this,arguments);
+    window.__startAppExtensions.forEach(function(fn){try{fn.apply(self,args)}catch(e){console.error('startApp extension failed',e)}});
+    return result;
+  };
+})();
 export {
   renderShelfAlertSettings,
   openAddExpiry,

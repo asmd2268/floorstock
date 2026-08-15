@@ -6,13 +6,18 @@ const crashSource = await readFile(new URL('../public/assets/js/modules/44-ccx-i
 const authSource = await readFile(new URL('../public/assets/js/modules/70-r676-accountability-regimen-roster-and-log.js', import.meta.url), 'utf8');
 const crashDeletionSource = await readFile(new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url), 'utf8');
 const sessionDefaultsSource = await readFile(new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url), 'utf8');
+const startAppOwnerSource = await readFile(new URL('../public/assets/js/modules/07-expiry-requests-and-primary-features.js', import.meta.url), 'utf8');
+// startApp extensions register into window.__startAppExtensions /
+// window.__startAppBeforeExtensions instead of each reassigning
+// window.startApp with its own "var previousStart=window.startApp;
+// window.startApp=function(){...previousStart.apply...}" wrapper. That
+// pattern had grown to 7 nested layers across 5 files before being
+// consolidated into the single wrapper module 07 owns.
 const lifecycleSources = await Promise.all([
-  '40-v16-clean-optimized-script.js',           // was 53-r661-authoritative-inventory-safety.js
-  '49-asdh-final-persistence-actions-20260725.js', // was 54-r662-accountability-draft-protection.js
-  '59-r664-security-complete-runtime.js',        // was 58-r664-public-privacy-rewrite.js
+  '40-v16-clean-optimized-script.js',
+  '49-asdh-final-persistence-actions-20260725.js',
   '59-r664-security-complete-runtime.js',
-  '49-asdh-final-persistence-actions-20260725.js', // was 63-r668-request-lock-drafts-and-session-defaults.js
-  '70-r676-accountability-regimen-roster-and-log.js' // was 64-r671-permissions-and-accountability-qr.js
+  '70-r676-accountability-regimen-roster-and-log.js'
 ].map(name => readFile(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8')));
 
 test('Crash Cart renderer has one canonical implementation', () => {
@@ -33,15 +38,21 @@ test('session defaults do not wrap the canonical logout lifecycle', () => {
   assert.doesNotMatch(sessionDefaultsSource, /window\.doLogout\s*=\s*async function/);
 });
 
-test('startApp extensions preserve the previous implementation', () => {
-  assert.match(authSource, /var previousStart=window\.startApp/);
-  assert.match(authSource, /previousStart\.apply\(this,arguments\)/);
+test('startApp has exactly one canonical wrapper, owned by module 07', () => {
+  const assignments = startAppOwnerSource.match(/window\.startApp\s*=/g) || [];
+  assert.equal(assignments.length, 2); // the core definition, then the single registry-running wrapper
+  assert.match(startAppOwnerSource, /window\.__startAppExtensions\.forEach/);
+  assert.match(startAppOwnerSource, /window\.__startAppBeforeExtensions\.forEach/);
 });
 
-test('every startApp wrapper preserves the lifecycle chain', () => {
+test('startApp extensions register into the shared registry instead of wrapping window.startApp', () => {
+  assert.match(authSource, /window\.__startAppExtensions\.push/);
+  assert.doesNotMatch(authSource, /var previousStart=window\.startApp/);
+});
+
+test('no module outside 07 reassigns window.startApp directly', () => {
   for (const source of lifecycleSources) {
-    if (!/window\.startApp\s*=/.test(source)) continue;
-    assert.match(source, /var previousStart=window\.startApp/);
-    assert.match(source, /previousStart\.apply\(this,arguments\)/);
+    assert.doesNotMatch(source, /window\.startApp\s*=(?!=)/);
+    assert.doesNotMatch(source, /var previousStart=window\.startApp/);
   }
 });

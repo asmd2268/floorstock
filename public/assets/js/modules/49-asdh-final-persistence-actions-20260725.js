@@ -324,8 +324,8 @@ function wrapSave(name){
   };wrapped.__r662=true;window[name]=wrapped
 }
 ['acc2SaveAssignment','acc2SaveRegimenVersion','acc2SubmitUsage','acc2CreateReceipt','acc2Decision'].forEach(wrapSave);
-var previousStart=window.startApp;
-if(typeof previousStart==='function')window.startApp=function(){var result=previousStart.apply(this,arguments);setTimeout(indicator,700);return result};
+window.__startAppExtensions=window.__startAppExtensions||[];
+window.__startAppExtensions.push(function(){setTimeout(indicator,700)});
 window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDefault();e.returnValue=''});
 })();
 
@@ -471,8 +471,17 @@ preserveDraftAround('renderCrashOperations','pg-crash-ops');
 // renderReqFormDebounced is owned by the canonical request renderer.  Do not
 // replace it here: replacing it bypasses draft protection and creates a second
 // render path that can erase quantities during realtime updates.
-var previousStart=window.startApp;
-if(typeof previousStart==='function')window.startApp=function(){window.resetFloorstockSessionFilters();var result=previousStart.apply(this,arguments);setTimeout(function(){window.resetFloorstockSessionFilters();var active=document.querySelector('.pg.on');if(active&&typeof window.restorePageTransientUi==='function')window.restorePageTransientUi(active.id);setTimeout(function(){setValue('rsrch','');applyNewRequestGate()},0)},0);return result};
+window.__startAppBeforeExtensions=window.__startAppBeforeExtensions||[];
+window.__startAppExtensions=window.__startAppExtensions||[];
+window.__startAppBeforeExtensions.push(function(){window.resetFloorstockSessionFilters()});
+window.__startAppExtensions.push(function(){
+  setTimeout(function(){
+    window.resetFloorstockSessionFilters();
+    var active=document.querySelector('.pg.on');
+    if(active&&typeof window.restorePageTransientUi==='function')window.restorePageTransientUi(active.id);
+    setTimeout(function(){setValue('rsrch','');applyNewRequestGate()},0);
+  },0);
+});
 // The canonical authentication module owns logout and invokes the reset helper.
 // A second global wrapper can be wrapped again by compatibility modules and
 // recurse until the browser reports “Maximum call stack size exceeded”.

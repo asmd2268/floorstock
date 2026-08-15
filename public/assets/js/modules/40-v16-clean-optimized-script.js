@@ -739,10 +739,8 @@ function verifyStartup(){
     if(typeof auditAction==='function')auditAction('inventory_startup_integrity_alert',{before:startFingerprint,after:current})
   }
 }
-var previousStart=window.startApp;
-if(typeof previousStart==='function')window.startApp=function(){
-  var result=previousStart.apply(this,arguments);
-
+window.__startAppExtensions=window.__startAppExtensions||[];
+window.__startAppExtensions.push(function(){
   setTimeout(function(){
     if(window.S&&S.ready){
       startFingerprint=totalAndHash();
@@ -750,9 +748,7 @@ if(typeof previousStart==='function')window.startApp=function(){
       setTimeout(verifyStartup,2600);
     }
   },0);
-
-  return result;
-};
+});
 new MutationObserver(function(mutations){
   var relevant=mutations.some(function(m){return Array.from(m.addedNodes||[]).some(function(node){return node.nodeType===1&&(node.matches&&node.matches('.sim-manual-merge-btn,.sim-merge-btn,#similar-medicines-modal-v2')||node.querySelector&&node.querySelector('.sim-manual-merge-btn,.sim-merge-btn'))})});
   if(relevant)disableUnsafeMergeButtons()

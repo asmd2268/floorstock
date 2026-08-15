@@ -437,7 +437,7 @@ test('request limits freeze New Request, drafts never expire, and session filter
   assert.match(sessionGuardSource, /getNewRequestGateState/);
   assert.match(sessionGuardSource, /'ccx-state':''/);
   assert.match(sessionGuardSource, /resetFloorstockSessionFilters/);
-  assert.match(sessionGuardSource, /previousStart=window\.startApp/);
+  assert.match(sessionGuardSource, /window\.__startAppBeforeExtensions\.push/);
   assert.doesNotMatch(sessionGuardSource, /window\.doLogout\s*=\s*async function/);
   assert.doesNotMatch(sessionGuardSource, /preserveDraftAround\('renderReqForm','pg-newreq'\)/);
   assert.match(sessionGuardSource, /renderReqFormDebounced is owned by the canonical request renderer/);
