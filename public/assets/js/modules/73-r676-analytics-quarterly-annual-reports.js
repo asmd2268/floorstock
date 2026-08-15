@@ -97,6 +97,7 @@ function injectStyles() {
 .anl-med-table td{padding:8px 10px;border-bottom:1px solid var(--cl-border,#334155);color:var(--cl-text,#e2e8f0);vertical-align:top}
 .anl-med-table tr:last-child td{border-bottom:none}
 .anl-spike-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:#fef3c7;color:#92400e;margin-left:6px}
+.anl-spike-badge.low{background:#dcfce7;color:#166534}
 .anl-spike-badge.mid{background:#fef3c7;color:#92400e}
 .anl-spike-badge.high{background:#fee2e2;color:#991b1b}
 .anl-spike-badge.extreme{background:#7f1d1d;color:#fecaca}
@@ -203,6 +204,31 @@ function renderSpikeLegend(threshold) {
     <span><span class="anl-spike-badge mid">+${threshold}%</span> ${threshold}–${Math.round(threshold * 1.5 - 1)}% increase</span>
     <span><span class="anl-spike-badge high">+${Math.round(threshold * 1.5)}%</span> ${Math.round(threshold * 1.5)}–${Math.round(threshold * 2.5 - 1)}% increase</span>
     <span><span class="anl-spike-badge extreme">+${Math.round(threshold * 2.5)}%</span> ${Math.round(threshold * 2.5)}%+ increase</span>
+  </div>`;
+}
+
+// Severity-by-share badges: unlike spikeBadge (YoY % change), this tiers a
+// value's share of a total (e.g. one medicine's share of all replacements),
+// reusing the same visual language (anl-spike-badge classes) for consistency
+// across every report in this module.
+const SHARE_TIERS = { mid: 15, high: 25, extreme: 40 };
+function shareBadgeClass(sharePct) {
+  if (sharePct >= SHARE_TIERS.extreme) return 'extreme';
+  if (sharePct >= SHARE_TIERS.high) return 'high';
+  if (sharePct >= SHARE_TIERS.mid) return 'mid';
+  return 'low';
+}
+function shareBadge(sharePct) {
+  const cls = shareBadgeClass(sharePct);
+  return `<span class="anl-spike-badge ${cls}">${sharePct}%</span>`;
+}
+function renderShareLegend() {
+  return `<div class="anl-legend">
+    <b>Legend / الدليل:</b>
+    <span><span class="anl-spike-badge low">&lt;${SHARE_TIERS.mid}%</span> normal share</span>
+    <span><span class="anl-spike-badge mid">${SHARE_TIERS.mid}%</span> ${SHARE_TIERS.mid}–${SHARE_TIERS.high - 1}% of total</span>
+    <span><span class="anl-spike-badge high">${SHARE_TIERS.high}%</span> ${SHARE_TIERS.high}–${SHARE_TIERS.extreme - 1}% of total</span>
+    <span><span class="anl-spike-badge extreme">${SHARE_TIERS.extreme}%</span> ${SHARE_TIERS.extreme}%+ of total</span>
   </div>`;
 }
 function renderSpikes(currentRows, priorRows, priorLabel, threshold) {
@@ -775,6 +801,7 @@ function renderCrashSection() {
     html += `<div class="car-empty">No replacement records in this period.</div>`;
   } else {
     const maxC = st.topMeds[0].count;
+    html += renderShareLegend();
     html += `<div style="overflow:auto"><table class="car-table">
       <thead><tr><th>#</th><th>Medicine / الدواء</th><th>Times replaced / عدد الاستبدالات</th><th>Share % / النسبة</th><th>Top departments / الأقسام</th></tr></thead>
       <tbody>${st.topMeds.map((m, i) => {
@@ -785,7 +812,7 @@ function renderCrashSection() {
           <td>${i + 1}</td>
           <td><b>${esc(m.name)}</b></td>
           <td>${m.count}</td>
-          <td><span class="car-badge blue">${pct(m.count, st.totalReplacements)}%</span></td>
+          <td>${shareBadge(pct(m.count, st.totalReplacements))}</td>
           <td style="font-size:12px;color:var(--cl-sub,#94a3b8)">${topDepts || '—'}</td>
         </tr>`;
       }).join('')}</tbody>
@@ -904,21 +931,27 @@ function renderNarcoticSection() {
   </div>`;
 
   // Quarterly comparison (current vs prior quarter same year + vs prior year)
+  const narcThreshold = spikeThresholdPct();
   html += `<div class="car-section">
     <div class="car-section-title">Quarterly comparison / المقارنة الربعية — ${y}</div>
+    ${renderSpikeLegend(narcThreshold)}
     <div class="car-q-cmp">
       ${st.quarterly.map((q, idx) => {
         const priorYQ = priorSt.quarterly.find(p => p.q === q.q) || { units: 0 };
         const prevSameYQ = idx > 0 ? st.quarterly[idx - 1] : null;
         const pcVsPriorY = pctChange(q.units, priorYQ.units);
         const pcVsPrevQ = prevSameYQ !== null ? pctChange(q.units, prevSameYQ.units) : null;
-        const colY = pcVsPriorY === null ? '#64748b' : pcVsPriorY > 0 ? '#f59e0b' : '#10b981';
-        const colQ = pcVsPrevQ === null ? '#64748b' : pcVsPrevQ > 0 ? '#f59e0b' : '#10b981';
+        const badgeY = pcVsPriorY === null ? '<span style="color:#64748b">No prior year data</span>'
+          : pcVsPriorY > 0 ? spikeBadge(pcVsPriorY, narcThreshold) + ` vs ${priorY} Q${q.q}`
+          : `<span style="color:#10b981">↓ ${Math.abs(pcVsPriorY)}% vs ${priorY} Q${q.q}</span>`;
+        const badgeQ = pcVsPrevQ === null ? '—'
+          : pcVsPrevQ > 0 ? spikeBadge(pcVsPrevQ, narcThreshold) + ` vs Q${prevSameYQ.q} ${y}`
+          : `<span style="color:#10b981">↓ ${Math.abs(pcVsPrevQ)}% vs Q${prevSameYQ.q} ${y}</span>`;
         return `<div class="car-q-item">
           <div style="font-size:12px;color:var(--cl-sub,#94a3b8)">Q${q.q} / الربع ${['','الأول','الثاني','الثالث','الرابع'][q.q]}</div>
           <div style="font-size:22px;font-weight:800;color:var(--cl-text,#f1f5f9);margin:4px 0">${q.units}</div>
-          <div style="font-size:12px;color:${colY}">${pcVsPriorY !== null ? (pcVsPriorY >= 0 ? '↑ +' : '↓ ') + Math.abs(pcVsPriorY) + '% vs ' + priorY + ' Q' + q.q : 'No prior year data'}</div>
-          ${prevSameYQ ? `<div style="font-size:12px;color:${colQ};margin-top:3px">${pcVsPrevQ !== null ? (pcVsPrevQ >= 0 ? '↑ +' : '↓ ') + Math.abs(pcVsPrevQ) + '% vs Q' + prevSameYQ.q + ' ' + y : '—'}</div>` : ''}
+          <div style="font-size:12px">${badgeY}</div>
+          ${prevSameYQ ? `<div style="font-size:12px;margin-top:3px">${badgeQ}</div>` : ''}
           <div style="font-size:11px;color:var(--cl-sub,#94a3b8);margin-top:3px">${q.events} dispense events</div>
         </div>`;
       }).join('')}
@@ -1025,6 +1058,13 @@ th{background:#dbeafe;color:#102a5c}
 .month-name{font-size:7pt;color:#64748b}
 .month-val{font-size:14pt;font-weight:bold;color:#102a5c}
 .section{break-inside:avoid;margin-bottom:14px}
+.anl-spike-badge{display:inline-block;font-size:8pt;font-weight:bold;padding:1px 6px;border-radius:99px;background:#fef3c7;color:#92400e}
+.anl-spike-badge.low{background:#dcfce7;color:#166534}
+.anl-spike-badge.mid{background:#fef3c7;color:#92400e}
+.anl-spike-badge.high{background:#fee2e2;color:#991b1b}
+.anl-spike-badge.extreme{background:#7f1d1d;color:#fecaca}
+.anl-legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:8pt;color:#52627b;margin:6px 0 10px;padding:6px 8px;background:#f5f9ff;border:1px solid #c8d4e8;border-radius:6px}
+.anl-legend b{color:#102a5c}
 @media print{button{display:none!important}.section{break-inside:avoid}}
 `;
 
@@ -1066,12 +1106,13 @@ function printCrashReport() {
   }
 
   body += `<div class="section"><h2 class="warn">Top 10 Replaced Medicines / أكثر 10 أدوية استُبدلت</h2>
+    ${renderShareLegend()}
     <table><thead><tr><th>#</th><th>Medicine</th><th>Times replaced</th><th>Share</th><th>Top departments</th></tr></thead>
     <tbody>${st.topMeds.map((m, i) => {
       const topDepts = Object.entries(st.deptMedCounts[m.name] || {})
         .sort((a, b) => b[1] - a[1]).slice(0, 3)
         .map(([d, n]) => `${esc(d)}: ${n}`).join(', ');
-      return `<tr><td>${i+1}</td><td><b>${esc(m.name)}</b></td><td>${m.count}</td><td>${pct(m.count, st.totalReplacements)}%</td><td>${topDepts || '—'}</td></tr>`;
+      return `<tr><td>${i+1}</td><td><b>${esc(m.name)}</b></td><td>${m.count}</td><td>${shareBadge(pct(m.count, st.totalReplacements))}</td><td>${topDepts || '—'}</td></tr>`;
     }).join('')}</tbody>
     </table></div>`;
 
@@ -1099,11 +1140,13 @@ function printNarcoticReport() {
       <div class="meter"><i style="width:${pct(m.units, Math.max(1,...st.monthly.map(x=>x.units)))}%;background:#2563eb"></i></div>
       </div>`).join('')}</div></div>
     <div class="section"><h2>Quarterly Comparison ${y} vs ${priorY}</h2>
+    ${renderSpikeLegend(spikeThresholdPct())}
     <table><thead><tr><th>Quarter</th><th>${y} units</th><th>${priorY} units</th><th>Change</th></tr></thead>
     <tbody>${st.quarterly.map(q => {
       const priorQ = priorSt.quarterly.find(p => p.q === q.q) || { units: 0 };
       const pc = pctChange(q.units, priorQ.units);
-      return `<tr><td>Q${q.q}</td><td><b>${q.units}</b></td><td>${priorQ.units}</td><td style="color:${pc > 0 ? '#b45309' : pc < 0 ? '#166534' : ''}">${pc !== null ? (pc >= 0 ? '+' : '') + pc + '%' : '—'}</td></tr>`;
+      const change = pc === null ? '—' : pc > 0 ? spikeBadge(pc, spikeThresholdPct()) : `<span style="color:#166534">${pc}%</span>`;
+      return `<tr><td>Q${q.q}</td><td><b>${q.units}</b></td><td>${priorQ.units}</td><td>${change}</td></tr>`;
     }).join('')}</tbody></table></div>
     <div class="section"><h2>Top 10 Dispensed / أكثر 10 أدوية صرفًا</h2>
     <table><thead><tr><th>#</th><th>Medicine</th><th>Class</th><th>Units</th><th>Events</th><th>Share</th></tr></thead>
