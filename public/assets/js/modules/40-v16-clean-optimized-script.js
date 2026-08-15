@@ -220,7 +220,6 @@ window.renderControlled=function(){
     signatureButton.textContent='Edit Signatures / تعديل التوقيعات';
   }
 
-  if(typeof renderCtlLog==='function'&&displayView==='departments')renderCtlLog();
   if(typeof renderCtlPdfReceiptPanel==='function'&&displayView==='overview'){
     try{renderCtlPdfReceiptPanel();}catch(error){}
   }

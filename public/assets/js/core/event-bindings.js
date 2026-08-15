@@ -1068,5 +1068,25 @@ export default [
     "id": "b212",
     "event": "drop",
     "source": "handleLogoDrop(event)"
+  },
+  {
+    "id": "b213",
+    "event": "click",
+    "source": "ctlOpenCustodyLog()"
+  },
+  {
+    "id": "b214",
+    "event": "click",
+    "source": "CM('mcustody-log')"
+  },
+  {
+    "id": "b215",
+    "event": "click",
+    "source": "ctlCustodyLogApplyFilters()"
+  },
+  {
+    "id": "b216",
+    "event": "click",
+    "source": "ctlCustodyLogClearFilters()"
   }
 ];

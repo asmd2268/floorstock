@@ -2194,7 +2194,59 @@ function renderCtlPending(){
   if(!el('ctl-pending'))return;var pending=ctlMoves().filter(function(x){return x.type==='warehouse_send'&&x.status==='pending'});
   el('ctl-pending').innerHTML=pending.length?pending.map(function(x){var m=ctlMedicine(x.medId)||{};return '<div class="limit-row"><span><b>'+esc(m.name||'')+'</b> — Qty: '+ctlNum(x.qty)+(x.expiry?' · Exp: '+fmtDate(x.expiry):'')+'</span>'+(ctlIsOfficer()?'<span><button class="btn bs bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,true)">Accept</button> <button class="btn bd2c bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,false)">Reject</button></span>':'<span class="chip">Awaiting pharmacy officer</span>')+'</div>'}).join(''):'<div style="color:var(--tx2)">No pending deliveries.</div>';
 }
-function renderCtlLog(){if(!el('ctl-log'))return;var dept=ctlCurrentDept(),rows=ctlMoves().filter(function(x){return !x.dept||x.dept===dept}).slice(-30).reverse();el('ctl-log').innerHTML=rows.length?'<div class="tw"><table><thead><tr><th>Date</th><th>Action</th><th>Medicine</th><th>By</th><th>Details</th></tr></thead><tbody>'+rows.map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+esc(x.type||'')+'</td><td>'+esc(m.name||'—')+'</td><td>'+esc(x.by||'')+'</td><td>'+esc(x.note||'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<div style="color:var(--tx2)">No movements yet.</div>'}
+function renderCtlLog(filters){
+  if(!el('ctl-log'))return;
+  filters=filters||{};
+  var rows=ctlMoves().slice();
+  if(filters.dept)rows=rows.filter(function(x){return x.dept===filters.dept});
+  if(filters.action)rows=rows.filter(function(x){return x.type===filters.action});
+  if(filters.medicine){
+    var q=String(filters.medicine).trim().toLowerCase();
+    rows=rows.filter(function(x){var m=ctlMedicine(x.medId)||{};return String(m.name||'').toLowerCase().indexOf(q)>=0});
+  }
+  if(filters.from){
+    var from=new Date(filters.from);
+    rows=rows.filter(function(x){var at=new Date(x.at);return !isNaN(at)&&at>=from});
+  }
+  if(filters.to){
+    var to=new Date(filters.to);to.setHours(23,59,59,999);
+    rows=rows.filter(function(x){var at=new Date(x.at);return !isNaN(at)&&at<=to});
+  }
+  rows=rows.slice(-200).reverse();
+  el('ctl-log').innerHTML=rows.length?'<div class="tw"><table><thead><tr><th>Date</th><th>Action</th><th>Medicine</th><th>By</th><th>Details</th></tr></thead><tbody>'+rows.map(function(x){var m=ctlMedicine(x.medId)||{};return '<tr><td>'+fmtDateTime(x.at)+'</td><td>'+esc(x.type||'')+'</td><td>'+esc(m.name||'—')+'</td><td>'+esc(x.by||'')+'</td><td>'+esc(x.note||'')+'</td></tr>'}).join('')+'</tbody></table></div>':'<div style="color:var(--tx2)">No movements match the selected filters.</div>';
+}
+function ctlCustodyLogFilters(){
+  return {
+    dept:(el('custody-log-filter-dept')||{}).value||'',
+    action:(el('custody-log-filter-action')||{}).value||'',
+    medicine:(el('custody-log-filter-med')||{}).value||'',
+    from:(el('custody-log-from')||{}).value||'',
+    to:(el('custody-log-to')||{}).value||''
+  };
+}
+function ctlOpenCustodyLog(){
+  if(!el('mcustody-log'))return;
+  var deptSel=el('custody-log-filter-dept');
+  if(deptSel){
+    var current=deptSel.value,depts=typeof gd==='function'?(gd()||[]):[];
+    deptSel.innerHTML='<option value="">All departments / كل الأقسام</option>'+depts.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+    deptSel.value=current&&Array.from(deptSel.options).some(function(o){return o.value===current})?current:(ctlCurrentDept()||'');
+  }
+  var actionSel=el('custody-log-filter-action');
+  if(actionSel){
+    var currentAction=actionSel.value;
+    var types=Array.from(new Set(ctlMoves().map(function(x){return x.type}).filter(Boolean))).sort();
+    actionSel.innerHTML='<option value="">All types / الكل</option>'+types.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+'</option>'}).join('');
+    actionSel.value=types.indexOf(currentAction)>=0?currentAction:'';
+  }
+  OM('mcustody-log');
+  renderCtlLog(ctlCustodyLogFilters());
+}
+function ctlCustodyLogApplyFilters(){renderCtlLog(ctlCustodyLogFilters())}
+function ctlCustodyLogClearFilters(){
+  ['custody-log-filter-dept','custody-log-filter-med','custody-log-filter-action','custody-log-from','custody-log-to'].forEach(function(id){var input=el(id);if(input)input.value=''});
+  renderCtlLog();
+}
 async function ctlSendToPharmacy(id){
   if(!ctlIsWarehouse())return;
   var original=ctlWarehouse()||{},next=Object.assign({},original),x=Object.assign({},original[id]||{}),qty=ctlNum(await uiPrompt('Quantity to send to pharmacy','0'));
@@ -2480,6 +2532,9 @@ const __asdhLegacyApi = {
   ctlCurrentDept: ctlCurrentDept,
   renderCtlPending: renderCtlPending,
   renderCtlLog: renderCtlLog,
+  ctlOpenCustodyLog: ctlOpenCustodyLog,
+  ctlCustodyLogApplyFilters: ctlCustodyLogApplyFilters,
+  ctlCustodyLogClearFilters: ctlCustodyLogClearFilters,
   ctlSendToPharmacy: ctlSendToPharmacy,
   ctlReceiveDelivery: ctlReceiveDelivery,
   ctlAssignMedicineToDept: ctlAssignMedicineToDept,
@@ -2680,6 +2735,9 @@ export {
   ctlCurrentDept,
   renderCtlPending,
   renderCtlLog,
+  ctlOpenCustodyLog,
+  ctlCustodyLogApplyFilters,
+  ctlCustodyLogClearFilters,
   ctlSendToPharmacy,
   ctlReceiveDelivery,
   ctlAssignMedicineToDept,

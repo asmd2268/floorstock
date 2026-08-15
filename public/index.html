@@ -513,6 +513,7 @@ Furosemide 40mg tab	5	20</pre>
 <button class="btn bp bsm" id="ctl-assign-btn" data-asdh-binding="b055">+ Add from shared catalogue</button>
 <button class="btn bg bsm" id="ctl-sign-btn" data-asdh-binding="b056">Edit Signatures / تعديل التوقيعات</button>
 <button class="btn bg bsm" id="ctl-bulk-shelf-btn" style="display:none" data-asdh-binding="b057">Add selected to shelf</button>
+<button class="btn bg bsm" id="ctl-log-btn" data-asdh-binding="b213">📜 Movement Log / سجل الحركات</button>
 </div>
 </div>
 <div class="cb" id="ctl-dept-alerts" style="padding-bottom:0"></div>
@@ -521,7 +522,6 @@ Furosemide 40mg tab	5	20</pre>
 <th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine</th><th>Class</th><th>Flags</th><th>Min</th><th>Max</th><th>Current qty</th><th>Shelf</th><th>Expiry batches</th><th></th>
 </tr></thead><tbody id="ctl-dept-table"></tbody></table></div>
 </div>
-<div class="card"><div class="ch"><span class="ct">Recent custody movements / سجل الحركات</span></div><div class="cb" id="ctl-log"></div></div>
 </div>
 <div id="ctl-dept-only-panel" style="display:none"></div>
 </div>
@@ -1176,6 +1176,22 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px">
 <button class="btn bg" data-asdh-binding="b147">Close</button>
 </div>
+</div>
+</div>
+<div class="modal-bg" id="mcustody-log">
+<div class="modal" style="width:min(900px,95vw);max-height:90vh">
+<div class="mh"><span class="mt">Recent custody movements / سجل الحركات</span><button class="xbtn" id="custody-log-close" data-asdh-binding="b214">✕</button></div>
+<div class="r17-grid4" style="margin-bottom:14px">
+<div class="fg"><label>Department / القسم</label><select id="custody-log-filter-dept"><option value="">All departments / كل الأقسام</option></select></div>
+<div class="fg"><label>Medicine / الدواء</label><input id="custody-log-filter-med" placeholder="Search medicine..." type="text"></div>
+<div class="fg"><label>Action type / نوع الحركة</label><select id="custody-log-filter-action"><option value="">All types / الكل</option></select></div>
+<div class="fg"><label>Date range / الفترة</label><div class="fl g6 ic"><input id="custody-log-from" style="margin:0" type="date"><input id="custody-log-to" style="margin:0" type="date"></div></div>
+</div>
+<div class="fl g8" style="margin-bottom:10px">
+<button class="btn bp bsm" id="custody-log-apply" data-asdh-binding="b215">Apply filters / تطبيق</button>
+<button class="btn bg bsm" id="custody-log-clear" data-asdh-binding="b216">Clear / مسح</button>
+</div>
+<div class="cb" id="ctl-log" style="max-height:55vh;overflow-y:auto"></div>
 </div>
 </div>
 <div class="modal-bg" id="mlogo">
