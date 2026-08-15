@@ -1,28 +1,12 @@
 {
   "modules": [
     {
-      "file": "00-r674-local-qr-runtime.js",
-      "stub": true
-    },
-    {
       "file": "01-firebase-global-bootstrap.js",
       "stub": false
     },
     {
-      "file": "02-r664-early-production-console-policy.js",
-      "stub": true
-    },
-    {
       "file": "03-core-application-firebase-state-auth.js",
       "stub": false
-    },
-    {
-      "file": "04-v13-complete-clean-fix-script.js",
-      "stub": true
-    },
-    {
-      "file": "05-controlled-ui-compatibility-fixes.js",
-      "stub": true
     },
     {
       "file": "06-zebra-label-printing.js",
@@ -33,52 +17,12 @@
       "stub": false
     },
     {
-      "file": "08-controlled-shared-list-filters.js",
-      "stub": true
-    },
-    {
-      "file": "09-warehouse-batch-editor.js",
-      "stub": true
-    },
-    {
-      "file": "10-warehouse-receiving-workflow.js",
-      "stub": true
-    },
-    {
-      "file": "11-master-backup-restore-access.js",
-      "stub": true
-    },
-    {
       "file": "12-local-daily-backups-system-health.js",
       "stub": false
     },
     {
-      "file": "13-pilot-controlled-public-expiry-fixes.js",
-      "stub": true
-    },
-    {
-      "file": "14-controlled-print-layout-and-tools.js",
-      "stub": true
-    },
-    {
       "file": "15-controlled-print-pages.js",
       "stub": false
-    },
-    {
-      "file": "16-expiry-dashboard-extension.js",
-      "stub": true
-    },
-    {
-      "file": "17-system-health-script.js",
-      "stub": true
-    },
-    {
-      "file": "18-wh-bulk-rx-dx-script.js",
-      "stub": true
-    },
-    {
-      "file": "19-test-data-cleanup-guard.js",
-      "stub": true
     },
     {
       "file": "20-psychotropic-shared-list-v12.js",
@@ -89,112 +33,28 @@
       "stub": false
     },
     {
-      "file": "22-pharmacy-narcotic-stock-and-independent-list-mode-v12.js",
-      "stub": true
-    },
-    {
-      "file": "23-category-management-final-v12.js",
-      "stub": true
-    },
-    {
-      "file": "24-inventory-name-merge-feature.js",
-      "stub": true
-    },
-    {
-      "file": "25-pharmacy-announcements-feature.js",
-      "stub": true
-    },
-    {
-      "file": "26-department-rename-repair.js",
-      "stub": true
-    },
-    {
-      "file": "27-announcements-selection-persist-fix.js",
-      "stub": true
-    },
-    {
       "file": "28-v13-final-controlled-bulk-print-fix.js",
       "stub": false
-    },
-    {
-      "file": "29-v13-classification-tools.js",
-      "stub": true
-    },
-    {
-      "file": "30-v13-w-supervisor-inventory-main.js",
-      "stub": true
     },
     {
       "file": "31-v13-x-controlled-request-fix.js",
       "stub": false
     },
     {
-      "file": "32-aa-final-controlled-stability-script.js",
-      "stub": true
-    },
-    {
-      "file": "33-v13-ap-custodian-bulk-replacement-fix.js",
-      "stub": true
-    },
-    {
-      "file": "34-v13-as-crash-opening-log.js",
-      "stub": true
-    },
-    {
-      "file": "35-v14nrse-main.js",
-      "stub": true
-    },
-    {
-      "file": "36-v14dp-main.js",
-      "stub": true
-    },
-    {
-      "file": "37-v16-radical-fixes.js",
-      "stub": true
-    },
-    {
       "file": "38-v16-user-operations-main.js",
       "stub": false
-    },
-    {
-      "file": "39-final-role-routing-system-health.js",
-      "stub": true
     },
     {
       "file": "40-v16-clean-optimized-script.js",
       "stub": false
     },
     {
-      "file": "41-v16-inventory-status-merge-clean-script.js",
-      "stub": true
-    },
-    {
       "file": "42-weekly-request-grid-bulk-classification-clean-script.js",
       "stub": false
     },
     {
-      "file": "43-similar-medicines-workbench-v2-script.js",
-      "stub": true
-    },
-    {
       "file": "44-ccx-inventory-redesign-script.js",
       "stub": false
-    },
-    {
-      "file": "45-asdh-final-department-controlled-fix-script.js",
-      "stub": true
-    },
-    {
-      "file": "46-r664-private-crash-cart-source-only.js",
-      "stub": true
-    },
-    {
-      "file": "47-asdh-authoritative-final-fixes-script.js",
-      "stub": true
-    },
-    {
-      "file": "48-asdh-final-request-completion-script.js",
-      "stub": true
     },
     {
       "file": "49-asdh-final-persistence-actions-20260725.js",
@@ -213,68 +73,20 @@
       "stub": false
     },
     {
-      "file": "53-r661-authoritative-inventory-safety.js",
-      "stub": true
-    },
-    {
-      "file": "54-r662-accountability-draft-protection.js",
-      "stub": true
-    },
-    {
-      "file": "55-r647-crash-cart-authoritative-boot.js",
-      "stub": true
-    },
-    {
-      "file": "56-r664-security-idle-timeout.js",
-      "stub": true
-    },
-    {
-      "file": "57-r664-production-console-policy.js",
-      "stub": true
-    },
-    {
-      "file": "58-r664-public-privacy-rewrite.js",
-      "stub": true
-    },
-    {
       "file": "59-r664-security-complete-runtime.js",
       "stub": false
-    },
-    {
-      "file": "60-csp-legacy-event-bridge.js",
-      "stub": true
-    },
-    {
-      "file": "61-r666-form-draft-and-crash-report-protection.js",
-      "stub": true
     },
     {
       "file": "62-r667-ui-text-and-icon-normalization.js",
       "stub": false
     },
     {
-      "file": "63-r668-request-lock-drafts-and-session-defaults.js",
-      "stub": true
-    },
-    {
-      "file": "64-r671-permissions-and-accountability-qr.js",
-      "stub": true
-    },
-    {
       "file": "65-r675-saas-subscriptions-runtime.js",
       "stub": false
     },
     {
-      "file": "66-r676-crash-report-ordering-notes-fixes.js",
-      "stub": true
-    },
-    {
       "file": "67-r676-fulfillment-edit-settings.js",
       "stub": false
-    },
-    {
-      "file": "68-schedule-controller.js",
-      "stub": true
     },
     {
       "file": "69-r676-narcotic-catalog-restore-20260728.js",
@@ -285,36 +97,12 @@
       "stub": false
     },
     {
-      "file": "71-r676-accountability-review-and-retention.js",
-      "stub": true
-    },
-    {
-      "file": "72-r676-accountability-handover-log-view.js",
-      "stub": true
-    },
-    {
       "file": "73-r676-analytics-quarterly-annual-reports.js",
       "stub": false
     },
     {
-      "file": "74-r676-analytics-department-print-comparison.js",
-      "stub": true
-    },
-    {
       "file": "75-r676-multi-year-department-comparison.js",
       "stub": false
-    },
-    {
-      "file": "77-r676-unified-analytics-print.js",
-      "stub": true
-    },
-    {
-      "file": "78-r676-comprehensive-annual-report.js",
-      "stub": true
-    },
-    {
-      "file": "79-r676-independent-regimen-database.js",
-      "stub": true
     },
     {
       "file": "80-controlled-pharmacy-ui-redesign.js",
