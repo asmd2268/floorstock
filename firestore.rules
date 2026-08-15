@@ -78,11 +78,12 @@ service cloud.firestore {
     }
 
     function tenantId() {
-      // Older profiles may contain tenantId: null. The client correctly treats
-      // that as a legacy (non-tenant) account, so rules must normalize it too.
-      return activeUser() && profile().get('tenantId', '') is string
-        ? profile().get('tenantId', '')
-        : '';
+      // Unauthenticated or inactive callers must never satisfy tenantId() == ''.
+      // Returning a sentinel ensures every tenantId() == '' guard requires an
+      // actual authenticated non-tenant profile, not just an absent session.
+      return activeUser()
+        ? (profile().get('tenantId', '') is string ? profile().get('tenantId', '') : '')
+        : '__no_auth__';
     }
 
     function sameTenant(id) {
