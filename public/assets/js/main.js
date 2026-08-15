@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.104 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.105 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -25,17 +25,14 @@ import './modules/00-r674-local-qr-runtime.js?v=R6.76.101';
 import './modules/01-firebase-global-bootstrap.js?v=R6.76.19';
 import './modules/03-core-application-firebase-state-auth.js?v=R6.76.91';
 import './modules/07-expiry-requests-and-primary-features.js?v=R6.76.101';
-import './modules/53-r661-authoritative-inventory-safety.js?v=R6.76.75';
-import './modules/08-controlled-shared-list-filters.js?v=R6.76.102';
 import './modules/10-warehouse-receiving-workflow.js?v=R6.76.100';
-import './modules/12-local-daily-backups-system-health.js?v=R6.76.102';
+import './modules/12-local-daily-backups-system-health.js?v=R6.76.105';
 import './modules/14-controlled-print-layout-and-tools.js?v=R6.76.102';
 import './modules/22-pharmacy-narcotic-stock-and-independent-list-mode-v12.js?v=R6.76.102';
-import './modules/31-v13-x-controlled-request-fix.js?v=R6.76.104';
+import './modules/31-v13-x-controlled-request-fix.js?v=R6.76.105';
 import './modules/35-v14nrse-main.js?v=R6.76.102';
 import './modules/38-v16-user-operations-main.js?v=R6.76.103';
-import './modules/39-final-role-routing-system-health.js?v=R6.76.101';
-import './modules/40-v16-clean-optimized-script.js?v=R6.76.104';
+import './modules/40-v16-clean-optimized-script.js?v=R6.76.105';
 import './modules/42-weekly-request-grid-bulk-classification-clean-script.js?v=R6.76.66';
 import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.104';
 import './modules/48-asdh-final-request-completion-script.js?v=R6.76.103';
