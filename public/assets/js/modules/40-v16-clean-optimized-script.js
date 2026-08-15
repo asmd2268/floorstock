@@ -735,7 +735,7 @@ function showSafety(){
 function verifyStartup(){
   var current=totalAndHash();
   if(startFingerprint&&(current.count!==startFingerprint.count||current.hash!==startFingerprint.hash)){
-    setSafety(VERSION+' ALERT: inventory changed during startup ('+startFingerprint.count+' → '+current.count+'). No automatic save was authorized.',true);
+    setSafety(VERSION+' Notice: inventory count changed during load ('+startFingerprint.count+' → '+current.count+'). This is informational only — no data was saved or overwritten.',true);
     if(typeof auditAction==='function')auditAction('inventory_startup_integrity_alert',{before:startFingerprint,after:current})
   }
 }
