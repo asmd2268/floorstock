@@ -93,11 +93,11 @@ const requestScheduleSource = fs.readFileSync(
   'utf8',
 );
 const crashReportSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/14-controlled-print-layout-and-tools.js', import.meta.url),
+  new URL('../public/assets/js/modules/80-controlled-pharmacy-ui-redesign.js', import.meta.url), // was 14-controlled-print-layout-and-tools.js
   'utf8',
 );
 const scheduleSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/35-v14nrse-main.js', import.meta.url),
+  new URL('../public/assets/js/modules/38-v16-user-operations-main.js', import.meta.url), // was 35-v14nrse-main.js
   'utf8',
 );
 const backupSource = fs.readFileSync(
@@ -152,7 +152,7 @@ const allInventorySource = fs.readFileSync(new URL('../public/assets/js/modules/
 const crashOpeningSource = fs.readFileSync(new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url), 'utf8');
 const crashInventorySource = fs.readFileSync(new URL('../public/assets/js/modules/44-ccx-inventory-redesign-script.js', import.meta.url), 'utf8');
 const inventoryMergeSource = fs.readFileSync(new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url), 'utf8');
-const localQrRuntimeSource = fs.readFileSync(new URL('../public/assets/js/modules/00-r674-local-qr-runtime.js', import.meta.url), 'utf8');
+const localQrRuntimeSource = fs.readFileSync(new URL('../public/assets/js/modules/59-r664-security-complete-runtime.js', import.meta.url), 'utf8'); // was 00-r674-local-qr-runtime.js
 const localQrVendorSource = fs.readFileSync(new URL('../public/assets/js/vendor/qrcode-generator.js', import.meta.url), 'utf8');
 const controlledRuntimeSource = fs.readFileSync(new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url), 'utf8');
 const crashPrintSource = fs.readFileSync(new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url), 'utf8');
