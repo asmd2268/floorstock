@@ -624,12 +624,21 @@ function fsStateScheduleManagedUserLoad(profileHint){
 }
 
 globalThis.S = {
-  cache:{},ready:false,stateUnsub:null,usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,
+  cache:{},ready:false,stateUnsub:null,usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,cacheKey:'',
+  persistLocalCache:function(){
+    if(!S.cacheKey)return;
+    try{
+      var snapshot=Object.assign({},S.cache);
+      delete snapshot.users;
+      localStorage.setItem(S.cacheKey,JSON.stringify(snapshot));
+    }catch(e){}
+  },
   init:async function(statusCallback,profileHint){
     S.stopRealtime();
     S.scopeProfile=profileHint||null;
     var cacheUid=String(profileHint&&profileHint.uid||FB_AUTH&&FB_AUTH.currentUser&&FB_AUTH.currentUser.uid||'').trim();
     var cacheKey=cacheUid?'floorstock_last_cache_v2_'+cacheUid:'';
+    S.cacheKey=cacheKey;
     // The v1 key was shared across accounts and could expose a previous session's state.
     try{
       localStorage.removeItem('floorstock_last_cache_v1');
@@ -848,6 +857,16 @@ S.ready=true;
     if(S.refreshTimer)clearTimeout(S.refreshTimer);
     S.refreshTimer=setTimeout(function(){
       S.refreshTimer=null;
+      // The warm-boot path (see init()) opens the app instantly from a
+      // localStorage snapshot taken during a PREVIOUS session, then corrects
+      // it once the realtime listener's fresh data arrives. That snapshot was
+      // only ever written once, at cold boot, so every later login kept
+      // replaying the same stale numbers (e.g. a department count off by
+      // however many departments changed since that first cache write) until
+      // the realtime listener silently fixed it in memory a moment later.
+      // Refresh the on-disk snapshot here too so it stays correct going
+      // forward and this flicker doesn't repeat on every subsequent login.
+      S.persistLocalCache();
       if(document.visibilityState==='visible')refreshCurrentPage();
     },450);
   },
