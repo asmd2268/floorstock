@@ -874,7 +874,7 @@ async function doDeptPrint(){
       +'</div>'
       +'<script>(function(){var done=false;function go(){if(done)return;done=true;if(!('+fitOne+')){var s=document.createElement("style");s.textContent="@media print{#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}}";document.head.appendChild(s)}window.focus();window.print()}if(document.readyState==="complete")setTimeout(go,300);else window.addEventListener("load",function(){setTimeout(go,300)},{once:true})})()</sc'+'ript>'
       +'</body></html>';
-    pw=openBlobPrint(dpHtml);
+    var pw=openBlobPrint(dpHtml);
     if(!pw){toast('Allow pop-ups to print the department drug list.','err');return false;}
     return true;
   }catch(error){
@@ -1514,7 +1514,7 @@ function getLogo(){
   var data=S.g('facility_logo')||{};
   var legacy=Array.isArray(data.lines)?data.lines.slice(0,4):[data.name||'','','',''];
   while(legacy.length<4)legacy.push('');
-  var english=Array.isArray(data.enLines)?data.enLines.slice(0,4):legacy.slice(0,4);
+  var english=Array.isArray(data.enLines)?data.enLines.slice(0,4):[];
   // If arLines not saved (old format), default to empty — officialPrintHeaderHTML will mirror English.
   var arabic=Array.isArray(data.arLines)?data.arLines.slice(0,4):['','','',''];
   while(english.length<4)english.push('');
