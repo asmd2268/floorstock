@@ -757,9 +757,52 @@ S.ready=true;
     S.cache.users=Array.isArray(users)?users:[];
     return S.cache.users;
   },
+  // Token-lag mitigation for the Phase 2b custom-claims scaffolding (see
+  // functions/sync-user-claims.js): a signed-in client keeps using whatever
+  // permissions it started with until its ID token naturally expires
+  // (up to ~1 hour), regardless of what an admin changes server-side in the
+  // meantime. Watching the signed-in user's own profile in realtime (allowed
+  // for any signed-in user under firestore.rules — request.auth.uid==uid)
+  // and force-signing-out the instant it's deactivated or its role/dept/
+  // master flag changes closes that gap in practice: it matches how
+  // deactivation already behaves today under the current get()-based rules,
+  // where a permission change takes effect on the very next Firestore call.
+  startSelfProfileWatch:function(){
+    if(S.selfProfileUnsub){S.selfProfileUnsub();S.selfProfileUnsub=null;}
+    var uid=window.CU&&window.CU.id;
+    if(!uid||!FB_DB)return;
+    S.selfProfileUnsub=FB_DB.collection('users').doc(uid).onSnapshot(function(snapshot){
+      if(!window.CU||window.CU.id!==uid)return;
+      if(!snapshot.exists){
+        S.forceSignOutForProfileChange('Your account was removed. / تم حذف حسابك، الرجاء التواصل مع الإدارة.');
+        return;
+      }
+      var profile=snapshot.data()||{};
+      var deptId=profile.deptId!=null?profile.deptId:profile.departmentId;
+      var deactivated=profile.active!==true;
+      var changed=deactivated
+        || String(profile.role||'')!==String(window.CU.role||'')
+        || String(deptId||'')!==String(window.CU.deptId||'')
+        || !!profile.master!==!!window.CU.master;
+      if(changed){
+        S.forceSignOutForProfileChange(deactivated
+          ? 'Your account was deactivated by an administrator. / تم إيقاف حسابك من قبل الإدارة، الرجاء التواصل معها.'
+          : 'Your account permissions changed. Please sign in again. / تغيّرت صلاحيات حسابك، الرجاء تسجيل الدخول مرة أخرى.');
+      }
+    },function(error){
+      console.warn('Self-profile watch error; will retry on the next realtime start.',error);
+    });
+  },
+  forceSignOutForProfileChange:function(message){
+    if(typeof window.toast==='function')window.toast(message,'err');
+    Promise.resolve(typeof window.doLogout==='function'?window.doLogout():null)
+      .catch(function(error){console.error('Forced sign-out after profile change failed',error)})
+      .then(function(){setTimeout(function(){location.reload()},1200)});
+  },
   startRealtime:function(){
     S.stopRealtime();
     if(!S.ready)return;
+    S.startSelfProfileWatch();
 
     // Scoped roles may read their allowed documents but are intentionally not
     // allowed to list the state collection. Poll explicit document reads so a
@@ -878,6 +921,7 @@ S.ready=true;
   stopRealtime:function(){
     if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
     if(S.crashReportsUnsub){S.crashReportsUnsub();S.crashReportsUnsub=null;S.__crashReportsById={};}
+    if(S.selfProfileUnsub){S.selfProfileUnsub();S.selfProfileUnsub=null;}
     if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
     if(S.usersPollTimer){clearInterval(S.usersPollTimer);S.usersPollTimer=null;}
     if(S.refreshTimer){clearTimeout(S.refreshTimer);S.refreshTimer=null;}
