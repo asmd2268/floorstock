@@ -352,7 +352,7 @@
       "inlineOrder": 8,
       "id": "07-expiry-requests-and-primary-features",
       "file": "assets/js/modules/07-expiry-requests-and-primary-features.js",
-      "bytes": 174889,
+      "bytes": 166875,
       "stub": false
     },
     {
@@ -929,6 +929,14 @@
       "id": "80-controlled-pharmacy-ui-redesign",
       "file": "assets/js/modules/80-controlled-pharmacy-ui-redesign.js",
       "bytes": 141893,
+      "stub": false
+    },
+    {
+      "documentIndex": 84,
+      "inlineOrder": 81,
+      "id": "81-public-live-view",
+      "file": "assets/js/modules/81-public-live-view.js",
+      "bytes": 8233,
       "stub": false
     }
   ],
