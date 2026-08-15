@@ -2007,7 +2007,9 @@ async function ctlApplyBulkShelf(){
 
 function renderCtlDepartments(){
   if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
-  var sel=el('ctl-dept'),ds=gd(),cur=sel.value;
+  var sel=el('ctl-dept');
+  if(!sel)return;
+  var ds=gd(),cur=sel.value;
   if(CU.role==='department')sel.innerHTML='<option value="'+CU.deptId+'">'+esc(CU.deptName)+'</option>';
   else sel.innerHTML=ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
   if(cur&&Array.from(sel.options).some(function(o){return o.value===cur}))sel.value=cur;

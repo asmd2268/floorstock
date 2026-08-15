@@ -173,6 +173,14 @@ window.renderControlled=function(){
   if(overview)overview.style.display=displayView==='overview'?'block':'none';
   if(storage)storage.style.display=displayView==='storage'?'block':'none';
   if(departments)departments.style.display=displayView==='departments'?'block':'none';
+  // Custodian/warehouse sessions own the static #ctl-dept / #ctl-dept-table markup.
+  // A prior department-role session in this same SPA lifetime may have shown the
+  // dept-only panel instead (see renderDepartmentControlledPanel) — restore the
+  // custodian panel here so a later non-department render is never left showing
+  // stale department content.
+  var custodianPanel=E('ctl-departments-custodian-panel'),deptOnlyPanel=E('ctl-dept-only-panel');
+  if(custodianPanel)custodianPanel.style.display='';
+  if(deptOnlyPanel)deptOnlyPanel.style.display='none';
 
   var pdf=E('ctl-pdf-receipt-card');
   if(pdf){

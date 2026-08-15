@@ -562,14 +562,24 @@ window.ctlDeptFinalToggle=function(){
 window.renderDepartmentControlledPanel=async function(){
   var effective=window.MASTER_EFFECTIVE||window.CU||{};
   if(String(effective.role||'')!=='department')return false;
-  var host=fsR5E('ctl-departments-view');
-  if(!host)return false;
+  var outer=fsR5E('ctl-departments-view');
+  // Render into a dedicated child panel instead of overwriting ctl-departments-view's
+  // innerHTML directly: that container also holds the static custodian markup
+  // (#ctl-dept, #ctl-dept-table) that renderCtlDepartments() depends on for
+  // controlled_pharmacy/warehouse sessions. Clobbering it here permanently destroys
+  // those elements for the rest of the SPA session (no page reload between logins),
+  // leaving a stale department view visible after a later custodian sign-in.
+  var host=fsR5E('ctl-dept-only-panel');
+  if(!outer||!host)return false;
+  var custodianPanel=fsR5E('ctl-departments-custodian-panel');
+  if(custodianPanel)custodianPanel.style.display='none';
   if(host.dataset.controlledLoading==='1')return false;
   host.dataset.controlledLoading='1';
 
   window.CTL_VIEW='departments';
   var overview=fsR5E('ctl-overview-view');
   if(overview)overview.style.display='none';
+  outer.style.display='block';
   host.style.display='block';
   host.innerHTML='<div class="card"><div class="cb">Loading My controlled list… / جاري تحميل عهدتي…</div></div>';
 
