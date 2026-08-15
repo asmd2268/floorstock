@@ -11,14 +11,12 @@ function openAddExpiry(){return typeof canonicalOpenAddExpiry==='function'&&cano
 function openEditExpiry(btn){return typeof canonicalOpenEditExpiry==='function'&&canonicalOpenEditExpiry!==openEditExpiry?canonicalOpenEditExpiry(btn):undefined}
 // ── USERS
 // ── USERS ────────────────────────────────────────────────
-// R6.77 FIX: Role-scoped department list for inpatient_supervisor and pharmacy_staff
+// Only outpatient_pharmacy_supervisor is restricted to its own department.
+// Every other role (including inpatient_supervisor and pharmacy_staff) sees
+// every department, OUTPATIENT DEPARTMENT included — this must never exclude
+// a department by name for any other role.
 function fsRoleScopedDepts(allDepts){
   var r=window.fsEffectiveRole?window.fsEffectiveRole():String(window.CU&&window.CU.role||'');
-  if(r==='inpatient_supervisor'||r==='pharmacy_staff'){
-    return allDepts.filter(function(d){
-      return !/outpatient\s+department/i.test(String(d.name||''))&&String(d.id||'').toLowerCase()!=='outpatient';
-    });
-  }
   if(r==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){
     var od=window.fsOutpatientDeptId();
     return allDepts.filter(function(d){return String(d.id)===String(od);});
