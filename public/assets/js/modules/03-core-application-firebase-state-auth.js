@@ -2037,9 +2037,11 @@ function renderInv(){
   }
 
   var fil=ms.filter(function(m){
-    var zero6=Number(m.stockQty!=null?m.stockQty:(m.currentStock!=null?m.currentStock:(m.availableQty!=null?m.availableQty:0)))<=0&&(!lastDispense(m)||lastDispense(m)<=zeroCutoff);
+    var stock=Number(m.stockQty!=null?m.stockQty:(m.currentStock!=null?m.currentStock:(m.availableQty!=null?m.availableQty:0)));
+    var zeroStock=stock<=0;
+    var zero6=zeroStock&&(!lastDispense(m)||lastDispense(m)<=zeroCutoff);
     var neverExpiry=hasExpiry(m)&&!wasRequested(m);
-    return(!srch||m.name.toLowerCase().indexOf(srch)>-1)&&(!catf||m.category===catf)&&(!clsf||m[clsf])&&(!special||special==='__zero_duration__'&&zero6||special==='__expiry_never_requested__'&&neverExpiry);
+    return(!srch||m.name.toLowerCase().indexOf(srch)>-1)&&(!catf||m.category===catf)&&(!clsf||m[clsf])&&(!special||special==='__zero_stock__'&&zeroStock||special==='__zero_duration__'&&zero6||special==='__expiry_never_requested__'&&neverExpiry);
   });
 
   // Duplicate detection
