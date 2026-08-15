@@ -104,7 +104,7 @@ window.r18OpenCrashCorrection=function(cartId){
   var cart=cartList().find(function(item){return String(item.id)===String(cartId)});
   if(!cart)return toast('Crash Cart not found.','err');
   if(reportList().some(function(report){return String(report.cartId)===String(cartId)&&(report.status==='open'||report.status==='pending')})){
-    return toast('Close the active opening report before direct correction.','err');
+    return toast('لا يمكن التصحيح المباشر لهذه العربة — يوجد بلاغ مفتوح عليها حالياً. أغلق البلاغ من "بلاغات الكراش كارت" أولاً، ثم أعد المحاولة.\nDirect correction is blocked — this cart has an open report. Close the report from Crash Cart Reports first, then try again.','err');
   }
   E('r18-cc-cart-id').value=cart.id;
   E('r18-cc-seal').textContent=cart.seal||'—';
@@ -125,7 +125,7 @@ window.r18SaveCrashCorrection=async function(){
   var reason=E('r18-cc-reason').value.trim();
   if(!reason)return toast('Correction reason is required.','err');
   if(reportList().some(function(report){return String(report.cartId)===String(cartId)&&(report.status==='open'||report.status==='pending')})){
-    return toast('Close the active opening report before direct correction.','err');
+    return toast('لا يمكن التصحيح المباشر لهذه العربة — يوجد بلاغ مفتوح عليها حالياً. أغلق البلاغ من "بلاغات الكراش كارت" أولاً، ثم أعد المحاولة.\nDirect correction is blocked — this cart has an open report. Close the report from Crash Cart Reports first, then try again.','err');
   }
   var originalCarts=clone(cartList());
   var carts=clone(originalCarts);
