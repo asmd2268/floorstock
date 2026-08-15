@@ -18,8 +18,18 @@ service cloud.firestore {
       return get(userPath()).data;
     }
 
+    // Merges the exists()+get() pair used everywhere else in this file into
+    // a single get(), using .get('active', false) so a genuinely missing
+    // profile document safely evaluates to false instead of erroring —
+    // Firestore's rules get() on a nonexistent path returns a snapshot whose
+    // .data access errors, but .data.get(field, default) on that snapshot
+    // does not. That reduction alone (95/95, verified before adding the
+    // claims check below) was what gave this the headroom the first,
+    // reverted attempt at converting activeUser() didn't have.
     function activeUser() {
-      return hasProfile() && profile().active == true;
+      return request.auth.token.get('role', null) != null
+        ? request.auth.token.get('active', false) == true
+        : (signedIn() && get(userPath()).data.get('active', false) == true);
     }
 
     // Phase 2b, narrowed after a full-conversion attempt regressed 4 tests
