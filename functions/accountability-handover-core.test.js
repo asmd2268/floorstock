@@ -58,3 +58,24 @@ test('completion replenishes accountability balance only after both confirmation
   assert.equal(state.receipts[0].confirmationMethod, 'temporary_dual_qr');
   assert.equal(state.receipts[0].medicineTotals[0].medName, 'Independent Drug');
 });
+
+test('completion auto-recreates a custody record deleted mid-handover instead of failing', () => {
+  const state = completeHandoverState({
+    assignments: [],
+    usage: [{ id: 'u1', assignmentId: 'a-deleted', deptId: 'd1', medName: 'Reteplase', units: 1, status: 'approved_waiting_receipt' }],
+    receipts: [],
+    session: {
+      id: 's1', deptId: 'd1', usageIds: ['u1'], departmentName: 'ICU',
+      pharmacyConfirmation: { name: 'Pharmacist', employeeId: 'P1' },
+      departmentConfirmation: { name: 'Nurse', employeeId: 'N1' }
+    },
+    nowIso: '2026-08-16T10:00:00.000Z'
+  });
+  const recreated = state.assignments.find((row) => row.id === 'a-deleted');
+  assert.ok(recreated);
+  assert.equal(recreated.balance, 1);
+  assert.equal(recreated.quota, 1);
+  assert.equal(recreated.deptId, 'd1');
+  assert.equal(state.usage[0].status, 'received_locked');
+  assert.equal(state.receipts[0].totalUnits, 1);
+});

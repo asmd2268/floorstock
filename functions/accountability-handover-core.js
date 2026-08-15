@@ -88,8 +88,28 @@ function completeHandoverState({ assignments, usage, receipts, session, nowIso }
 
   const totals = medicineTotals(selected, nextAssignments);
   for (const total of totals) {
-    const assignment = nextAssignments.find((row) => String(row.id) === total.assignmentId);
-    if (!assignment) throw new Error(`Custody assignment ${total.assignmentId} was not found.`);
+    let assignment = nextAssignments.find((row) => String(row.id) === total.assignmentId);
+    if (!assignment) {
+      // The custody record was deleted after this usage entered the handover
+      // pipeline (e.g. a master removed it mid-flight). Recreate a minimal
+      // record so the already-in-progress receipt can still complete instead
+      // of leaving the department permanently unable to confirm; quota is
+      // capped to exactly what is being received here, so it carries no more
+      // authority than this one receipt until someone reviews it.
+      assignment = {
+        id: total.assignmentId,
+        deptId: session.deptId,
+        medName: total.medName || 'Medicine',
+        quota: total.units,
+        balance: 0,
+        reasons: [],
+        active: true,
+        createdAt: nowIso,
+        createdBy: 'Auto-recreated by handover receipt (original custody record was deleted before receipt)',
+        recreatedFromHandover: session.id
+      };
+      nextAssignments.push(assignment);
+    }
     const nextBalance = number(assignment.balance) + total.units;
     const quota = number(assignment.quota);
     if (nextBalance > quota + 1e-9) throw new Error(`${assignment.medName || 'Medicine'} receipt would exceed the approved custody quantity.`);
