@@ -2,7 +2,7 @@
 
 const assert = require('node:assert/strict');
 const test = require('node:test');
-const { applyCrashCartReport, publicCrashCartPayload } = require('./crash-cart-report-core');
+const { applyCrashCartReport, acceptCrashCartReport, publicCrashCartPayload } = require('./crash-cart-report-core');
 
 function fixture() {
   return {
@@ -20,7 +20,7 @@ function fixture() {
   };
 }
 
-test('department report changes only its assigned cart and creates an open report', () => {
+test('department report changes only its assigned cart and creates a pending report without deducting inventory', () => {
   const source = fixture();
   const result = applyCrashCartReport({
     ...source,
@@ -29,15 +29,32 @@ test('department report changes only its assigned cart and creates an open repor
     consumed: [{ itemId: 'med-a', qty: 2, reportedExpiry: '2027-01-01' }],
     actorName: 'Department Employee', stamp: '2026-08-04T07:00:00.000Z',
   });
-  assert.equal(result.cart.items[0].present, 3);
-  assert.equal(result.cart.items[0].batches[0].qty, 1);
-  assert.equal(result.report.status, 'open');
-  assert.equal(result.report.inventoryDeductedAtReport, true);
+  // Phase 7a: submit creates a pending report — deduction happens only when pharmacy accepts.
+  assert.equal(result.cart.items[0].present, 5);
+  assert.equal(result.cart.items[0].batches[0].qty, 3);
+  assert.equal(result.report.status, 'pending');
+  assert.equal(result.report.inventoryDeductedAtReport, false);
   assert.equal(result.report.oldSeal, 'OLD-123');
   assert.deepEqual(result.carts[1], source.carts[1]);
 });
 
-test('editing an open report restores its earlier deduction before applying the replacement report', () => {
+test('accepting a pending report deducts inventory from the correct batches', () => {
+  const submitted = applyCrashCartReport({
+    ...fixture(), cartId: 'cart-a', departmentId: 'dept-a', reason: 'Code Blue',
+    consumed: [{ itemId: 'med-a', qty: 2, reportedExpiry: '2027-01-01' }],
+    actorName: 'Employee', stamp: '2026-08-04T07:00:00.000Z',
+  });
+  const accepted = acceptCrashCartReport({
+    carts: submitted.carts, reports: submitted.reports, reportId: submitted.report.id,
+    actorName: 'Pharmacy', stamp: '2026-08-04T08:00:00.000Z',
+  });
+  assert.equal(accepted.cart.items[0].present, 3);
+  assert.equal(accepted.cart.items[0].batches.find((batch) => batch.batchId === 'batch-a').qty, 1);
+  assert.equal(accepted.report.status, 'accepted');
+  assert.equal(accepted.report.inventoryDeductedAtReport, true);
+});
+
+test('re-submitting a pending report replaces it without needing a restore (nothing was deducted)', () => {
   const first = applyCrashCartReport({
     ...fixture(), cartId: 'cart-a', departmentId: 'dept-a', reason: 'Code Blue',
     consumed: [{ itemId: 'med-a', qty: 2, reportedExpiry: '2027-01-01' }],
@@ -48,11 +65,12 @@ test('editing an open report restores its earlier deduction before applying the 
     consumed: [{ itemId: 'med-a', qty: 1, reportedExpiry: '2027-06-01' }],
     actorName: 'Employee', stamp: '2026-08-04T07:05:00.000Z',
   });
-  assert.equal(second.cart.items[0].present, 4);
+  assert.equal(second.cart.items[0].present, 5);
   assert.equal(second.cart.items[0].batches.find((batch) => batch.batchId === 'batch-a').qty, 3);
-  assert.equal(second.cart.items[0].batches.find((batch) => batch.batchId === 'batch-b').qty, 1);
+  assert.equal(second.cart.items[0].batches.find((batch) => batch.batchId === 'batch-b').qty, 2);
   assert.equal(second.reports.length, 1);
   assert.equal(second.report.id, first.report.id);
+  assert.equal(second.report.status, 'pending');
 });
 
 test('department cannot report another department Crash Cart', () => {
