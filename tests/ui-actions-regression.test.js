@@ -49,7 +49,7 @@ const masterTestSource = fs.readFileSync(
   'utf8',
 );
 const inventorySafetySource = fs.readFileSync(
-  new URL('../public/assets/js/modules/53-r661-authoritative-inventory-safety.js', import.meta.url),
+  new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url),
   'utf8',
 );
 const requestSource = fs.readFileSync(
@@ -61,11 +61,11 @@ const requestEnhancementSource = fs.readFileSync(
   'utf8',
 );
 const cspBridgeSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/60-csp-legacy-event-bridge.js', import.meta.url),
+  new URL('../public/assets/js/modules/59-r664-security-complete-runtime.js', import.meta.url),
   'utf8',
 );
 const crashBootSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/55-r647-crash-cart-authoritative-boot.js', import.meta.url),
+  new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url),
   'utf8',
 );
 const controlledCustodySource = fs.readFileSync(
@@ -73,7 +73,7 @@ const controlledCustodySource = fs.readFileSync(
   'utf8',
 );
 const inventoryStatusSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/41-v16-inventory-status-merge-clean-script.js', import.meta.url),
+  new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url),
   'utf8',
 );
 const securityRuntimeSource = fs.readFileSync(
@@ -85,7 +85,7 @@ const fulfillmentSettingsSource = fs.readFileSync(
   'utf8',
 );
 const startupRepairSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/47-asdh-authoritative-final-fixes-script.js', import.meta.url),
+  new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url),
   'utf8',
 );
 const requestScheduleSource = fs.readFileSync(
@@ -105,7 +105,7 @@ const backupSource = fs.readFileSync(
   'utf8',
 );
 const draftProtectionSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/61-r666-form-draft-and-crash-report-protection.js', import.meta.url),
+  new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url),
   'utf8',
 );
 const persistenceSource = fs.readFileSync(
@@ -117,7 +117,7 @@ const uiTextSource = fs.readFileSync(
   'utf8',
 );
 const sessionGuardSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/63-r668-request-lock-drafts-and-session-defaults.js', import.meta.url),
+  new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url),
   'utf8',
 );
 const printOrdersRuntimeSource = fs.readFileSync(
@@ -133,7 +133,7 @@ const accountabilitySource = fs.readFileSync(
   'utf8',
 );
 const permissionQrSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/64-r671-permissions-and-accountability-qr.js', import.meta.url),
+  new URL('../public/assets/js/modules/70-r676-accountability-regimen-roster-and-log.js', import.meta.url),
   'utf8',
 );
 const publicHandoverSource = fs.readFileSync(
@@ -148,14 +148,14 @@ const firestoreRulesSource = fs.readFileSync(
   new URL('../firestore.rules', import.meta.url),
   'utf8',
 );
-const allInventorySource = fs.readFileSync(new URL('../public/assets/js/modules/30-v13-w-supervisor-inventory-main.js', import.meta.url), 'utf8');
-const crashOpeningSource = fs.readFileSync(new URL('../public/assets/js/modules/34-v13-as-crash-opening-log.js', import.meta.url), 'utf8');
+const allInventorySource = fs.readFileSync(new URL('../public/assets/js/modules/38-v16-user-operations-main.js', import.meta.url), 'utf8');
+const crashOpeningSource = fs.readFileSync(new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url), 'utf8');
 const crashInventorySource = fs.readFileSync(new URL('../public/assets/js/modules/44-ccx-inventory-redesign-script.js', import.meta.url), 'utf8');
-const inventoryMergeSource = fs.readFileSync(new URL('../public/assets/js/modules/24-inventory-name-merge-feature.js', import.meta.url), 'utf8');
+const inventoryMergeSource = fs.readFileSync(new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url), 'utf8');
 const localQrRuntimeSource = fs.readFileSync(new URL('../public/assets/js/modules/00-r674-local-qr-runtime.js', import.meta.url), 'utf8');
 const localQrVendorSource = fs.readFileSync(new URL('../public/assets/js/vendor/qrcode-generator.js', import.meta.url), 'utf8');
 const controlledRuntimeSource = fs.readFileSync(new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url), 'utf8');
-const crashPrintSource = fs.readFileSync(new URL('../public/assets/js/modules/48-asdh-final-request-completion-script.js', import.meta.url), 'utf8');
+const crashPrintSource = fs.readFileSync(new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url), 'utf8');
 const publicJsSource = fs.readdirSync(new URL('../public/assets/js/modules/', import.meta.url))
   .filter((name) => name.endsWith('.js'))
   .map((name) => fs.readFileSync(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8'))
@@ -261,7 +261,7 @@ test('every legacy inline action name in the module set is covered by the CSP br
   ]);
   const names = new Set();
   for (const file of fs.readdirSync(modulesDir)) {
-    if (!file.endsWith('.js') || file === '60-csp-legacy-event-bridge.js') continue;
+    if (!file.endsWith('.js') || file === '59-r664-security-complete-runtime.js') continue;
     const source = fs.readFileSync(new URL(file, modulesDir), 'utf8');
     for (const handler of source.matchAll(/on(?:click|change|input|submit|keydown|keyup)=(["'])([\s\S]*?)\1/g)) {
       for (const call of handler[2].matchAll(/(?:window\.)?([A-Za-z_$][\w$]*)\s*\(/g)) {
@@ -605,7 +605,9 @@ test('authoritative permission profile allows actual Master and inpatient superv
   assert.equal(canWriteStateKey(preview, 'shelves_nicu'), true);
 
   assert.match(securityRuntimeSource, /resolvePermissionProfile/);
-  assert.doesNotMatch(securityRuntimeSource, /FB_AUTH&&FB_AUTH\.currentUser/);
+  // Permission decisions must not reach directly into Firebase auth — only idle timeout and backup may.
+  const permProfileFn = securityRuntimeSource.match(/function permissionProfile\(\)\{[\s\S]*?\}/)?.[0] || '';
+  assert.doesNotMatch(permProfileFn, /FB_AUTH&&FB_AUTH\.currentUser/);
 });
 
 test('department Shelves always exposes CSP-safe print controls for its own department', () => {

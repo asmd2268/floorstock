@@ -187,6 +187,8 @@ var scheduleFixBusy=false;
 var E=window.fsE;
 function numberValue(value){var parsed=Number(value);return isFinite(parsed)?parsed:0}
 function dateKey(value){return String(value||'').slice(0,10)}
+// Crash Cart data must never be changed merely by opening the page. Boot is read-only — data flows
+// in from Firestore realtime snapshots only; no reconcile or setCrashCarts call on login.
 function crashItems(){return typeof window.crashCarts==='function'?(window.crashCarts()||[]):[]}
 function crashReportsList(){return typeof window.crashReports==='function'?(window.crashReports()||[]):[]}
 function errorMessage(error){return String(error&&error.message||error||'Unknown error').replace(/^FirebaseError:\s*/,'')}

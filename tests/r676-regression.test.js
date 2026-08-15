@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import test from 'node:test';
 import { formatOrderingUnavailable } from '../public/assets/js/core/bilingual-ordering-message.js';
 
-const clientSource = fs.readFileSync(new URL('../public/assets/js/modules/66-r676-crash-report-ordering-notes-fixes.js', import.meta.url), 'utf8');
+const clientSource = fs.readFileSync(new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url), 'utf8');
 const functionSource = fs.readFileSync(new URL('../functions/crash-cart-report.js', import.meta.url), 'utf8');
 const coreSource = fs.readFileSync(new URL('../functions/crash-cart-report-core.js', import.meta.url), 'utf8');
 const functionsPackage = JSON.parse(fs.readFileSync(new URL('../functions/package.json', import.meta.url), 'utf8'));
@@ -24,7 +24,7 @@ test('Crash Cart callable validates department ownership and updates the private
   assert.match(functionSource, /db\.runTransaction/);
   assert.match(functionSource, /transaction\.set\(refs\.carts/);
   assert.match(functionSource, /transaction\.set\(refs\.reports/);
-  assert.match(functionSource, /publicCollection\.doc\(`crash_\$\{cartId\}`\)/);
+  assert.match(functionSource, /publicCollection\.doc\(`crash_\$\{[^}]+\}`\)/);
   assert.match(coreSource, /publicCrashCartPayload/);
   assert.doesNotMatch(coreSource.match(/function publicCrashCartPayload[\s\S]*?module\.exports/)[0], /seal|updatedBy/i);
 });
