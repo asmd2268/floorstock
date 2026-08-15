@@ -768,7 +768,7 @@
       "inlineOrder": 60,
       "id": "59-r664-security-complete-runtime",
       "file": "assets/js/modules/59-r664-security-complete-runtime.js",
-      "bytes": 40716,
+      "bytes": 40742,
       "stub": false
     },
     {
@@ -928,7 +928,7 @@
       "inlineOrder": 80,
       "id": "80-controlled-pharmacy-ui-redesign",
       "file": "assets/js/modules/80-controlled-pharmacy-ui-redesign.js",
-      "bytes": 141284,
+      "bytes": 142787,
       "stub": false
     }
   ],
