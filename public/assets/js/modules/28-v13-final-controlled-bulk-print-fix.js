@@ -79,6 +79,7 @@ async function persistPrintOrdersMeta(ids){
   }
   if(typeof auditAction==='function')await Promise.resolve(auditAction('requests_printed',{requestIds:ids}));
 }
+window.persistPrintOrdersMeta=persistPrintOrdersMeta;
 
 
 })();
