@@ -93,13 +93,14 @@ window.ccxSaveRules=async function(){
     if(typeof toast==='function')toast('Expiry rules saved ✓','succ')
   }catch(ex){fail('تعذر حفظ القواعد: '+String((ex&&ex.message)||ex||'Unknown error')+'\nExpiry rules could not be saved: '+String((ex&&ex.message)||ex||'Unknown error'));if(save){save.disabled=false;save.textContent='Save rules / حفظ القواعد'}if(cancel)cancel.disabled=false}
 };
-function isPharmacy(){var r=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');return ['master','pharmacy','pharmacy_supervisor'].indexOf(r)>=0}
+function isPharmacy(){return typeof window.fsHasCapability==='function'?window.fsHasCapability('crashCart.operate'):(function(){var r=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');return ['master','pharmacy','pharmacy_supervisor','inpatient_supervisor','inpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(r)>=0})()}
 function reportCard(r,c){
   var isPending=r.status==='pending';
   var badge=isPending?'<span style="background:var(--or,#e67e22);color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:6px">بانتظار الموافقة / Pending</span>':'';
-  var actions=isPending&&isPharmacy()
+  var canOperate=isPharmacy();
+  var actions=isPending&&canOperate
     ?'<div style="display:flex;gap:6px;margin-top:8px"><button class="btn bg bsm" onclick="ccAcceptReport(\''+escx(r.id)+'\')">✔ قبول / Accept</button><button class="btn bd2c bsm" onclick="ccRejectReport(\''+escx(r.id)+'\')">✖ رفض / Reject</button></div>'
-    :'<div style="margin-top:8px"><span class="btn bd2c bsm" onclick="ccxOpenReport(\''+escx(r.id)+'\')">Open and respond / فتح والرد</span></div>';
+    :isPending?'':'<div style="margin-top:8px"><span class="btn bd2c bsm" onclick="ccxOpenReport(\''+escx(r.id)+'\')">Open and respond / فتح والرد</span></div>';
   return '<div class="ccx-alert-card"><div class="ccx-alert-title">⚠ '+escx(deptName(r.deptId))+' — '+escx((c&&c.name)||'Crash Cart')+badge+'</div><div class="fhint">'+escx(r.reason||'Opening report')+'</div><div class="fhint">'+escx(r.openedBy||'')+' · '+escx(fmt(r.openedAt))+'</div>'+actions+'</div>'
 }
 window.ccxOpenReport=function(reportId){var r=(typeof crashReports==='function'?crashReports():[]).find(function(x){return String(x.id)===String(reportId)});if(!r)return;var c=typeof crashCart==='function'?crashCart(r.cartId):null;if(E('ccx-dept')&&!isDepartment())E('ccx-dept').value=r.deptId||'';if(E('ccx-state'))E('ccx-state').value='open';if(E('ccx-search'))E('ccx-search').value='';window.renderCrashCarts();var card=E('ccx-cart-'+r.cartId);if(card)card.scrollIntoView({behavior:'smooth',block:'start'});if(canManage()&&r.status==='open'&&typeof crashCloseReport==='function')crashCloseReport(r.id);/* pending reports are handled via ccAcceptReport/ccRejectReport, not crashCloseReport */};
@@ -125,6 +126,7 @@ window.ccxRenderDashboardAlerts=function(){
     var badge=isPending?'<span style="background:var(--or,#e67e22);color:#fff;border-radius:4px;padding:1px 5px;font-size:10px;font-weight:700;margin-left:4px">بانتظار الموافقة</span>':'';
     var btn=isPending&&isPharmacy()
       ?'<button class="btn bg bsm" onclick="ccAcceptReport(\''+escx(r.id)+'\')">✔ قبول</button> <button class="btn bd2c bsm" onclick="ccRejectReport(\''+escx(r.id)+'\')">✖ رفض</button>'
+      :isPending?''
       :'<span class="btn bd2c bsm" onclick="showPg(\'pg-crashcart\');ccxOpenReport(\''+escx(r.id)+'\')">Open</span>';
     return '<div class="ccx-dashboard-report"><div><b>'+escx(deptName(r.deptId))+' — '+escx((c&&c.name)||'Crash Cart')+badge+'</b><div class="fhint">'+escx(r.reason||'Opening report')+'</div></div>'+btn+'</div>';
   }).join('');

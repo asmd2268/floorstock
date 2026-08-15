@@ -282,8 +282,7 @@ window.ccSubmitReport.__r676SecureCallable=true;
 var crashAccepting=false;
 window.ccAcceptReport=async function(reportId){
   if(crashAccepting)return false;
-  var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');
-  var canAct=['master','pharmacy','pharmacy_supervisor'].indexOf(role)>=0;
+  var canAct=typeof window.fsHasCapability==='function'?window.fsHasCapability('crashCart.operate'):(function(){var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');return ['master','pharmacy','pharmacy_supervisor','inpatient_supervisor','inpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(role)>=0})();
   if(!canAct)return callToast('هذه الصلاحية للصيدلية فقط','Only pharmacy staff can accept reports','err');
   if(!reportId)return callToast('معرّف البلاغ مطلوب','Report ID is required','err');
   if(!confirm('تأكيد قبول البلاغ وخصم الكميات من العربة؟\nConfirm accept and deduct quantities from the cart?'))return false;
@@ -311,8 +310,7 @@ window.ccAcceptReport.__r676SecureCallable=true;
 var crashRejecting=false;
 window.ccRejectReport=async function(reportId){
   if(crashRejecting)return false;
-  var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');
-  var canAct=['master','pharmacy','pharmacy_supervisor'].indexOf(role)>=0;
+  var canAct=typeof window.fsHasCapability==='function'?window.fsHasCapability('crashCart.operate'):(function(){var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');return ['master','pharmacy','pharmacy_supervisor','inpatient_supervisor','inpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(role)>=0})();
   if(!canAct)return callToast('هذه الصلاحية للصيدلية فقط','Only pharmacy staff can reject reports','err');
   if(!reportId)return callToast('معرّف البلاغ مطلوب','Report ID is required','err');
   var note=window.prompt('ملاحظة الرفض (اختياري) / Rejection note (optional):','');

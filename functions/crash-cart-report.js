@@ -36,7 +36,12 @@ async function callerDepartmentProfile(db, request) {
 async function callerPharmacyProfile(db, request) {
   const profile = await callerProfile(db, request);
   const role = String(profile.role || '');
-  const allowed = ['master', 'pharmacy', 'pharmacy_supervisor'];
+  // crashCart.operate roles: pharmacy, inpatient_supervisor, pharmacy_staff (+ legacy aliases)
+  const allowed = [
+    'master', 'pharmacy', 'pharmacy_supervisor',
+    'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor',
+    'pharmacy_staff',
+  ];
   if (!allowed.includes(role)) {
     throw new HttpsError('permission-denied', 'Only pharmacy staff can accept or reject crash cart reports.');
   }
