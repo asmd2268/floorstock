@@ -10,19 +10,6 @@ function now(){return new Date().toISOString()}
 function get(k,d){try{var v=window.S&&S.g?S.g(k):null;return v==null?d:v}catch(e){return d}}
 function set(k,v){return window.S&&S.s?S.s(k,v):Promise.resolve()}
 function norm(v){return window.fsMedNorm?window.fsMedNorm(v):String(v||'').toLowerCase().trim()}
-function medFamily(v){return norm(v).replace(/\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|gm|ml|l|iu|unit|units|%|mmol|meq)\b/gi,' ').replace(/\b(?:tab(?:let)?s?|caps?(?:ule)?s?|amp(?:oule)?s?|vials?|bottles?|bags?|syrups?|solution|solutions|injection|injections|cream|ointment|drops?|inhalers?|suppositor(?:y|ies))\b/gi,' ').replace(/\s+/g,' ').trim()}
-function medIdentity(v){
- var stop={mg:1,mcg:1,g:1,gm:1,ml:1,l:1,iu:1,unit:1,units:1,percent:1,mmol:1,meq:1,tab:1,tabs:1,tablet:1,tablets:1,cap:1,caps:1,capsule:1,capsules:1,amp:1,amps:1,ampoule:1,ampoules:1,vial:1,vials:1,bottle:1,bottles:1,bag:1,bags:1,syrup:1,solution:1,solutions:1,soln:1,susp:1,suspension:1,inj:1,injection:1,injections:1,cream:1,ointment:1,drop:1,drops:1,inhaler:1,inhalers:1,suppository:1,suppositories:1,oral:1,iv:1,im:1,sc:1,intravenous:1,intramuscular:1,subcutaneous:1,infusion:1,premix:1,pack:1,packs:1,for:1,of:1,محلول:1,محاليل:1,حقن:1,حقنة:1,امبول:1,امبولات:1,فيال:1,فيالات:1,قرص:1,اقراص:1,كبسول:1,كبسولات:1,مل:1,مجم:1};
- return norm(v).split(/\s+/).filter(function(t){return t&&t.length>1&&!/^\d+$/.test(t)&&!/^\d+(?:mg|mcg|g|gm|ml|l|iu|units?|mmol|meq)$/i.test(t)&&!stop[t]}).join(' ').trim();
-}
-function sameMedicationIdentity(a,b){
- a=medIdentity(a);b=medIdentity(b);if(!a||!b)return false;if(a===b)return true;
- var shorter=a.length<=b.length?a:b,longer=a.length<=b.length?b:a;
- if(shorter.length>=5&&(' '+longer+' ').indexOf(' '+shorter+' ')>-1)return true;
- var at=a.split(' '),bt=b.split(' '),common=at.filter(function(t){return bt.indexOf(t)>-1});
- var score=common.length/Math.max(at.length,bt.length);
- return common.length>=2&&score>=0.72;
-}
 function hideMap(){return get('medication_visibility_rules_v3',{})||{}}
 function freezeMap(){var a=get('medication_freeze_rules_v3',{})||{},b=get('global_request_freeze_v2',{})||{};Object.keys(b).forEach(function(k){if(!a[k])a[k]=b[k]});return a}
 function applies(info,dept){return !!(info&&(info.allDepartments===true||info.deptIds==='all'||(Array.isArray(info.departmentIds)&&info.departmentIds.indexOf(dept)>-1)||(Array.isArray(info.deptIds)&&info.deptIds.indexOf(dept)>-1)))}
@@ -73,46 +60,6 @@ window.v16SaveEdit=async function(id){var r=reqs().find(function(x){return Strin
 
 /* Schedule convenience: 24-hour preset per selected days */
 function enhanceSchedule(){var m=E('mreq-window');if(m&&!E('v16-24h-btn')){var btn=document.createElement('button');btn.id='v16-24h-btn';btn.className='btn bg bsm';btn.textContent='24 hours / ٢٤ ساعة';btn.onclick=function(){var a=E('rwin-from'),b=E('rwin-to');if(a)a.value='00:00';if(b)b.value='23:59'};var h=m.querySelector('.mh');if(h)h.insertAdjacentElement('afterend',btn)}}
-
-/* Crash Cart medication names: one complete canonical name across departments. */
-var crashNameSyncBusy=false;
-function crashFullNameCandidate(it){
- var n=String(it&&it.name||'').trim(),st=String(it&&it.strength||'').trim();
- if(st&&norm(n).indexOf(norm(st))<0)n=(n+' '+st).trim();
- return n;
-}
-function crashNameScore(v){
- v=String(v||'').trim();var score=v.length;
- if(/\d\s*(?:mg|mcg|g|gm|ml|l|iu|unit|units|mmol|meq|%)/i.test(v))score+=35;
- if(/\b(?:injection|solution|tablet|capsule|ampoule|vial|bag|syrup|cream|ointment|drops|inhaler|suppository)\b/i.test(v))score+=18;
- score+=Math.min(20,v.split(/\s+/).length*2);return score;
-}
-function crashCanonicalNames(carts,reports){
- var groups={},targets={},stored=get('crash_cart_medication_names_v1',{})||{};
- function identity(name){name=String(name||'').trim();return name?(medIdentity(name)||norm(name)):''}
- function add(name){name=String(name||'').trim();var id=identity(name);if(!id)return;(groups[id]||(groups[id]=[])).push(name)}
- function addTarget(name){var id=identity(name);if(!id)return;targets[id]=true;add(name)}
- (carts||[]).forEach(function(c){(c.items||[]).forEach(function(it){addTarget(crashFullNameCandidate(it))})});
- (reports||[]).forEach(function(r){(r.consumed||[]).forEach(function(it){addTarget(it&&it.name)});(r.replacements||[]).forEach(function(it){addTarget(it&&it.name)})});
- Object.keys(stored).forEach(function(k){if(targets[k])add(stored[k])});
- (typeof gd==='function'?(gd()||[]):[]).forEach(function(d){(typeof getMeds==='function'?(getMeds(d.id)||[]):[]).forEach(function(m){var id=identity(m&&m.name);if(targets[id])add(m.name)})});
- var map={};Object.keys(groups).forEach(function(k){map[k]=groups[k].slice().sort(function(a,b){return crashNameScore(b)-crashNameScore(a)||b.length-a.length})[0]});return map;
-}
-function unifyCrashMedicationNames(){
- if(crashNameSyncBusy||typeof crashCarts!=='function')return;
- var carts=crashCarts()||[],reports=typeof crashReports==='function'?(crashReports()||[]):[],map=crashCanonicalNames(carts,reports),cartChanged=false,reportChanged=false;
- carts.forEach(function(c){(c.items||[]).forEach(function(it){var candidate=crashFullNameCandidate(it),id=medIdentity(candidate)||norm(candidate),canonical=map[id];if(canonical&&it.name!==canonical){it.name=canonical;cartChanged=true}})});
- reports.forEach(function(r){['consumed','replacements'].forEach(function(key){(r[key]||[]).forEach(function(it){var id=medIdentity(it&&it.name)||norm(it&&it.name),canonical=map[id];if(canonical&&it.name!==canonical){it.name=canonical;reportChanged=true}})})});
- if(!cartChanged&&!reportChanged)return;
- crashNameSyncBusy=true;
- var jobs=[];
- /* Managers persist the cleanup. Department users only normalize their in-memory display. */
- if(mgr()){
-  jobs.push(setCrashCarts(carts));jobs.push(set('crash_cart_medication_names_v1',map));if(reportChanged)jobs.push(set('crash_cart_reports',reports));
- }
- Promise.all(jobs).catch(function(){}).then(function(){crashNameSyncBusy=false;if(typeof renderCrashCarts==='function')renderCrashCarts()});
-}
-
 
 /* Department-facing polishing */
 function polishDepartment(){
@@ -596,19 +543,6 @@ function getRequestCountLimits(){
     if(!result[id].per7Days)result[id].per7Days=requestLimitNumber(weekly[id]);
   });
   return result;
-}
-async function migrateRequestCountLimits(){
-  if(!window.S||typeof S.s!=='function')return getRequestCountLimits();
-  var merged=getRequestCountLimits();
-  await S.s(REQUEST_COUNT_LIMITS_KEY,merged);
-  if(typeof S.rm==='function'){
-    await Promise.all([
-      S.rm('weekly_limits_v2'),
-      S.rm('daily_limits_v2'),
-      S.rm('rate_limits_v2')
-    ]);
-  }
-  return merged;
 }
 function requestCreatedTime(request){
   var value=request&&(request.created||request.createdAt||request.submittedAt);

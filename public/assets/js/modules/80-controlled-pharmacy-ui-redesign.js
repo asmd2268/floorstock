@@ -1258,9 +1258,6 @@ async function saveSignatures(){
   }
 }
 
-function openBulk(){
- createModals();var cat=typeof ctlCatalog==='function'?(ctlCatalog()||[]):[];E('v13-final-bulk-med').innerHTML='<option value="">Select medication…</option>'+cat.slice().sort(function(a,b){return String(a.name).localeCompare(String(b.name))}).map(function(m){return '<option value="'+escH(m.id)+'">'+escH(m.name)+'</option>'}).join('');E('v13-final-bulk-scope').innerHTML='<div class="fhint" style="padding:12px">Choose a medication to show departments carrying it.</div>';E('v13-final-selected-count').textContent='';openM('v13-final-bulk-modal')
-}
 function deptName(id){return window.fsDeptName?window.fsDeptName(id):String(id||'—')}
 function renderBulkDepartments(){
  var med=E('v13-final-bulk-med').value,host=E('v13-final-bulk-scope');if(!med){host.innerHTML='<div class="fhint" style="padding:12px">Choose a medication.</div>';return}var depts=typeof gd==='function'?(gd()||[]):[];var rows=[];depts.forEach(function(d){var list=typeof ctlDeptList==='function'?(ctlDeptList(d.id)||[]):[];var item=list.find(function(x){return String(x.medId)===String(med)});if(item)rows.push({dept:d,item:item})});host.innerHTML=rows.length?rows.map(function(r){return '<label><input type="checkbox" class="v13-final-dept-check" data-dept="'+escH(r.dept.id)+'"><span><b>'+escH(r.dept.name)+'</b><br><small>Current qty: '+n(r.item.qty)+' · Expiry batches: '+((r.item.batches||[]).length)+'</small></span></label>'}).join(''):'<div class="fhint" style="padding:12px">This medication is not assigned to any inpatient department.</div>';host.querySelectorAll('input').forEach(function(x){x.onchange=updateBulkCount});updateBulkCount()
@@ -1270,9 +1267,6 @@ function toggleAllBulk(){var boxes=Array.from(document.querySelectorAll('.v13-fi
 async function applyBulk(){
  var med=E('v13-final-bulk-med').value;var selected=Array.from(document.querySelectorAll('.v13-final-dept-check:checked'));if(!med)return toast2('Select a medication.','err');if(!selected.length)return toast2('Select at least one department.','err');var qop=E('v13-final-bulk-qty-op').value,qv=n(E('v13-final-bulk-qty').value),eop=E('v13-final-bulk-exp-op').value,date=E('v13-final-bulk-expiry').value,eq=Math.max(0,n(E('v13-final-bulk-exp-qty').value));if(eop!=='keep'&&!date)return toast2('Choose an expiry date.','err');var changed=0;
  try{for(var i=0;i<selected.length;i++){var dept=selected[i].dataset.dept;var list=(ctlDeptList(dept)||[]).map(function(x){return Object.assign({},x,{batches:(x.batches||[]).map(function(b){return Object.assign({},b)})})});var item=list.find(function(x){return String(x.medId)===String(med)});if(!item)continue;var cur=n(item.qty);if(qop==='unavailable')item.qty=0;else if(qop==='set')item.qty=Math.max(0,qv);else if(qop==='adjust')item.qty=Math.max(0,cur+qv);if(eop==='replace')item.batches=[];if(eop==='add'||eop==='replace'){item.batches=item.batches||[];item.batches.push({expiry:date,qty:eq,lot:''})}await ctlSetDeptList(dept,list);changed++}closeM('v13-final-bulk-modal');toast2(changed+' department(s) updated ✓','succ');if(typeof auditAction==='function')auditAction('controlled_bulk_department_medication_edit',{medId:med,departments:changed,quantityOperation:qop,expiryOperation:eop});if(typeof renderControlled==='function')renderControlled()}catch(e){toast2(e&&e.message||'Bulk update failed.','err')}
-}
-function medFlags(m){
- var cls=String(m.classification||'').toLowerCase();return {ha:!!(m.high_alert||m.highAlert||cls.indexOf('high')>=0),hz:!!(m.hazard||m.hazardous||cls.indexOf('hazard')>=0),lasa:!!(m.lasa||m.LASA||cls.indexOf('lasa')>=0),cold:!!(m.refrigerated||m.fridge||m.cold_chain||cls.indexOf('refriger')>=0)}
 }
 async function persistPrintOrdersMeta(ids){
   var requests=typeof gr==='function'?(gr()||[]):[];

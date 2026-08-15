@@ -640,7 +640,6 @@ window.setCrashCarts=async function(v){var repaired=reconcileCrashCartData(v),ou
 window.fsReconcileCrashCartData=async function(){var current=typeof crashCarts==='function'?(crashCarts()||[]):[],fixed=reconcileCrashCartData(current);if(fixed.changed){await window.setCrashCarts(fixed.carts);if(typeof renderCrashCarts==='function')renderCrashCarts()}return fixed};
 
 function daysUntil(v){return window.fsDaysUntil?window.fsDaysUntil(v):null}
-function expClass(exp){var d=daysUntil(exp),r=rules();if(d===null)return'missing';if(d<0)return'expired';if(d<=r.urgentDays)return'urgent';if(d<=r.nearDays)return'near';return'normal'}
 function fmtDateFinal(v){try{return typeof fmtDate==='function'?fmtDate(v):String(v||'—')}catch(e){return String(v||'—')}}
 function deptName(id){return window.fsDeptName?window.fsDeptName(id):String(id||'—')}
 window.crashPrint=function(id){
@@ -690,7 +689,6 @@ window.crashPrint=function(id){
 var PREVIEW_KEY='asdh_master_role_preview_v3';
 const E=globalThis.E;
 function previewRead(){try{return JSON.parse(sessionStorage.getItem(PREVIEW_KEY)||'null')}catch(e){return null}}
-function previewWrite(v){try{sessionStorage.setItem(PREVIEW_KEY,JSON.stringify(v));return true}catch(e){console.error(e);return false}}
 function previewClear(){try{sessionStorage.removeItem(PREVIEW_KEY)}catch(e){}}
 function deptZ(id){try{return ((typeof gd==='function'?gd():[])||[]).find(function(d){return String(d.id)===String(id)})||null}catch(e){return null}}
 function toastZ(m,t){if(typeof toast==='function')toast(m,t||'info')}

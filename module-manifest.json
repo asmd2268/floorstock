@@ -352,7 +352,7 @@
       "inlineOrder": 8,
       "id": "07-expiry-requests-and-primary-features",
       "file": "assets/js/modules/07-expiry-requests-and-primary-features.js",
-      "bytes": 175165,
+      "bytes": 174889,
       "stub": false
     },
     {
@@ -600,7 +600,7 @@
       "inlineOrder": 39,
       "id": "38-v16-user-operations-main",
       "file": "assets/js/modules/38-v16-user-operations-main.js",
-      "bytes": 86333,
+      "bytes": 81204,
       "stub": false
     },
     {
@@ -616,7 +616,7 @@
       "inlineOrder": 41,
       "id": "40-v16-clean-optimized-script",
       "file": "assets/js/modules/40-v16-clean-optimized-script.js",
-      "bytes": 84357,
+      "bytes": 81554,
       "stub": false
     },
     {
@@ -688,7 +688,7 @@
       "inlineOrder": 50,
       "id": "49-asdh-final-persistence-actions-20260725",
       "file": "assets/js/modules/49-asdh-final-persistence-actions-20260725.js",
-      "bytes": 87857,
+      "bytes": 87536,
       "stub": false
     },
     {
@@ -696,7 +696,7 @@
       "inlineOrder": 51,
       "id": "50-r617-integrated-operations",
       "file": "assets/js/modules/50-r617-integrated-operations.js",
-      "bytes": 110274,
+      "bytes": 109951,
       "stub": false
     },
     {
@@ -712,7 +712,7 @@
       "inlineOrder": 53,
       "id": "52-r635-master-backup-delete-and-crash-print-sync",
       "file": "assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js",
-      "bytes": 40894,
+      "bytes": 39658,
       "stub": false
     },
     {
@@ -856,7 +856,7 @@
       "inlineOrder": 71,
       "id": "70-r676-accountability-regimen-roster-and-log",
       "file": "assets/js/modules/70-r676-accountability-regimen-roster-and-log.js",
-      "bytes": 46579,
+      "bytes": 43773,
       "stub": false
     },
     {
@@ -928,7 +928,7 @@
       "inlineOrder": 80,
       "id": "80-controlled-pharmacy-ui-redesign",
       "file": "assets/js/modules/80-controlled-pharmacy-ui-redesign.js",
-      "bytes": 142787,
+      "bytes": 141893,
       "stub": false
     }
   ],

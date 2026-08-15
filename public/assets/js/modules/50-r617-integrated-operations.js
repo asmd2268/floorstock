@@ -732,15 +732,6 @@ window.controlledStoragePrint=async function(id,mode){
         return String(item.id)===String(cell.medId);
       });
     }
-    function batchLines(medicine){
-      var batches=(medicine&&medicine.batches)||[];
-      if(!batches.length)return '—';
-      return batches.map(function(batch,index){
-        return '<div class="batch-line">'+
-          esc(batch.lot||batch.batch||('Batch '+(index+1)))+
-          '</div>';
-      }).join('');
-    }
     function expiryLines(medicine){
       var batches=(medicine&&medicine.batches)||[];
       if(!batches.length)return '—';

@@ -193,30 +193,6 @@ function crashItems(){return typeof window.crashCarts==='function'?(window.crash
 function crashReportsList(){return typeof window.crashReports==='function'?(window.crashReports()||[]):[]}
 function errorMessage(error){return String(error&&error.message||error||'Unknown error').replace(/^FirebaseError:\s*/,'')}
 function callToast(ar,en,type){if(typeof window.toast==='function')window.toast(String(ar||'')+'\n'+String(en||''),type||'info')}
-
-function loadFunctionsSdk(){
-  if(window.firebase&&typeof firebase.functions==='function')return Promise.resolve(firebase.functions());
-  return new Promise(function(resolve,reject){
-    var existing=document.querySelector('script[data-r676-functions-sdk]');
-    if(existing){
-      existing.addEventListener('load',function(){resolve(firebase.functions())},{once:true});
-      existing.addEventListener('error',function(){reject(new Error('Firebase Functions library failed to load.'))},{once:true});
-      return;
-    }
-    var script=document.createElement('script');
-    script.src='https://www.gstatic.com/firebasejs/12.15.0/firebase-functions-compat.js';
-    script.async=true;script.dataset.r676FunctionsSdk='1';
-    script.onload=function(){try{resolve(firebase.functions())}catch(error){reject(error)}};
-    script.onerror=function(){reject(new Error('Firebase Functions library failed to load.'))};
-    document.head.appendChild(script);
-  });
-}
-async function functionsClient(){
-  if(typeof window.ensureFirebaseFunctions==='function'){
-    try{return await window.ensureFirebaseFunctions()}catch(error){console.warn('Existing Firebase Functions loader failed; retrying directly.',error)}
-  }
-  return loadFunctionsSdk();
-}
 function replaceCachedCrashState(cart,report){
   if(!window.S||!S.cache)throw new Error('Crash Cart state cache is unavailable.');
   var carts=crashItems().map(function(entry){return String(entry&&entry.id||'')===String(cart&&cart.id||'')?cart:entry});

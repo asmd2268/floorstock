@@ -30,8 +30,6 @@ function normalizeViewC(v){var valid=['overview','storage','departments','pharma
 
 /* ── Inventory Hide / Freeze: one modal, reliable close, no orphan overlay. ── */
 function invNorm(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').trim()}
-function invFamily(v){return invNorm(v).replace(/\b\d+(?:\.\d+)?\s*(?:mg|mcg|g|gm|ml|l|iu|unit|units|%|mmol|meq)\b/gi,' ').replace(/\b(?:tab(?:let)?s?|caps?(?:ule)?s?|amp(?:oule)?s?|vials?|bottles?|bags?|syrups?|solution|solutions|injection|injections|cream|ointment|drops?|inhalers?|suppositor(?:y|ies))\b/gi,' ').replace(/\s+/g,' ').trim()}
-function invIdentity(v){var stop={mg:1,mcg:1,g:1,gm:1,ml:1,l:1,iu:1,unit:1,units:1,percent:1,mmol:1,meq:1,tab:1,tabs:1,tablet:1,tablets:1,cap:1,caps:1,capsule:1,capsules:1,amp:1,amps:1,ampoule:1,ampoules:1,vial:1,vials:1,bottle:1,bottles:1,bag:1,bags:1,syrup:1,solution:1,solutions:1,soln:1,susp:1,suspension:1,inj:1,injection:1,injections:1,cream:1,ointment:1,drop:1,drops:1,inhaler:1,inhalers:1,suppository:1,suppositories:1,oral:1,iv:1,im:1,sc:1,intravenous:1,intramuscular:1,subcutaneous:1,infusion:1,premix:1,pack:1,packs:1,for:1,of:1,محلول:1,محاليل:1,حقن:1,حقنة:1,امبول:1,امبولات:1,فيال:1,فيالات:1,قرص:1,اقراص:1,كبسول:1,كبسولات:1,مل:1,مجم:1};return invNorm(v).split(/\s+/).filter(function(t){return t&&t.length>1&&!/^\d+$/.test(t)&&!/^\d+(?:mg|mcg|g|gm|ml|l|iu|units?|mmol|meq)$/i.test(t)&&!stop[t]}).join(' ').trim()}
 function selectedInvMedsC(){var dep=(E('inv-dept-sel')||{}).value||'';var ids=Array.from(document.querySelectorAll('.inv-chk:checked')).map(function(x){return String(x.dataset.id)});return (typeof getMeds==='function'?(getMeds(dep)||[]):[]).filter(function(m){return ids.indexOf(String(m.id))>-1})}
 function closeInvModalC(id){var n=E(id);if(n)n.remove();document.body.style.overflow='';document.documentElement.style.overflow='';document.body.style.pointerEvents='';}
 function cleanupInvModalsC(){['v16-hide-modal','v16-freeze-modal'].forEach(closeInvModalC);document.querySelectorAll('.inventory-action-modal').forEach(function(n){n.remove()});document.body.style.overflow='';document.documentElement.style.overflow=''}
@@ -324,7 +322,6 @@ function identityV(v){
 }
 function sameV(a,b){a=identityV(a);b=identityV(b);if(!a||!b)return false;if(a===b)return true;var aa=a.split(' '),bb=b.split(' '),common=aa.filter(function(t){return bb.indexOf(t)>-1});return common.length>=2&&common.length/Math.max(aa.length,bb.length)>=.78}
 function store(key,def){try{var x=window.S&&S.g?S.g(key):null;return x==null?def:x}catch(e){return def}}
-function appliesV(rule,dept){return !!(rule&&(rule.allDepartments===true||rule.deptIds==='all'||(Array.isArray(rule.departmentIds)&&rule.departmentIds.indexOf(dept)>-1)||(Array.isArray(rule.deptIds)&&rule.deptIds.indexOf(dept)>-1)))}
 function ruleFor(map,med,dept){return typeof window.fsR17MedicationRuleFor==='function'?window.fsR17MedicationRuleFor(map,med,dept):null}
 function statusAllowed(){return window.fsHasCapability?window.fsHasCapability('inventory.read'):!!(window.CU&&(CU.master===true||['pharmacy','inpatient_supervisor','pharmacy_staff'].indexOf(R())>-1))}
 function manageAllowed(){return window.fsHasCapability?window.fsHasCapability('inventory.manage'):!!(window.CU&&(CU.master===true||['pharmacy','inpatient_supervisor'].indexOf(R())>-1))}
@@ -399,13 +396,9 @@ window.bindInventoryTools=bindTools;
 (function(){
 'use strict';
 const E=globalThis.E;
-function escF(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function nF(v){var n=Number(v);return isFinite(n)?n:0}
 function normF(v){return String(v==null?'':v).toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').trim().replace(/\s+/g,' ')}
 function roleF(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
-function deptNameF(id){var d=(typeof window.gd==='function'?(gd()||[]):[]).find(function(x){return String(x.id)===String(id)});return d&&d.name?d.name:String(id||'')}
-function currentDeptF(){return roleF()==='department'?String((CU&&CU.deptId)||''):(typeof window.ctlCurrentDept==='function'?String(ctlCurrentDept()||''):'')}
-
 /* Stop the old workbook seed from creating duplicate departments such as MMW. */
 window.seed=async function(){
   var depts=typeof window.gd==='function'?(gd()||[]):[];
@@ -516,10 +509,6 @@ window.ctlEnsureDepartmentSeed=async function(){
 /* Run once after the canonical state load; the login flow invokes this explicitly. */
 window.repairImportedDepartmentAliases=repairImportedDepartmentAliasesF;
 
-/* One exact custody print generator shared by the officer and the department employee. */
-function fmtDateF(v){if(!v)return '—';try{if(typeof ctlFmtDMY==='function')return ctlFmtDMY(v);var d=new Date(String(v).slice(0,10)+'T00:00:00');return isNaN(d.getTime())?String(v):String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()}catch(e){return String(v)}}
-function batchLinesF(batches){var a=Array.isArray(batches)?batches:[];return a.length?a.map(function(b){return (b.qty!=null&&b.qty!==''?escF(nF(b.qty))+' → ':'')+escF(fmtDateF(b.expiry))+(b.lot?' — '+escF(b.lot):'')}).join('<br>'):'—'}
-function codeModeF(dept,override){var s=typeof ctlPrintSettings==='function'?(ctlPrintSettings(dept)||{}):{},m=String(override||s.printCodeMode||'nupco');return ['none','moh','nupco','both'].indexOf(m)>=0?m:'nupco'}
 
 
 function cleanupDepartmentPrintUiF(){
