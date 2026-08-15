@@ -753,6 +753,10 @@ S.transport=result.source||'rest';
 S.writeTransport=window.FB_DB?'sdk':'rest';
 S.cache.users=S.cache.users||[];
 S.ready=true;
+if(!window.__ASDH_REAL_LOAD_COMPLETE){
+  window.__ASDH_REAL_LOAD_COMPLETE=true;
+  document.dispatchEvent(new CustomEvent('asdh:real-load-complete'));
+}
 
     // Save only this authenticated account's already permission-scoped state.
     try{
@@ -943,6 +947,10 @@ S.ready=true;
       }
       var changed=fsStateApplyCache(incoming);
       if(changed)S.scheduleRefresh();
+      if(!window.__ASDH_REAL_LOAD_COMPLETE){
+        window.__ASDH_REAL_LOAD_COMPLETE=true;
+        document.dispatchEvent(new CustomEvent('asdh:real-load-complete'));
+      }
       if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
         try{
           var previousUsers=S.cache.users||[];

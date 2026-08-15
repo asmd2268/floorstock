@@ -741,11 +741,19 @@ function verifyStartup(){
 }
 window.__startAppExtensions=window.__startAppExtensions||[];
 window.__startAppExtensions.push(function(){
+  function captureBaseline(){
+    startFingerprint=totalAndHash();
+    showSafety();
+    setTimeout(verifyStartup,2600);
+  }
   setTimeout(function(){
     if(window.S&&S.ready){
-      startFingerprint=totalAndHash();
-      showSafety();
-      setTimeout(verifyStartup,2600);
+      if(window.__ASDH_REAL_LOAD_COMPLETE){
+        captureBaseline();
+      }else{
+        document.addEventListener('asdh:real-load-complete',captureBaseline,{once:true});
+        setTimeout(function(){if(!startFingerprint)captureBaseline();},10000);
+      }
     }
   },0);
 });
