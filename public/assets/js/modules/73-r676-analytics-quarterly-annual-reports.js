@@ -14,8 +14,40 @@ function permitted() {
   return ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor'].includes(r) || !!(window.CU && window.CU.master);
 }
 function qLabel(q) { return `Q${q} / الربع ${['','الأول','الثاني','الثالث','الرابع'][q]||q}`; }
+// firestore.rules' canWriteState() allows unrestricted docId writes only for
+// pharmacy/pharmacy_director (and master, who takes on an effective role) —
+// inpatient_supervisor and the other roles permitted() lets VIEW this page
+// are restricted to a fixed docId pattern that does not include this new
+// setting key, so their write would be silently rejected server-side.
+function canEditSpikeThreshold() {
+  const r = String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
+  return ['pharmacy','pharmacy_director'].includes(r) || !!(window.CU && window.CU.master);
+}
 function selectedYear()    { const el = document.getElementById('analytics-report-year');    return Number(el && el.value) || new Date().getFullYear(); }
 function selectedQuarter() { const el = document.getElementById('analytics-report-quarter'); return String(el && el.value || 'all'); }
+const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
+function spikeThresholdPct() {
+  const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
+  return Number.isFinite(v) && v > 0 ? v : 30;
+}
+window.saveAnalyticsSpikeThreshold = async function () {
+  const input = document.getElementById('analytics-spike-threshold');
+  if (!input || !canEditSpikeThreshold()) return;
+  const value = Math.round(Number(input.value));
+  if (!Number.isFinite(value) || value < 1 || value > 500) {
+    input.value = spikeThresholdPct();
+    if (window.toast) toast('Enter a threshold between 1 and 500%. / أدخل نسبة بين 1 و500%', 'err');
+    return;
+  }
+  try {
+    await S.s(SPIKE_THRESHOLD_KEY, value);
+    if (typeof window.auditAction === 'function') auditAction('analytics_spike_threshold_changed', { thresholdPct: value });
+    if (window.toast) toast('Threshold saved ✓ / تم حفظ النسبة ✓', 'succ');
+    window.renderAnalyticsReports();
+  } catch (error) {
+    if (window.toast) toast('Threshold was not saved. / لم يتم حفظ النسبة', 'err');
+  }
+};
 function pctArrow(pct) {
   if (pct === null) return '';
   return pct > 0 ? `<span class="arw up">↑${pct}%</span>` : pct < 0 ? `<span class="arw dn">↓${Math.abs(pct)}%</span>` : `<span class="arw eq">→ 0%</span>`;
@@ -65,9 +97,16 @@ function injectStyles() {
 .anl-med-table td{padding:8px 10px;border-bottom:1px solid var(--cl-border,#334155);color:var(--cl-text,#e2e8f0);vertical-align:top}
 .anl-med-table tr:last-child td{border-bottom:none}
 .anl-spike-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:#fef3c7;color:#92400e;margin-left:6px}
+.anl-spike-badge.mid{background:#fef3c7;color:#92400e}
+.anl-spike-badge.high{background:#fee2e2;color:#991b1b}
+.anl-spike-badge.extreme{background:#7f1d1d;color:#fecaca}
 .anl-zero-row{font-size:13px;color:var(--cl-sub,#94a3b8);padding:6px 0;border-bottom:1px solid var(--cl-border,#334155)}
 .anl-zero-row:last-child{border-bottom:none}
 .anl-empty{text-align:center;color:var(--cl-sub,#94a3b8);padding:20px;font-size:13px}
+.anl-threshold-ctl{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--cl-sub,#94a3b8)}
+.anl-threshold-ctl input{width:60px;padding:4px 6px;text-align:center;border-radius:6px;border:1px solid var(--cl-border,#334155);background:var(--cl-card2,#1e293b);color:var(--cl-text,#f1f5f9)}
+.anl-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;color:var(--cl-sub,#94a3b8);margin:8px 0 12px;padding:8px 10px;background:var(--cl-card2,#111827);border:1px solid var(--cl-border,#334155);border-radius:8px}
+.anl-legend b{color:var(--cl-text,#f1f5f9)}
 @media print{.anl-controls button,.btn{display:none!important}}
 @media(max-width:640px){.anl-kpi-row{grid-template-columns:repeat(2,1fr)}}
 `;
@@ -150,18 +189,34 @@ function renderMedTable(meds, emptyMsg) {
   </table></div>`;
 }
 
-function renderSpikes(currentRows, priorRows, priorLabel) {
-  const spikes = detectSpikes(currentRows, priorRows, 30);
+function spikeBadgeClass(pct, threshold) {
+  if (pct >= threshold * 2.5) return 'extreme';
+  if (pct >= threshold * 1.5) return 'high';
+  return 'mid';
+}
+function spikeBadge(pct, threshold) {
+  return `<span class="anl-spike-badge ${spikeBadgeClass(pct, threshold)}">+${pct}%</span>`;
+}
+function renderSpikeLegend(threshold) {
+  return `<div class="anl-legend">
+    <b>Legend / الدليل:</b>
+    <span><span class="anl-spike-badge mid">+${threshold}%</span> ${threshold}–${Math.round(threshold * 1.5 - 1)}% increase</span>
+    <span><span class="anl-spike-badge high">+${Math.round(threshold * 1.5)}%</span> ${Math.round(threshold * 1.5)}–${Math.round(threshold * 2.5 - 1)}% increase</span>
+    <span><span class="anl-spike-badge extreme">+${Math.round(threshold * 2.5)}%</span> ${Math.round(threshold * 2.5)}%+ increase</span>
+  </div>`;
+}
+function renderSpikes(currentRows, priorRows, priorLabel, threshold) {
+  const spikes = detectSpikes(currentRows, priorRows, threshold);
   if (!spikes.overall.length && !spikes.perDept.length) {
-    return `<div class="anl-empty">No medicine exceeded a 30% consumption increase vs ${esc(priorLabel)}.</div>`;
+    return `<div class="anl-empty">No medicine exceeded a ${threshold}% consumption increase vs ${esc(priorLabel)}.</div>`;
   }
-  let html = '';
+  let html = renderSpikeLegend(threshold);
   if (spikes.overall.length) {
     html += `<div style="margin-bottom:10px"><b style="font-size:13px;color:var(--cl-text,#f1f5f9)">Overall (all departments)</b>
     <div style="overflow:auto;margin-top:6px"><table class="anl-med-table">
       <thead><tr><th>Medicine</th><th>Current</th><th>Prior (${esc(priorLabel)})</th><th>Change</th></tr></thead>
       <tbody>${spikes.overall.slice(0, 15).map(s =>
-        `<tr><td><b>${esc(s.medicine)}</b></td><td>${s.current}</td><td>${s.prior}</td><td><span class="anl-spike-badge">+${s.pctChange}%</span></td></tr>`
+        `<tr><td><b>${esc(s.medicine)}</b></td><td>${s.current}</td><td>${s.prior}</td><td>${spikeBadge(s.pctChange, threshold)}</td></tr>`
       ).join('')}</tbody>
     </table></div></div>`;
   }
@@ -170,7 +225,7 @@ function renderSpikes(currentRows, priorRows, priorLabel) {
     <div style="overflow:auto;margin-top:6px"><table class="anl-med-table">
       <thead><tr><th>Medicine</th><th>Department</th><th>Current</th><th>Prior</th><th>Change</th></tr></thead>
       <tbody>${spikes.perDept.slice(0, 20).map(s =>
-        `<tr><td><b>${esc(s.medicine)}</b></td><td>${esc(s.dept)}</td><td>${s.current}</td><td>${s.prior}</td><td><span class="anl-spike-badge">+${s.pctChange}%</span></td></tr>`
+        `<tr><td><b>${esc(s.medicine)}</b></td><td>${esc(s.dept)}</td><td>${s.current}</td><td>${s.prior}</td><td>${spikeBadge(s.pctChange, threshold)}</td></tr>`
       ).join('')}</tbody>
     </table></div></div>`;
   }
@@ -220,6 +275,7 @@ window.renderAnalyticsReports = function () {
 
   const topRoutine = topMedicines(stats.routine, 10);
   const topHigh    = topMedicines(stats.high, 10);
+  const threshold  = spikeThresholdPct();
 
   let root = document.getElementById('analytics-reports-card');
   if (!root) {
@@ -238,6 +294,10 @@ window.renderAnalyticsReports = function () {
           <option value="all"${quarter==='all'?' selected':''}>Full year / السنة كاملة</option>
           ${[1,2,3,4].map(q => `<option value="${q}"${quarter===String(q)?' selected':''}>${qLabel(q)}</option>`).join('')}
         </select>
+        <span class="anl-threshold-ctl">Spike threshold / حد الارتفاع:
+          <input type="number" id="analytics-spike-threshold" min="1" max="500" value="${threshold}"${canEditSpikeThreshold() ? '' : ' disabled title="Only pharmacy director / master can change this. / فقط مدير الصيدلية / الماستر يقدر يغيّرها"'}>%
+          ${canEditSpikeThreshold() ? '<button class="btn bg bsm" id="analytics-spike-threshold-save">Save / حفظ</button>' : ''}
+        </span>
         <button class="btn bp bsm" id="analytics-report-print">🖨 Print / طباعة</button>
       </div>
     </div>
@@ -262,13 +322,13 @@ window.renderAnalyticsReports = function () {
     </div>
 
     <div class="anl-section" id="analytics-spike-section">
-      <div class="anl-section-title alert">📈 Consumption spikes ≥30% vs prior period (${esc(priorLbl)}) / ارتفاع ≥30%</div>
-      ${renderSpikes(currentRows, priorRows, priorLbl)}
+      <div class="anl-section-title alert">📈 Consumption spikes ≥${threshold}% vs prior period (${esc(priorLbl)}) / ارتفاع ≥${threshold}%</div>
+      ${renderSpikes(currentRows, priorRows, priorLbl, threshold)}
     </div>
 
     <div class="anl-section" id="analytics-spike-yoy-section">
-      <div class="anl-section-title alert">📈 Consumption spikes ≥30% vs same period last year (${esc(sameLastYearLbl)}) / مقارنة بنفس الفترة من العام الماضي</div>
-      ${renderSpikes(currentRows, sameLastYearRows, sameLastYearLbl)}
+      <div class="anl-section-title alert">📈 Consumption spikes ≥${threshold}% vs same period last year (${esc(sameLastYearLbl)}) / مقارنة بنفس الفترة من العام الماضي</div>
+      ${renderSpikes(currentRows, sameLastYearRows, sameLastYearLbl, threshold)}
     </div>
 
     <div class="anl-section" id="analytics-zero-section">
@@ -282,6 +342,13 @@ window.renderAnalyticsReports = function () {
     const el = document.getElementById(id);
     if (el && !el.dataset.bound) { el.dataset.bound = '1'; el.addEventListener('change', window.renderAnalyticsReports); }
   });
+
+  // Threshold save button
+  const thresholdSaveBtn = document.getElementById('analytics-spike-threshold-save');
+  if (thresholdSaveBtn && !thresholdSaveBtn.dataset.bound) {
+    thresholdSaveBtn.dataset.bound = '1';
+    thresholdSaveBtn.addEventListener('click', window.saveAnalyticsSpikeThreshold);
+  }
 
   // Print button
   const printBtn = document.getElementById('analytics-report-print');
@@ -408,6 +475,12 @@ function buildPrintHtml(detail) {
     .anl-quarter-table th,.anl-med-table th{background:#dbeafe;color:#102a5c;padding:5px 8px;text-align:left;border:1px solid #9aa8bd}
     .anl-quarter-table td,.anl-med-table td{padding:5px 8px;border:1px solid #9aa8bd;color:#172033;vertical-align:top}
     .anl-spike-badge{background:#fef3c7;color:#92400e;font-weight:bold;padding:1px 5px;border-radius:4px;font-size:8pt;margin-left:4px}
+    .anl-spike-badge.mid{background:#fef3c7;color:#92400e}
+    .anl-spike-badge.high{background:#fee2e2;color:#991b1b}
+    .anl-spike-badge.extreme{background:#7f1d1d;color:#fecaca}
+    .anl-legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:8pt;color:#52627b;margin:6px 0 10px;padding:6px 8px;background:#f5f9ff;border:1px solid #c8d4e8;border-radius:6px}
+    .anl-legend b{color:#102a5c}
+    .anl-threshold-ctl{display:none!important}
     .anl-empty{text-align:center;color:#94a3b8;padding:12px;font-size:9pt}
     .anl-zero-row{font-size:9pt;color:#475569;padding:4px 0;border-bottom:1px solid #e2e8f0}
     .arw{font-size:8pt;font-weight:700;padding:1px 5px;border-radius:4px}
