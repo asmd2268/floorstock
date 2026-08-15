@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { next } from '@vercel/edge';
 
 export const config = { matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'] };
 
@@ -26,10 +26,10 @@ const BLOCK_HTML = `<!doctype html><html lang="ar" dir="rtl">
 export default function middleware(request) {
   const country = request.headers.get('x-vercel-ip-country') || '';
   if (country && !ALLOWED_COUNTRIES.has(country)) {
-    return new NextResponse(BLOCK_HTML, {
+    return new Response(BLOCK_HTML, {
       status: 403,
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
     });
   }
-  return NextResponse.next();
+  return next();
 }

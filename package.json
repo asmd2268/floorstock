@@ -16,6 +16,9 @@
     "test": "npm run verify && npm run test:ui && npm run test:functions && npm run test:browser && npm run test:rules",
     "test:functions": "npm --prefix functions test"
   },
+  "dependencies": {
+    "@vercel/edge": "1.3.3"
+  },
   "devDependencies": {
     "@firebase/rules-unit-testing": "5.0.1",
     "@playwright/test": "^1.61.1",
