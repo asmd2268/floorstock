@@ -294,443 +294,642 @@
     {
       "documentIndex": 4,
       "inlineOrder": 1,
-      "id": "firebase-global-bootstrap",
-      "file": "assets/js/modules/01-firebase-global-bootstrap.js",
-      "bytes": 675
+      "id": "00-r674-local-qr-runtime",
+      "file": "assets/js/modules/00-r674-local-qr-runtime.js",
+      "bytes": 88,
+      "stub": true
     },
     {
       "documentIndex": 5,
       "inlineOrder": 2,
-      "id": "r664-early-production-console-policy",
-      "file": "assets/js/modules/02-r664-early-production-console-policy.js",
-      "bytes": 618
+      "id": "01-firebase-global-bootstrap",
+      "file": "assets/js/modules/01-firebase-global-bootstrap.js",
+      "bytes": 675,
+      "stub": false
     },
     {
       "documentIndex": 6,
       "inlineOrder": 3,
-      "id": "",
-      "file": "assets/js/modules/03-core-application-firebase-state-auth.js",
-      "bytes": 131100
+      "id": "02-r664-early-production-console-policy",
+      "file": "assets/js/modules/02-r664-early-production-console-policy.js",
+      "bytes": 79,
+      "stub": true
     },
     {
       "documentIndex": 7,
       "inlineOrder": 4,
-      "id": "v13-complete-clean-fix-script",
-      "file": "assets/js/modules/04-v13-complete-clean-fix-script.js",
-      "bytes": 1452
+      "id": "03-core-application-firebase-state-auth",
+      "file": "assets/js/modules/03-core-application-firebase-state-auth.js",
+      "bytes": 166402,
+      "stub": false
     },
     {
       "documentIndex": 8,
       "inlineOrder": 5,
-      "id": "",
-      "file": "assets/js/modules/05-controlled-ui-compatibility-fixes.js",
-      "bytes": 8689
+      "id": "04-v13-complete-clean-fix-script",
+      "file": "assets/js/modules/04-v13-complete-clean-fix-script.js",
+      "bytes": 70,
+      "stub": true
     },
     {
       "documentIndex": 9,
       "inlineOrder": 6,
-      "id": "",
-      "file": "assets/js/modules/06-zebra-label-printing.js",
-      "bytes": 14768
+      "id": "05-controlled-ui-compatibility-fixes",
+      "file": "assets/js/modules/05-controlled-ui-compatibility-fixes.js",
+      "bytes": 88,
+      "stub": true
     },
     {
       "documentIndex": 10,
       "inlineOrder": 7,
-      "id": "",
-      "file": "assets/js/modules/07-expiry-requests-and-primary-features.js",
-      "bytes": 157842
+      "id": "06-zebra-label-printing",
+      "file": "assets/js/modules/06-zebra-label-printing.js",
+      "bytes": 91,
+      "stub": true
     },
     {
       "documentIndex": 11,
       "inlineOrder": 8,
-      "id": "",
-      "file": "assets/js/modules/08-controlled-shared-list-filters.js",
-      "bytes": 522
+      "id": "07-expiry-requests-and-primary-features",
+      "file": "assets/js/modules/07-expiry-requests-and-primary-features.js",
+      "bytes": 175165,
+      "stub": false
     },
     {
       "documentIndex": 12,
       "inlineOrder": 9,
-      "id": "",
-      "file": "assets/js/modules/09-warehouse-batch-editor.js",
-      "bytes": 3733
+      "id": "08-controlled-shared-list-filters",
+      "file": "assets/js/modules/08-controlled-shared-list-filters.js",
+      "bytes": 86,
+      "stub": true
     },
     {
       "documentIndex": 13,
       "inlineOrder": 10,
-      "id": "",
-      "file": "assets/js/modules/10-warehouse-receiving-workflow.js",
-      "bytes": 4956
+      "id": "09-warehouse-batch-editor",
+      "file": "assets/js/modules/09-warehouse-batch-editor.js",
+      "bytes": 86,
+      "stub": true
     },
     {
       "documentIndex": 14,
       "inlineOrder": 11,
-      "id": "",
-      "file": "assets/js/modules/11-master-backup-restore-access.js",
-      "bytes": 6240
+      "id": "10-warehouse-receiving-workflow",
+      "file": "assets/js/modules/10-warehouse-receiving-workflow.js",
+      "bytes": 82,
+      "stub": true
     },
     {
       "documentIndex": 15,
       "inlineOrder": 12,
-      "id": "",
-      "file": "assets/js/modules/12-local-daily-backups-system-health.js",
-      "bytes": 9196
+      "id": "11-master-backup-restore-access",
+      "file": "assets/js/modules/11-master-backup-restore-access.js",
+      "bytes": 91,
+      "stub": true
     },
     {
       "documentIndex": 16,
       "inlineOrder": 13,
-      "id": "",
-      "file": "assets/js/modules/13-pilot-controlled-public-expiry-fixes.js",
-      "bytes": 1927
+      "id": "12-local-daily-backups-system-health",
+      "file": "assets/js/modules/12-local-daily-backups-system-health.js",
+      "bytes": 29941,
+      "stub": false
     },
     {
       "documentIndex": 17,
       "inlineOrder": 14,
-      "id": "",
-      "file": "assets/js/modules/14-controlled-print-layout-and-tools.js",
-      "bytes": 32096
+      "id": "13-pilot-controlled-public-expiry-fixes",
+      "file": "assets/js/modules/13-pilot-controlled-public-expiry-fixes.js",
+      "bytes": 86,
+      "stub": true
     },
     {
       "documentIndex": 18,
       "inlineOrder": 15,
-      "id": "",
-      "file": "assets/js/modules/15-controlled-print-pages.js",
-      "bytes": 4208
+      "id": "14-controlled-print-layout-and-tools",
+      "file": "assets/js/modules/14-controlled-print-layout-and-tools.js",
+      "bytes": 89,
+      "stub": true
     },
     {
       "documentIndex": 19,
       "inlineOrder": 16,
-      "id": "",
-      "file": "assets/js/modules/16-expiry-dashboard-extension.js",
-      "bytes": 8153
+      "id": "15-controlled-print-pages",
+      "file": "assets/js/modules/15-controlled-print-pages.js",
+      "bytes": 91,
+      "stub": true
     },
     {
       "documentIndex": 20,
       "inlineOrder": 17,
-      "id": "system-health-script",
-      "file": "assets/js/modules/17-system-health-script.js",
-      "bytes": 2609
+      "id": "16-expiry-dashboard-extension",
+      "file": "assets/js/modules/16-expiry-dashboard-extension.js",
+      "bytes": 94,
+      "stub": true
     },
     {
       "documentIndex": 21,
       "inlineOrder": 18,
-      "id": "wh-bulk-rx-dx-script",
-      "file": "assets/js/modules/18-wh-bulk-rx-dx-script.js",
-      "bytes": 7174
+      "id": "17-system-health-script",
+      "file": "assets/js/modules/17-system-health-script.js",
+      "bytes": 91,
+      "stub": true
     },
     {
       "documentIndex": 22,
       "inlineOrder": 19,
-      "id": "",
-      "file": "assets/js/modules/19-test-data-cleanup-guard.js",
-      "bytes": 4287
+      "id": "18-wh-bulk-rx-dx-script",
+      "file": "assets/js/modules/18-wh-bulk-rx-dx-script.js",
+      "bytes": 86,
+      "stub": true
     },
     {
       "documentIndex": 23,
       "inlineOrder": 20,
-      "id": "psychotropic-shared-list-v12",
-      "file": "assets/js/modules/20-psychotropic-shared-list-v12.js",
-      "bytes": 9406
+      "id": "19-test-data-cleanup-guard",
+      "file": "assets/js/modules/19-test-data-cleanup-guard.js",
+      "bytes": 90,
+      "stub": true
     },
     {
       "documentIndex": 24,
       "inlineOrder": 21,
-      "id": "r664-psychotropic-pharmacy-stock-import-20260728",
-      "file": "assets/js/modules/21-r664-psychotropic-pharmacy-stock-import-20260728.js",
-      "bytes": 17857
+      "id": "20-psychotropic-shared-list-v12",
+      "file": "assets/js/modules/20-psychotropic-shared-list-v12.js",
+      "bytes": 111,
+      "stub": true
     },
     {
       "documentIndex": 25,
       "inlineOrder": 22,
-      "id": "pharmacy-narcotic-stock-and-independent-list-mode-v12",
-      "file": "assets/js/modules/22-pharmacy-narcotic-stock-and-independent-list-mode-v12.js",
-      "bytes": 2710
+      "id": "21-r664-psychotropic-pharmacy-stock-import-20260728",
+      "file": "assets/js/modules/21-r664-psychotropic-pharmacy-stock-import-20260728.js",
+      "bytes": 111,
+      "stub": true
     },
     {
       "documentIndex": 26,
       "inlineOrder": 23,
-      "id": "category-management-final-v12",
-      "file": "assets/js/modules/23-category-management-final-v12.js",
-      "bytes": 7981
+      "id": "22-pharmacy-narcotic-stock-and-independent-list-mode-v12",
+      "file": "assets/js/modules/22-pharmacy-narcotic-stock-and-independent-list-mode-v12.js",
+      "bytes": 89,
+      "stub": true
     },
     {
       "documentIndex": 27,
       "inlineOrder": 24,
-      "id": "inventory-name-merge-feature",
-      "file": "assets/js/modules/24-inventory-name-merge-feature.js",
-      "bytes": 1628
+      "id": "23-category-management-final-v12",
+      "file": "assets/js/modules/23-category-management-final-v12.js",
+      "bytes": 87,
+      "stub": true
     },
     {
       "documentIndex": 28,
       "inlineOrder": 25,
-      "id": "pharmacy-announcements-feature",
-      "file": "assets/js/modules/25-pharmacy-announcements-feature.js",
-      "bytes": 10309
+      "id": "24-inventory-name-merge-feature",
+      "file": "assets/js/modules/24-inventory-name-merge-feature.js",
+      "bytes": 97,
+      "stub": true
     },
     {
       "documentIndex": 29,
       "inlineOrder": 26,
-      "id": "",
-      "file": "assets/js/modules/26-department-rename-repair.js",
-      "bytes": 2114
+      "id": "25-pharmacy-announcements-feature",
+      "file": "assets/js/modules/25-pharmacy-announcements-feature.js",
+      "bytes": 93,
+      "stub": true
     },
     {
       "documentIndex": 30,
       "inlineOrder": 27,
-      "id": "announcements-selection-persist-fix",
-      "file": "assets/js/modules/27-announcements-selection-persist-fix.js",
-      "bytes": 3038
+      "id": "26-department-rename-repair",
+      "file": "assets/js/modules/26-department-rename-repair.js",
+      "bytes": 90,
+      "stub": true
     },
     {
       "documentIndex": 31,
       "inlineOrder": 28,
-      "id": "v13-final-controlled-bulk-print-fix",
-      "file": "assets/js/modules/28-v13-final-controlled-bulk-print-fix.js",
-      "bytes": 10978
+      "id": "27-announcements-selection-persist-fix",
+      "file": "assets/js/modules/27-announcements-selection-persist-fix.js",
+      "bytes": 86,
+      "stub": true
     },
     {
       "documentIndex": 32,
       "inlineOrder": 29,
-      "id": "v13-classification-tools",
-      "file": "assets/js/modules/29-v13-classification-tools.js",
-      "bytes": 4186
+      "id": "28-v13-final-controlled-bulk-print-fix",
+      "file": "assets/js/modules/28-v13-final-controlled-bulk-print-fix.js",
+      "bytes": 91,
+      "stub": true
     },
     {
       "documentIndex": 33,
       "inlineOrder": 30,
-      "id": "v13-w-supervisor-inventory-main",
-      "file": "assets/js/modules/30-v13-w-supervisor-inventory-main.js",
-      "bytes": 10894
+      "id": "29-v13-classification-tools",
+      "file": "assets/js/modules/29-v13-classification-tools.js",
+      "bytes": 86,
+      "stub": true
     },
     {
       "documentIndex": 34,
       "inlineOrder": 31,
-      "id": "v13-x-controlled-request-fix",
-      "file": "assets/js/modules/31-v13-x-controlled-request-fix.js",
-      "bytes": 11202
+      "id": "30-v13-w-supervisor-inventory-main",
+      "file": "assets/js/modules/30-v13-w-supervisor-inventory-main.js",
+      "bytes": 82,
+      "stub": true
     },
     {
       "documentIndex": 35,
       "inlineOrder": 32,
-      "id": "aa-final-controlled-stability-script",
-      "file": "assets/js/modules/32-aa-final-controlled-stability-script.js",
-      "bytes": 3148
+      "id": "31-v13-x-controlled-request-fix",
+      "file": "assets/js/modules/31-v13-x-controlled-request-fix.js",
+      "bytes": 40714,
+      "stub": false
     },
     {
       "documentIndex": 36,
       "inlineOrder": 33,
-      "id": "v13-ap-custodian-bulk-replacement-fix",
-      "file": "assets/js/modules/33-v13-ap-custodian-bulk-replacement-fix.js",
-      "bytes": 1052
+      "id": "32-aa-final-controlled-stability-script",
+      "file": "assets/js/modules/32-aa-final-controlled-stability-script.js",
+      "bytes": 92,
+      "stub": true
     },
     {
       "documentIndex": 37,
       "inlineOrder": 34,
-      "id": "v13-as-crash-opening-log",
-      "file": "assets/js/modules/34-v13-as-crash-opening-log.js",
-      "bytes": 8923
+      "id": "33-v13-ap-custodian-bulk-replacement-fix",
+      "file": "assets/js/modules/33-v13-ap-custodian-bulk-replacement-fix.js",
+      "bytes": 86,
+      "stub": true
     },
     {
       "documentIndex": 38,
       "inlineOrder": 35,
-      "id": "v14nrse-main",
-      "file": "assets/js/modules/35-v14nrse-main.js",
-      "bytes": 16159
+      "id": "34-v13-as-crash-opening-log",
+      "file": "assets/js/modules/34-v13-as-crash-opening-log.js",
+      "bytes": 104,
+      "stub": true
     },
     {
       "documentIndex": 39,
       "inlineOrder": 36,
-      "id": "v14dp-main",
-      "file": "assets/js/modules/36-v14dp-main.js",
-      "bytes": 5335
+      "id": "35-v14nrse-main",
+      "file": "assets/js/modules/35-v14nrse-main.js",
+      "bytes": 82,
+      "stub": true
     },
     {
       "documentIndex": 40,
       "inlineOrder": 37,
-      "id": "v16-radical-fixes",
-      "file": "assets/js/modules/37-v16-radical-fixes.js",
-      "bytes": 8448
+      "id": "36-v14dp-main",
+      "file": "assets/js/modules/36-v14dp-main.js",
+      "bytes": 70,
+      "stub": true
     },
     {
       "documentIndex": 41,
       "inlineOrder": 38,
-      "id": "v16-user-operations-main",
-      "file": "assets/js/modules/38-v16-user-operations-main.js",
-      "bytes": 31706
+      "id": "37-v16-radical-fixes",
+      "file": "assets/js/modules/37-v16-radical-fixes.js",
+      "bytes": 82,
+      "stub": true
     },
     {
       "documentIndex": 42,
       "inlineOrder": 39,
-      "id": "final-role-routing-system-health",
-      "file": "assets/js/modules/39-final-role-routing-system-health.js",
-      "bytes": 4999
+      "id": "38-v16-user-operations-main",
+      "file": "assets/js/modules/38-v16-user-operations-main.js",
+      "bytes": 86333,
+      "stub": false
     },
     {
       "documentIndex": 43,
       "inlineOrder": 40,
-      "id": "v16-clean-optimized-script",
-      "file": "assets/js/modules/40-v16-clean-optimized-script.js",
-      "bytes": 28889
+      "id": "39-final-role-routing-system-health",
+      "file": "assets/js/modules/39-final-role-routing-system-health.js",
+      "bytes": 91,
+      "stub": true
     },
     {
       "documentIndex": 44,
       "inlineOrder": 41,
-      "id": "v16-inventory-status-merge-clean-script",
-      "file": "assets/js/modules/41-v16-inventory-status-merge-clean-script.js",
-      "bytes": 18513
+      "id": "40-v16-clean-optimized-script",
+      "file": "assets/js/modules/40-v16-clean-optimized-script.js",
+      "bytes": 84357,
+      "stub": false
     },
     {
       "documentIndex": 45,
       "inlineOrder": 42,
-      "id": "weekly-request-grid-bulk-classification-clean-script",
-      "file": "assets/js/modules/42-weekly-request-grid-bulk-classification-clean-script.js",
-      "bytes": 34746
+      "id": "41-v16-inventory-status-merge-clean-script",
+      "file": "assets/js/modules/41-v16-inventory-status-merge-clean-script.js",
+      "bytes": 84,
+      "stub": true
     },
     {
       "documentIndex": 46,
       "inlineOrder": 43,
-      "id": "similar-medicines-workbench-v2-script",
-      "file": "assets/js/modules/43-similar-medicines-workbench-v2-script.js",
-      "bytes": 28490
+      "id": "42-weekly-request-grid-bulk-classification-clean-script",
+      "file": "assets/js/modules/42-weekly-request-grid-bulk-classification-clean-script.js",
+      "bytes": 35571,
+      "stub": false
     },
     {
       "documentIndex": 47,
       "inlineOrder": 44,
-      "id": "ccx-inventory-redesign-script",
-      "file": "assets/js/modules/44-ccx-inventory-redesign-script.js",
-      "bytes": 22531
+      "id": "43-similar-medicines-workbench-v2-script",
+      "file": "assets/js/modules/43-similar-medicines-workbench-v2-script.js",
+      "bytes": 87,
+      "stub": true
     },
     {
       "documentIndex": 48,
       "inlineOrder": 45,
-      "id": "asdh-final-department-controlled-fix-script",
-      "file": "assets/js/modules/45-asdh-final-department-controlled-fix-script.js",
-      "bytes": 16293
+      "id": "44-ccx-inventory-redesign-script",
+      "file": "assets/js/modules/44-ccx-inventory-redesign-script.js",
+      "bytes": 62694,
+      "stub": false
     },
     {
       "documentIndex": 49,
       "inlineOrder": 46,
-      "id": "r664-private-crash-cart-source-only",
-      "file": "assets/js/modules/46-r664-private-crash-cart-source-only.js",
-      "bytes": 384
+      "id": "45-asdh-final-department-controlled-fix-script",
+      "file": "assets/js/modules/45-asdh-final-department-controlled-fix-script.js",
+      "bytes": 84,
+      "stub": true
     },
     {
       "documentIndex": 50,
       "inlineOrder": 47,
-      "id": "asdh-authoritative-final-fixes-script",
-      "file": "assets/js/modules/47-asdh-authoritative-final-fixes-script.js",
-      "bytes": 7875
+      "id": "46-r664-private-crash-cart-source-only",
+      "file": "assets/js/modules/46-r664-private-crash-cart-source-only.js",
+      "bytes": 82,
+      "stub": true
     },
     {
       "documentIndex": 51,
       "inlineOrder": 48,
-      "id": "asdh-final-request-completion-script",
-      "file": "assets/js/modules/48-asdh-final-request-completion-script.js",
-      "bytes": 30431
+      "id": "47-asdh-authoritative-final-fixes-script",
+      "file": "assets/js/modules/47-asdh-authoritative-final-fixes-script.js",
+      "bytes": 94,
+      "stub": true
     },
     {
       "documentIndex": 52,
       "inlineOrder": 49,
-      "id": "asdh-final-persistence-actions-20260725",
-      "file": "assets/js/modules/49-asdh-final-persistence-actions-20260725.js",
-      "bytes": 22968
+      "id": "48-asdh-final-request-completion-script",
+      "file": "assets/js/modules/48-asdh-final-request-completion-script.js",
+      "bytes": 97,
+      "stub": true
     },
     {
       "documentIndex": 53,
       "inlineOrder": 50,
-      "id": "r617-integrated-operations",
-      "file": "assets/js/modules/50-r617-integrated-operations.js",
-      "bytes": 102234
+      "id": "49-asdh-final-persistence-actions-20260725",
+      "file": "assets/js/modules/49-asdh-final-persistence-actions-20260725.js",
+      "bytes": 87857,
+      "stub": false
     },
     {
       "documentIndex": 54,
       "inlineOrder": 51,
-      "id": "asdhealth-canonical-r6-32-20260727",
-      "file": "assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js",
-      "bytes": 128564
+      "id": "50-r617-integrated-operations",
+      "file": "assets/js/modules/50-r617-integrated-operations.js",
+      "bytes": 110274,
+      "stub": false
     },
     {
       "documentIndex": 55,
       "inlineOrder": 52,
-      "id": "r635-master-backup-delete-and-crash-print-sync",
-      "file": "assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js",
-      "bytes": 8220
+      "id": "51-asdhealth-canonical-r6-32-20260727",
+      "file": "assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js",
+      "bytes": 121283,
+      "stub": false
     },
     {
       "documentIndex": 56,
       "inlineOrder": 53,
-      "id": "r661-authoritative-inventory-safety",
-      "file": "assets/js/modules/53-r661-authoritative-inventory-safety.js",
-      "bytes": 17068
+      "id": "52-r635-master-backup-delete-and-crash-print-sync",
+      "file": "assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js",
+      "bytes": 40894,
+      "stub": false
     },
     {
       "documentIndex": 57,
       "inlineOrder": 54,
-      "id": "r662-accountability-draft-protection",
-      "file": "assets/js/modules/54-r662-accountability-draft-protection.js",
-      "bytes": 2401
+      "id": "53-r661-authoritative-inventory-safety",
+      "file": "assets/js/modules/53-r661-authoritative-inventory-safety.js",
+      "bytes": 84,
+      "stub": true
     },
     {
       "documentIndex": 58,
       "inlineOrder": 55,
-      "id": "r647-crash-cart-authoritative-boot",
-      "file": "assets/js/modules/55-r647-crash-cart-authoritative-boot.js",
-      "bytes": 921
+      "id": "54-r662-accountability-draft-protection",
+      "file": "assets/js/modules/54-r662-accountability-draft-protection.js",
+      "bytes": 97,
+      "stub": true
     },
     {
       "documentIndex": 59,
       "inlineOrder": 56,
-      "id": "r664-security-idle-timeout",
-      "file": "assets/js/modules/56-r664-security-idle-timeout.js",
-      "bytes": 2348
+      "id": "55-r647-crash-cart-authoritative-boot",
+      "file": "assets/js/modules/55-r647-crash-cart-authoritative-boot.js",
+      "bytes": 91,
+      "stub": true
     },
     {
       "documentIndex": 60,
       "inlineOrder": 57,
-      "id": "r664-production-console-policy",
-      "file": "assets/js/modules/57-r664-production-console-policy.js",
-      "bytes": 178
+      "id": "56-r664-security-idle-timeout",
+      "file": "assets/js/modules/56-r664-security-idle-timeout.js",
+      "bytes": 88,
+      "stub": true
     },
     {
       "documentIndex": 61,
       "inlineOrder": 58,
-      "id": "r664-public-privacy-rewrite",
-      "file": "assets/js/modules/58-r664-public-privacy-rewrite.js",
-      "bytes": 1951
+      "id": "57-r664-production-console-policy",
+      "file": "assets/js/modules/57-r664-production-console-policy.js",
+      "bytes": 94,
+      "stub": true
     },
     {
       "documentIndex": 62,
       "inlineOrder": 59,
-      "id": "r664-security-complete-runtime",
-      "file": "assets/js/modules/59-r664-security-complete-runtime.js",
-      "bytes": 17792
+      "id": "58-r664-public-privacy-rewrite",
+      "file": "assets/js/modules/58-r664-public-privacy-rewrite.js",
+      "bytes": 88,
+      "stub": true
     },
     {
       "documentIndex": 63,
       "inlineOrder": 60,
-      "id": "csp-legacy-event-bridge",
-      "file": "assets/js/modules/60-csp-legacy-event-bridge.js",
-      "bytes": 9750
+      "id": "59-r664-security-complete-runtime",
+      "file": "assets/js/modules/59-r664-security-complete-runtime.js",
+      "bytes": 40716,
+      "stub": false
     },
     {
       "documentIndex": 64,
       "inlineOrder": 61,
-      "id": "r666-form-draft-and-crash-report-protection",
-      "file": "assets/js/modules/61-r666-form-draft-and-crash-report-protection.js",
-      "bytes": 10241
+      "id": "60-csp-legacy-event-bridge",
+      "file": "assets/js/modules/60-csp-legacy-event-bridge.js",
+      "bytes": 88,
+      "stub": true
     },
     {
       "documentIndex": 65,
       "inlineOrder": 62,
-      "id": "r667-ui-text-and-icon-normalization",
-      "file": "assets/js/modules/62-r667-ui-text-and-icon-normalization.js",
-      "bytes": 288
+      "id": "61-r666-form-draft-and-crash-report-protection",
+      "file": "assets/js/modules/61-r666-form-draft-and-crash-report-protection.js",
+      "bytes": 103,
+      "stub": true
     },
     {
       "documentIndex": 66,
       "inlineOrder": 63,
-      "id": "r668-request-lock-drafts-and-session-defaults",
+      "id": "62-r667-ui-text-and-icon-normalization",
+      "file": "assets/js/modules/62-r667-ui-text-and-icon-normalization.js",
+      "bytes": 300,
+      "stub": false
+    },
+    {
+      "documentIndex": 67,
+      "inlineOrder": 64,
+      "id": "63-r668-request-lock-drafts-and-session-defaults",
       "file": "assets/js/modules/63-r668-request-lock-drafts-and-session-defaults.js",
-      "bytes": 7542
+      "bytes": 97,
+      "stub": true
+    },
+    {
+      "documentIndex": 68,
+      "inlineOrder": 65,
+      "id": "64-r671-permissions-and-accountability-qr",
+      "file": "assets/js/modules/64-r671-permissions-and-accountability-qr.js",
+      "bytes": 100,
+      "stub": true
+    },
+    {
+      "documentIndex": 69,
+      "inlineOrder": 66,
+      "id": "65-r675-saas-subscriptions-runtime",
+      "file": "assets/js/modules/65-r675-saas-subscriptions-runtime.js",
+      "bytes": 10250,
+      "stub": false
+    },
+    {
+      "documentIndex": 70,
+      "inlineOrder": 67,
+      "id": "66-r676-crash-report-ordering-notes-fixes",
+      "file": "assets/js/modules/66-r676-crash-report-ordering-notes-fixes.js",
+      "bytes": 104,
+      "stub": true
+    },
+    {
+      "documentIndex": 71,
+      "inlineOrder": 68,
+      "id": "67-r676-fulfillment-edit-settings",
+      "file": "assets/js/modules/67-r676-fulfillment-edit-settings.js",
+      "bytes": 4046,
+      "stub": false
+    },
+    {
+      "documentIndex": 72,
+      "inlineOrder": 69,
+      "id": "68-schedule-controller",
+      "file": "assets/js/modules/68-schedule-controller.js",
+      "bytes": 97,
+      "stub": true
+    },
+    {
+      "documentIndex": 73,
+      "inlineOrder": 70,
+      "id": "69-r676-narcotic-catalog-restore-20260728",
+      "file": "assets/js/modules/69-r676-narcotic-catalog-restore-20260728.js",
+      "bytes": 111,
+      "stub": true
+    },
+    {
+      "documentIndex": 74,
+      "inlineOrder": 71,
+      "id": "70-r676-accountability-regimen-roster-and-log",
+      "file": "assets/js/modules/70-r676-accountability-regimen-roster-and-log.js",
+      "bytes": 46579,
+      "stub": false
+    },
+    {
+      "documentIndex": 75,
+      "inlineOrder": 72,
+      "id": "71-r676-accountability-review-and-retention",
+      "file": "assets/js/modules/71-r676-accountability-review-and-retention.js",
+      "bytes": 100,
+      "stub": true
+    },
+    {
+      "documentIndex": 76,
+      "inlineOrder": 73,
+      "id": "72-r676-accountability-handover-log-view",
+      "file": "assets/js/modules/72-r676-accountability-handover-log-view.js",
+      "bytes": 100,
+      "stub": true
+    },
+    {
+      "documentIndex": 77,
+      "inlineOrder": 74,
+      "id": "73-r676-analytics-quarterly-annual-reports",
+      "file": "assets/js/modules/73-r676-analytics-quarterly-annual-reports.js",
+      "bytes": 68995,
+      "stub": false
+    },
+    {
+      "documentIndex": 78,
+      "inlineOrder": 75,
+      "id": "74-r676-analytics-department-print-comparison",
+      "file": "assets/js/modules/74-r676-analytics-department-print-comparison.js",
+      "bytes": 97,
+      "stub": true
+    },
+    {
+      "documentIndex": 79,
+      "inlineOrder": 76,
+      "id": "75-r676-multi-year-department-comparison",
+      "file": "assets/js/modules/75-r676-multi-year-department-comparison.js",
+      "bytes": 4780,
+      "stub": false
+    },
+    {
+      "documentIndex": 80,
+      "inlineOrder": 77,
+      "id": "77-r676-unified-analytics-print",
+      "file": "assets/js/modules/77-r676-unified-analytics-print.js",
+      "bytes": 97,
+      "stub": true
+    },
+    {
+      "documentIndex": 81,
+      "inlineOrder": 78,
+      "id": "78-r676-comprehensive-annual-report",
+      "file": "assets/js/modules/78-r676-comprehensive-annual-report.js",
+      "bytes": 97,
+      "stub": true
+    },
+    {
+      "documentIndex": 82,
+      "inlineOrder": 79,
+      "id": "79-r676-independent-regimen-database",
+      "file": "assets/js/modules/79-r676-independent-regimen-database.js",
+      "bytes": 100,
+      "stub": true
+    },
+    {
+      "documentIndex": 83,
+      "inlineOrder": 80,
+      "id": "80-controlled-pharmacy-ui-redesign",
+      "file": "assets/js/modules/80-controlled-pharmacy-ui-redesign.js",
+      "bytes": 141284,
+      "stub": false
     }
   ],
   "firebaseProject": "floorstock-6ac2d",
