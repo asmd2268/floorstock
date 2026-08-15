@@ -59,6 +59,13 @@ document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(E('v16
 
 /* ── One controlled-stock page. Separate Shared Catalogue page is removed. ── */
 window.ctlOwnerSource=function(){return ctlCanDispense()?'pharmacy':''};
+// ctlTabs: module 80 fully replaces this (no _orig call-through) so this
+// definition itself is not the active one — BUT module 80's patch routine
+// polls `if(!window.ctlTabs||!window.renderControlled)` as a readiness gate
+// before it will install ITS OWN ctlTabs/renderControlled patches at all.
+// Deleting this stalled that gate forever (confirmed live: window.ctlTabs
+// stayed undefined and module 80's tryPatch() never ran). Must stay as the
+// early placeholder module 80 waits for.
 window.ctlTabs=function(){
   var root=E('ctl-tabs');
   if(!root||!window.CU)return;
@@ -122,6 +129,11 @@ window.renderCtlOverview=function(){
  if(typeof renderCtlPending==='function')renderCtlPending();
 };
 function ensureDeptToolsC(){if(window.CTL_VIEW!=='departments'||!E('ctl-departments-view'))return;var allowed=masterC()||roleC()==='pharmacy'||roleC()==='controlled_pharmacy'||roleC()==='inpatient_supervisor';if(!allowed)return;var bar=E('ctl-departments-view').querySelector('.ch .fl')||E('ctl-departments-view').querySelector('.ch');if(!bar)return;if(!E('aa-final-rules-btn-dept')&&typeof window.aaFinalOpenExpiryRules==='function'){var c=document.createElement('button');c.id='aa-final-rules-btn-dept';c.type='button';c.className='btn bg bsm';c.textContent='⚙ Expiry rules';c.onclick=window.aaFinalOpenExpiryRules;bar.appendChild(c)}}
+// renderControlled: module 80 WRAPS this definition (captures it as `_orig` and
+// calls `_orig.apply(...)`), it does not replace it — this is the real base
+// implementation and must stay. (Confirmed by a test failure after an earlier,
+// incorrect deletion attempt: module 80's own renderControlled has no rendering
+// logic of its own outside the 'analytics' CTL_VIEW branch.)
 window.renderControlled=function(){
   if(!window.CU)return;
   var effective=window.MASTER_EFFECTIVE||window.CU||{};
@@ -132,7 +144,6 @@ window.renderControlled=function(){
 
   if(effectiveRole==='department'){
     window.CTL_VIEW='departments';
-    if(typeof window.ctlTabs==='function')window.ctlTabs();
     if(overview)overview.style.display='none';
     if(storage)storage.style.display='none';
     if(departments)departments.style.display='block';
@@ -159,7 +170,7 @@ window.renderControlled=function(){
     displayView='overview';
     window.CTL_VIEW='overview';
   }
-  window.ctlTabs();
+  if(typeof window.ctlTabs==='function')window.ctlTabs();
 
   var mainPrint=E('ctl-main-print-btn');
   if(mainPrint){

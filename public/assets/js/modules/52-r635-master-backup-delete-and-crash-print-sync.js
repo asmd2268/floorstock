@@ -333,23 +333,12 @@ function renderSealPolicyToggle(){
   container.innerHTML='<b>⚙️ إعداد ماستر / Master Setting:</b><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" '+(on?'checked':'')+' onchange="window.setCrashSealPolicy(this.checked)"><span>'+(on?'✅ رقم القفل الجديد يجب أن يطابق القفل السابق / New seal must match the old seal':'☐ رقم القفل الجديد حر / New seal can be any unique number')+'</span></label>';
 }
 
-// Enforce seal policy on pharmacy close response
-var _origSavePharmacy=window.ccSavePharmacyResponse;
-window.ccSavePharmacyResponse=async function(){
-  if(getSealPolicy()){
-    var reportId=String((document.getElementById('ccc-report-id')||{}).value||'');
-    var reports=crashReportsList();
-    var r=reports.find(function(x){return String(x.id)===String(reportId)});
-    if(r&&r.oldSeal){
-      var newSeal=String((document.getElementById('ccc-new-seal')||{}).value||'').trim();
-      if(newSeal!==String(r.oldSeal).trim()){
-        callToast('رقم القفل الجديد يجب أن يطابق رقم القفل السابق: '+r.oldSeal,'New seal must match the previous seal: '+r.oldSeal,'err');
-        return false;
-      }
-    }
-  }
-  return typeof _origSavePharmacy==='function'?_origSavePharmacy.apply(this,arguments):undefined;
-};
+// Module 52 loads before module 80, which owns the real ccSavePharmacyResponse
+// and overwrites window.ccSavePharmacyResponse unconditionally — this wrapper's
+// seal-match-policy enforcement never ran at runtime (confirmed live: module 80's
+// raw implementation is what's active, with no seal-policy check inside it).
+// Left removed rather than kept dead; see docs/window-conflicts-classification.md
+// for the still-open question of whether that enforcement should be reimplemented.
 
 function unresolvedNote(note){var status=String(note&&note.status||'').toLowerCase();return status==='open'||status==='urgent'}
 function notes(){try{return typeof window.getNotes==='function'?(window.getNotes()||[]):[]}catch(error){return[]}}
