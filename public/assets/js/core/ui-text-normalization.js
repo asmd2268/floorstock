@@ -54,6 +54,11 @@ export function decodeLegacySymbolEntities(value) {
 
 export function formatBilingualText(value) {
   const decoded = decodeLegacySymbolEntities(value);
+  // Bullet-list content (e.g. a multi-item confirmation dialog) already has
+  // its own line-by-line structure — the split-and-regroup logic below
+  // assumes a single flat "Arabic sentence / English sentence" pair and
+  // scrambles anything with multiple "/" or newlines beyond that shape.
+  if (decoded.includes('•')) return decoded;
   if (!ARABIC_RE.test(decoded) || !LATIN_RE.test(decoded) || !/(?:\s+\/\s+|\n+)/.test(decoded)) return decoded;
 
   const parts = decoded.split(/(?:\s+\/\s+|\n+)/).map((part) => part.trim()).filter(Boolean);

@@ -851,8 +851,8 @@ window.ctlCmpPrint=function(){
     var id=val('ccc-report-id'),originalReports=crashReports(),originalCarts=crashCarts(),rs=JSON.parse(JSON.stringify(originalReports||[])),carts=JSON.parse(JSON.stringify(originalCarts||[])),r=rs.find(function(x){return String(x.id)===String(id)});if(!r)return;var c=carts.find(function(x){return String(x.id)===String(r.cartId)});if(!c)return toast('Crash Cart not found.','err');var seal=val('ccc-new-seal').trim();if(!seal)return toast('Enter the new seal number / أدخل رقم القفل الجديد.','err');if(!ccUniqueSealAllowed(seal,c.id,id))return toast('The new seal number is already used. Enter a unique seal.','err');if(!ccCrashResponsePreview())return toast('Correct the highlighted replacement rows first.','err');
     var belowStandard=ccCrashResponseBelowStandardItems(r,c);
     if(belowStandard.length){
-      var list=belowStandard.map(function(x){return '<li>'+esc(x.name)+' — '+x.result+' / '+x.standard+(x.outOfStock?' (نافد / out of stock)':'')+'</li>'}).join('');
-      var proceed=await uiConfirm('<b>⚠ الأصناف التالية أقل من الحد القياسي / The following items are below standard:</b><ul style="margin:8px 0 0;padding-inline-start:20px">'+list+'</ul><div style="margin-top:10px">هل تريد تأكيد الإغلاق رغم النقص؟ / Confirm closing anyway?</div>',{title:'⚠ Confirm closing below standard',okText:'Confirm closing / تأكيد الإغلاق'});
+      var list=belowStandard.map(function(x){return '• '+x.name+' — '+x.result+' / '+x.standard+(x.outOfStock?' (نافد / out of stock)':'')}).join('\n');
+      var proceed=await uiConfirm('الأصناف التالية أقل من الحد القياسي / The following items are below standard:\n\n'+list+'\n\nهل تريد تأكيد الإغلاق رغم النقص؟ / Confirm closing anyway?',{title:'⚠ Confirm closing below standard',okText:'Confirm closing / تأكيد الإغلاق'});
       if(!proceed)return false;
     }
     var replacements=[],alreadyDeducted=!!r.inventoryDeductedAtReport;
