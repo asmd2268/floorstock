@@ -1884,6 +1884,7 @@ function refreshCurrentPage(){
   populateInvDeptSel();fillDS();
   renderPageById(active.id);
   updateNotesBadge();
+  if(typeof window.ccUpdateBadges==='function')window.ccUpdateBadges();
   window.refreshAnnouncementsUi(active.id);
   if(typeof window.restorePageTransientUi==='function')window.restorePageTransientUi(active.id);
 }
