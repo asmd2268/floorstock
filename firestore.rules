@@ -22,8 +22,19 @@ service cloud.firestore {
       return hasProfile() && profile().active == true;
     }
 
+    // Phase 2b, narrowed after a full-conversion attempt regressed 4 tests
+    // to the exact 1000-expression limit this was meant to prevent: touching
+    // activeUser()/masterUser()/departmentId()/tenantId() too multiplied a
+    // small per-call overhead across dozens of call sites in the largest
+    // OR-chains and tipped them over. role() alone is touched here — it's
+    // the single highest-value target (chained from almost every other role
+    // check) and this stays a much smaller, isolated addition. A user with
+    // no role claim yet falls straight through to the original get()-based
+    // path with the ternary's condition check as the only added cost.
     function role() {
-      return activeUser() ? profile().role : '';
+      return request.auth.token.get('role', null) != null
+        ? (request.auth.token.get('active', false) == true ? request.auth.token.get('role', '') : '')
+        : (activeUser() ? profile().role : '');
     }
 
     function masterUser() {
