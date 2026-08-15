@@ -2142,7 +2142,11 @@ function openFulfill(id){
     var settings=S.g(FULFILLMENT_EDIT_SETTINGS_KEY);
     var reason=fulfillmentEditReason(r,profile,settings,Date.now());
     if(reason)return toast(reason,'err');
-  }else if(!canManageRequests())return toast('No request edit permission','err');
+  }else{
+    if(!canManageRequests())return toast('No request edit permission','err');
+    var scheduleBlock=requestScheduledDispenseBlocked(r);
+    if(scheduleBlock)return toast(scheduleBlock,'err');
+  }
   var d=gd().find(function(x){return x.id===r.deptId});
   el('fulfill-title').textContent=(isEdit?'Edit Fulfillment':'Fulfill Request')+' — '+((d&&d.name)||r.deptId);
   el('fulfill-hint').textContent=isEdit?'Previous dispensed quantities are loaded. Change only the item you need, then save.':'Enter the dispensed quantity for every item. Enter 0 if not dispensed. Quantities may exceed Requested and departmental Max.';
@@ -2205,6 +2209,19 @@ window.canEditFulfillmentRequest=function(request,now){
   var profile=typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():(window.CU||{});
   return canEditFulfillment(request,profile,S.g(FULFILLMENT_EDIT_SETTINGS_KEY),now==null?Date.now():now);
 };
+// A request with a computed dispensing slot (scheduledFor, set at submission
+// time from the department's next-allowed-dispense window) may not be
+// dispensed before that slot arrives, for anyone. Requests with no
+// scheduledFor (ordering not scheduled for this department) are unaffected.
+function requestScheduledDispenseBlocked(r,now){
+  if(!r||!r.scheduledFor)return '';
+  var scheduled=new Date(r.scheduledFor).getTime();
+  if(!isFinite(scheduled))return '';
+  if((now==null?Date.now():now)>=scheduled)return '';
+  var label=fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' · '+r.scheduledLabel:'');
+  return 'لا يمكن صرف هذا الطلب قبل موعده المجدول: '+label+'\nThis request cannot be dispensed before its scheduled time: '+label;
+}
+window.requestScheduledDispenseBlocked=requestScheduledDispenseBlocked;
 
 
 // ── CONTROLLED & PSYCHOTROPIC MEDICINES ────────────────────────────────

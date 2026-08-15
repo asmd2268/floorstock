@@ -60,7 +60,10 @@ window.submitFulfill=async function(){
   var editing=!!(current&&current.status==='fulfilled');
   if(editing){
     if(typeof window.canEditFulfillmentRequest!=='function'||!window.canEditFulfillmentRequest(current))return toast('The fulfillment editing window has expired or this account is outside the permitted scope.','err');
-  }else if(typeof canManageRequests==='function'&&!canManageRequests())return toast('No request edit permission','err');
+  }else{
+    if(typeof canManageRequests==='function'&&!canManageRequests())return toast('No request edit permission','err');
+    if(typeof window.requestScheduledDispenseBlocked==='function'){var scheduleBlock=window.requestScheduledDispenseBlocked(current);if(scheduleBlock)return toast(scheduleBlock,'err');}
+  }
   var inputs=Array.from((document.getElementById('ftbl')||document).querySelectorAll('input[data-med]'));inputs.forEach(function(x){x.style.borderColor='';x.style.boxShadow=''});
   var missing=inputs.find(function(x){return String(x.value).trim()===''});if(missing){missing.style.borderColor='var(--rd)';missing.focus();return toast('Enter the dispensed quantity for every item. Enter 0 if not dispensed.','err')}
   var bad=inputs.find(function(x){var q=Number(x.value);return !isFinite(q)||q<0});if(bad){bad.style.borderColor='var(--rd)';bad.focus();return toast('Dispensed quantity must be zero or a positive number.','err')}
