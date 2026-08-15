@@ -2116,7 +2116,7 @@ function rcard(r,isp){
     +'<button class="btn bg bsm" data-request-action="view" data-id="'+r.id+'">View</button></div></div>'
     +'<div style="padding:9px 18px;font-size:12px;color:var(--tx2)">'+(r.items||[]).length+' items'
     +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDateTime(r.fulfilledAt):' &middot; Awaiting fulfillment')
-    +(r.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">📅 Scheduled dispense: '+fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' &middot; '+r.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">📅 Dispense time: Not scheduled yet</div>')
+    +(function(){var eff=effectiveRequestSchedule(r);return eff.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">📅 Scheduled dispense: '+fmtDateTime(eff.scheduledFor)+(eff.scheduledLabel?' &middot; '+eff.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">📅 Dispense time: Not scheduled yet</div>'})()
     +'</div></div>';
 }
 function viewReq(id){
@@ -2209,16 +2209,29 @@ window.canEditFulfillmentRequest=function(request,now){
   var profile=typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():(window.CU||{});
   return canEditFulfillment(request,profile,S.g(FULFILLMENT_EDIT_SETTINGS_KEY),now==null?Date.now():now);
 };
-// A request with a computed dispensing slot (scheduledFor, set at submission
-// time from the department's next-allowed-dispense window) may not be
-// dispensed before that slot arrives, for anyone. Requests with no
-// scheduledFor (ordering not scheduled for this department) are unaffected.
+// scheduledFor/scheduledLabel are frozen on the request at submission time.
+// If the department's dispense-slot schedule changes afterward, a pending
+// request must not keep pointing at a slot that no longer exists — recompute
+// live from the CURRENT schedule for any request still pending; once it is
+// no longer pending, the frozen value is the historical record and is
+// returned unchanged.
+function effectiveRequestSchedule(r){
+  if(!r)return {scheduledFor:null,scheduledLabel:''};
+  if(r.status!=='pending')return {scheduledFor:r.scheduledFor||null,scheduledLabel:r.scheduledLabel||''};
+  var next=typeof getNextDispSlot==='function'?getNextDispSlot(r.deptId):null;
+  return {scheduledFor:next?next.scheduledAt:null,scheduledLabel:next&&next.slot?next.slot.label:''};
+}
+window.effectiveRequestSchedule=effectiveRequestSchedule;
+// A request with a computed dispensing slot may not be dispensed before that
+// slot arrives, for anyone. Requests with no scheduledFor (ordering not
+// scheduled for this department) are unaffected.
 function requestScheduledDispenseBlocked(r,now){
-  if(!r||!r.scheduledFor)return '';
-  var scheduled=new Date(r.scheduledFor).getTime();
+  var effective=effectiveRequestSchedule(r);
+  if(!effective.scheduledFor)return '';
+  var scheduled=new Date(effective.scheduledFor).getTime();
   if(!isFinite(scheduled))return '';
   if((now==null?Date.now():now)>=scheduled)return '';
-  var label=fmtDateTime(r.scheduledFor)+(r.scheduledLabel?' · '+r.scheduledLabel:'');
+  var label=fmtDateTime(effective.scheduledFor)+(effective.scheduledLabel?' · '+effective.scheduledLabel:'');
   return 'لا يمكن صرف هذا الطلب قبل موعده المجدول: '+label+'\nThis request cannot be dispensed before its scheduled time: '+label;
 }
 window.requestScheduledDispenseBlocked=requestScheduledDispenseBlocked;
