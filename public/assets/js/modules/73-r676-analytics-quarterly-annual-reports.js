@@ -342,7 +342,11 @@ function attach(root, stats) {
   window._r676DeptStats = stats.departments || {};
 
   const section = document.createElement('div');
-  section.className = 'anl-section r676-dept-print-section';
+  // r676-dept-print-only: these launcher buttons call window._r676PrintDept, which only
+  // exists on the live app window. When the whole analytics card is copied into the
+  // standalone print/blob document (buildPrintHtml below), the buttons render but do
+  // nothing there — hidden via a print-scoped rule instead of shipping dead controls.
+  section.className = 'anl-section r676-dept-print-section r676-dept-print-only';
   section.innerHTML = `
     <div class="anl-section-title">Department print pages / طباعة تقارير الأقسام</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0">
@@ -409,6 +413,7 @@ function buildPrintHtml(detail) {
     .arw{font-size:8pt;font-weight:700;padding:1px 5px;border-radius:4px}
     .arw.up{background:#fef3c7;color:#92400e}.arw.dn{background:#dcfce7;color:#166534}.arw.eq{background:#e2e8f0;color:#475569}
     .anl-controls{display:none!important}
+    .r676-dept-print-only{display:none!important}
     @media print{button{display:none!important}}
     .brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}
   `;
