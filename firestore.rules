@@ -148,6 +148,33 @@ service cloud.firestore {
         );
     }
 
+    // ── Legacy-tenant parity helpers (Phase 7d) ──────────────────────────────
+    // The original FloorStock installation predates the tenant subscription
+    // system and therefore has no /tenants/{id} document to call
+    // tenantWritable/stateFeatureAllowed/departmentLimitAllowed against.
+    // These functions mirror those checks with the correct semantics for the
+    // legacy deployment: the subscription is always considered active (direct-
+    // contract model), all features are permanently enabled (no feature flags),
+    // and there is no plan-based department cap.  Structural parity with the
+    // tenant path is preserved so future restrictions can be added here.
+
+    function legacyTenantWritable() {
+      // Legacy uses activeUser() as the subscription gate — no expiry concept.
+      return activeUser() && tenantId() == '';
+    }
+
+    function legacyFeatureAllowed(docId) {
+      // All features permanently enabled for the legacy installation.
+      // Signature mirrors stateFeatureAllowed(id, docId) for future alignment.
+      return docId is string;
+    }
+
+    function legacyDepartmentLimitAllowed(docId) {
+      // No plan-based department cap on the legacy installation.
+      return true;
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     function validStateShape() {
       return request.resource.data.keys().hasOnly(['value', 'updatedAt'])
         && request.resource.data.updatedAt is timestamp;
@@ -327,17 +354,25 @@ service cloud.firestore {
 
     // Department sessions use explicit document reads. Crash Cart state is read so
     // the client can retain only the authenticated department's carts and reports.
+    // Department sessions use explicit document reads. Crash Cart state is read so
+    // the client can retain only the authenticated department's carts and reports.
     match /floorstock_state/{docId} {
-      allow get: if activeUser() && tenantId() == '' && (
+      allow get: if legacyTenantWritable() && (
         !scopedStateUser() || canReadScopedState(docId)
       );
-      allow list: if activeUser() && tenantId() == '' && !scopedStateUser();
-      allow create, update: if activeUser() && tenantId() == ''
+      allow list: if legacyTenantWritable() && !scopedStateUser();
+      // Structurally mirrors tenants/{id}/state/{docId} create/update:
+      //   legacyTenantWritable()      ≡ sameTenant(t) && tenantWritable(t)
+      //   legacyFeatureAllowed(docId) ≡ stateFeatureAllowed(t, docId)
+      //   legacyDepartmentLimitAllowed(docId) ≡ departmentLimitAllowed(t, docId)
+      allow create, update: if legacyTenantWritable()
+        && legacyFeatureAllowed(docId)
+        && legacyDepartmentLimitAllowed(docId)
         && canWriteState(docId)
         && (docId != 'fulfillment_edit_settings_v1' || (role() in ['pharmacy', 'pharmacy_director'] && profile().master == true))
         && validStateShape()
         && validFulfillmentEditSettings(docId);
-      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector()
+      allow delete: if legacyTenantWritable() && (masterUser() || pharmacyDirector()
         || (inpatientSupervisor() && docId.matches('^inventory_snapshot_.*$'))
         || (departmentUser() && docId.matches('^inventory_snapshot_' + departmentId() + '_.*$')));
     }
