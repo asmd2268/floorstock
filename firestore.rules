@@ -37,8 +37,18 @@ service cloud.firestore {
         : (activeUser() ? profile().role : '');
     }
 
+    // Only 2 call sites (here and the fulfillment_edit_settings_v1 check
+    // below), so a dedicated helper is fine — the risk in the earlier failed
+    // full-conversion attempt was fan-out across dozens of call sites, not
+    // helper functions per se.
+    function masterClaim() {
+      return request.auth.token.get('role', null) != null
+        ? request.auth.token.get('master', false) == true
+        : (hasProfile() && profile().master == true);
+    }
+
     function masterUser() {
-      return activeUser() && profile().master == true
+      return activeUser() && masterClaim()
         && role() in ['master', 'pharmacy', 'pharmacy_director'];
     }
 
@@ -82,19 +92,26 @@ service cloud.firestore {
         || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
     }
 
+    // Same narrowed pattern as role() above: isolated early-return, verified
+    // alone against the full firestore-rules test suite before being kept.
     function departmentId() {
-      return profile().deptId != null
-        ? profile().deptId
-        : profile().departmentId;
+      return request.auth.token.get('role', null) != null
+        ? request.auth.token.get('deptId', '')
+        : (profile().deptId != null ? profile().deptId : profile().departmentId);
     }
 
+    // Same narrowed pattern as role()/departmentId() above: isolated
+    // early-return, verified alone against the full firestore-rules test
+    // suite before being kept.
     function tenantId() {
       // Unauthenticated or inactive callers must never satisfy tenantId() == ''.
       // Returning a sentinel ensures every tenantId() == '' guard requires an
       // actual authenticated non-tenant profile, not just an absent session.
-      return activeUser()
-        ? (profile().get('tenantId', '') is string ? profile().get('tenantId', '') : '')
-        : '__no_auth__';
+      return request.auth.token.get('role', null) != null
+        ? (request.auth.token.get('active', false) == true ? request.auth.token.get('tenantId', '') : '__no_auth__')
+        : (activeUser()
+            ? (profile().get('tenantId', '') is string ? profile().get('tenantId', '') : '')
+            : '__no_auth__');
     }
 
     function sameTenant(id) {
@@ -380,7 +397,7 @@ service cloud.firestore {
         && legacyFeatureAllowed(docId)
         && legacyDepartmentLimitAllowed(docId)
         && canWriteState(docId)
-        && (docId != 'fulfillment_edit_settings_v1' || (role() in ['pharmacy', 'pharmacy_director'] && profile().master == true))
+        && (docId != 'fulfillment_edit_settings_v1' || (role() in ['pharmacy', 'pharmacy_director'] && masterClaim()))
         && validStateShape()
         && validFulfillmentEditSettings(docId);
       allow delete: if legacyTenantWritable() && (masterUser() || pharmacyDirector()
