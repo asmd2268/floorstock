@@ -86,8 +86,12 @@ export function mayWriteState(role, key) {
     return /^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|audit_log|theme)$/.test(key);
   }
   if (role === 'department' || role === 'custodian') {
+    // crash_cart_reports intentionally excluded: departments submit via the
+    // submitCrashCartReport Cloud Function (see firestore.rules canWriteState),
+    // which also writes crash_carts atomically. Direct browser writes bypass
+    // that atomic seal/cart-status update and are correctly denied.
     const allowed = new Set([
-      'requests', 'dept_notes', 'notes', 'crash_cart_reports',
+      'requests', 'dept_notes', 'notes',
       'accountability_usage_v2', 'accountability_receipts_v2',
       'audit_log', 'theme', `meds_${DEPARTMENT_ID}`, `expiry_${DEPARTMENT_ID}`, `shelves_${DEPARTMENT_ID}`, `alerts_${DEPARTMENT_ID}`,
       `inventory_integrity_${DEPARTMENT_ID}`, `inventory_snapshot_index_${DEPARTMENT_ID}`,
