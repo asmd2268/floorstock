@@ -1356,6 +1356,8 @@ function uiConfirm(message,options){options=options||{};return uiDialog(Object.a
 
 function toast(msg,type){
   var t=document.getElementById('toast'),value=String(msg==null?'':msg);
+  var toastRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+  if(['pharmacy','pharmacy_manager','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(toastRole)>=0&&/(medications?\s+(expired|expiring)|expired\s+medications|expiring\s+soon)/i.test(value))return;
   if(typeof globalThis.formatBilingualText==='function')value=globalThis.formatBilingualText(value);
   t.textContent=value;t.style.whiteSpace='pre-line';t.style.unicodeBidi='plaintext';t.className='on t'+type;
   clearTimeout(window._tt);
