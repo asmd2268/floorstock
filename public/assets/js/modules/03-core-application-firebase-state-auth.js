@@ -13,7 +13,7 @@ import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js';
 import { withTimeout } from '../core/promise-timeout.js';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js';
-import { tenantIdFromProfile, stateCollectionPath } from '../core/firestore-scope.js';
+import { tenantIdFromProfile, stateCollectionPath, crashReportsCollectionPath } from '../core/firestore-scope.js';
 import { stateCollectionRef, crashReportsCollectionRef } from '../core/firestore-sdk-scope.js';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js';
 
@@ -304,12 +304,18 @@ async function fsStateLoadFloorstockViaRest(){
   });
   return {cache:cache,source:'rest'};
 }
+// crash_cart_reports intentionally omitted from both lists below: scoped
+// roles now read crash_cart_reports_v2 (the individual-document collection)
+// via fsStateLoadCrashReportsViaRest instead of the legacy state-doc blob —
+// see fsStateLoadFloorstockForProfileViaRest. The Cloud Functions still
+// dual-write both, and the SDK realtime path made the same switch earlier
+// (see crashReportsCollectionRef / S.crashReportsUnsub in this same file).
 globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','daily_limits_v2',
   'weekly_limits_v2','monthly_limits','rate_limits_v2','req_windows','disp_slots',
   'request_count_limits_v1','request_hour_grids_v1','requests','dept_notes','notes',
   'fulfillment_edit_settings_v1',
-  'crash_carts','crash_cart_reports',
+  'crash_carts',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3',
   'controlled_catalog'
@@ -320,7 +326,7 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
 // readable. Keep this list aligned with canReadPharmacyState() in firestore.rules.
 globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','requests','dept_notes','notes',
-  'crash_carts','crash_cart_reports','accountability_assignments_v2','accountability_usage_v2',
+  'crash_carts','accountability_assignments_v2','accountability_usage_v2',
   'accountability_receipts_v2','theme','facility_logo','pharmacy_category_config',
   'pharmacy_department_announcements','pharmacy_department_expiry_rules',
   'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1',
@@ -452,17 +458,53 @@ async function fsStateLoadPharmacyScoped(profile,loader,source){
   initial.failedKeys=(initial.failedKeys||[]).concat(dynamic.failedKeys||[]);
   return initial;
 }
+async function fsStateMergeCrashReports(resultPromise,profile){
+  var result=await resultPromise;
+  try{
+    result.cache.crash_cart_reports=await fsStateLoadCrashReportsViaRest(profile);
+  }catch(error){
+    // Leave the key out of the returned cache entirely and record it as
+    // failed instead — pollRest() already restores a failed key's previous
+    // cached value from before this poll (same guard it uses for every
+    // other document read), so a transient network/permission hiccup here
+    // can't blank out crash cart reports the way an unconditional [] would.
+    console.warn('crash_cart_reports_v2 REST load failed for this poll.',error);
+    result.failedKeys=(result.failedKeys||[]).concat('crash_cart_reports');
+  }
+  return result;
+}
 function fsStateLoadFloorstockForProfileViaRest(profile){
-  if(fsIsPharmacyScopedProfile(profile))return fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped');
+  if(fsIsPharmacyScopedProfile(profile))return fsStateMergeCrashReports(fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped'),profile);
   if(String(profile&&profile.role||'')==='controlled_pharmacy')return fsStateLoadControlledPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped');
   var keys=fsStateKeysForProfile(profile);
-  return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped',profile):fsStateLoadFloorstockViaRest();
+  if(!keys)return fsStateLoadFloorstockViaRest();
+  var scoped=fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped',profile);
+  return ['department','outpatient_pharmacy_supervisor'].includes(String(profile&&profile.role||''))
+    ? fsStateMergeCrashReports(scoped,profile)
+    : scoped;
 }
 function fsStateLoadFloorstockForProfileViaSdk(profile){
   if(fsIsPharmacyScopedProfile(profile))return fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaSdk,'sdk-scoped');
   if(String(profile&&profile.role||'')==='controlled_pharmacy')return fsStateLoadControlledPharmacyScoped(profile,fsStateLoadDocumentViaSdk,'sdk-scoped');
   var keys=fsStateKeysForProfile(profile);
   return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-scoped',profile):fsStateLoadFloorstockViaSdk();
+}
+// REST-path counterpart of the SDK's crashReportsCollectionRef + docChanges
+// aggregation (see S.crashReportsUnsub in startRealtime): scoped roles never
+// use the SDK realtime listener (fsStateKeysForProfile forces transport:
+// 'rest'), so this is the only way they pick up crash_cart_reports_v2.
+// Every call re-lists the whole collection — S.pollRest() already runs this
+// every 30s regardless, same cadence the legacy crash_cart_reports blob key
+// used to get polled at.
+async function fsStateLoadCrashReportsViaRest(profile){
+  var documents=await fsStateRestListCollection(crashReportsCollectionPath(profile));
+  var reports=documents.map(function(documentValue){
+    var data=fsLoginDecodeRestDocument(documentValue)||{};
+    delete data.updatedAt;delete data._migratedAt;
+    return data;
+  });
+  reports.sort(function(a,b){return String(a.openedAt||'').localeCompare(String(b.openedAt||''))||String(a.id||'').localeCompare(String(b.id||''));});
+  return reports;
 }
 async function fsStateLoadUsersViaRest(){
   var documents=await fsStateRestListCollection('users');
@@ -2527,6 +2569,8 @@ const __asdhLegacyApi = {
   fsStateKeysForProfile: fsStateKeysForProfile,
   fsStateLoadDocumentViaRest: fsStateLoadDocumentViaRest,
   fsStateLoadDocumentViaSdk: fsStateLoadDocumentViaSdk,
+  fsStateLoadCrashReportsViaRest: fsStateLoadCrashReportsViaRest,
+  fsStateMergeCrashReports: fsStateMergeCrashReports,
   fsStateScopeCacheForProfile: fsStateScopeCacheForProfile,
   fsStateLoadScoped: fsStateLoadScoped,
   fsControlledPharmacyDeptKeys: fsControlledPharmacyDeptKeys,
@@ -2730,6 +2774,8 @@ export {
   fsStateKeysForProfile,
   fsStateLoadDocumentViaRest,
   fsStateLoadDocumentViaSdk,
+  fsStateLoadCrashReportsViaRest,
+  fsStateMergeCrashReports,
   fsStateScopeCacheForProfile,
   fsStateLoadScoped,
   fsControlledPharmacyDeptKeys,

@@ -207,7 +207,9 @@ test('department login hydrates its directory before assignment validation and s
   assert.match(requestSource, /localStorage\.removeItem\('floorstock_last_cache_v1'\)/);
   assert.doesNotMatch(requestSource, /localStorage\.setItem\(\s*['"]floorstock_last_cache_v1/);
   assert.match(requestSource, /fsStateLoadFloorstockForProfileViaRest\(profileHint\)/);
-  assert.match(requestSource, /'crash_carts','crash_cart_reports'/);
+  assert.match(requestSource, /'crash_carts',\n/);
+  assert.match(requestSource, /function fsStateLoadCrashReportsViaRest\(profile\)/);
+  assert.match(requestSource, /result\.failedKeys=\(result\.failedKeys\|\|\[\]\)\.concat\('crash_cart_reports'\)/);
   assert.match(requestSource, /function fsStateScopeCacheForProfile\(cache,profile\)/);
   assert.match(requestSource, /function belongs\(row\)/);
   assert.match(requestSource, /Neonatal Intensive Care Unit/);
