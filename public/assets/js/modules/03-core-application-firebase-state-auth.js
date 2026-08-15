@@ -14,7 +14,7 @@ import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-code
 import { withTimeout } from '../core/promise-timeout.js';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js';
 import { tenantIdFromProfile, stateCollectionPath } from '../core/firestore-scope.js';
-import { stateCollectionRef } from '../core/firestore-sdk-scope.js';
+import { stateCollectionRef, crashReportsCollectionRef } from '../core/firestore-sdk-scope.js';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
@@ -176,10 +176,16 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
   }
   try{
     if(FB_DB&&typeof FB_DB.settings==='function'){
+      // merge:true — otherwise this silently replaces the useEmulator() host
+      // settings above and reconnects to production Firestore instead of the
+      // emulator (confirmed live: the SDK's own console warning says as much,
+      // "You are overriding the original host").  Harmless in production,
+      // where isFirebaseEmulatorEnabled() is false and useEmulator() never runs.
       FB_DB.settings({
         experimentalAutoDetectLongPolling:true,
         useFetchStreams:false,
-        ignoreUndefinedProperties:true
+        ignoreUndefinedProperties:true,
+        merge:true
       });
     }
   }catch(settingsError){
@@ -770,7 +776,11 @@ S.ready=true;
         S.stateUnsub=fsStateSdkCollection().onSnapshot(function(snapshot){
           var changed=false;
           snapshot.docChanges().forEach(function(change){
-            if(change.doc.id==='users')return;
+            // crash_cart_reports: read from the crash_cart_reports_v2 (or
+            // per-tenant) collection listener below instead of this legacy
+            // state-doc array — the Cloud Functions still dual-write both,
+            // this just switches which side the client reads from first.
+            if(change.doc.id==='users'||change.doc.id==='crash_cart_reports')return;
             var key=change.doc.id;
             if(change.type==='removed'){
               if(Object.prototype.hasOwnProperty.call(S.cache,key)){delete S.cache[key];changed=true;}
@@ -784,6 +794,27 @@ S.ready=true;
         },function(error){
           console.error('floorstock_state realtime error; switching to REST polling.',error);
           S.transport='rest';S.startRealtime();
+        });
+        S.__crashReportsById=S.__crashReportsById||{};
+        S.crashReportsUnsub=crashReportsCollectionRef(FB_DB,S.scopeProfile).onSnapshot(function(snapshot){
+          snapshot.docChanges().forEach(function(change){
+            if(change.type==='removed'){delete S.__crashReportsById[change.doc.id];return;}
+            var data=change.doc.data()||{};
+            // Strip fields the collection doc carries but the legacy array
+            // entry never had, so S.cache.crash_cart_reports stays byte-for-
+            // byte identical in shape to what the old path produced.
+            var report=Object.assign({},data);
+            delete report.updatedAt;delete report._migratedAt;
+            S.__crashReportsById[change.doc.id]=report;
+          });
+          var next=Object.keys(S.__crashReportsById).map(function(id){return S.__crashReportsById[id];})
+            .sort(function(a,b){return String(a.openedAt||'').localeCompare(String(b.openedAt||''))||String(a.id||'').localeCompare(String(b.id||''));});
+          if(!stateValueEqual(S.cache.crash_cart_reports,next)){
+            S.cache.crash_cart_reports=next;
+            S.scheduleRefresh();
+          }
+        },function(error){
+          console.error('crash_cart_reports_v2 realtime error.',error);
         });
         var tenantId=fsTenantId(S.scopeProfile),canManageUsers=!!(S.scopeProfile&&(S.scopeProfile.master===true||['pharmacy','pharmacy_director'].indexOf(S.scopeProfile.role)>=0));
         if(canManageUsers){
@@ -846,6 +877,7 @@ S.ready=true;
   },
   stopRealtime:function(){
     if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
+    if(S.crashReportsUnsub){S.crashReportsUnsub();S.crashReportsUnsub=null;S.__crashReportsById={};}
     if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
     if(S.usersPollTimer){clearInterval(S.usersPollTimer);S.usersPollTimer=null;}
     if(S.refreshTimer){clearTimeout(S.refreshTimer);S.refreshTimer=null;}
