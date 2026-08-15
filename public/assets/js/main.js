@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.103 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.104 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -31,26 +31,21 @@ import './modules/10-warehouse-receiving-workflow.js?v=R6.76.100';
 import './modules/12-local-daily-backups-system-health.js?v=R6.76.102';
 import './modules/14-controlled-print-layout-and-tools.js?v=R6.76.102';
 import './modules/22-pharmacy-narcotic-stock-and-independent-list-mode-v12.js?v=R6.76.102';
-import './modules/27-announcements-selection-persist-fix.js?v=R6.76.98';
-import './modules/31-v13-x-controlled-request-fix.js?v=R6.76.97';
+import './modules/31-v13-x-controlled-request-fix.js?v=R6.76.104';
 import './modules/35-v14nrse-main.js?v=R6.76.102';
 import './modules/38-v16-user-operations-main.js?v=R6.76.103';
 import './modules/39-final-role-routing-system-health.js?v=R6.76.101';
-import './modules/40-v16-clean-optimized-script.js?v=R6.76.103';
+import './modules/40-v16-clean-optimized-script.js?v=R6.76.104';
 import './modules/42-weekly-request-grid-bulk-classification-clean-script.js?v=R6.76.66';
-import './modules/43-similar-medicines-workbench-v2-script.js?v=R6.76.19';
-import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.103';
-import './modules/45-asdh-final-department-controlled-fix-script.js?v=R6.76.19';
+import './modules/44-ccx-inventory-redesign-script.js?v=R6.76.104';
 import './modules/48-asdh-final-request-completion-script.js?v=R6.76.103';
-import './modules/49-asdh-final-persistence-actions-20260725.js?v=R6.76.98';
+import './modules/49-asdh-final-persistence-actions-20260725.js?v=R6.76.104';
 import './modules/50-r617-integrated-operations.js?v=R6.76.74';
 import './modules/51-asdhealth-canonical-r6-32-20260727.js?v=R6.76.97';
-import './modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.76.101';
+import './modules/52-r635-master-backup-delete-and-crash-print-sync.js?v=R6.76.104';
 import './modules/59-r664-security-complete-runtime.js?v=R6.76.103';
 import './modules/62-r667-ui-text-and-icon-normalization.js?v=R6.76.19';
-import './modules/63-r668-request-lock-drafts-and-session-defaults.js?v=R6.76.95';
 import './modules/65-r675-saas-subscriptions-runtime.js?v=R6.76.19';
-import './modules/66-r676-crash-report-ordering-notes-fixes.js?v=R6.76.92';
 import './modules/67-r676-fulfillment-edit-settings.js?v=R6.76.19';
 import './modules/70-r676-accountability-regimen-roster-and-log.js?v=R6.76.99';
 import './modules/73-r676-analytics-quarterly-annual-reports.js?v=R6.76.102';
