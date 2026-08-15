@@ -204,7 +204,11 @@ service cloud.firestore {
           r == 'department'
           && (
             docId in [
-              'requests', 'dept_notes', 'notes', 'crash_cart_reports',
+              // crash_cart_reports intentionally omitted: departments submit via
+              // submitCrashCartReport Cloud Function (which also writes crash_carts
+              // atomically). Direct browser writes to crash_cart_reports bypass
+              // that atomic seal/cart-status update and are therefore disallowed.
+              'requests', 'dept_notes', 'notes',
               'accountability_usage_v2', 'accountability_receipts_v2',
               'audit_log', 'theme',
               'meds_' + dept, 'expiry_' + dept, 'shelves_' + dept,
@@ -285,6 +289,18 @@ service cloud.firestore {
       allow list: if platformAdmin();
       allow create, update, delete: if false;
 
+      // Individual crash cart report documents.  All writes are via Cloud
+      // Functions (admin SDK) — the rules here gate client-side reads only.
+      match /crash_cart_reports/{reportId} {
+        allow get: if sameTenant(tenant);
+        allow list: if sameTenant(tenant) && (
+          !scopedStateUser()
+          || departmentUser()
+          || role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']
+        );
+        allow create, update, delete: if false;
+      }
+
       match /public_expiry/{docId} {
         allow get: if true;
         allow list: if sameTenant(tenant) && masterUser();
@@ -356,6 +372,14 @@ service cloud.firestore {
     match /public_crash_carts/{docId} {
       allow read: if false;
       allow create, update, delete: if tenantId() == '' && masterUser();
+    }
+
+    // Legacy (non-tenant) crash cart report collection.  All writes are via
+    // Cloud Functions (admin SDK) — rules here gate client reads only.
+    match /crash_cart_reports_v2/{reportId} {
+      allow get: if activeUser() && tenantId() == '';
+      allow list: if activeUser() && tenantId() == '';
+      allow create, update, delete: if false;
     }
 
     match /floorstock_backups/{uid}/snapshots/{snapshotId} {

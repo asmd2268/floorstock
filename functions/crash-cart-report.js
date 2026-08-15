@@ -74,9 +74,15 @@ function stateRefs(db, tenantId) {
   const publicCollection = tenantId
     ? db.collection('tenants').doc(tenantId).collection('public_controlled_expiry')
     : db.collection('public_controlled_expiry');
+  // Individual report documents — no 1 MB limit, no last-writer-wins race.
+  // The legacy path uses a top-level collection to stay outside floorstock_state.
+  const reportsCollection = tenantId
+    ? db.collection('tenants').doc(tenantId).collection('crash_cart_reports')
+    : db.collection('crash_cart_reports_v2');
   return {
     carts: state.doc('crash_carts'),
     reports: state.doc('crash_cart_reports'),
+    reportsCollection,
     publicCollection,
   };
 }
@@ -147,6 +153,12 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
       const updatedAt = FieldValue.serverTimestamp();
       transaction.set(refs.carts, { value: result.carts, updatedAt }, { merge: false });
       transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
+      // Dual-write: also persist the report as an individual collection document.
+      // This eliminates the 1 MB state-doc limit and enables per-document reads.
+      transaction.set(refs.reportsCollection.doc(result.report.id), {
+        ...result.report,
+        updatedAt,
+      });
     });
   } catch (error) {
     wrapError(error);
@@ -205,6 +217,10 @@ exports.acceptCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
       const updatedAt = FieldValue.serverTimestamp();
       transaction.set(refs.carts, { value: result.carts, updatedAt }, { merge: false });
       transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
+      transaction.set(refs.reportsCollection.doc(result.report.id), {
+        ...result.report,
+        updatedAt,
+      });
       transaction.set(
         refs.publicCollection.doc(`crash_${result.cart.id}`),
         { ...publicCrashCartPayload(result.cart), updatedAt },
@@ -259,6 +275,10 @@ exports.rejectCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
       result = rejectCrashCartReport({ reports, reportId, rejectionNote, actorName, stamp });
       const updatedAt = FieldValue.serverTimestamp();
       transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
+      transaction.set(refs.reportsCollection.doc(result.report.id), {
+        ...result.report,
+        updatedAt,
+      });
     });
   } catch (error) {
     wrapError(error);
