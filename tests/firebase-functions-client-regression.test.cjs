@@ -4,10 +4,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 
-const core = fs.readFileSync(
-  'public/assets/js/modules/03-core-application-firebase-state-auth.js',
-  'utf8'
-);
+const core = [
+  '03-core-application-firebase-state-auth.js',
+  '03b-controlled-psychotropic-medicines.js',
+  '03c-medication-expiry-shelf-helpers.js',
+  '03d-seed-medication-catalog.js',
+  '03e-date-dialog-permission-helpers.js',
+  '03f-app-shell-nav-dashboard-inventory.js',
+].map((name) => fs.readFileSync(`public/assets/js/modules/${name}`, 'utf8')).join('\n');
 
 const users = fs.readFileSync(
   'public/assets/js/modules/07-expiry-requests-and-primary-features.js',
