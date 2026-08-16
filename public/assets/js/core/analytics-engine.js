@@ -6,8 +6,17 @@
 import { buildAnalyticsMedicineIndex, resolveAnalyticsMedicine } from './analytics-medicine-resolver.js';
 
 export function allRows() {
+  // request_analytics_archive: legacy full-detail archive (pre-existing data
+  // only — order-retention.js stopped writing new records here once it
+  // switched to compact monthly aggregates, since a single ever-growing
+  // Firestore document risked its 1MiB limit). request_analytics_summary_v1:
+  // the compact replacement — one synthetic row per month×department with
+  // dispensed[] already summed, shaped identically to a real request row so
+  // every function below (computeStats, rowsForPeriod, etc.) needs no
+  // special-casing for aggregated vs. individual data.
   return (typeof window.gr === 'function' ? window.gr() : [])
     .concat((window.S && window.S.g && window.S.g('request_analytics_archive')) || [])
+    .concat((window.S && window.S.g && window.S.g('request_analytics_summary_v1')) || [])
     .filter(r => r && r.status !== 'pending');
 }
 
