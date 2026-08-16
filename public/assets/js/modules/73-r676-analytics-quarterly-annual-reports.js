@@ -677,6 +677,51 @@ function renderSpikeLegend(threshold) {
   </div>`;
 }
 
+// Editable spike-threshold control, reused by every report in this IIFE
+// that shows spike-tiered badges (narcotic, crash-cart, drug analytics) —
+// previously the only place to change the threshold was buried inside the
+// quarterly report's OTHER (separate-scope) IIFE, reached only via a
+// print-trigger button that generated and printed a report before the
+// control was ever interactable. window.saveAnalyticsSpikeThreshold
+// already exists as a real global (assigned in that other IIFE) so it's
+// reused here rather than duplicated — only the role check and the HTML/
+// bind wiring needed a local copy for this IIFE's own render functions.
+function canEditSpikeThresholdShared() {
+  const r = currentRole();
+  return ['pharmacy','pharmacy_director'].includes(r)
+    || (typeof window.isMasterActual === 'function' ? window.isMasterActual() : isMaster());
+}
+function renderThresholdControl(idPrefix) {
+  const threshold = spikeThresholdPct();
+  const canEdit = canEditSpikeThresholdShared();
+  return `<span class="anl-threshold-ctl">Spike threshold / حد الارتفاع:
+    <input type="number" id="${idPrefix}-input" min="1" max="500" value="${threshold}"${canEdit ? '' : ' disabled title="Only pharmacy director / master can change this. / فقط مدير الصيدلية / الماستر يقدر يغيّرها"'}>%
+    ${canEdit ? `<button class="btn bg bsm" id="${idPrefix}-save">Save / حفظ</button>` : ''}
+  </span>`;
+}
+function bindThresholdControl(idPrefix, onSaved) {
+  const input = document.getElementById(idPrefix + '-input');
+  const btn = document.getElementById(idPrefix + '-save');
+  if (!btn || btn.dataset.bound) return;
+  btn.dataset.bound = '1';
+  btn.addEventListener('click', async () => {
+    const value = Math.round(Number(input.value));
+    if (!Number.isFinite(value) || value < 1 || value > 500) {
+      input.value = spikeThresholdPct();
+      if (window.toast) toast('Enter a threshold between 1 and 500%. / أدخل نسبة بين 1 و500%', 'err');
+      return;
+    }
+    try {
+      await S.s(SPIKE_THRESHOLD_KEY, value);
+      if (typeof window.auditAction === 'function') auditAction('analytics_spike_threshold_changed', { thresholdPct: value });
+      if (window.toast) toast('Threshold saved ✓ / تم حفظ النسبة ✓', 'succ');
+      onSaved();
+    } catch (error) {
+      if (window.toast) toast('Threshold was not saved. / لم يتم حفظ النسبة', 'err');
+    }
+  });
+}
+
 // Severity-by-share badges: unlike spikeBadge (YoY % change), this tiers a
 // value's share of a total (e.g. one medicine's share of all replacements),
 // reusing the same visual language (anl-spike-badge classes) for consistency
@@ -1063,6 +1108,18 @@ function renderDrugComparison() {
     printBtn.dataset.bound = '1';
     printBtn.addEventListener('click', printDrugComparisonReport);
   }
+}
+
+// The "📊 إحصائيات الأدوية / Drug Analytics" tab used to be a static card
+// with only a print-trigger button — the spike threshold used by that
+// printed report (window.renderAnalyticsReports in this file's OTHER,
+// separate-scope IIFE) had no reachable control anywhere on this tab
+// before generating the report. This gives it one.
+function renderDrugsThreshold() {
+  const host = document.getElementById('car-drugs-threshold-host');
+  if (!host || !tabAllowed('drugs')) return;
+  host.innerHTML = renderThresholdControl('car-drugs-threshold');
+  bindThresholdControl('car-drugs-threshold', () => { renderDrugsThreshold(); });
 }
 
 function crashStatsForYears(fromY, toY) {
@@ -1572,7 +1629,7 @@ function printNarcoticReport() {
 /* ── RENDER: narcotic analytics (in its own tab) ────────────────────────── */
 function render() {
   const host = document.getElementById('comprehensive-annual-report-host');
-  if (!host || !permitted()) return;
+  if (!host || !tabAllowed('analytics')) return;
   injectStyles();
 
   const y = currentYear();
@@ -1591,6 +1648,7 @@ function render() {
           <label style="font-size:12px">Year / السنة
             <select id="car-year">${years.map(v => `<option value="${v}"${v === selY ? ' selected' : ''}>${v}</option>`).join('')}</select>
           </label>
+          ${renderThresholdControl('car-narc-threshold')}
           <button class="btn bp bsm" id="car-narc-print">🖨 Print / طباعة</button>
         </div>
       </div>
@@ -1607,6 +1665,7 @@ function render() {
       if (body) body.innerHTML = renderNarcoticSection();
     });
   }
+  bindThresholdControl('car-narc-threshold', () => { render(); });
   const narcPrint = document.getElementById('car-narc-print');
   if (narcPrint && !narcPrint.dataset.bound) {
     narcPrint.dataset.bound = '1';
@@ -1617,7 +1676,7 @@ function render() {
 /* ── RENDER: crash cart analytics (dedicated tab) ───────────────────────── */
 function renderCrash() {
   const host = document.getElementById('car-crash-host');
-  if (!host || !permitted()) return;
+  if (!host || !tabAllowed('crashcart')) return;
   injectStyles();
 
   const y = currentYear();
@@ -1706,6 +1765,7 @@ function activatePrintTab(tab) {
   if (tab === 'crashcart') setTimeout(renderCrash, 50);
   if (tab === 'fulfillment') setTimeout(renderFulfillment, 50);
   if (tab === 'drugcompare') setTimeout(renderDrugComparison, 50);
+  if (tab === 'drugs') setTimeout(renderDrugsThreshold, 50);
 
   // Header settings button is master-only
   const hdrBtn = document.getElementById('pg-print-header-settings-btn');
