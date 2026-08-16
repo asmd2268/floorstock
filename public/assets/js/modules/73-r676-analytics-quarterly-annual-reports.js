@@ -208,209 +208,6 @@ function renderSpikeLegend(threshold) {
   </div>`;
 }
 
-// Severity-by-share badges: unlike spikeBadge (YoY % change), this tiers a
-// value's share of a total (e.g. one medicine's share of all replacements),
-// reusing the same visual language (anl-spike-badge classes) for consistency
-// across every report in this module.
-const SHARE_TIERS = { mid: 15, high: 25, extreme: 40 };
-function shareBadgeClass(sharePct) {
-  if (sharePct >= SHARE_TIERS.extreme) return 'extreme';
-  if (sharePct >= SHARE_TIERS.high) return 'high';
-  if (sharePct >= SHARE_TIERS.mid) return 'mid';
-  return 'low';
-}
-function shareBadge(sharePct) {
-  const cls = shareBadgeClass(sharePct);
-  return `<span class="anl-spike-badge ${cls}">${sharePct}%</span>`;
-}
-// Fulfillment badges: inverse severity from shareBadge — here LOW % is bad
-// (a request that came up short), so the color ramp runs the other way.
-const FULFILL_TIERS = { good: 95, mid: 80, low: 60 };
-function fulfillBadgeClass(pct) {
-  if (pct >= FULFILL_TIERS.good) return 'good';
-  if (pct >= FULFILL_TIERS.mid) return 'mid';
-  if (pct >= FULFILL_TIERS.low) return 'high';
-  return 'extreme';
-}
-function fulfillBadge(pct) {
-  return `<span class="anl-spike-badge ${fulfillBadgeClass(pct)}">${pct}%</span>`;
-}
-function renderFulfillLegend() {
-  return `<div class="anl-legend">
-    <b>Legend / الدليل:</b>
-    <span><span class="anl-spike-badge good">${FULFILL_TIERS.good}%+</span> Fully fulfilled / تلبية كاملة</span>
-    <span><span class="anl-spike-badge mid">${FULFILL_TIERS.mid}–${FULFILL_TIERS.good - 1}%</span> Minor shortfall / نقص طفيف</span>
-    <span><span class="anl-spike-badge high">${FULFILL_TIERS.low}–${FULFILL_TIERS.mid - 1}%</span> Significant shortfall / نقص ملحوظ</span>
-    <span><span class="anl-spike-badge extreme">&lt;${FULFILL_TIERS.low}%</span> Severe shortfall / نقص حاد</span>
-  </div>`;
-}
-
-function fulfillmentRequests() {
-  const live = (typeof window.gr === 'function' ? window.gr() : (window.S && typeof S.g === 'function' ? S.g('requests') : [])) || [];
-  const archive = (window.S && typeof S.g === 'function' ? S.g('request_analytics_archive') : []) || [];
-  return live.concat(archive);
-}
-function requestFulfillmentPct(r) {
-  const requestedQty = (r.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-  const dispensedQty = (r.dispensed || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-  if (!requestedQty) return null;
-  return round1(dispensedQty / requestedQty * 100);
-}
-function fulfillmentStatsForYear(y) {
-  const rows = fulfillmentRequests()
-    .filter(r => (r.status === 'fulfilled' || r.status === 'partial') && new Date(r.fulfilledAt || r.updatedAt || r.created || 0).getFullYear() === y)
-    .map(r => ({ r, pct: requestFulfillmentPct(r) }))
-    .filter(x => x.pct !== null);
-
-  const avgPct = rows.length ? round1(avg(rows.map(x => x.pct))) : null;
-  const byDept = {};
-  rows.forEach(x => { const d = deptName(x.r.deptId); (byDept[d] = byDept[d] || []).push(x.pct); });
-  const deptStats = Object.entries(byDept)
-    .map(([dept, pcts]) => ({ dept, avg: round1(avg(pcts)), count: pcts.length }))
-    .sort((a, b) => a.avg - b.avg);
-  const worst10 = rows.slice().sort((a, b) => a.pct - b.pct).slice(0, 10);
-  return { total: rows.length, avgPct, deptStats, worst10 };
-}
-
-function renderFulfillmentSection() {
-  const y = Number((document.getElementById('car-fulfill-year') || {}).value) || currentYear();
-  const st = fulfillmentStatsForYear(y);
-
-  let html = `
-    <div class="car-kpi-row">
-      <div class="car-kpi"><div class="car-kpi-label">Fulfilled/partial requests / طلبات مُلبّاة</div><div class="car-kpi-val">${st.total}</div></div>
-      <div class="car-kpi ${st.avgPct === null ? '' : st.avgPct >= FULFILL_TIERS.good ? 'good' : st.avgPct < FULFILL_TIERS.low ? 'warn' : ''}">
-        <div class="car-kpi-label">Average fulfillment rate / متوسط معدل التلبية</div>
-        <div class="car-kpi-val">${st.avgPct === null ? '—' : st.avgPct + '%'}</div>
-      </div>
-      <div class="car-kpi"><div class="car-kpi-label">Departments represented / الأقسام</div><div class="car-kpi-val">${st.deptStats.length}</div></div>
-    </div>`;
-
-  if (!st.total) {
-    html += `<div class="car-empty">No fulfilled or partially fulfilled requests in ${y}.</div>`;
-    return html;
-  }
-
-  html += `<div class="car-section">
-    <div class="car-section-title warn">📉 Lowest fulfillment rate requests / أقل الطلبات تلبية</div>
-    ${renderFulfillLegend()}
-    <div style="overflow:auto"><table class="car-table">
-      <thead><tr><th>Department / القسم</th><th>Requested / المطلوب</th><th>Dispensed / المصروف</th><th>Fulfillment / التلبية</th><th>Date / التاريخ</th></tr></thead>
-      <tbody>${st.worst10.map(x => {
-        const requestedQty = (x.r.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-        const dispensedQty = (x.r.dispensed || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-        const d = x.r.fulfilledAt || x.r.updatedAt || x.r.created || '';
-        return `<tr>
-          <td><b>${esc(deptName(x.r.deptId))}</b></td>
-          <td>${requestedQty}</td>
-          <td>${dispensedQty}</td>
-          <td>${fulfillBadge(x.pct)}</td>
-          <td style="font-size:12px;color:var(--cl-sub,#94a3b8)">${d ? new Date(d).toLocaleDateString('en-SA') : '—'}</td>
-        </tr>`;
-      }).join('')}</tbody>
-    </table></div>
-  </div>`;
-
-  html += `<div class="car-section">
-    <div class="car-section-title">🏢 Average fulfillment by department / متوسط التلبية حسب القسم</div>
-    <div style="overflow:auto"><table class="car-table">
-      <thead><tr><th>Department / القسم</th><th>Requests / عدد الطلبات</th><th>Average fulfillment / متوسط التلبية</th></tr></thead>
-      <tbody>${st.deptStats.map(d => `<tr>
-        <td><b>${esc(d.dept)}</b></td>
-        <td>${d.count}</td>
-        <td>${fulfillBadge(d.avg)}</td>
-      </tr>`).join('')}</tbody>
-    </table></div>
-  </div>`;
-
-  return html;
-}
-
-function printFulfillmentReport() {
-  const y = Number((document.getElementById('car-fulfill-year') || {}).value) || currentYear();
-  const st = fulfillmentStatsForYear(y);
-  const now = new Date().toLocaleDateString('en-SA');
-
-  let body = `<h1>Request Fulfillment Rate / معدل تلبية الطلبات<br><small>${y} · ${now}</small></h1>
-    <div class="kpi-row">
-      <div class="kpi"><div class="kpi-label">Fulfilled/partial requests</div><div class="kpi-val">${st.total}</div></div>
-      <div class="kpi"><div class="kpi-label">Average fulfillment rate</div><div class="kpi-val">${st.avgPct === null ? '—' : st.avgPct + '%'}</div></div>
-      <div class="kpi"><div class="kpi-label">Departments</div><div class="kpi-val">${st.deptStats.length}</div></div>
-    </div>`;
-
-  if (!st.total) {
-    body += `<div class="section">No fulfilled or partially fulfilled requests in ${y}.</div>`;
-  } else {
-    body += `<div class="section"><h2 class="warn">Lowest Fulfillment Rate Requests / أقل الطلبات تلبية</h2>
-      ${renderFulfillLegend()}
-      <table><thead><tr><th>Department</th><th>Requested</th><th>Dispensed</th><th>Fulfillment</th><th>Date</th></tr></thead>
-      <tbody>${st.worst10.map(x => {
-        const requestedQty = (x.r.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-        const dispensedQty = (x.r.dispensed || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-        const d = x.r.fulfilledAt || x.r.updatedAt || x.r.created || '';
-        return `<tr><td>${esc(deptName(x.r.deptId))}</td><td>${requestedQty}</td><td>${dispensedQty}</td><td>${fulfillBadge(x.pct)}</td><td>${d ? new Date(d).toLocaleDateString('en-SA') : '—'}</td></tr>`;
-      }).join('')}</tbody></table></div>
-      <div class="section"><h2>Average Fulfillment by Department / متوسط التلبية حسب القسم</h2>
-      <table><thead><tr><th>Department</th><th>Requests</th><th>Average fulfillment</th></tr></thead>
-      <tbody>${st.deptStats.map(d => `<tr><td>${esc(d.dept)}</td><td>${d.count}</td><td>${fulfillBadge(d.avg)}</td></tr>`).join('')}</tbody></table></div>`;
-  }
-
-  openPrintWindow('Request Fulfillment Rate', body);
-}
-
-function renderFulfillment() {
-  const host = document.getElementById('car-fulfillment-host');
-  if (!host || !tabAllowed('fulfillment')) return;
-  injectStyles();
-
-  const y = currentYear();
-  const years = [];
-  for (let i = 2026; i <= y; i++) years.push(i);
-  const selY = Number((document.getElementById('car-fulfill-year') || {}).value) || y;
-
-  host.innerHTML = `
-    <div class="car-card">
-      <div class="car-header">
-        <div>
-          <div class="car-title">📦 Request Fulfillment Rate / معدل تلبية الطلبات</div>
-          <div class="car-sub">Master · Pharmacy · Inpatient Supervisor</div>
-        </div>
-        <div class="car-controls">
-          <label style="font-size:12px">Year / السنة
-            <select id="car-fulfill-year">${years.map(v => `<option value="${v}"${v === selY ? ' selected' : ''}>${v}</option>`).join('')}</select>
-          </label>
-          <button class="btn bp bsm" id="car-fulfill-print">🖨 Print / طباعة</button>
-        </div>
-      </div>
-      <div id="car-fulfill-body">${renderFulfillmentSection()}</div>
-      <div class="car-brand">${BRAND}</div>
-    </div>
-  `;
-
-  const yearEl = document.getElementById('car-fulfill-year');
-  if (yearEl && !yearEl.dataset.bound) {
-    yearEl.dataset.bound = '1';
-    yearEl.addEventListener('change', () => {
-      const body = document.getElementById('car-fulfill-body');
-      if (body) body.innerHTML = renderFulfillmentSection();
-    });
-  }
-  const printBtn = document.getElementById('car-fulfill-print');
-  if (printBtn && !printBtn.dataset.bound) {
-    printBtn.dataset.bound = '1';
-    printBtn.addEventListener('click', printFulfillmentReport);
-  }
-}
-
-function renderShareLegend() {
-  return `<div class="anl-legend">
-    <b>Legend / الدليل:</b>
-    <span><span class="anl-spike-badge low">&lt;${SHARE_TIERS.mid}%</span> normal share</span>
-    <span><span class="anl-spike-badge mid">${SHARE_TIERS.mid}%</span> ${SHARE_TIERS.mid}–${SHARE_TIERS.high - 1}% of total</span>
-    <span><span class="anl-spike-badge high">${SHARE_TIERS.high}%</span> ${SHARE_TIERS.high}–${SHARE_TIERS.extreme - 1}% of total</span>
-    <span><span class="anl-spike-badge extreme">${SHARE_TIERS.extreme}%</span> ${SHARE_TIERS.extreme}%+ of total</span>
-  </div>`;
-}
 function renderSpikes(currentRows, priorRows, priorLabel, threshold) {
   const spikes = detectSpikes(currentRows, priorRows, threshold);
   if (!spikes.overall.length && !spikes.perDept.length) {
@@ -806,6 +603,14 @@ function injectStyles() {
 .car-badge.green{background:#dcfce7;color:#166534}
 .car-badge.red{background:#fee2e2;color:#991b1b}
 .car-badge.blue{background:#dbeafe;color:#1e40af}
+.anl-spike-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:#fef3c7;color:#92400e;margin-left:6px}
+.anl-spike-badge.low{background:#dcfce7;color:#166534}
+.anl-spike-badge.good{background:#dcfce7;color:#166534}
+.anl-spike-badge.mid{background:#fef3c7;color:#92400e}
+.anl-spike-badge.high{background:#fee2e2;color:#991b1b}
+.anl-spike-badge.extreme{background:#7f1d1d;color:#fecaca}
+.anl-legend{display:flex;flex-wrap:wrap;gap:12px;align-items:center;font-size:11px;color:var(--cl-sub,#94a3b8);margin:8px 0 12px;padding:8px 10px;background:var(--cl-card2,#111827);border:1px solid var(--cl-border,#334155);border-radius:8px}
+.anl-legend b{color:var(--cl-text,#f1f5f9)}
 .car-bar-wrap{display:grid;gap:6px}
 .car-bar-row{padding:8px 10px;border:1px solid var(--cl-border,#334155);border-radius:8px;background:var(--cl-card2,#111827)}
 .car-bar-head{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
@@ -837,6 +642,238 @@ function crashReportList() {
 }
 function crashCartList() {
   return typeof window.crashCarts === 'function' ? (window.crashCarts() || []) : [];
+}
+
+// Duplicated from this file's other IIFE (the original quarterly/annual
+// report scope): that IIFE and this one do NOT share lexical scope despite
+// living in the same file (this file is 4 separate top-level IIFEs merged
+// over time), so render()/renderCrash() here need their own copies of the
+// spike-badge + threshold helpers rather than reaching across into the
+// other IIFE's private functions.
+const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
+function spikeThresholdPct() {
+  const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
+  return Number.isFinite(v) && v > 0 ? v : 30;
+}
+function spikeBadgeClass(pct, threshold) {
+  if (pct >= threshold * 2.5) return 'extreme';
+  if (pct >= threshold * 1.5) return 'high';
+  return 'mid';
+}
+function spikeBadge(pct, threshold) {
+  return `<span class="anl-spike-badge ${spikeBadgeClass(pct, threshold)}">+${pct}%</span>`;
+}
+function renderSpikeLegend(threshold) {
+  return `<div class="anl-legend">
+    <b>Legend / الدليل:</b>
+    <span><span class="anl-spike-badge mid">+${threshold}%</span> ${threshold}–${Math.round(threshold * 1.5 - 1)}% increase</span>
+    <span><span class="anl-spike-badge high">+${Math.round(threshold * 1.5)}%</span> ${Math.round(threshold * 1.5)}–${Math.round(threshold * 2.5 - 1)}% increase</span>
+    <span><span class="anl-spike-badge extreme">+${Math.round(threshold * 2.5)}%</span> ${Math.round(threshold * 2.5)}%+ increase</span>
+  </div>`;
+}
+
+// Severity-by-share badges: unlike spikeBadge (YoY % change), this tiers a
+// value's share of a total (e.g. one medicine's share of all replacements),
+// reusing the same visual language (anl-spike-badge classes) for consistency
+// across every report in this module.
+const SHARE_TIERS = { mid: 15, high: 25, extreme: 40 };
+function shareBadgeClass(sharePct) {
+  if (sharePct >= SHARE_TIERS.extreme) return 'extreme';
+  if (sharePct >= SHARE_TIERS.high) return 'high';
+  if (sharePct >= SHARE_TIERS.mid) return 'mid';
+  return 'low';
+}
+function shareBadge(sharePct) {
+  const cls = shareBadgeClass(sharePct);
+  return `<span class="anl-spike-badge ${cls}">${sharePct}%</span>`;
+}
+// Fulfillment badges: inverse severity from shareBadge — here LOW % is bad
+// (a request that came up short), so the color ramp runs the other way.
+const FULFILL_TIERS = { good: 95, mid: 80, low: 60 };
+function fulfillBadgeClass(pct) {
+  if (pct >= FULFILL_TIERS.good) return 'good';
+  if (pct >= FULFILL_TIERS.mid) return 'mid';
+  if (pct >= FULFILL_TIERS.low) return 'high';
+  return 'extreme';
+}
+function fulfillBadge(pct) {
+  return `<span class="anl-spike-badge ${fulfillBadgeClass(pct)}">${pct}%</span>`;
+}
+function renderFulfillLegend() {
+  return `<div class="anl-legend">
+    <b>Legend / الدليل:</b>
+    <span><span class="anl-spike-badge good">${FULFILL_TIERS.good}%+</span> Fully fulfilled / تلبية كاملة</span>
+    <span><span class="anl-spike-badge mid">${FULFILL_TIERS.mid}–${FULFILL_TIERS.good - 1}%</span> Minor shortfall / نقص طفيف</span>
+    <span><span class="anl-spike-badge high">${FULFILL_TIERS.low}–${FULFILL_TIERS.mid - 1}%</span> Significant shortfall / نقص ملحوظ</span>
+    <span><span class="anl-spike-badge extreme">&lt;${FULFILL_TIERS.low}%</span> Severe shortfall / نقص حاد</span>
+  </div>`;
+}
+
+function fulfillmentRequests() {
+  const live = (typeof window.gr === 'function' ? window.gr() : (window.S && typeof S.g === 'function' ? S.g('requests') : [])) || [];
+  const archive = (window.S && typeof S.g === 'function' ? S.g('request_analytics_archive') : []) || [];
+  return live.concat(archive);
+}
+function requestFulfillmentPct(r) {
+  const requestedQty = (r.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
+  const dispensedQty = (r.dispensed || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
+  if (!requestedQty) return null;
+  return round1(dispensedQty / requestedQty * 100);
+}
+function fulfillmentStatsForYear(y) {
+  const rows = fulfillmentRequests()
+    .filter(r => (r.status === 'fulfilled' || r.status === 'partial') && new Date(r.fulfilledAt || r.updatedAt || r.created || 0).getFullYear() === y)
+    .map(r => ({ r, pct: requestFulfillmentPct(r) }))
+    .filter(x => x.pct !== null);
+
+  const avgPct = rows.length ? round1(avg(rows.map(x => x.pct))) : null;
+  const byDept = {};
+  rows.forEach(x => { const d = deptName(x.r.deptId); (byDept[d] = byDept[d] || []).push(x.pct); });
+  const deptStats = Object.entries(byDept)
+    .map(([dept, pcts]) => ({ dept, avg: round1(avg(pcts)), count: pcts.length }))
+    .sort((a, b) => a.avg - b.avg);
+  const worst10 = rows.slice().sort((a, b) => a.pct - b.pct).slice(0, 10);
+  return { total: rows.length, avgPct, deptStats, worst10 };
+}
+
+function renderFulfillmentSection() {
+  const y = Number((document.getElementById('car-fulfill-year') || {}).value) || currentYear();
+  const st = fulfillmentStatsForYear(y);
+
+  let html = `
+    <div class="car-kpi-row">
+      <div class="car-kpi"><div class="car-kpi-label">Fulfilled/partial requests / طلبات مُلبّاة</div><div class="car-kpi-val">${st.total}</div></div>
+      <div class="car-kpi ${st.avgPct === null ? '' : st.avgPct >= FULFILL_TIERS.good ? 'good' : st.avgPct < FULFILL_TIERS.low ? 'warn' : ''}">
+        <div class="car-kpi-label">Average fulfillment rate / متوسط معدل التلبية</div>
+        <div class="car-kpi-val">${st.avgPct === null ? '—' : st.avgPct + '%'}</div>
+      </div>
+      <div class="car-kpi"><div class="car-kpi-label">Departments represented / الأقسام</div><div class="car-kpi-val">${st.deptStats.length}</div></div>
+    </div>`;
+
+  if (!st.total) {
+    html += `<div class="car-empty">No fulfilled or partially fulfilled requests in ${y}.</div>`;
+    return html;
+  }
+
+  html += `<div class="car-section">
+    <div class="car-section-title warn">📉 Lowest fulfillment rate requests / أقل الطلبات تلبية</div>
+    ${renderFulfillLegend()}
+    <div style="overflow:auto"><table class="car-table">
+      <thead><tr><th>Department / القسم</th><th>Requested / المطلوب</th><th>Dispensed / المصروف</th><th>Fulfillment / التلبية</th><th>Date / التاريخ</th></tr></thead>
+      <tbody>${st.worst10.map(x => {
+        const requestedQty = (x.r.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
+        const dispensedQty = (x.r.dispensed || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
+        const d = x.r.fulfilledAt || x.r.updatedAt || x.r.created || '';
+        return `<tr>
+          <td><b>${esc(deptName(x.r.deptId))}</b></td>
+          <td>${requestedQty}</td>
+          <td>${dispensedQty}</td>
+          <td>${fulfillBadge(x.pct)}</td>
+          <td style="font-size:12px;color:var(--cl-sub,#94a3b8)">${d ? new Date(d).toLocaleDateString('en-SA') : '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>
+  </div>`;
+
+  html += `<div class="car-section">
+    <div class="car-section-title">🏢 Average fulfillment by department / متوسط التلبية حسب القسم</div>
+    <div style="overflow:auto"><table class="car-table">
+      <thead><tr><th>Department / القسم</th><th>Requests / عدد الطلبات</th><th>Average fulfillment / متوسط التلبية</th></tr></thead>
+      <tbody>${st.deptStats.map(d => `<tr>
+        <td><b>${esc(d.dept)}</b></td>
+        <td>${d.count}</td>
+        <td>${fulfillBadge(d.avg)}</td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+  </div>`;
+
+  return html;
+}
+
+function printFulfillmentReport() {
+  const y = Number((document.getElementById('car-fulfill-year') || {}).value) || currentYear();
+  const st = fulfillmentStatsForYear(y);
+  const now = new Date().toLocaleDateString('en-SA');
+
+  let body = `<h1>Request Fulfillment Rate / معدل تلبية الطلبات<br><small>${y} · ${now}</small></h1>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Fulfilled/partial requests</div><div class="kpi-val">${st.total}</div></div>
+      <div class="kpi"><div class="kpi-label">Average fulfillment rate</div><div class="kpi-val">${st.avgPct === null ? '—' : st.avgPct + '%'}</div></div>
+      <div class="kpi"><div class="kpi-label">Departments</div><div class="kpi-val">${st.deptStats.length}</div></div>
+    </div>`;
+
+  if (!st.total) {
+    body += `<div class="section">No fulfilled or partially fulfilled requests in ${y}.</div>`;
+  } else {
+    body += `<div class="section"><h2 class="warn">Lowest Fulfillment Rate Requests / أقل الطلبات تلبية</h2>
+      ${renderFulfillLegend()}
+      <table><thead><tr><th>Department</th><th>Requested</th><th>Dispensed</th><th>Fulfillment</th><th>Date</th></tr></thead>
+      <tbody>${st.worst10.map(x => {
+        const requestedQty = (x.r.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
+        const dispensedQty = (x.r.dispensed || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
+        const d = x.r.fulfilledAt || x.r.updatedAt || x.r.created || '';
+        return `<tr><td>${esc(deptName(x.r.deptId))}</td><td>${requestedQty}</td><td>${dispensedQty}</td><td>${fulfillBadge(x.pct)}</td><td>${d ? new Date(d).toLocaleDateString('en-SA') : '—'}</td></tr>`;
+      }).join('')}</tbody></table></div>
+      <div class="section"><h2>Average Fulfillment by Department / متوسط التلبية حسب القسم</h2>
+      <table><thead><tr><th>Department</th><th>Requests</th><th>Average fulfillment</th></tr></thead>
+      <tbody>${st.deptStats.map(d => `<tr><td>${esc(d.dept)}</td><td>${d.count}</td><td>${fulfillBadge(d.avg)}</td></tr>`).join('')}</tbody></table></div>`;
+  }
+
+  openPrintWindow('Request Fulfillment Rate', body);
+}
+
+function renderFulfillment() {
+  const host = document.getElementById('car-fulfillment-host');
+  if (!host || !tabAllowed('fulfillment')) return;
+  injectStyles();
+
+  const y = currentYear();
+  const years = [];
+  for (let i = 2026; i <= y; i++) years.push(i);
+  const selY = Number((document.getElementById('car-fulfill-year') || {}).value) || y;
+
+  host.innerHTML = `
+    <div class="car-card">
+      <div class="car-header">
+        <div>
+          <div class="car-title">📦 Request Fulfillment Rate / معدل تلبية الطلبات</div>
+          <div class="car-sub">Master · Pharmacy · Inpatient Supervisor</div>
+        </div>
+        <div class="car-controls">
+          <label style="font-size:12px">Year / السنة
+            <select id="car-fulfill-year">${years.map(v => `<option value="${v}"${v === selY ? ' selected' : ''}>${v}</option>`).join('')}</select>
+          </label>
+          <button class="btn bp bsm" id="car-fulfill-print">🖨 Print / طباعة</button>
+        </div>
+      </div>
+      <div id="car-fulfill-body">${renderFulfillmentSection()}</div>
+      <div class="car-brand">${BRAND}</div>
+    </div>
+  `;
+
+  const yearEl = document.getElementById('car-fulfill-year');
+  if (yearEl && !yearEl.dataset.bound) {
+    yearEl.dataset.bound = '1';
+    yearEl.addEventListener('change', () => {
+      const body = document.getElementById('car-fulfill-body');
+      if (body) body.innerHTML = renderFulfillmentSection();
+    });
+  }
+  const printBtn = document.getElementById('car-fulfill-print');
+  if (printBtn && !printBtn.dataset.bound) {
+    printBtn.dataset.bound = '1';
+    printBtn.addEventListener('click', printFulfillmentReport);
+  }
+}
+
+function renderShareLegend() {
+  return `<div class="anl-legend">
+    <b>Legend / الدليل:</b>
+    <span><span class="anl-spike-badge low">&lt;${SHARE_TIERS.mid}%</span> normal share</span>
+    <span><span class="anl-spike-badge mid">${SHARE_TIERS.mid}%</span> ${SHARE_TIERS.mid}–${SHARE_TIERS.high - 1}% of total</span>
+    <span><span class="anl-spike-badge high">${SHARE_TIERS.high}%</span> ${SHARE_TIERS.high}–${SHARE_TIERS.extreme - 1}% of total</span>
+    <span><span class="anl-spike-badge extreme">${SHARE_TIERS.extreme}%</span> ${SHARE_TIERS.extreme}%+ of total</span>
+  </div>`;
 }
 
 function crashStatsForYears(fromY, toY) {
