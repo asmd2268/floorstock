@@ -21,7 +21,12 @@ function qLabel(q) { return `Q${q} / الربع ${['','الأول','الثاني
 // setting key, so their write would be silently rejected server-side.
 function canEditSpikeThreshold() {
   const r = String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
-  return ['pharmacy','pharmacy_director'].includes(r) || !!(window.CU && window.CU.master);
+  // window.CU.master alone misses the case where master is currently testing
+  // as another role (CU gets swapped, MASTER_ACTUAL preserves the real
+  // identity) — use the same canonical check module 07j already exposes for
+  // this exact scenario instead of a narrower ad-hoc one.
+  return ['pharmacy','pharmacy_director'].includes(r)
+    || (typeof window.isMasterActual === 'function' ? window.isMasterActual() : !!(window.CU && window.CU.master));
 }
 function selectedYear()    { const el = document.getElementById('analytics-report-year');    return Number(el && el.value) || new Date().getFullYear(); }
 function selectedQuarter() { const el = document.getElementById('analytics-report-quarter'); return String(el && el.value || 'all'); }
