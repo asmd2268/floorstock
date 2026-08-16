@@ -1,3 +1,5 @@
+import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js';
+
 /* Order retention: keep Firestore from growing without bound as fulfilled
    requests age past 6 months, without silently breaking historical
    analytics/reports (which read request rows going back years).
@@ -68,46 +70,6 @@ function buildMonthlyAggregates(oldRequests){
   });
 }
 
-function downloadJsonFile(obj,name){
-  var blob=new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();
-  setTimeout(function(){URL.revokeObjectURL(url)},1000);
-}
-
-// Small dedicated IndexedDB store for full-detail order archives — kept
-// separate from module 12's daily-backup store (different lifecycle: this
-// holds permanent historical detail that is never pruned, that one holds a
-// rolling window of recent full-state snapshots). Best-effort: the file
-// download is the real safety net; this is a convenience second copy on
-// the same device, not relied upon alone.
-function orArchiveDbOpen(){
-  return new Promise(function(resolve,reject){
-    if(!window.indexedDB)return reject(new Error('IndexedDB is unavailable'));
-    var req=indexedDB.open('ASDHealth_OrderArchives',1);
-    req.onupgradeneeded=function(){
-      var db=req.result;
-      if(!db.objectStoreNames.contains('archives'))db.createObjectStore('archives',{keyPath:'id'});
-    };
-    req.onsuccess=function(){resolve(req.result)};
-    req.onerror=function(){reject(req.error||new Error('IndexedDB open failed'))};
-  });
-}
-async function orArchiveDbSave(record){
-  try{
-    var db=await orArchiveDbOpen();
-    try{
-      await new Promise(function(resolve,reject){
-        var tx=db.transaction('archives','readwrite');
-        tx.objectStore('archives').put(record);
-        tx.oncomplete=function(){resolve()};
-        tx.onabort=tx.onerror=function(){reject(tx.error||new Error('IndexedDB write failed'))};
-      });
-    }finally{db.close()}
-  }catch(indexedDbError){
-    console.warn('Order archive could not be saved to IndexedDB (file download remains the real copy).',indexedDbError);
-  }
-}
-
 async function cleanupOldOrders(autoMode){
   var user=globalThis.CU;if(!user||user.role!=='pharmacy')return;
   if(autoMode){
@@ -128,7 +90,7 @@ async function cleanupOldOrders(autoMode){
   var exportPayload={format:'ASDHealth-Orders-Archive',version:1,exportedAt:new Date().toISOString(),count:fullDetail.length,orders:fullDetail};
 
   downloadJsonFile(exportPayload,fileName);
-  await orArchiveDbSave({id:stamp,createdAt:exportPayload.exportedAt,count:fullDetail.length,payload:exportPayload});
+  await localArchiveDbSave('orders',{id:stamp,createdAt:exportPayload.exportedAt,count:fullDetail.length,payload:exportPayload});
 
   var confirmed=await globalThis.uiConfirm(
     'A file with the full detail of '+old.length+' order(s) older than 6 months has been downloaded ('+fileName+').\n\n'+

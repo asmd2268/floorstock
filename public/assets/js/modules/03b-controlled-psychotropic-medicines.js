@@ -94,6 +94,16 @@ function ctlOpenCustodyLog(){
     actionSel.innerHTML='<option value="">All types / الكل</option>'+types.map(function(t){return '<option value="'+esc(t)+'">'+esc(t)+'</option>'}).join('');
     actionSel.value=types.indexOf(currentAction)>=0?currentAction:'';
   }
+  var archiveBtn=el('custody-log-archive-btn');
+  if(archiveBtn){
+    archiveBtn.style.display=(window.CU&&CU.master===true)?'inline-flex':'none';
+    if(!archiveBtn.dataset.bound){
+      archiveBtn.dataset.bound='1';
+      archiveBtn.addEventListener('click',function(){
+        if(typeof window.archiveOldControlledMoves==='function')window.archiveOldControlledMoves();
+      });
+    }
+  }
   OM('mcustody-log');
   renderCtlLog(ctlCustodyLogFilters());
 }

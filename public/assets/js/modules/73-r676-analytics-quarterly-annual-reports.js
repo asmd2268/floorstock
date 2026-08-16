@@ -1455,7 +1455,9 @@ function renderCrashSection() {
 
 /* ── NARCOTIC / CONTROLLED ANALYTICS ───────────────────────────────────── */
 function narcoticMoves() {
-  return typeof window.ctlMoves === 'function' ? (window.ctlMoves() || []) : (window.S && window.S.g ? window.S.g('controlled_moves') || [] : []);
+  var live = typeof window.ctlMoves === 'function' ? (window.ctlMoves() || []) : (window.S && window.S.g ? window.S.g('controlled_moves') || [] : []);
+  var archived = window.S && window.S.g ? window.S.g('controlled_moves_summary_v1') || [] : [];
+  return archived.length ? live.concat(archived) : live;
 }
 function narcoticCatalog() {
   const cat = window.S && window.S.g ? (window.S.g('controlled_catalog') || []) : [];
