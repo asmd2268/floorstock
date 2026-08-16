@@ -36,8 +36,18 @@ const indexSource = fs.readFileSync(
   'utf8',
 );
 
-const usersSource = ['07-expiry-requests-and-primary-features.js', '07c-users.js']
-  .map((name) => fs.readFileSync(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8'))
+const usersSource = [
+  '07-expiry-requests-and-primary-features.js',
+  '07b-inventory-import.js',
+  '07c-users.js',
+  '07d-analytics.js',
+  '07e-dept-drug-list-print.js',
+  '07f-shelves.js',
+  '07g-barcode-scanner.js',
+  '07h-logo-print-header.js',
+  '07i-misc-features.js',
+  '07j-controlled-module-enhancements.js',
+].map((name) => fs.readFileSync(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8'))
   .join('\n');
 const noteSchemaSource = fs.readFileSync(
   new URL('../public/assets/js/core/department-note-schema.js', import.meta.url),
