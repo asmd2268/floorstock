@@ -821,8 +821,8 @@ th,td{
 }
 th{font-weight:900}
 .medicine{text-align:left;font-weight:800}
-.batch{text-align:left;padding-left:1.2mm}
-.ctl-batch-print-line{display:block;padding:.18mm 0}
+.batch{text-align:center}
+.ctl-batch-print-line{display:block;padding:.18mm 0;text-align:center}
 .near-expiry-30 td{
   font-weight:700!important;
   background:#f0f0f0!important;
