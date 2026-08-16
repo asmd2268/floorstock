@@ -59,6 +59,7 @@ const requestSource = [
   '03d-seed-medication-catalog.js',
   '03e-date-dialog-permission-helpers.js',
   '03f-app-shell-nav-dashboard-inventory.js',
+  '03g-requests.js',
 ].map((name) => fs.readFileSync(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8')).join('\n');
 const requestEnhancementSource = fs.readFileSync(
   new URL('../public/assets/js/modules/38-v16-user-operations-main.js', import.meta.url),

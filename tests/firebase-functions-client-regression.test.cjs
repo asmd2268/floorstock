@@ -11,6 +11,7 @@ const core = [
   '03d-seed-medication-catalog.js',
   '03e-date-dialog-permission-helpers.js',
   '03f-app-shell-nav-dashboard-inventory.js',
+  '03g-requests.js',
 ].map((name) => fs.readFileSync(`public/assets/js/modules/${name}`, 'utf8')).join('\n');
 
 const users = fs.readFileSync(
