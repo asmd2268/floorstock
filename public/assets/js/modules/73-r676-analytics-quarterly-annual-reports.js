@@ -30,6 +30,7 @@ function canEditSpikeThreshold() {
 }
 function selectedYear()    { const el = document.getElementById('analytics-report-year');    return Number(el && el.value) || new Date().getFullYear(); }
 function selectedQuarter() { const el = document.getElementById('analytics-report-quarter'); return String(el && el.value || 'all'); }
+function selectedDept()    { const el = document.getElementById('analytics-report-dept');    return String(el && el.value || ''); }
 const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
 function spikeThresholdPct() {
   const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
@@ -264,19 +265,23 @@ window.renderAnalyticsReports = function () {
   const years = availableYears();
   const year = selectedYear();
   const quarter = selectedQuarter();
+  const deptId = selectedDept();
+  const depts = (typeof window.gd === 'function' ? window.gd() : []) || [];
+  const deptFilter = deptId ? (r => String(r.deptId) === deptId) : null;
 
-  const currentRows = rowsForPeriod(year, quarter);
+  const currentRows = deptFilter ? rowsForPeriod(year, quarter).filter(deptFilter) : rowsForPeriod(year, quarter);
   const prior = priorPeriod(year, quarter);
-  const priorRows = rowsForPeriod(prior.year, prior.quarter);
+  const priorRows = deptFilter ? rowsForPeriod(prior.year, prior.quarter).filter(deptFilter) : rowsForPeriod(prior.year, prior.quarter);
   const sameLastYear = sameQuarterPriorYear(year, quarter);
-  const sameLastYearRows = rowsForPeriod(sameLastYear.year, sameLastYear.quarter);
+  const sameLastYearRows = deptFilter ? rowsForPeriod(sameLastYear.year, sameLastYear.quarter).filter(deptFilter) : rowsForPeriod(sameLastYear.year, sameLastYear.quarter);
 
   const stats      = computeStats(currentRows);
   const priorStats = computeStats(priorRows);
 
-  const title = quarter === 'all'
+  const deptSuffix = deptId ? ` — ${deptLabel(deptId)}` : '';
+  const title = (quarter === 'all'
     ? `Annual report ${year} / التقرير السنوي ${year}`
-    : `${qLabel(Number(quarter))} ${year}`;
+    : `${qLabel(Number(quarter))} ${year}`) + deptSuffix;
 
   const priorLbl = periodLabel(prior.year, prior.quarter);
   const sameLastYearLbl = periodLabel(sameLastYear.year, sameLastYear.quarter);
@@ -301,6 +306,10 @@ window.renderAnalyticsReports = function () {
         <select id="analytics-report-quarter">
           <option value="all"${quarter==='all'?' selected':''}>Full year / السنة كاملة</option>
           ${[1,2,3,4].map(q => `<option value="${q}"${quarter===String(q)?' selected':''}>${qLabel(q)}</option>`).join('')}
+        </select>
+        <select id="analytics-report-dept">
+          <option value=""${deptId===''?' selected':''}>All departments / كل الأقسام</option>
+          ${depts.map(d => `<option value="${esc(d.id)}"${String(d.id)===deptId?' selected':''}>${esc(d.name)}</option>`).join('')}
         </select>
         <span class="anl-threshold-ctl">Spike threshold / حد الارتفاع:
           <input type="number" id="analytics-spike-threshold" min="1" max="500" value="${threshold}"${canEditSpikeThreshold() ? '' : ' disabled title="Only pharmacy director / master can change this. / فقط مدير الصيدلية / الماستر يقدر يغيّرها"'}>%
@@ -346,7 +355,7 @@ window.renderAnalyticsReports = function () {
   `;
 
   // Bind controls
-  ['analytics-report-year','analytics-report-quarter'].forEach(id => {
+  ['analytics-report-year','analytics-report-quarter','analytics-report-dept'].forEach(id => {
     const el = document.getElementById(id);
     if (el && !el.dataset.bound) { el.dataset.bound = '1'; el.addEventListener('change', window.renderAnalyticsReports); }
   });
