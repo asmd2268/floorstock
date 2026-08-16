@@ -569,7 +569,7 @@ function tabAllowed(tab) {
   const r = currentRole(), master = isMaster();
   if (tab === 'orders') return true;
   if (tab === 'analytics') return master || r === 'controlled_pharmacy';
-  if (tab === 'crashcart' || tab === 'drugs' || tab === 'fulfillment') return master || ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor'].includes(r);
+  if (tab === 'crashcart' || tab === 'drugs' || tab === 'fulfillment' || tab === 'drugcompare') return master || ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor'].includes(r);
   return false;
 }
 function currentYear() { return new Date().getFullYear(); }
@@ -879,6 +879,190 @@ function renderShareLegend() {
     <span><span class="anl-spike-badge high">${SHARE_TIERS.high}%</span> ${SHARE_TIERS.high}–${SHARE_TIERS.extreme - 1}% of total</span>
     <span><span class="anl-spike-badge extreme">${SHARE_TIERS.extreme}%</span> ${SHARE_TIERS.extreme}%+ of total</span>
   </div>`;
+}
+
+/* ── DRUG COMPARISON ACROSS DEPARTMENTS ──────────────────────────────────
+   Pick one medicine + a period range; compare its total dispensed quantity
+   per department, plus a month-by-month trend. Reuses computeStats (same
+   department/medicine resolution as the rest of this file) rather than
+   re-deriving medicine identity — a medicine's routine/high bucket already
+   carries a per-department qty breakdown for whatever row set it's given. */
+function drugComparisonMedicineNames() {
+  const stats = computeStats(allRows());
+  return [...new Set([...Object.keys(stats.routine), ...Object.keys(stats.high)])].sort((a, b) => a.localeCompare(b));
+}
+function drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth) {
+  const fromMs = new Date(fromYear, fromMonth - 1, 1).getTime();
+  const toMs = new Date(toYear, toMonth, 1).getTime();
+  return allRows().filter(r => {
+    const d = new Date(r.fulfilledAt || r.updatedAt || r.created || 0);
+    const t = d.getTime();
+    return t >= fromMs && t < toMs;
+  });
+}
+function drugComparisonMedicineQty(rows, medicineName) {
+  const stats = computeStats(rows);
+  const bucket = stats.routine[medicineName] || stats.high[medicineName];
+  return bucket ? { qty: bucket.qty, depts: bucket.depts } : { qty: 0, depts: {} };
+}
+function drugComparisonStats(medicineName, fromYear, fromMonth, toYear, toMonth) {
+  const rows = drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth);
+  const total = drugComparisonMedicineQty(rows, medicineName);
+  const deptRows = Object.entries(total.depts)
+    .map(([dept, qty]) => ({ dept, qty }))
+    .sort((a, b) => b.qty - a.qty);
+
+  const months = [];
+  let y = fromYear, m = fromMonth;
+  while (y < toYear || (y === toYear && m <= toMonth)) {
+    const monthRows = drugComparisonRowsInRange(y, m, y + (m === 12 ? 1 : 0), m === 12 ? 1 : m + 1);
+    const monthQty = drugComparisonMedicineQty(monthRows, medicineName).qty;
+    months.push({ year: y, month: m, label: MONTHS_EN[m - 1] || String(m), qty: monthQty });
+    if (m === 12) { y++; m = 1; } else { m++; }
+  }
+
+  return { medicineName, totalQty: total.qty, deptRows, months };
+}
+function renderDrugComparisonSection() {
+  const medSel = document.getElementById('car-drug-cmp-med');
+  const fromYSel = document.getElementById('car-drug-cmp-from-year');
+  const fromMSel = document.getElementById('car-drug-cmp-from-month');
+  const toYSel = document.getElementById('car-drug-cmp-to-year');
+  const toMSel = document.getElementById('car-drug-cmp-to-month');
+  const medicineName = medSel && medSel.value;
+  if (!medicineName) return `<div class="car-empty">Select a medicine above to compare its dispensing across departments.</div>`;
+
+  const fromYear = Number(fromYSel && fromYSel.value) || currentYear();
+  const fromMonth = Number(fromMSel && fromMSel.value) || 1;
+  const toYear = Number(toYSel && toYSel.value) || currentYear();
+  const toMonth = Number(toMSel && toMSel.value) || 12;
+  const st = drugComparisonStats(medicineName, fromYear, fromMonth, toYear, toMonth);
+
+  let html = `
+    <div class="car-kpi-row">
+      <div class="car-kpi"><div class="car-kpi-label">Total dispensed / إجمالي الصرف</div><div class="car-kpi-val">${st.totalQty}</div></div>
+      <div class="car-kpi"><div class="car-kpi-label">Departments involved / الأقسام</div><div class="car-kpi-val">${st.deptRows.length}</div></div>
+    </div>`;
+
+  if (!st.totalQty) {
+    html += `<div class="car-empty">No dispensing records for "${esc(medicineName)}" in this period.</div>`;
+    return html;
+  }
+
+  html += `<div class="car-section">
+    <div class="car-section-title warn">🏥 Per-department comparison / مقارنة حسب القسم</div>
+    ${renderShareLegend()}
+    <div class="car-bar-wrap">${st.deptRows.map(d => {
+      const pct = Math.round(d.qty / st.totalQty * 1000) / 10;
+      const w = Math.max(2, Math.round(d.qty / st.deptRows[0].qty * 100));
+      return `<div class="car-bar-row">
+        <div class="car-bar-head"><b>${esc(d.dept)}</b><span>${d.qty} units · ${shareBadge(pct)}</span></div>
+        <div class="car-meter"><i style="width:${w}%;background:#2563eb"></i></div>
+      </div>`;
+    }).join('')}</div>
+  </div>`;
+
+  const maxMonth = Math.max(1, ...st.months.map(m => m.qty));
+  html += `<div class="car-section">
+    <div class="car-section-title">📈 Monthly trend / الاتجاه الشهري</div>
+    <div class="car-month-grid">${st.months.map(m => `
+      <div class="car-month-cell">
+        <div class="car-month-cell-name">${m.label} ${m.year}</div>
+        <div class="car-month-cell-val">${m.qty}</div>
+        <div class="car-meter" style="margin-top:4px"><i style="width:${Math.max(2, Math.round(m.qty / maxMonth * 100))}%;background:#2563eb"></i></div>
+      </div>`).join('')}</div>
+  </div>`;
+
+  return html;
+}
+function printDrugComparisonReport() {
+  const medSel = document.getElementById('car-drug-cmp-med');
+  const medicineName = medSel && medSel.value;
+  if (!medicineName) { if (window.toast) toast('Select a medicine first. / اختر دواء أولاً', 'err'); return; }
+  const fromYear = Number((document.getElementById('car-drug-cmp-from-year') || {}).value) || currentYear();
+  const fromMonth = Number((document.getElementById('car-drug-cmp-from-month') || {}).value) || 1;
+  const toYear = Number((document.getElementById('car-drug-cmp-to-year') || {}).value) || currentYear();
+  const toMonth = Number((document.getElementById('car-drug-cmp-to-month') || {}).value) || 12;
+  const st = drugComparisonStats(medicineName, fromYear, fromMonth, toYear, toMonth);
+  const now = new Date().toLocaleDateString('en-SA');
+
+  let body = `<h1>Drug Comparison Across Departments / مقارنة صرف دواء بين الأقسام<br><small>${esc(medicineName)} · ${MONTHS_EN[fromMonth-1]} ${fromYear} – ${MONTHS_EN[toMonth-1]} ${toYear} · ${now}</small></h1>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total dispensed</div><div class="kpi-val">${st.totalQty}</div></div>
+      <div class="kpi"><div class="kpi-label">Departments</div><div class="kpi-val">${st.deptRows.length}</div></div>
+    </div>`;
+
+  if (st.totalQty) {
+    body += `<div class="section"><h2 class="warn">Per-Department Comparison / مقارنة حسب القسم</h2>
+      ${renderShareLegend()}
+      <table><thead><tr><th>Department</th><th>Units</th><th>Share</th></tr></thead>
+      <tbody>${st.deptRows.map(d => `<tr><td>${esc(d.dept)}</td><td>${d.qty}</td><td>${shareBadge(Math.round(d.qty / st.totalQty * 1000) / 10)}</td></tr>`).join('')}</tbody></table></div>
+      <div class="section"><h2>Monthly Trend / الاتجاه الشهري</h2>
+      <table><thead><tr><th>Month</th><th>Units</th></tr></thead>
+      <tbody>${st.months.map(m => `<tr><td>${m.label} ${m.year}</td><td>${m.qty}</td></tr>`).join('')}</tbody></table></div>`;
+  } else {
+    body += `<div class="section">No dispensing records for this medicine in this period.</div>`;
+  }
+
+  openPrintWindow('Drug Comparison Across Departments', body);
+}
+function renderDrugComparison() {
+  const host = document.getElementById('car-drug-cmp-host');
+  if (!host || !tabAllowed('drugcompare')) return;
+  injectStyles();
+
+  const meds = drugComparisonMedicineNames();
+  const y = currentYear();
+  const years = [];
+  for (let i = 2026; i <= y; i++) years.push(i);
+  const selMed = (document.getElementById('car-drug-cmp-med') || {}).value || '';
+  const selFromY = Number((document.getElementById('car-drug-cmp-from-year') || {}).value) || y;
+  const selFromM = Number((document.getElementById('car-drug-cmp-from-month') || {}).value) || 1;
+  const selToY = Number((document.getElementById('car-drug-cmp-to-year') || {}).value) || y;
+  const selToM = Number((document.getElementById('car-drug-cmp-to-month') || {}).value) || (new Date().getMonth() + 1);
+
+  host.innerHTML = `
+    <div class="car-card">
+      <div class="car-header">
+        <div>
+          <div class="car-title">🔬 Drug Comparison Across Departments / مقارنة صرف دواء بين الأقسام</div>
+          <div class="car-sub">Master · Pharmacy · Inpatient Supervisor</div>
+        </div>
+        <div class="car-controls">
+          <label style="font-size:12px">Medicine / الدواء
+            <select id="car-drug-cmp-med" style="min-width:220px"><option value="">Select…</option>${meds.map(m => `<option value="${esc(m)}"${m === selMed ? ' selected' : ''}>${esc(m)}</option>`).join('')}</select>
+          </label>
+          <label style="font-size:12px">From / من
+            <select id="car-drug-cmp-from-month">${MONTHS_EN.map((mn, i) => `<option value="${i+1}"${i+1===selFromM?' selected':''}>${mn}</option>`).join('')}</select>
+            <select id="car-drug-cmp-from-year">${years.map(v => `<option value="${v}"${v===selFromY?' selected':''}>${v}</option>`).join('')}</select>
+          </label>
+          <label style="font-size:12px">To / إلى
+            <select id="car-drug-cmp-to-month">${MONTHS_EN.map((mn, i) => `<option value="${i+1}"${i+1===selToM?' selected':''}>${mn}</option>`).join('')}</select>
+            <select id="car-drug-cmp-to-year">${years.map(v => `<option value="${v}"${v===selToY?' selected':''}>${v}</option>`).join('')}</select>
+          </label>
+          <button class="btn bp bsm" id="car-drug-cmp-print">🖨 Print / طباعة</button>
+        </div>
+      </div>
+      <div id="car-drug-cmp-body">${renderDrugComparisonSection()}</div>
+      <div class="car-brand">${BRAND}</div>
+    </div>
+  `;
+
+  ['car-drug-cmp-med','car-drug-cmp-from-year','car-drug-cmp-from-month','car-drug-cmp-to-year','car-drug-cmp-to-month'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.bound) {
+      el.dataset.bound = '1';
+      el.addEventListener('change', () => {
+        const body = document.getElementById('car-drug-cmp-body');
+        if (body) body.innerHTML = renderDrugComparisonSection();
+      });
+    }
+  });
+  const printBtn = document.getElementById('car-drug-cmp-print');
+  if (printBtn && !printBtn.dataset.bound) {
+    printBtn.dataset.bound = '1';
+    printBtn.addEventListener('click', printDrugComparisonReport);
+  }
 }
 
 function crashStatsForYears(fromY, toY) {
@@ -1488,6 +1672,7 @@ function activatePrintTab(tab) {
     crashcart:   document.getElementById('pg-print-panel-crashcart'),
     drugs:       document.getElementById('pg-print-panel-drugs'),
     fulfillment: document.getElementById('pg-print-panel-fulfillment'),
+    drugcompare: document.getElementById('pg-print-panel-drugcompare'),
   };
   const tabs = {
     orders:      document.getElementById('pg-print-tab-orders'),
@@ -1495,6 +1680,7 @@ function activatePrintTab(tab) {
     crashcart:   document.getElementById('pg-print-tab-crashcart'),
     drugs:       document.getElementById('pg-print-tab-drugs'),
     fulfillment: document.getElementById('pg-print-tab-fulfillment'),
+    drugcompare: document.getElementById('pg-print-tab-drugcompare'),
   };
   if (!panels.orders) return;
 
@@ -1519,6 +1705,7 @@ function activatePrintTab(tab) {
   if (tab === 'analytics') setTimeout(render, 50);
   if (tab === 'crashcart') setTimeout(renderCrash, 50);
   if (tab === 'fulfillment') setTimeout(renderFulfillment, 50);
+  if (tab === 'drugcompare') setTimeout(renderDrugComparison, 50);
 
   // Header settings button is master-only
   const hdrBtn = document.getElementById('pg-print-header-settings-btn');
@@ -1535,6 +1722,7 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('#pg-print-tab-crashcart')) { activatePrintTab('crashcart'); return; }
   if (e.target.closest('#pg-print-tab-drugs')) { activatePrintTab('drugs'); return; }
   if (e.target.closest('#pg-print-tab-fulfillment')) { activatePrintTab('fulfillment'); return; }
+  if (e.target.closest('#pg-print-tab-drugcompare')) { activatePrintTab('drugcompare'); return; }
   if (e.target.closest('#drug-analytics-print-trigger')) {
     if (typeof window.renderAnalyticsReports === 'function') window.renderAnalyticsReports();
     setTimeout(() => window.dispatchEvent(new CustomEvent('floorstock:analytics-print')), 300);
