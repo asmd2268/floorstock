@@ -820,7 +820,7 @@ th,td{
   overflow-wrap:anywhere
 }
 th{font-weight:900}
-.medicine{text-align:left;font-weight:800}
+.medicine{text-align:center;font-weight:800}
 .batch{text-align:center}
 .ctl-batch-print-line{display:block;padding:.18mm 0;text-align:center}
 .near-expiry-30 td{
