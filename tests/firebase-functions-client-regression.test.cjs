@@ -14,10 +14,11 @@ const core = [
   '03g-requests.js',
 ].map((name) => fs.readFileSync(`public/assets/js/modules/${name}`, 'utf8')).join('\n');
 
-const users = fs.readFileSync(
-  'public/assets/js/modules/07-expiry-requests-and-primary-features.js',
-  'utf8'
-);
+const users = [
+  '07-expiry-requests-and-primary-features.js',
+  '07b-inventory-import.js',
+  '07c-users.js',
+].map((name) => fs.readFileSync(`public/assets/js/modules/${name}`, 'utf8')).join('\n');
 
 test('Firebase Functions loader publishes and returns the initialized client', () => {
   assert.match(core, /window\.FB_FUNCTIONS=FB_FUNCTIONS/);

@@ -36,10 +36,9 @@ const indexSource = fs.readFileSync(
   'utf8',
 );
 
-const usersSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/07-expiry-requests-and-primary-features.js', import.meta.url),
-  'utf8',
-);
+const usersSource = ['07-expiry-requests-and-primary-features.js', '07c-users.js']
+  .map((name) => fs.readFileSync(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8'))
+  .join('\n');
 const noteSchemaSource = fs.readFileSync(
   new URL('../public/assets/js/core/department-note-schema.js', import.meta.url),
   'utf8',
