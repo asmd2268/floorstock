@@ -59,16 +59,38 @@ function retentionPanel(){
   var log=root.querySelector('#r676-accountability-handover-log, #r676-accountability-handover-log-view');if(!log)return;
   var oldUsage=appState('accountability_usage_v2').filter(function(row){return olderThanSixMonths(row.submittedAt||row.consumptionDate)}).length;
   var oldReceipts=appState('accountability_receipts_v2').filter(function(row){return olderThanSixMonths(row.receivedAt||row.createdAt||row.receivedDate)}).length;
-  var panel=document.createElement('div');panel.id='r676-accountability-retention';panel.className='alert-banner-y';panel.innerHTML='<b>Master retention controls / إدارة الاحتفاظ للماستر</b><br>Historical accountability activity older than six months: '+oldUsage+' usage record(s), '+oldReceipts+' receipt/handover record(s). Active custody lines and regimens are never deleted.<br><button class="btn bd2c bsm" type="button" data-acc2-purge-history style="margin-top:8px">Delete accountability history older than 6 months / حذف سجل العهد الأقدم من 6 أشهر</button>';
+  var panel=document.createElement('div');panel.id='r676-accountability-retention';panel.className='alert-banner-y';panel.innerHTML='<b>Master retention controls / إدارة الاحتفاظ للماستر</b><br>Historical accountability activity older than six months: '+oldUsage+' usage record(s), '+oldReceipts+' receipt/handover record(s). Active custody lines and regimens are never deleted. A full-detail JSON+Excel file is downloaded and must be confirmed saved before deletion.<br><button class="btn bd2c bsm" type="button" data-acc2-purge-history style="margin-top:8px">Archive &amp; delete accountability history older than 6 months / أرشفة وحذف سجل العهد الأقدم من 6 أشهر</button>';
   log.parentNode.insertBefore(panel,log);
 }
 window.acc2PurgeHistoricalHistory=async function(){
   if(!isActualMaster())return window.toast&&window.toast('Actual Master access is required. / يتطلب صلاحية الماستر الفعلية.','err');
-  var usage=appState('accountability_usage_v2'),receipts=appState('accountability_receipts_v2'),keptUsage=usage.filter(function(row){return !olderThanSixMonths(row.submittedAt||row.consumptionDate)}),keptReceipts=receipts.filter(function(row){return !olderThanSixMonths(row.receivedAt||row.createdAt||row.receivedDate)}),removedUsage=usage.length-keptUsage.length,removedReceipts=receipts.length-keptReceipts.length;
-  if(!removedUsage&&!removedReceipts)return window.toast&&window.toast('No accountability history is older than six months. / لا توجد سجلات أقدم من ستة أشهر.','info');
-  var question='Delete '+removedUsage+' usage record(s) and '+removedReceipts+' receipt/handover record(s) older than six months? Active custody and regimens will remain unchanged. / حذف سجلات العهد القديمة فقط دون تغيير العهد النشطة أو الخطط؟',ok=typeof window.uiConfirm==='function'?await window.uiConfirm(question):window.confirm(question);if(!ok)return;
+  var usage=appState('accountability_usage_v2'),receipts=appState('accountability_receipts_v2'),keptUsage=usage.filter(function(row){return !olderThanSixMonths(row.submittedAt||row.consumptionDate)}),keptReceipts=receipts.filter(function(row){return !olderThanSixMonths(row.receivedAt||row.createdAt||row.receivedDate)}),removedUsage=usage.filter(function(row){return olderThanSixMonths(row.submittedAt||row.consumptionDate)}),removedReceipts=receipts.filter(function(row){return olderThanSixMonths(row.receivedAt||row.createdAt||row.receivedDate)});
+  if(!removedUsage.length&&!removedReceipts.length)return window.toast&&window.toast('No accountability history is older than six months. / لا توجد سجلات أقدم من ستة أشهر.','info');
+
+  if(typeof window.downloadJsonFile!=='function')return window.toast&&window.toast('Archive utilities are not loaded. / أدوات الأرشفة غير محمّلة.','err');
+  var stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  var exportPayload={format:'ASDHealth-Accountability-History-Archive',version:1,exportedAt:new Date().toISOString(),usageCount:removedUsage.length,receiptCount:removedReceipts.length,usage:removedUsage,receipts:removedReceipts};
+  var fileName='ASDHealth_Accountability_History_Archive_'+stamp+'.json';
+  window.downloadJsonFile(exportPayload,fileName);
+  if(typeof window.downloadExcelFile==='function'){
+    try{
+      await window.downloadExcelFile(removedUsage.concat(removedReceipts.map(function(row){return Object.assign({__kind:'receipt'},row)})),[
+        {label:'Kind',value:function(r){return r.__kind==='receipt'?'Receipt/Handover':'Usage'}},
+        {label:'Date',value:function(r){var d=r.submittedAt||r.consumptionDate||r.receivedAt||r.createdAt||r.receivedDate;return d?new Date(d).toLocaleString():''}},
+        {label:'Department',value:function(r){return r.deptName||r.deptId||''}},
+        {label:'Medicine',value:function(r){return r.medName||''}},
+        {label:'Qty',value:function(r){return r.qty!=null?Number(r.qty):''}},
+        {label:'By',value:function(r){return r.by||r.submittedBy||r.receivedBy||''}}
+      ],'ASDHealth_Accountability_History_Archive_'+stamp+'.xlsx');
+    }catch(excelError){console.warn('Accountability history Excel export failed; JSON archive (already downloaded) remains the full-detail copy.',excelError)}
+  }
+  if(typeof window.localArchiveDbSave==='function')await window.localArchiveDbSave('accountability',{id:stamp,createdAt:exportPayload.exportedAt,usageCount:removedUsage.length,receiptCount:removedReceipts.length,payload:exportPayload});
+
+  var question='Files with the full detail of '+removedUsage.length+' usage record(s) and '+removedReceipts.length+' receipt/handover record(s) older than six months have been downloaded ('+fileName+' + Excel).\n\nSave these files somewhere safe outside the browser — they are the ONLY full-detail copy once you continue. Active custody and regimens will remain unchanged.\n\nConfirm you saved the files and want to permanently delete these history records now? / تم تنزيل ملفات بالتفاصيل الكاملة لسجلات العهد الأقدم من 6 أشهر. أكّد أنك حفظت الملفات وتريد حذف هذه السجلات نهائيًا الآن؟';
+  var ok=typeof window.uiConfirm==='function'?await window.uiConfirm(question,{danger:true,okText:'I saved the files — delete now'}):window.confirm(question);
+  if(!ok){window.toast&&window.toast('Archive files downloaded; records were NOT deleted. Re-run this action when ready.','info');return}
   var store=window.S&&window.S.s;if(typeof store!=='function')return window.toast&&window.toast('State storage is not ready.','err');
-  try{await store('accountability_usage_v2',keptUsage);try{await store('accountability_receipts_v2',keptReceipts)}catch(error){await store('accountability_usage_v2',usage);throw error}if(typeof window.auditAction==='function')await Promise.resolve(window.auditAction('accountability_history_retention_purge',{olderThanMonths:6,removedUsage:removedUsage,removedReceipts:removedReceipts})).catch(function(error){console.warn('Accountability retention audit warning',error)});window.toast&&window.toast('Historical accountability records deleted: '+(removedUsage+removedReceipts)+' ✓','succ');window.renderMedicationAccountability&&window.renderMedicationAccountability()}catch(error){console.error(error);window.toast&&window.toast(String(error&&error.message||error),'err')}
+  try{await store('accountability_usage_v2',keptUsage);try{await store('accountability_receipts_v2',keptReceipts)}catch(error){await store('accountability_usage_v2',usage);throw error}if(typeof window.auditAction==='function')await Promise.resolve(window.auditAction('accountability_history_retention_purge',{olderThanMonths:6,removedUsage:removedUsage.length,removedReceipts:removedReceipts.length})).catch(function(error){console.warn('Accountability retention audit warning',error)});window.toast&&window.toast('Historical accountability records archived and deleted: '+(removedUsage.length+removedReceipts.length)+' ✓','succ');window.renderMedicationAccountability&&window.renderMedicationAccountability()}catch(error){console.error(error);window.toast&&window.toast(String(error&&error.message||error),'err')}
 };
 document.addEventListener('click',function(event){var button=event.target&&event.target.closest&&event.target.closest('[data-acc2-purge-history]');if(button){window.acc2PurgeHistoricalHistory()}},true);
 function decorate(){decorateReview();retentionPanel()}
