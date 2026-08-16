@@ -44,7 +44,7 @@ service cloud.firestore {
     function role() {
       return request.auth.token.get('role', null) != null
         ? (request.auth.token.get('active', false) == true ? request.auth.token.get('role', '') : '')
-        : (activeUser() ? profile().role : '');
+        : (activeUser() ? profile().get('role', '') : '');
     }
 
     // Only 2 call sites (here and the fulfillment_edit_settings_v1 check
@@ -54,7 +54,7 @@ service cloud.firestore {
     function masterClaim() {
       return request.auth.token.get('role', null) != null
         ? request.auth.token.get('master', false) == true
-        : (hasProfile() && profile().master == true);
+        : (hasProfile() && profile().get('master', false) == true);
     }
 
     function masterUser() {
@@ -107,7 +107,7 @@ service cloud.firestore {
     function departmentId() {
       return request.auth.token.get('role', null) != null
         ? request.auth.token.get('deptId', '')
-        : (profile().deptId != null ? profile().deptId : profile().departmentId);
+        : (profile().get('deptId', null) != null ? profile().get('deptId', null) : profile().get('departmentId', ''));
     }
 
     // Same narrowed pattern as role()/departmentId() above: isolated
@@ -263,8 +263,8 @@ service cloud.firestore {
       // role branch can exceed Firestore's 1,000-expression limit for department
       // custodians, especially on their controlled-department keys.
       let p = profile();
-      let r = p.role;
-      let dept = p.deptId != null ? p.deptId : p.departmentId;
+      let r = p.get('role', '');
+      let dept = p.get('deptId', null) != null ? p.get('deptId', null) : p.get('departmentId', '');
       return (docId != 'fulfillment_edit_settings_v1' || masterUser()) && (
           r == 'department'
           && (
