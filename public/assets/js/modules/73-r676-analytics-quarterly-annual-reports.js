@@ -578,7 +578,7 @@ function tabAllowed(tab) {
   const r = currentRole(), master = isMaster();
   if (tab === 'orders') return true;
   if (tab === 'analytics') return master || r === 'controlled_pharmacy';
-  if (tab === 'crashcart' || tab === 'drugs' || tab === 'fulfillment' || tab === 'drugcompare') return master || ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor'].includes(r);
+  if (tab === 'crashcart' || tab === 'drugs' || tab === 'fulfillment' || tab === 'drugcompare' || tab === 'depttrend') return master || ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor'].includes(r);
   return false;
 }
 function currentYear() { return new Date().getFullYear(); }
@@ -1116,6 +1116,164 @@ function renderDrugComparison() {
   if (printBtn && !printBtn.dataset.bound) {
     printBtn.dataset.bound = '1';
     printBtn.addEventListener('click', printDrugComparisonReport);
+  }
+}
+
+/* ── DRUG TREND WITHIN ONE DEPARTMENT ─────────────────────────────────────
+   Same idea as the cross-department comparison above, but scoped to a
+   single department: pick a department + a medicine + a period range, see
+   that department's own month-by-month dispensing trend for it. Reuses
+   drugComparisonRowsInRange (period filtering) and computeStats (medicine/
+   department resolution) exactly like the cross-department report — the
+   only difference is an extra deptId filter on every row set. */
+function deptDrugTrendStats(deptId, medicineName, fromYear, fromMonth, toYear, toMonth) {
+  const rows = drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth).filter(r => String(r.deptId) === String(deptId));
+  const total = drugComparisonMedicineQty(rows, medicineName).qty;
+
+  const months = [];
+  let y = fromYear, m = fromMonth;
+  while (y < toYear || (y === toYear && m <= toMonth)) {
+    const monthRows = drugComparisonRowsInRange(y, m, y + (m === 12 ? 1 : 0), m === 12 ? 1 : m + 1).filter(r => String(r.deptId) === String(deptId));
+    const monthQty = drugComparisonMedicineQty(monthRows, medicineName).qty;
+    months.push({ year: y, month: m, label: MONTHS_EN[m - 1] || String(m), qty: monthQty });
+    if (m === 12) { y++; m = 1; } else { m++; }
+  }
+
+  const nonZeroMonths = months.filter(m => m.qty > 0);
+  const avgPerMonth = months.length ? round1(total / months.length) : 0;
+  const peak = months.reduce((best, m) => (!best || m.qty > best.qty) ? m : best, null);
+
+  return { deptName: deptLabel(deptId), medicineName, totalQty: total, months, avgPerMonth, peak: peak && peak.qty > 0 ? peak : null, activeMonths: nonZeroMonths.length };
+}
+function renderDeptTrendSection() {
+  const deptSel = document.getElementById('car-dept-trend-dept');
+  const medSel = document.getElementById('car-dept-trend-med');
+  const deptId = deptSel && deptSel.value;
+  const medicineName = medSel && medSel.value;
+  if (!deptId || !medicineName) return `<div class="car-empty">Select a department and a medicine above.</div>`;
+
+  const fromYear = Number((document.getElementById('car-dept-trend-from-year') || {}).value) || currentYear();
+  const fromMonth = Number((document.getElementById('car-dept-trend-from-month') || {}).value) || 1;
+  const toYear = Number((document.getElementById('car-dept-trend-to-year') || {}).value) || currentYear();
+  const toMonth = Number((document.getElementById('car-dept-trend-to-month') || {}).value) || 12;
+  const st = deptDrugTrendStats(deptId, medicineName, fromYear, fromMonth, toYear, toMonth);
+
+  let html = `
+    <div class="car-kpi-row">
+      <div class="car-kpi"><div class="car-kpi-label">Total dispensed / إجمالي الصرف</div><div class="car-kpi-val">${st.totalQty}</div></div>
+      <div class="car-kpi"><div class="car-kpi-label">Average per month / متوسط شهري</div><div class="car-kpi-val">${st.avgPerMonth}</div></div>
+      <div class="car-kpi"><div class="car-kpi-label">Peak month / أعلى شهر</div><div class="car-kpi-val">${st.peak ? st.peak.qty : '—'}</div><div class="car-kpi-sub">${st.peak ? st.peak.label + ' ' + st.peak.year : ''}</div></div>
+      <div class="car-kpi"><div class="car-kpi-label">Active months / أشهر فيها صرف</div><div class="car-kpi-val">${st.activeMonths} / ${st.months.length}</div></div>
+    </div>`;
+
+  if (!st.totalQty) {
+    html += `<div class="car-empty">No dispensing records for "${esc(medicineName)}" in ${esc(st.deptName)} during this period.</div>`;
+    return html;
+  }
+
+  const maxMonth = Math.max(1, ...st.months.map(m => m.qty));
+  html += `<div class="car-section">
+    <div class="car-section-title">📈 Monthly trend — ${esc(st.deptName)} / الاتجاه الشهري</div>
+    <div class="car-month-grid">${st.months.map(m => `
+      <div class="car-month-cell">
+        <div class="car-month-cell-name">${m.label} ${m.year}</div>
+        <div class="car-month-cell-val">${m.qty}</div>
+        <div class="car-meter" style="margin-top:4px"><i style="width:${Math.max(2, Math.round(m.qty / maxMonth * 100))}%;background:#2563eb"></i></div>
+      </div>`).join('')}</div>
+  </div>`;
+
+  return html;
+}
+function printDeptTrendReport() {
+  const deptId = (document.getElementById('car-dept-trend-dept') || {}).value;
+  const medicineName = (document.getElementById('car-dept-trend-med') || {}).value;
+  if (!deptId || !medicineName) { if (window.toast) toast('Select a department and a medicine first. / اختر قسم ودواء أولاً', 'err'); return; }
+  const fromYear = Number((document.getElementById('car-dept-trend-from-year') || {}).value) || currentYear();
+  const fromMonth = Number((document.getElementById('car-dept-trend-from-month') || {}).value) || 1;
+  const toYear = Number((document.getElementById('car-dept-trend-to-year') || {}).value) || currentYear();
+  const toMonth = Number((document.getElementById('car-dept-trend-to-month') || {}).value) || 12;
+  const st = deptDrugTrendStats(deptId, medicineName, fromYear, fromMonth, toYear, toMonth);
+  const now = new Date().toLocaleDateString('en-SA');
+
+  let body = `<h1>Drug Trend Within a Department / اتجاه صرف دواء داخل قسم<br><small>${esc(st.deptName)} · ${esc(medicineName)} · ${MONTHS_EN[fromMonth-1]} ${fromYear} – ${MONTHS_EN[toMonth-1]} ${toYear} · ${now}</small></h1>
+    <div class="kpi-row">
+      <div class="kpi"><div class="kpi-label">Total dispensed</div><div class="kpi-val">${st.totalQty}</div></div>
+      <div class="kpi"><div class="kpi-label">Average / month</div><div class="kpi-val">${st.avgPerMonth}</div></div>
+      <div class="kpi"><div class="kpi-label">Peak month</div><div class="kpi-val">${st.peak ? st.peak.qty : '—'}</div></div>
+      <div class="kpi"><div class="kpi-label">Active months</div><div class="kpi-val">${st.activeMonths}/${st.months.length}</div></div>
+    </div>`;
+
+  if (st.totalQty) {
+    body += `<div class="section"><h2>Monthly Trend / الاتجاه الشهري</h2>
+      <table><thead><tr><th>Month</th><th>Units</th></tr></thead>
+      <tbody>${st.months.map(m => `<tr><td>${m.label} ${m.year}</td><td>${m.qty}</td></tr>`).join('')}</tbody></table></div>`;
+  } else {
+    body += `<div class="section">No dispensing records for this medicine in this department during this period.</div>`;
+  }
+
+  openPrintWindow('Drug Trend Within a Department', body);
+}
+function renderDeptTrend() {
+  const host = document.getElementById('car-dept-trend-host');
+  if (!host || !tabAllowed('depttrend')) return;
+  injectStyles();
+
+  const depts = (typeof window.gd === 'function' ? window.gd() : []) || [];
+  const meds = drugComparisonMedicineNames();
+  const y = currentYear();
+  const years = [];
+  for (let i = 2026; i <= y; i++) years.push(i);
+  const selDept = (document.getElementById('car-dept-trend-dept') || {}).value || '';
+  const selMed = (document.getElementById('car-dept-trend-med') || {}).value || '';
+  const selFromY = Number((document.getElementById('car-dept-trend-from-year') || {}).value) || y;
+  const selFromM = Number((document.getElementById('car-dept-trend-from-month') || {}).value) || 1;
+  const selToY = Number((document.getElementById('car-dept-trend-to-year') || {}).value) || y;
+  const selToM = Number((document.getElementById('car-dept-trend-to-month') || {}).value) || (new Date().getMonth() + 1);
+
+  host.innerHTML = `
+    <div class="car-card">
+      <div class="car-header">
+        <div>
+          <div class="car-title">📉 Drug Trend Within a Department / اتجاه صرف دواء داخل قسم</div>
+          <div class="car-sub">Master · Pharmacy · Inpatient Supervisor</div>
+        </div>
+        <div class="car-controls">
+          <label style="font-size:12px">Department / القسم
+            <select id="car-dept-trend-dept" style="min-width:160px"><option value="">Select…</option>${depts.map(d => `<option value="${esc(d.id)}"${String(d.id)===selDept?' selected':''}>${esc(d.name)}</option>`).join('')}</select>
+          </label>
+          <label style="font-size:12px">Medicine / الدواء
+            <select id="car-dept-trend-med" style="min-width:200px"><option value="">Select…</option>${meds.map(m => `<option value="${esc(m)}"${m===selMed?' selected':''}>${esc(m)}</option>`).join('')}</select>
+          </label>
+          <label style="font-size:12px">From / من
+            <select id="car-dept-trend-from-month">${MONTHS_EN.map((mn, i) => `<option value="${i+1}"${i+1===selFromM?' selected':''}>${mn}</option>`).join('')}</select>
+            <select id="car-dept-trend-from-year">${years.map(v => `<option value="${v}"${v===selFromY?' selected':''}>${v}</option>`).join('')}</select>
+          </label>
+          <label style="font-size:12px">To / إلى
+            <select id="car-dept-trend-to-month">${MONTHS_EN.map((mn, i) => `<option value="${i+1}"${i+1===selToM?' selected':''}>${mn}</option>`).join('')}</select>
+            <select id="car-dept-trend-to-year">${years.map(v => `<option value="${v}"${v===selToY?' selected':''}>${v}</option>`).join('')}</select>
+          </label>
+          <button class="btn bp bsm" id="car-dept-trend-print">🖨 Print / طباعة</button>
+        </div>
+      </div>
+      <div id="car-dept-trend-body">${renderDeptTrendSection()}</div>
+      <div class="car-brand">${BRAND}</div>
+    </div>
+  `;
+
+  ['car-dept-trend-dept','car-dept-trend-med','car-dept-trend-from-year','car-dept-trend-from-month','car-dept-trend-to-year','car-dept-trend-to-month'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el && !el.dataset.bound) {
+      el.dataset.bound = '1';
+      el.addEventListener('change', () => {
+        const body = document.getElementById('car-dept-trend-body');
+        if (body) body.innerHTML = renderDeptTrendSection();
+      });
+    }
+  });
+  const printBtn2 = document.getElementById('car-dept-trend-print');
+  if (printBtn2 && !printBtn2.dataset.bound) {
+    printBtn2.dataset.bound = '1';
+    printBtn2.addEventListener('click', printDeptTrendReport);
   }
 }
 
@@ -1741,6 +1899,7 @@ function activatePrintTab(tab) {
     drugs:       document.getElementById('pg-print-panel-drugs'),
     fulfillment: document.getElementById('pg-print-panel-fulfillment'),
     drugcompare: document.getElementById('pg-print-panel-drugcompare'),
+    depttrend:   document.getElementById('pg-print-panel-depttrend'),
   };
   const tabs = {
     orders:      document.getElementById('pg-print-tab-orders'),
@@ -1749,6 +1908,7 @@ function activatePrintTab(tab) {
     drugs:       document.getElementById('pg-print-tab-drugs'),
     fulfillment: document.getElementById('pg-print-tab-fulfillment'),
     drugcompare: document.getElementById('pg-print-tab-drugcompare'),
+    depttrend:   document.getElementById('pg-print-tab-depttrend'),
   };
   if (!panels.orders) return;
 
@@ -1774,6 +1934,7 @@ function activatePrintTab(tab) {
   if (tab === 'crashcart') setTimeout(renderCrash, 50);
   if (tab === 'fulfillment') setTimeout(renderFulfillment, 50);
   if (tab === 'drugcompare') setTimeout(renderDrugComparison, 50);
+  if (tab === 'depttrend') setTimeout(renderDeptTrend, 50);
   if (tab === 'drugs') setTimeout(renderDrugsThreshold, 50);
 
   // Header settings button is master-only
@@ -1792,6 +1953,7 @@ document.addEventListener('click', function (e) {
   if (e.target.closest('#pg-print-tab-drugs')) { activatePrintTab('drugs'); return; }
   if (e.target.closest('#pg-print-tab-fulfillment')) { activatePrintTab('fulfillment'); return; }
   if (e.target.closest('#pg-print-tab-drugcompare')) { activatePrintTab('drugcompare'); return; }
+  if (e.target.closest('#pg-print-tab-depttrend')) { activatePrintTab('depttrend'); return; }
   if (e.target.closest('#drug-analytics-print-trigger')) {
     if (typeof window.renderAnalyticsReports === 'function') window.renderAnalyticsReports();
     setTimeout(() => window.dispatchEvent(new CustomEvent('floorstock:analytics-print')), 300);
