@@ -969,6 +969,7 @@ function fitOne(layout){
   var font=orientation==='landscape'?7.6:6.7;
   var padding=orientation==='landscape'?.8:.5;
   var qr=orientation==='landscape'?22:17;
+  var fontMax=orientation==='landscape'?15:13;
   var guard=0;
 
   layout.style.display='block';
@@ -977,6 +978,7 @@ function fitOne(layout){
   layout.style.setProperty('--fs',font+'pt');
   layout.style.setProperty('--py',padding+'mm');
   layout.style.setProperty('--qr',qr+'mm');
+  void fit.offsetHeight;
 
   while(over(layout,fit)&&guard<100){
     if(font>(orientation==='landscape'?5:4.6)){
@@ -992,6 +994,39 @@ function fitOne(layout){
       break;
     }
     void fit.offsetHeight;
+    guard++;
+  }
+
+  // Short custody lists (few medicines) used to stay at the small base font even
+  // though most of the A4 sheet was empty underneath — the layout only ever
+  // shrank to fit, never grew to fill real headroom. Grow the font (and QR/
+  // padding to match) step by step while there's still room, so a short list
+  // reads clearly at a glance instead of looking unfinished in a corner.
+  guard=0;
+  while(!over(layout,fit)&&font<fontMax&&guard<100){
+    var nextFont=Math.min(fontMax,font+.2);
+    layout.style.setProperty('--fs',nextFont+'pt');
+    void fit.offsetHeight;
+    if(over(layout,fit)){
+      layout.style.setProperty('--fs',font+'pt');
+      void fit.offsetHeight;
+      break;
+    }
+    font=nextFont;
+    guard++;
+  }
+  guard=0;
+  var qrMax=orientation==='landscape'?30:24;
+  while(!over(layout,fit)&&qr<qrMax&&guard<60){
+    qr++;
+    layout.style.setProperty('--qr',qr+'mm');
+    void fit.offsetHeight;
+    if(over(layout,fit)){
+      qr--;
+      layout.style.setProperty('--qr',qr+'mm');
+      void fit.offsetHeight;
+      break;
+    }
     guard++;
   }
 
