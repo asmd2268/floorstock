@@ -123,9 +123,12 @@ async function fsCallFunction(name,data){
     }
   }
   var token=await fsLoginTimeout(user.getIdToken(true),10000,'Firebase authentication refresh timed out.');
+  var appCheckToken=await fsStateAppCheckToken();
+  var callHeaders={'Content-Type':'application/json','Authorization':'Bearer '+token};
+  if(appCheckToken)callHeaders['X-Firebase-AppCheck']=appCheckToken;
   var response=await fsLoginTimeout(fetch(fsCallableUrl(name),{
     method:'POST',
-    headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+    headers:callHeaders,
     body:JSON.stringify({data:data||{}})
   }),12000,'User service timed out.');
   var payload=null;
@@ -272,13 +275,36 @@ function fsStateCollectionPath(profile){return stateCollectionPath(profile||(glo
 function fsStateSdkCollection(profile){return stateCollectionRef(FB_DB,profile||(globalThis.S&&S.scopeProfile))}
 window.fsTenantId=function(){var profileId=tenantIdFromProfile(window.CU||(globalThis.S&&S.scopeProfile));if(profileId)return profileId;try{return String(new URLSearchParams(location.search).get('tenant')||'').trim()}catch(e){return ''}};
 window.fsTenantCollection=function(name){var tenantId=window.fsTenantId();return tenantId?FB_DB.collection('tenants').doc(tenantId).collection(name):FB_DB.collection(name)};
+// Raw REST calls (used by every scoped/department role that cannot use the
+// Firestore SDK's .list()/.onSnapshot()) never went through the Firestore
+// SDK, so App Check's automatic token attachment never applied to them —
+// only Authorization was ever set here. Confirmed live in the Firebase
+// Console: Cloud Firestore App Check showed 84% "Unverified requests"
+// before this fix, which is exactly the REST-path traffic this function
+// serves. Fails open (no header) if App Check isn't active, matching the
+// existing defensive activate() pattern in initFirebase — a request
+// without this header is unaffected as long as Firestore stays in
+// "Monitor" mode; it only starts mattering once Enforce is turned on.
+async function fsStateAppCheckToken(){
+  var appCheck=globalThis.FB_APPCHECK;
+  if(!appCheck||typeof appCheck.getToken!=='function')return null;
+  try{
+    var result=await appCheck.getToken(false);
+    return result&&result.token||null;
+  }catch(appCheckTokenError){
+    console.warn('Firebase App Check token unavailable for REST request.',appCheckTokenError);
+    return null;
+  }
+}
 async function fsStateRestRequest(url,options,timeoutMs){
   var token=await fsStateToken(false);
+  var appCheckToken=await fsStateAppCheckToken();
   options=options||{};
   options.headers=Object.assign({},options.headers||{},{
     'Authorization':'Bearer '+token,
     'Content-Type':'application/json'
   });
+  if(appCheckToken)options.headers['X-Firebase-AppCheck']=appCheckToken;
   return fsLoginFetchJson(url,options,timeoutMs||12000);
 }
 async function fsStateRestListCollection(collectionId){
