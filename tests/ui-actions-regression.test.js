@@ -56,6 +56,8 @@ const requestSource = [
   '03-core-application-firebase-state-auth.js',
   '03b-controlled-psychotropic-medicines.js',
   '03c-medication-expiry-shelf-helpers.js',
+  '03d-seed-medication-catalog.js',
+  '03e-date-dialog-permission-helpers.js',
 ].map((name) => fs.readFileSync(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8')).join('\n');
 const requestEnhancementSource = fs.readFileSync(
   new URL('../public/assets/js/modules/38-v16-user-operations-main.js', import.meta.url),
