@@ -527,12 +527,10 @@ function fsR5BatchText(batches,html,actualTotal){
     batchQtys=batchQtys.map(function(q){return Math.round(q/batchSum*total);});
   }
   return batches.map(function(batch,i){
-    var lot=fsR5S(batch&&batch.lot,'');
     var expiry=fsR5DMY(batch&&batch.expiry);
     var qty=batchQtys[i];
     var parts=[];
     if(qty>0||batchSum>0)parts.push(String(qty));
-    if(lot)parts.push('Lot '+lot);
     parts.push('Exp '+expiry);
     if(!html)return parts.join(' · ');
     return '<div class="ctl-batch-print-line">'+parts.map(fsR5Esc).join(' · ')+'</div>';
