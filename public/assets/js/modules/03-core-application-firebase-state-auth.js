@@ -447,9 +447,21 @@ globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'controlled_dept_list_name_enrich_v1'
 ]);
 function fsControlledPharmacyDeptKeys(cache){
-  return(Array.isArray(cache&&cache.departments)?cache.departments:[])
-    .map(function(d){return String(d&&d.id||'').trim();}).filter(Boolean)
-    .map(function(id){return 'controlled_dept_list_'+id;});
+  var ids=(Array.isArray(cache&&cache.departments)?cache.departments:[])
+    .map(function(d){return String(d&&d.id||'').trim();}).filter(Boolean);
+  var keys=[];
+  // controlled_settings_ (custody print signatures/print-code mode) and
+  // controlled_dept_shelves_ (shelf/cabinet layout) are readable+writable by
+  // this role for every department (see canReadPharmacyState/canWriteState
+  // in firestore.rules, both matched by the controlled_.* wildcard), but were
+  // missing from this scoped key list — so a save via ctlEditSignatures
+  // succeeded in Firestore yet never came back on the next scoped state
+  // load/poll, making edits appear to silently revert and print pull stale
+  // per-department data.
+  ids.forEach(function(id){
+    keys.push('controlled_dept_list_'+id,'controlled_settings_'+id,'controlled_dept_shelves_'+id);
+  });
+  return keys;
 }
 async function fsStateLoadControlledPharmacyScoped(profile,loader,source){
   var initial=await fsStateLoadScoped(CONTROLLED_PHARMACY_BASE_KEYS,loader,source,profile);
