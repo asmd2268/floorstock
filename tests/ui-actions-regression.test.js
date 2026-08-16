@@ -52,10 +52,11 @@ const inventorySafetySource = fs.readFileSync(
   new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url),
   'utf8',
 );
-const requestSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url),
-  'utf8',
-);
+const requestSource = [
+  '03-core-application-firebase-state-auth.js',
+  '03b-controlled-psychotropic-medicines.js',
+  '03c-medication-expiry-shelf-helpers.js',
+].map((name) => fs.readFileSync(new URL(`../public/assets/js/modules/${name}`, import.meta.url), 'utf8')).join('\n');
 const requestEnhancementSource = fs.readFileSync(
   new URL('../public/assets/js/modules/38-v16-user-operations-main.js', import.meta.url),
   'utf8',
