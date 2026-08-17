@@ -172,12 +172,15 @@ async function countActiveMasters(excludeUid = null, tenantId = '') {
 // production (check the logs for the country value on a real request)
 // before treating this as a real enforcement boundary.
 exports.checkGeoAllowed = onCall(CALLABLE_OPTIONS, async (request) => {
+  const headers = (request.rawRequest && request.rawRequest.headers) || {};
+  // TEMPORARY — remove once header presence is confirmed from real traffic.
+  // Logged before the auth check so we see headers even for an
+  // unauthenticated probe request, since network-level headers come from
+  // the routing/proxy layer, not from Firebase Auth.
+  console.log('[GEO-DEBUG] All headers:', JSON.stringify(headers));
   if (!request.auth) {
     throw new HttpsError('unauthenticated', 'Sign in first / يجب تسجيل الدخول');
   }
-  const headers = (request.rawRequest && request.rawRequest.headers) || {};
-  // TEMPORARY — remove once header presence is confirmed from real traffic.
-  console.log('[GEO-DEBUG] All headers:', JSON.stringify(headers));
   const country = headers['x-appengine-country'] || headers['x-vercel-ip-country'] || '';
   if (!country) return { allowed: true, country: 'unknown' };
   return { allowed: country === 'SA', country };
