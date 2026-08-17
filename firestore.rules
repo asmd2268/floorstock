@@ -249,12 +249,16 @@ service cloud.firestore {
         || docId == 'inventory_integrity_' + departmentId()
         || docId == 'inventory_snapshot_index_' + departmentId()
         || docId == 'controlled_dept_list_' + departmentId()
+        // Every department needs to read its own controlled_settings_ (head
+        // nurse / controlled-medicines officer / pharmacy manager print
+        // signatures) to print "My controlled list" — not just the
+        // custodian who saved them. Shelf layout stays custodian-only since
+        // it's an internal configuration detail, not something every
+        // department print depends on.
+        || docId == 'controlled_settings_' + departmentId()
         || (
           profile().get('controlledCustodian', false) == true
-          && (
-            docId == 'controlled_dept_shelves_' + departmentId()
-            || docId == 'controlled_settings_' + departmentId()
-          )
+          && docId == 'controlled_dept_shelves_' + departmentId()
         );
     }
 

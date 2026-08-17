@@ -373,10 +373,15 @@ function fsStateKeysForProfile(profile){
   if(deptId){
     ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
     // Every department may view its own controlled-custody list.  Editing and
-    // the custody configuration remain restricted to the controlled custodian.
-    keys.push('controlled_dept_list_'+deptId);
+    // the shelf configuration remain restricted to the controlled custodian.
+    // controlled_settings_ (head nurse / controlled-medicines officer /
+    // pharmacy manager print signatures) is readable by every department —
+    // not just the custodian — because every department's own "My controlled
+    // list" print depends on it; gating it to controlledCustodian left those
+    // signature lines blank for any department account without that flag.
+    keys.push('controlled_dept_list_'+deptId,'controlled_settings_'+deptId);
     if(profile.controlledCustodian===true){
-      ['controlled_dept_shelves_','controlled_settings_'].forEach(function(prefix){keys.push(prefix+deptId)});
+      keys.push('controlled_dept_shelves_'+deptId);
     }
   }
   return keys;
