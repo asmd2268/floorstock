@@ -340,6 +340,8 @@ function syncHeroBtns(){
     btns+='<button class="btn bg bsm" onclick="ctlAddCatalogMedicine()">+ Add medicine</button>';
   if(view==='overview'&&(role==='controlled_pharmacy'||typeof window.isMaster==='function'&&window.isMaster())&&typeof window.ctlOpenHijriLedger==='function')
     btns+='<button class="btn bg bsm" onclick="ctlOpenHijriLedger()">📜 Hijri Ledger / السجل الهجري</button>';
+  if(view==='overview'&&(role==='controlled_pharmacy'||typeof window.isMaster==='function'&&window.isMaster())&&typeof window.ctlOpenCustodyHandover==='function')
+    btns+='<button class="btn bg bsm" onclick="ctlOpenCustodyHandover()">🧾 Handover / محضر تسليم</button>';
   if(view==='analytics')
     btns+='<button class="btn bg bsm" onclick="ctlAnPrint()">🖨 Print analytics</button>';
   row.innerHTML=btns;

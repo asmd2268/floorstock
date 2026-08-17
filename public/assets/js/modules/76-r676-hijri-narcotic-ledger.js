@@ -29,6 +29,27 @@ function hijriMonthKey(value){var h=hijriParts(value);return h?h.year+'-'+String
 function hijriMonthLabel(year,month){return (HIJRI_MONTHS_AR[month-1]||month)+' '+year+' هـ'}
 function hijriDateLabel(value){var h=hijriParts(value);if(!h)return '—';return h.day+' '+(HIJRI_MONTHS_AR[h.month-1]||h.month)+' '+h.year}
 function currentHijri(){return hijriParts(new Date())||{year:1447,month:1,day:1}}
+function isNarcoticOnly(m){return String(m&&m.classification||'narcotic')!=='psychotropic'}
+
+/* ── period helpers: a "period" is always resolved down to an inclusive
+   [startMonthKey,endMonthKey] Hijri-month range, so month/quarter/year all
+   reuse the exact same balance-range math. ── */
+function periodBounds(periodKey,periodType){
+  if(periodType==='year'){
+    var y=Number(periodKey);
+    return {start:y+'-01',endIncl:y+'-12'};
+  }
+  if(periodType==='quarter'){
+    var parts=periodKey.split('-Q'),y2=Number(parts[0]),q=Number(parts[1]),startM=(q-1)*3+1;
+    return {start:y2+'-'+String(startM).padStart(2,'0'),endIncl:y2+'-'+String(startM+2).padStart(2,'0')};
+  }
+  return {start:periodKey,endIncl:periodKey};
+}
+function periodLabel(periodKey,periodType){
+  if(periodType==='year')return periodKey+' هـ';
+  if(periodType==='quarter'){var parts=periodKey.split('-Q');return 'Q'+parts[1]+' '+parts[0]+' هـ';}
+  var m=periodKey.split('-');return hijriMonthLabel(Number(m[0]),Number(m[1]));
+}
 
 function esc2(v){return window.esc?window.esc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function isOfficerOrMaster(){
@@ -96,26 +117,43 @@ function createModal(){
       '<div class="mh"><span class="mt">📜 Hijri Narcotic Ledger / السجل الهجري للأدوية المخدرة</span><button class="xbtn" type="button" data-close="mhijri-ledger">✕</button></div>'+
       '<div style="padding:14px 18px;overflow:auto;flex:1">'+
         '<div id="hjl-size-alert"></div>'+
+        '<div class="fl g8" style="flex-wrap:wrap;margin-bottom:8px">'+
+          '<select id="hjl-view-mode" style="min-width:220px">'+
+            '<option value="single">Single medicine / دواء واحد</option>'+
+            '<option value="all">All Narcotics summary (excl. psychotropic) / كل الناركوتك بدون النفسية</option>'+
+          '</select>'+
+          '<select id="hjl-period-type" style="min-width:130px">'+
+            '<option value="month">Monthly / شهري</option>'+
+            '<option value="quarter">Quarterly / ربعي</option>'+
+            '<option value="year">Yearly / سنوي</option>'+
+          '</select>'+
+        '</div>'+
         '<div class="fl g8" style="flex-wrap:wrap;margin-bottom:12px">'+
           '<select id="hjl-med" style="min-width:220px"></select>'+
-          '<select id="hjl-month" style="min-width:160px"></select>'+
+          '<select id="hjl-period" style="min-width:160px"></select>'+
           '<select id="hjl-dept" style="min-width:160px"><option value="">All departments / كل الأقسام</option><option value="outpatient">Outpatient / مريض خارجي</option></select>'+
           '<button class="btn bp bsm" type="button" id="hjl-apply">Apply / تطبيق</button>'+
           '<button class="btn bg bsm" type="button" id="hjl-export">📊 Export Excel</button>'+
           '<button class="btn bg bsm" type="button" id="hjl-print">🖨 Print</button>'+
         '</div>'+
         '<div id="hjl-summary" class="ctl-stat-row" style="margin-bottom:10px"></div>'+
-        '<div class="card" style="margin:0"><div class="tw"><table><thead><tr>'+
+        '<div id="hjl-single-view" class="card" style="margin:0"><div class="tw"><table><thead><tr>'+
           '<th>Date / التاريخ</th><th>Type / النوع</th><th>Department / القسم</th>'+
           '<th>In / وارد</th><th>Out / صادر</th><th>Balance / الرصيد</th><th></th>'+
         '</tr></thead><tbody id="hjl-rows"></tbody></table></div></div>'+
+        '<div id="hjl-all-view" class="card" style="margin:0;display:none"><div class="tw"><table><thead><tr>'+
+          '<th>Medicine / الدواء</th><th>Opening / افتتاحي</th><th>Received / استلام</th><th>Dispensed (total) / صرف إجمالي</th>'+
+          '<th>→ Departments / للأقسام</th><th>→ Outpatients / للخارجي</th><th>Closing / ختامي</th>'+
+        '</tr></thead><tbody id="hjl-all-rows"></tbody></table></div></div>'+
       '</div>'+
     '</div>';
   document.body.appendChild(div);
   div.querySelectorAll('[data-close]').forEach(function(x){x.onclick=function(){CM('mhijri-ledger')}});
+  el('hjl-view-mode').onchange=function(){populatePeriodOptions();renderLedger()};
+  el('hjl-period-type').onchange=function(){populatePeriodOptions();renderLedger()};
   el('hjl-apply').onclick=renderLedger;
-  el('hjl-export').onclick=exportLedgerExcel;
-  el('hjl-print').onclick=printLedger;
+  el('hjl-export').onclick=function(){return el('hjl-view-mode').value==='all'?exportAllMedicinesExcel():exportLedgerExcel()};
+  el('hjl-print').onclick=function(){return el('hjl-view-mode').value==='all'?printAllMedicines():printLedger()};
 }
 function populateFilters(){
   var medSel=el('hjl-med'),cat=(typeof window.ctlCatalog==='function'?window.ctlCatalog():[])||[];
@@ -124,35 +162,72 @@ function populateFilters(){
     .map(function(m){return '<option value="'+esc2(m.id)+'">'+esc2(m.name)+'</option>'}).join('');
   if(prevMed&&cat.some(function(m){return m.id===prevMed}))medSel.value=prevMed;
 
-  var monthSel=el('hjl-month'),h=currentHijri(),y=h.year,m=h.month,opts=[];
-  for(var i=0;i<72;i++){
-    opts.push('<option value="'+y+'-'+String(m).padStart(2,'0')+'">'+esc2(hijriMonthLabel(y,m))+'</option>');
-    m--;if(m<1){m=12;y--}
-  }
-  monthSel.innerHTML=opts.join('');
+  populatePeriodOptions();
 
   var deptSel=el('hjl-dept'),depts=(typeof window.gd==='function'?window.gd():[])||[];
   deptSel.innerHTML='<option value="">All departments / كل الأقسام</option><option value="outpatient">Outpatient / مريض خارجي</option>'+
     depts.map(function(d){return '<option value="'+esc2(d.id)+'">'+esc2(d.name)+'</option>'}).join('');
 }
+function populatePeriodOptions(){
+  var periodType=el('hjl-period-type').value,periodSel=el('hjl-period'),h=currentHijri(),prev=periodSel.value,opts=[];
+  if(periodType==='year'){
+    for(var y=h.year;y>h.year-6;y--)opts.push('<option value="'+y+'">'+esc2(periodLabel(String(y),'year'))+'</option>');
+  }else if(periodType==='quarter'){
+    var y2=h.year,q=Math.ceil(h.month/3);
+    for(var i=0;i<24;i++){
+      var key=y2+'-Q'+q;
+      opts.push('<option value="'+key+'">'+esc2(periodLabel(key,'quarter'))+'</option>');
+      q--;if(q<1){q=4;y2--}
+    }
+  }else{
+    var y3=h.year,m=h.month;
+    for(var j=0;j<72;j++){
+      var key2=y3+'-'+String(m).padStart(2,'0');
+      opts.push('<option value="'+key2+'">'+esc2(periodLabel(key2,'month'))+'</option>');
+      m--;if(m<1){m=12;y3--}
+    }
+  }
+  periodSel.innerHTML=opts.join('');
+  if(prev&&opts.some(function(o){return o.indexOf('value="'+prev+'"')>=0}))periodSel.value=prev;
+
+  var isAll=el('hjl-view-mode').value==='all';
+  el('hjl-med').style.display=isAll?'none':'';
+  el('hjl-single-view').style.display=isAll?'none':'';
+  el('hjl-all-view').style.display=isAll?'':'none';
+}
 
 function currentSelection(){
-  return {medId:el('hjl-med').value,monthKey:el('hjl-month').value,deptFilter:el('hjl-dept').value};
+  var periodType=el('hjl-period-type').value;
+  return {medId:el('hjl-med').value,periodKey:el('hjl-period').value,periodType:periodType,deptFilter:el('hjl-dept').value};
+}
+function ledgerForRange(medId,startKey,endKeyIncl,deptFilter){
+  var series=medicineBalanceSeries(medId);
+  var before=series.filter(function(e){return hijriMonthKey(e.at)<startKey});
+  var opening=before.length?before[before.length-1].balance:0;
+  var periodEntries=series.filter(function(e){var k=hijriMonthKey(e.at);return k>=startKey&&k<=endKeyIncl});
+  var closing=periodEntries.length?periodEntries[periodEntries.length-1].balance:opening;
+  var totalIn=periodEntries.filter(function(e){return e.dir==='in'}).reduce(function(s,e){return s+e.qty},0);
+  var totalOut=periodEntries.filter(function(e){return e.dir==='out'}).reduce(function(s,e){return s+e.qty},0);
+  var outDept=periodEntries.filter(function(e){return e.dir==='out'&&e.dispenseType!=='outpatient'}).reduce(function(s,e){return s+e.qty},0);
+  var outPatient=periodEntries.filter(function(e){return e.dir==='out'&&e.dispenseType==='outpatient'}).reduce(function(s,e){return s+e.qty},0);
+  var displayEntries=periodEntries.filter(function(e){
+    if(!deptFilter)return true;
+    if(deptFilter==='outpatient')return e.dispenseType==='outpatient';
+    return String(e.dept)===String(deptFilter);
+  });
+  return {opening:opening,closing:closing,totalIn:totalIn,totalOut:totalOut,outDept:outDept,outPatient:outPatient,entries:displayEntries,allEntries:periodEntries};
 }
 function ledgerForSelection(sel){
-  var series=medicineBalanceSeries(sel.medId);
-  var before=series.filter(function(e){return hijriMonthKey(e.at)<sel.monthKey});
-  var opening=before.length?before[before.length-1].balance:0;
-  var monthEntries=series.filter(function(e){return hijriMonthKey(e.at)===sel.monthKey});
-  var closing=monthEntries.length?monthEntries[monthEntries.length-1].balance:opening;
-  var totalIn=monthEntries.filter(function(e){return e.dir==='in'}).reduce(function(s,e){return s+e.qty},0);
-  var totalOut=monthEntries.filter(function(e){return e.dir==='out'}).reduce(function(s,e){return s+e.qty},0);
-  var displayEntries=monthEntries.filter(function(e){
-    if(!sel.deptFilter)return true;
-    if(sel.deptFilter==='outpatient')return e.dispenseType==='outpatient';
-    return String(e.dept)===String(sel.deptFilter);
+  var bounds=periodBounds(sel.periodKey,sel.periodType);
+  return ledgerForRange(sel.medId,bounds.start,bounds.endIncl,sel.deptFilter);
+}
+function allMedicinesSummary(periodKey,periodType,deptFilter){
+  var bounds=periodBounds(periodKey,periodType);
+  var cat=((typeof window.ctlCatalog==='function'?window.ctlCatalog():[])||[]).filter(isNarcoticOnly);
+  return cat.slice().sort(function(a,b){return String(a.name||'').localeCompare(String(b.name||''))}).map(function(m){
+    var d=ledgerForRange(m.id,bounds.start,bounds.endIncl,deptFilter);
+    return {medId:m.id,name:m.name||m.id,moh:m.moh||'',nupco:m.nupco||'',opening:d.opening,totalIn:d.totalIn,totalOut:d.totalOut,outDept:d.outDept,outPatient:d.outPatient,closing:d.closing};
   });
-  return {opening:opening,closing:closing,totalIn:totalIn,totalOut:totalOut,entries:displayEntries,allMonthEntries:monthEntries};
 }
 function deptLabel(e){
   if(e.dispenseType==='outpatient')return 'Outpatient / مريض خارجي';
@@ -161,13 +236,15 @@ function deptLabel(e){
 }
 
 function renderLedger(){
-  var sel=currentSelection();if(!sel.medId||!sel.monthKey)return;
-  var data=ledgerForSelection(sel);
-  var med=(typeof window.ctlMedicine==='function'?window.ctlMedicine(sel.medId):null)||{};
-  var h=sel.monthKey.split('-');
   el('hjl-size-alert').innerHTML='';
   var sizeInfo=checkControlledMovesSize();
   if(sizeInfo.warn)el('hjl-size-alert').innerHTML='<div class="alert-banner" style="margin-bottom:10px">⚠️ controlled_moves is at '+sizeInfo.pct+'% of the Firestore size limit — archive records older than 1 year from Custody Log. / سجل الحركات اقترب من الحد الأقصى، يُنصح بالأرشفة.</div>';
+
+  if(el('hjl-view-mode').value==='all')return renderAllMedicines();
+
+  var sel=currentSelection();if(!sel.medId||!sel.periodKey)return;
+  var data=ledgerForSelection(sel);
+  var med=(typeof window.ctlMedicine==='function'?window.ctlMedicine(sel.medId):null)||{};
 
   el('hjl-summary').innerHTML=
     _statCard('Medicine / الدواء',esc2(med.name||sel.medId))+
@@ -188,6 +265,94 @@ function renderLedger(){
     '</tr>';
   }).join(''):'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--tx2)">No movements this month / لا توجد حركات هذا الشهر</td></tr>';
 }
+
+function allMedicinesSelection(){
+  return {periodKey:el('hjl-period').value,periodType:el('hjl-period-type').value,deptFilter:el('hjl-dept').value};
+}
+function renderAllMedicines(){
+  var sel=allMedicinesSelection();if(!sel.periodKey)return;
+  var rows=allMedicinesSummary(sel.periodKey,sel.periodType,sel.deptFilter);
+  var totalIn=rows.reduce(function(s,r){return s+r.totalIn},0),totalOut=rows.reduce(function(s,r){return s+r.totalOut},0);
+  el('hjl-summary').innerHTML=
+    _statCard('Period / الفترة',esc2(periodLabel(sel.periodKey,sel.periodType)))+
+    _statCard('Medicines / عدد الأدوية',rows.length)+
+    _statCard('Total received / إجمالي الاستلام',totalIn)+
+    _statCard('Total dispensed / إجمالي الصرف',totalOut);
+  el('hjl-all-rows').innerHTML=rows.length?rows.map(function(r){
+    return '<tr><td style="text-align:left;font-weight:700">'+esc2(r.name)+'</td>'+
+      '<td style="font-family:var(--mono)">'+r.opening+'</td>'+
+      '<td style="font-family:var(--mono)">'+r.totalIn+'</td>'+
+      '<td style="font-family:var(--mono);font-weight:700">'+r.totalOut+'</td>'+
+      '<td style="font-family:var(--mono)">'+r.outDept+'</td>'+
+      '<td style="font-family:var(--mono)">'+r.outPatient+'</td>'+
+      '<td style="font-family:var(--mono);font-weight:700">'+r.closing+'</td></tr>';
+  }).join(''):'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--tx2)">No narcotic medicines found / لا توجد أدوية مخدرة</td></tr>';
+}
+async function exportAllMedicinesExcel(){
+  var sel=allMedicinesSelection();if(!sel.periodKey)return;
+  var rows=allMedicinesSummary(sel.periodKey,sel.periodType,sel.deptFilter);
+  if(typeof window.ensureXLSX!=='function')return window.toast&&window.toast('Excel export library is unavailable.','err');
+  try{
+    await window.ensureXLSX();
+    var aoa=[
+      ['Hijri Narcotic Ledger — All Medicines / سجل هجري شامل — كل الأدوية'],
+      ['Period / الفترة',periodLabel(sel.periodKey,sel.periodType)],
+      [],
+      ['Medicine','MOH','NUPCO','Opening balance','Received','Dispensed (total)','Dispensed → Departments','Dispensed → Outpatients','Closing balance']
+    ];
+    rows.forEach(function(r){aoa.push([r.name,r.moh,r.nupco,r.opening,r.totalIn,r.totalOut,r.outDept,r.outPatient,r.closing])});
+    var ws=XLSX.utils.aoa_to_sheet(aoa);
+    var wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'Ledger');
+    XLSX.writeFile(wb,'Hijri_Ledger_All_Narcotics_'+sel.periodKey+'.xlsx');
+  }catch(e){
+    console.error('All-medicines ledger export failed',e);
+    window.toast&&window.toast(String(e&&e.message||e),'err');
+  }
+}
+function printAllMedicines(){
+  var sel=allMedicinesSelection();if(!sel.periodKey)return;
+  var rows=allMedicinesSummary(sel.periodKey,sel.periodType,sel.deptFilter);
+  var official=typeof window.officialPrintHeaderHTML==='function'?window.officialPrintHeaderHTML():'';
+  var body=rows.map(function(r){
+    return '<tr><td style="text-align:left">'+esc2(r.name)+'</td><td>'+r.opening+'</td><td>'+r.totalIn+'</td><td>'+r.totalOut+'</td><td>'+r.outDept+'</td><td>'+r.outPatient+'</td><td>'+r.closing+'</td></tr>';
+  }).join('');
+  var html='<!doctype html><html><head><meta charset="utf-8"><title>Hijri Ledger — All Narcotics</title><style>'+
+    '@page{size:A4 landscape;margin:8mm}'+
+    '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
+    'html,body{width:100%;height:100%;margin:0;overflow:hidden}'+
+    'body{font-family:Arial,Tahoma,sans-serif;color:#000}'+
+    '.sheet{height:196mm;overflow:hidden;display:flex;flex-direction:column}'+
+    '.fit{width:100%;transform-origin:top left}'+
+    'h1{font-size:14pt;margin:4mm 0 1mm;text-align:center}'+
+    'h2{font-size:10pt;margin:0 0 3mm;text-align:center;font-weight:400}'+
+    'table{width:100%;border-collapse:collapse;font-size:8.5pt}'+
+    'th,td{border:1px solid #000;padding:2mm;text-align:center}'+
+    'th{background:#1f2328;color:#fff}'+
+    '.footer{text-align:center;font-size:7pt;color:#555;margin-top:3mm}'+
+    '</style></head><body><div class="sheet"><div class="fit">'+
+    official+
+    '<h1>Hijri Narcotic Ledger — All Medicines / السجل الهجري الشامل — كل الأدوية المخدرة</h1>'+
+    '<h2>'+esc2(periodLabel(sel.periodKey,sel.periodType))+'</h2>'+
+    '<table><thead><tr><th>Medicine / الدواء</th><th>Opening / افتتاحي</th><th>Received / استلام</th><th>Dispensed / صرف</th><th>→ Departments / أقسام</th><th>→ Outpatients / خارجي</th><th>Closing / ختامي</th></tr></thead>'+
+    '<tbody>'+(body||'<tr><td colspan="7">No data / لا توجد بيانات</td></tr>')+'</tbody></table>'+
+    '<div class="footer">By Ali Abudahash — Printed / تاريخ الطباعة: '+esc2(hijriDateLabel(new Date()))+'</div>'+
+    '</div></div>'+
+    '<script>(function(){'+
+    'function over(){var s=document.querySelector(".sheet"),f=document.querySelector(".fit");return f.scrollHeight>s.clientHeight+1}'+
+    'function fit(){var f=document.querySelector(".fit"),size=13,guard=0;f.style.fontSize=size+"px";'+
+    'while(over()&&size>5&&guard<80){size-=0.4;f.style.fontSize=size+"px";guard++}'+
+    'var s=document.querySelector(".sheet"),wr=(s.clientWidth-2)/Math.max(1,f.scrollWidth),hr=(s.clientHeight-2)/Math.max(1,f.scrollHeight),scale=Math.min(wr,hr,1);'+
+    'f.style.transform="scale("+scale+")"}'+
+    'window.addEventListener("load",function(){setTimeout(function(){fit();window.focus();window.print()},250)},{once:true});'+
+    '})()</'+'script></body></html>';
+  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
+  var url=URL.createObjectURL(blob);
+  var w=window.open(url,'_blank');
+  setTimeout(function(){URL.revokeObjectURL(url)},60000);
+  if(!w)window.toast&&window.toast('Allow pop-ups to print the ledger.','err');
+}
+
 function _statCard(label,val){
   return '<div class="ctl-stat-card"><div class="ctl-stat-card-label">'+label+'</div><div class="ctl-stat-card-value">'+val+'</div></div>';
 }
@@ -227,7 +392,7 @@ window.ctlEditLedgerMove=async function(moveId){
 
 /* ── excel export (opening balance → daily movements → closing balance) ── */
 async function exportLedgerExcel(){
-  var sel=currentSelection();if(!sel.medId||!sel.monthKey)return;
+  var sel=currentSelection();if(!sel.medId||!sel.periodKey)return;
   var data=ledgerForSelection(sel);
   var med=(typeof window.ctlMedicine==='function'?window.ctlMedicine(sel.medId):null)||{};
   if(typeof window.ensureXLSX!=='function')return window.toast&&window.toast('Excel export library is unavailable.','err');
@@ -236,12 +401,12 @@ async function exportLedgerExcel(){
     var aoa=[
       ['Hijri Narcotic Ledger / السجل الهجري للأدوية المخدرة'],
       ['Medicine / الدواء',med.name||sel.medId],
-      ['Hijri month / الشهر الهجري',hijriMonthLabel(Number(sel.monthKey.split('-')[0]),Number(sel.monthKey.split('-')[1]))],
+      ['Period / الفترة',periodLabel(sel.periodKey,sel.periodType)],
       ['Opening balance / الرصيد الافتتاحي',data.opening],
       [],
       ['Hijri date','Gregorian date','Type','Department','In','Out','Balance']
     ];
-    data.allMonthEntries.forEach(function(e){
+    data.allEntries.forEach(function(e){
       aoa.push([hijriDateLabel(e.at),new Date(e.at).toISOString().slice(0,10),e.dir==='in'?'Receipt':'Dispense',deptLabel(e),e.dir==='in'?e.qty:'',e.dir==='out'?e.qty:'',e.balance]);
     });
     aoa.push([]);
@@ -249,7 +414,7 @@ async function exportLedgerExcel(){
     var ws=XLSX.utils.aoa_to_sheet(aoa);
     var wb=XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb,ws,'Ledger');
-    XLSX.writeFile(wb,'Hijri_Ledger_'+(med.name||sel.medId)+'_'+sel.monthKey+'.xlsx');
+    XLSX.writeFile(wb,'Hijri_Ledger_'+(med.name||sel.medId)+'_'+sel.periodKey+'.xlsx');
   }catch(e){
     console.error('Ledger export failed',e);
     window.toast&&window.toast(String(e&&e.message||e),'err');
@@ -258,12 +423,12 @@ async function exportLedgerExcel(){
 
 /* ── print (single A4 page) ── */
 function printLedger(){
-  var sel=currentSelection();if(!sel.medId||!sel.monthKey)return;
+  var sel=currentSelection();if(!sel.medId||!sel.periodKey)return;
   var data=ledgerForSelection(sel);
   var med=(typeof window.ctlMedicine==='function'?window.ctlMedicine(sel.medId):null)||{};
   var official=typeof window.officialPrintHeaderHTML==='function'?window.officialPrintHeaderHTML():'';
-  var monthLabel=hijriMonthLabel(Number(sel.monthKey.split('-')[0]),Number(sel.monthKey.split('-')[1]));
-  var rows=data.allMonthEntries.map(function(e){
+  var monthLabel=periodLabel(sel.periodKey,sel.periodType);
+  var rows=data.allEntries.map(function(e){
     return '<tr><td>'+esc2(hijriDateLabel(e.at))+'</td><td>'+(e.dir==='in'?'Receipt / استلام':'Dispense / صرف')+'</td>'+
       '<td>'+esc2(deptLabel(e))+'</td><td>'+(e.dir==='in'?e.qty:'')+'</td><td>'+(e.dir==='out'?e.qty:'')+'</td><td>'+e.balance+'</td></tr>';
   }).join('');
