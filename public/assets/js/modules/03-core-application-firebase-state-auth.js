@@ -450,7 +450,7 @@ globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
   'narcotic_restore_from_backup_20260728_v1',
   'controlled_dept_list_name_enrich_v1',
-  'controlled_custody_handover_log_v1'
+  'controlled_custody_handover_log_v1','controlled_custody_handover_defaults_v1'
 ]);
 function fsControlledPharmacyDeptKeys(cache){
   var ids=(Array.isArray(cache&&cache.departments)?cache.departments:[])

@@ -26,6 +26,16 @@ function logKey(){return 'controlled_custody_handover_log_v1'}
 function readLog(){return (window.S&&window.S.g?window.S.g(logKey())||[]:[])}
 async function writeLog(next){return window.S.s(logKey(),next)}
 
+/* Custody Officer / Pharmacy Manager names are entered once and reused —
+   only the Recipient is retyped for every handover, since that's the one
+   name that actually changes each time. */
+function defaultsKey(){return 'controlled_custody_handover_defaults_v1'}
+function readDefaults(){return (window.S&&window.S.g?window.S.g(defaultsKey())||{}:{})}
+async function saveDefaults(officer,manager){
+  try{await window.S.s(defaultsKey(),{custodyOfficer:officer,pharmacyManager:manager})}
+  catch(e){console.warn('Could not save custody officer/manager defaults.',e)}
+}
+
 function buildSnapshot(){
   var cat=(typeof window.ctlCatalog==='function'?window.ctlCatalog():[])||[];
   var ph=(typeof window.ctlPharmacy==='function'?window.ctlPharmacy():{})||{};
@@ -56,9 +66,9 @@ function createModal(){
         '</div>'+
         '<div id="chr-form-panel">'+
           '<div class="fhint" id="chr-form-hint" style="margin-bottom:10px"></div>'+
-          '<div class="fg"><label>Custody Officer (outgoing) / مسؤول العهدة المُسلِّم</label><input id="chr-officer"></div>'+
-          '<div class="fg"><label>Recipient / المستلم للعهدة</label><input id="chr-recipient"></div>'+
-          '<div class="fg"><label>Pharmacy Manager / مدير الصيدلية</label><input id="chr-manager"></div>'+
+          '<div class="fg"><label>Custody Officer (outgoing) / مسؤول العهدة المُسلِّم <span class="fhint">saved — edit anytime / محفوظ، يمكن تعديله</span></label><input id="chr-officer"></div>'+
+          '<div class="fg"><label>Recipient / المستلم للعهدة <span class="fhint">enter each time / يُدخل في كل مرة</span></label><input id="chr-recipient"></div>'+
+          '<div class="fg"><label>Pharmacy Manager / مدير الصيدلية <span class="fhint">saved — edit anytime / محفوظ، يمكن تعديله</span></label><input id="chr-manager"></div>'+
           '<div class="fl g8" style="margin:10px 0">'+
             '<label class="fl g8" style="align-items:center"><input type="checkbox" id="chr-inc-narcotic" checked> Narcotics page / صفحة الناركوتك</label>'+
             '<label class="fl g8" style="align-items:center"><input type="checkbox" id="chr-inc-psych" checked> Psychotropics page / صفحة النفسية</label>'+
@@ -117,6 +127,7 @@ async function generateAndSave(){
   try{
     var log=readLog().slice();log.push(record);
     await writeLog(log);
+    await saveDefaults(officer,manager);
     if(typeof window.auditAction==='function')await Promise.resolve(window.auditAction('controlled_custody_'+record.type,{recordId:record.id,officer:officer,recipient:recipient})).catch(function(){});
     window.toast&&window.toast('Custody '+(record.type==='return'?'return':'handover')+' record saved ✓','succ');
     printRecord(record);
@@ -189,7 +200,10 @@ function printRecord(record){
 window.ctlOpenCustodyHandover=function(){
   if(!isOfficerOrMaster())return window.toast&&window.toast('Access restricted to the Controlled Medicines Officer or Master. / الوصول مقصور على مسؤول الأدوية المخدرة أو الماستر.','err');
   createModal();
-  el('chr-officer').value='';el('chr-recipient').value='';el('chr-manager').value='';
+  var defaults=readDefaults();
+  el('chr-officer').value=defaults.custodyOfficer||'';
+  el('chr-recipient').value='';
+  el('chr-manager').value=defaults.pharmacyManager||'';
   el('chr-inc-narcotic').checked=true;el('chr-inc-psych').checked=true;
   setMode('handover');
   OM('mcustody-handover');
