@@ -159,6 +159,28 @@ async function countActiveMasters(excludeUid = null, tenantId = '') {
   }).length;
 }
 
+// Geo-gate for state writes (see fsStateSetSmart/fsStateDeleteSmart in
+// 03-core-application-firebase-state-auth.js). Read-only check, never
+// performs the write itself. NOTE: Cloud Functions v2 runs on Cloud Run,
+// which does not populate a country header by default the way App Engine
+// standard does — x-appengine-country is included as a best-effort in case
+// this project ever sits behind an HTTPS Load Balancer with geo
+// enrichment, but on a bare Cloud Functions v2 deployment it will likely
+// be absent for every request. When no country header is present at all,
+// this returns allowed:true (fail open) rather than silently blocking
+// every write nationwide — verify the header is actually populated in
+// production (check the logs for the country value on a real request)
+// before treating this as a real enforcement boundary.
+exports.checkGeoAllowed = onCall(CALLABLE_OPTIONS, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in first / يجب تسجيل الدخول');
+  }
+  const headers = (request.rawRequest && request.rawRequest.headers) || {};
+  const country = headers['x-appengine-country'] || headers['x-vercel-ip-country'] || '';
+  if (!country) return { allowed: true, country: 'unknown' };
+  return { allowed: country === 'SA', country };
+});
+
 exports.listManagedUsers = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requirePharmacy(caller);

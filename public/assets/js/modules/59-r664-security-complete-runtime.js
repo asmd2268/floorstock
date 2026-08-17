@@ -193,6 +193,7 @@ window.masterCreateCloudBackup=async function(manual){
   if(!actualMaster()||!FB_AUTH||!FB_AUTH.currentUser||!FB_DB){if(manual)toast('Master permission required.','err');return false}
   var button=E('r664-cloud-backup-btn');if(button)button.disabled=true;backupStatus('Creating encrypted-at-rest authenticated cloud backup…');
   try{
+    if(typeof window.ensureGeoAllowed==='function')await window.ensureGeoAllowed();
     var payload=await buildCloudPayload(),text=JSON.stringify(payload),chunks=[];
     for(var i=0;i<text.length;i+=CLOUD_CHUNK)chunks.push(text.slice(i,i+CLOUD_CHUNK));
     var uid=FB_AUTH.currentUser.uid,id=payload.createdAt.replace(/[:.]/g,'-'),root=FB_DB.collection(CLOUD_COLLECTION).doc(uid).collection('snapshots'),ref=root.doc(id);
