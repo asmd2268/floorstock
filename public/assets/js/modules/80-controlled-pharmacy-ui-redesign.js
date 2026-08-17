@@ -338,6 +338,8 @@ function syncHeroBtns(){
     btns+='<button class="btn bp" onclick="ctlOpenDepartmentPrintOptions()">🖨 Print custody</button>';
   if(view==='overview'&&(role==='controlled_pharmacy'||typeof window.isMaster==='function'&&window.isMaster()))
     btns+='<button class="btn bg bsm" onclick="ctlAddCatalogMedicine()">+ Add medicine</button>';
+  if(view==='overview'&&(role==='controlled_pharmacy'||typeof window.isMaster==='function'&&window.isMaster())&&typeof window.ctlOpenHijriLedger==='function')
+    btns+='<button class="btn bg bsm" onclick="ctlOpenHijriLedger()">📜 Hijri Ledger / السجل الهجري</button>';
   if(view==='analytics')
     btns+='<button class="btn bg bsm" onclick="ctlAnPrint()">🖨 Print analytics</button>';
   row.innerHTML=btns;
