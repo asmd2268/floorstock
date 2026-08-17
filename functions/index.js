@@ -176,6 +176,8 @@ exports.checkGeoAllowed = onCall(CALLABLE_OPTIONS, async (request) => {
     throw new HttpsError('unauthenticated', 'Sign in first / يجب تسجيل الدخول');
   }
   const headers = (request.rawRequest && request.rawRequest.headers) || {};
+  // TEMPORARY — remove once header presence is confirmed from real traffic.
+  console.log('[GEO-DEBUG] All headers:', JSON.stringify(headers));
   const country = headers['x-appengine-country'] || headers['x-vercel-ip-country'] || '';
   if (!country) return { allowed: true, country: 'unknown' };
   return { allowed: country === 'SA', country };
