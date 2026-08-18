@@ -10,8 +10,7 @@
 function el(id){return document.getElementById(id)}
 function esc4(v){return window.esc?window.esc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function isManager(){
-  var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');
-  return (typeof window.isMaster==='function'&&window.isMaster())||['pharmacy','pharmacy_director'].indexOf(role)>=0;
+  return typeof window.isMaster==='function'&&window.isMaster();
 }
 
 function usersDirectory(){return (window.S&&window.S.g?window.S.g('users')||[]:[])}
@@ -129,7 +128,7 @@ function renderReport(){
 }
 
 window.ctlOpenStaffActivity=function(){
-  if(!isManager())return window.toast&&window.toast('Access restricted to Master or Pharmacy management. / الوصول مقصور على الماستر أو إدارة الصيدلية.','err');
+  if(!isManager())return window.toast&&window.toast('Access restricted to Master. / الوصول مقصور على الماستر فقط.','err');
   createModal();
   OM('mstaff-activity');
   renderReport();
