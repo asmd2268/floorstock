@@ -667,7 +667,37 @@ async function fsStateSdkDeleteDocument(key){
     'Firestore SDK delete timed out.'
   );
 }
+// Geo-gate for floorstock_state writes: checked here, BEFORE the SDK/REST
+// branch, not inside fsStateSdkSetDocument/fsStateSdkDeleteDocument — those
+// two are only reached on the SDK path, and S.writeTransport permanently
+// flips to 'rest' after a single transient SDK failure for the rest of the
+// session, which would silently bypass a check placed only in the SDK
+// helpers. Cached for 30 minutes per session so this doesn't add a Cloud
+// Function round-trip to every write.
+globalThis._geoWriteCheckCache = {allowed:null,checkedAt:0};
+async function ensureGeoAllowed(){
+  var now=Date.now(),cache=globalThis._geoWriteCheckCache;
+  if(cache.allowed!==null&&now-cache.checkedAt<30*60*1000){
+    if(!cache.allowed)throw new Error('Writing is restricted to Saudi Arabia. / الكتابة مقيّدة جغرافياً بالسعودية.');
+    return;
+  }
+  try{
+    var result=await fsCallFunction('checkGeoAllowed',{});
+    var allowed=!!(result&&result.allowed);
+    globalThis._geoWriteCheckCache={allowed:allowed,checkedAt:now};
+    if(!allowed)throw new Error('Writing is restricted to Saudi Arabia. / الكتابة مقيّدة جغرافياً بالسعودية.');
+  }catch(error){
+    if(error&&/restricted to Saudi Arabia/.test(error.message||''))throw error;
+    // The geo check itself failing (network hiccup, cold start, callable
+    // unreachable) must never brick every write nationwide — fail open and
+    // let Firestore Rules + App Check remain the real security boundary.
+    console.warn('Geo write check failed; allowing this write. / تعذر فحص الموقع الجغرافي للكتابة؛ سيُسمح بالكتابة.',error);
+    globalThis._geoWriteCheckCache={allowed:null,checkedAt:0};
+  }
+}
+window.ensureGeoAllowed=ensureGeoAllowed;
 async function fsStateSetSmart(key,value){
+  await ensureGeoAllowed();
   if(S.writeTransport==='rest'||!window.FB_DB)return fsStateRestSetDocument(key,value);
   try{
     return await fsStateSdkSetDocument(key,value);
@@ -678,6 +708,7 @@ async function fsStateSetSmart(key,value){
   }
 }
 async function fsStateDeleteSmart(key){
+  await ensureGeoAllowed();
   if(S.writeTransport==='rest'||!window.FB_DB)return fsStateRestDeleteDocument(key);
   try{
     return await fsStateSdkDeleteDocument(key);

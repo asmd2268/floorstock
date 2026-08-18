@@ -159,6 +159,52 @@ async function countActiveMasters(excludeUid = null, tenantId = '') {
   }).length;
 }
 
+// Geo-gate for state writes (see fsStateSetSmart/fsStateDeleteSmart in
+// 03-core-application-firebase-state-auth.js). Read-only check, never
+// performs the write itself.
+//
+// Confirmed via a real request (see [GEO-DEBUG] logs, now removed) that
+// Cloud Functions v2 / Cloud Run never populates x-appengine-country or
+// x-vercel-ip-country — this project's requests reach the function
+// directly, not through Vercel's edge or App Engine. The only usable
+// location signal present is the raw client IP (x-forwarded-for), so the
+// country is resolved via ipapi.co's free IP-lookup endpoint instead.
+// Fail-open throughout: no IP, a non-OK response, or any network error
+// (including the 3s timeout) all return allowed:true rather than block
+// writes nationwide over a third-party lookup outage.
+exports.checkGeoAllowed = onCall(CALLABLE_OPTIONS, async (request) => {
+  if (!request.auth) {
+    throw new HttpsError('unauthenticated', 'Sign in first / يجب تسجيل الدخول');
+  }
+  const headers = (request.rawRequest && request.rawRequest.headers) || {};
+  const clientIp = (headers['x-forwarded-for'] || '').split(',')[0].trim();
+
+  if (!clientIp) {
+    console.warn('[geo-check] No client IP found in headers — failing open');
+    return { allowed: true, country: 'ip-missing' };
+  }
+
+  try {
+    const response = await fetch(`https://ipapi.co/${clientIp}/country/`, {
+      signal: AbortSignal.timeout(3000)
+    });
+
+    if (!response.ok) {
+      console.warn('[geo-check] ipapi.co returned non-OK status:', response.status);
+      return { allowed: true, country: 'lookup-failed' };
+    }
+
+    const country = (await response.text()).trim();
+    const allowed = country === 'SA';
+
+    console.info(`[geo-check] IP ${clientIp} → country ${country} → allowed: ${allowed}`);
+    return { allowed, country };
+  } catch (error) {
+    console.error('[geo-check] ipapi.co lookup failed:', error.message);
+    return { allowed: true, country: 'lookup-error' };
+  }
+});
+
 exports.listManagedUsers = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requirePharmacy(caller);
