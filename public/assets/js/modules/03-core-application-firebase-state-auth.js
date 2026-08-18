@@ -288,13 +288,22 @@ window.fsTenantCollection=function(name){var tenantId=window.fsTenantId();return
 async function fsStateAppCheckToken(){
   var appCheck=globalThis.FB_APPCHECK;
   if(!appCheck||typeof appCheck.getToken!=='function')return null;
-  try{
-    var result=await appCheck.getToken(false);
-    return result&&result.token||null;
-  }catch(appCheckTokenError){
-    console.warn('Firebase App Check token unavailable for REST request.',appCheckTokenError);
-    return null;
+  // One retry on failure: a transient reCAPTCHA Enterprise network hiccup
+  // (slow hospital wifi, brief connectivity blip) shouldn't permanently mark
+  // every REST call for the rest of the session as unverified when a second
+  // attempt a moment later would likely succeed. Still fails open — a
+  // second failure just returns null like before, never blocks the write.
+  for(var attempt=0;attempt<2;attempt++){
+    try{
+      var result=await appCheck.getToken(false);
+      var token=result&&result.token||null;
+      if(token)return token;
+    }catch(appCheckTokenError){
+      if(attempt===1)console.warn('Firebase App Check token unavailable for REST request.',appCheckTokenError);
+    }
+    if(attempt===0)await new Promise(function(resolve){setTimeout(resolve,300)});
   }
+  return null;
 }
 async function fsStateRestRequest(url,options,timeoutMs){
   var token=await fsStateToken(false);
