@@ -1088,5 +1088,10 @@ export default [
     "id": "b216",
     "event": "click",
     "source": "ctlCustodyLogClearFilters()"
+  },
+  {
+    "id": "b217",
+    "event": "click",
+    "source": "hideSelectedZeroDispense()"
   }
 ];

@@ -51,15 +51,17 @@ function renderAn(){
     ?ha.map(function(e){var m=totMeta[e[0]];return '<div class="brow"><div class="blbl">'+(m?m.name:e[0])+'</div><div class="btrk"><div class="bfil" style="width:'+Math.round(e[1]/mx2*100)+'%;background:var(--rd)"><span class="bval">'+e[1]+'</span></div></div></div>'}).join('')
     :'<div style="padding:14px;color:var(--tx2)">No data</div>';
   var usedKeys=Object.keys(tot),zeroMap={};
-  allMs.forEach(function(m){if(usedKeys.indexOf(analyticsMedKey(m))>=0)return;var key=analyticsMedKey(m),z=zeroMap[key]||(zeroMap[key]={med:m,departments:[]}),dep=gd().find(function(d){return String(d.id)===String(m.deptId||df)}),name=dep?dep.name:(df?((gd().find(function(d){return String(d.id)===String(df)})||{}).name||df):'Department');if(z.departments.indexOf(name)<0)z.departments.push(name)});
+  allMs.forEach(function(m){if(usedKeys.indexOf(analyticsMedKey(m))>=0)return;var key=analyticsMedKey(m),z=zeroMap[key]||(zeroMap[key]={med:m,departments:[],instances:[]}),deptId=String(m.deptId||df),dep=gd().find(function(d){return String(d.id)===deptId}),name=dep?dep.name:(df?((gd().find(function(d){return String(d.id)===String(df)})||{}).name||df):'Department');if(z.departments.indexOf(name)<0)z.departments.push(name);if(!z.instances.some(function(inst){return inst.deptId===deptId&&inst.medId===String(m.id)}))z.instances.push({deptId:deptId,medId:String(m.id),deptName:name})});
   var zero=Object.keys(zeroMap).map(function(k){return zeroMap[k]});
+  window._anlZeroRows=zero;
   var zc=el('azero-count'),au=el('analytics-units'),ar=el('analytics-requests');
   if(zc)zc.textContent=zero.length;
   if(au)au.textContent=Object.keys(tot).reduce(function(s,k){return s+Number(tot[k]||0)},0);
   if(ar)ar.textContent=rs.length;
   el('ztbl').innerHTML=zero.length
-    ?zero.map(function(z){var m=z.med;return '<tr><td>'+m.name+'</td><td>'+z.departments.join(', ')+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
-    :'<tr><td colspan="6" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
+    ?zero.map(function(z,i){var m=z.med;return '<tr><td><input type="checkbox" class="anl-zero-chk" data-idx="'+i+'" style="width:auto;margin:0"></td><td>'+m.name+'</td><td>'+z.departments.join(', ')+'</td><td><span class="chip">'+m.category+'</span></td><td>'+bdg(m)+'</td><td style="font-family:var(--mono)">'+m.min+'</td><td style="font-family:var(--mono)">'+m.max+'</td></tr>'}).join('')
+    :'<tr><td colspan="7" style="text-align:center;color:var(--gnl);padding:18px">All dispensed ✓</td></tr>';
+  var hideBtn=el('anl-zero-hide-btn');if(hideBtn)hideBtn.style.display=zero.length?'':'none';
 
   /* ── Crash Cart Medicines ── */
   (function(){
@@ -160,8 +162,36 @@ function renderAn(){
 }
 
 
+/* Hide selected zero-dispense medicines from New Request only — reuses the
+   exact same medication_visibility_rules_v3 map/shape that the Inventory
+   page's existing Hide-from-Request feature writes (saveInvRuleC in
+   40-v16-clean-optimized-script.js), so behavior stays identical (still
+   visible in Shelves, receiving, expiry entry and printing). Zero-dispense
+   rows can span several departments, and medicine ids are department-local,
+   so each row's own tracked {deptId,medId} instances are used directly
+   instead of re-deriving them from a single "current department" selector
+   the way the Inventory page's picker does. */
+window.hideSelectedZeroDispense=async function(){
+  var rows=window._anlZeroRows||[];
+  var checked=Array.from(document.querySelectorAll('.anl-zero-chk:checked')).map(function(x){return rows[Number(x.dataset.idx)]}).filter(Boolean);
+  if(!checked.length)return toast('Select one or more medicines first. / اختر دواءً واحدًا على الأقل.','err');
+  var confirmed=typeof uiConfirm==='function'?await uiConfirm('Hide '+checked.length+' medicine(s) from New Request in their zero-dispense department(s)? They remain visible in Shelves, receiving, expiry entry and printing.\n\nإخفاء '+checked.length+' دواء من نموذج الطلب في الأقسام التي لم تُصرف فيها؟ يبقى ظاهرًا في الأرفف والاستلام وإدخال الصلاحية والطباعة.'):true;
+  if(!confirmed)return;
+  var key='medication_visibility_rules_v3',map=Object.assign({},(window.S&&S.g?S.g(key):{})||{}),changed=0;
+  checked.forEach(function(z){(z.instances||[]).forEach(function(inst){var k='med:'+inst.medId;map[k]={medId:inst.medId,name:z.med.name,allDepartments:false,departmentIds:[inst.deptId],deptIds:[inst.deptId],reason:'No dispensing in the selected analytics period / لا يوجد صرف بالفترة المحددة',updatedAt:new Date().toISOString(),updatedBy:(window.CU&&(CU.username||CU.email))||''};changed++})});
+  try{
+    await S.s(key,map);
+    toast(changed+' medicine/department record(s) hidden from New Request ✓','succ');
+    renderAn();
+  }catch(error){
+    console.error('Hiding zero-dispense medicines failed',error);
+    toast(String(error&&error.message||error),'err');
+  }
+};
+
 publishLegacy("07d-analytics.js", {
   renderAn,
+  hideSelectedZeroDispense: window.hideSelectedZeroDispense,
 });
 
 export {};

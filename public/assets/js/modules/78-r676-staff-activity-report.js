@@ -134,19 +134,32 @@ window.ctlOpenStaffActivity=function(){
   renderReport();
 };
 
-var _btnAttempts=0;
 function injectButton(){
   var tabs=el('anl-tabs');
-  if(!tabs){if(++_btnAttempts<80)setTimeout(injectButton,500);return}
-  if(el('sar-open-btn'))return;
-  if(!isManager())return;
-  var btn=document.createElement('button');
-  btn.className='btn bg bsm';btn.type='button';btn.id='sar-open-btn';
-  btn.style.marginInlineStart='auto';
-  btn.textContent='👥 Staff Activity / نشاط الموظفين';
-  btn.onclick=window.ctlOpenStaffActivity;
-  tabs.parentNode.insertBefore(btn,tabs);
+  // #anl-tabs is static HTML present from first page load, before any
+  // login — so on the very first call CU/isManager() is never ready yet.
+  // The old version only retried while the element itself was missing,
+  // never on the role check, so it gave up for good on that first check
+  // and the button never appeared even after a real Master signed in
+  // later. Keep polling on a timer for as long as the app runs instead of
+  // a bounded attempt count, and re-check every time in case CU changes
+  // (login, logout, or Master "acting as" another role).
+  if(!tabs)return;
+  var existing=el('sar-open-btn');
+  if(isManager()){
+    if(!existing){
+      var btn=document.createElement('button');
+      btn.className='btn bg bsm';btn.type='button';btn.id='sar-open-btn';
+      btn.style.marginInlineStart='auto';
+      btn.textContent='👥 Staff Activity / نشاط الموظفين';
+      btn.onclick=window.ctlOpenStaffActivity;
+      tabs.parentNode.insertBefore(btn,tabs);
+    }
+  }else if(existing){
+    existing.remove();
+  }
 }
+setInterval(injectButton,1000);
 injectButton();
 })();
 export {};
