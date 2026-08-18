@@ -96,28 +96,39 @@ window.delBatch=async function(id,button){
 };
 window.saveExpiry=async function(){
   if(!window.CU)return;
-  var medId=el('exp-med-sel').value;
-  var date=el('exp-date-inp').value;
-  if(!medId||!date){
-    return toast(
-      'Medicine and expiry date are required. Batch/Lot is optional.',
-      'err'
-    );
-  }
-
+  // The whole body is wrapped, not just the addExpBatch/updExpBatch call:
+  // saveExpiry is async, so any error thrown here — including a null
+  // el(id) lookup — never reaches dom-bindings.js's synchronous try/catch
+  // (calling an async function never throws synchronously; it only ever
+  // rejects the returned promise). Left uncaught, that rejection was only
+  // ever recorded silently into window.__asdhRuntime diagnostics with no
+  // toast — from the tapper's side, indistinguishable from the button
+  // simply not responding. Catching everything here guarantees a visible
+  // toast either way.
   var button=el('exp-save-btn');
-  var editId=el('exp-edit-id').value;
-  var lot=el('exp-batch-inp').value.trim();
-  var row={
-    medId:medId,
-    batch:lot,
-    lot:lot,
-    date:date,
-    expiry:date
-  };
-
-  if(button)button.disabled=true;
   try{
+    var medEl=el('exp-med-sel'),dateEl=el('exp-date-inp'),editEl=el('exp-edit-id'),lotEl=el('exp-batch-inp');
+    if(!medEl||!dateEl||!editEl||!lotEl)return toast('The expiry form was not ready — close and reopen it. / النموذج لم يكن جاهزًا، أغلقه وأعد فتحه.','err');
+    var medId=medEl.value;
+    var date=dateEl.value;
+    if(!medId||!date){
+      return toast(
+        'Medicine and expiry date are required. Batch/Lot is optional.',
+        'err'
+      );
+    }
+
+    var editId=editEl.value;
+    var lot=lotEl.value.trim();
+    var row={
+      medId:medId,
+      batch:lot,
+      lot:lot,
+      date:date,
+      expiry:date
+    };
+
+    if(button)button.disabled=true;
     if(editId)await updExpBatch(CU.deptId,editId,row);
     else await addExpBatch(CU.deptId,row);
 
