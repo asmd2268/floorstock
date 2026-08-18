@@ -3,12 +3,35 @@
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
+const { getAppCheck } = require('firebase-admin/app-check');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
 const { canCreateHandover, createToken, hashToken, tokenMatches, cleanIdentity, applyPartyConfirmation, completeHandoverState } = require('./accountability-handover-core');
 
 initializeApp();
 const db = getFirestore();
 const auth = getAuth();
+const appCheck = getAppCheck();
+
+// Monitoring-only for now, matching the same cautious rollout as the rest of
+// the app's App Check integration this session: logs whether a request to
+// these two previously-unprotected public HTTP endpoints carried a valid
+// App Check token, but never rejects on a missing/invalid one yet. Flip to
+// enforcing (return false / have callers reject) only after confirming a
+// healthy verified rate in real traffic — the client only started sending
+// this header now, so there is no baseline yet.
+async function logAppCheckStatus(request, label) {
+  const headerToken = request.get('X-Firebase-AppCheck');
+  if (!headerToken) {
+    console.warn(`[app-check] ${label}: no token present`);
+    return;
+  }
+  try {
+    await appCheck.verifyToken(headerToken);
+    console.info(`[app-check] ${label}: verified`);
+  } catch (error) {
+    console.warn(`[app-check] ${label}: invalid token`, error.message || error);
+  }
+}
 const CALLABLE_OPTIONS = {
   region: 'us-central1',
   // Keep monitoring-only until every supported production client is observed
@@ -614,6 +637,7 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
 exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (request, response) => {
   if (request.method === 'OPTIONS') return response.status(204).send('');
   if (request.method !== 'GET') return sendJson(response, 405, { ok: false, error: 'Method not allowed.' });
+  await logAppCheckStatus(request, 'getAccountabilityHandover');
   try {
     const sessionId = cleanIdentity(requestValue(request, 'session'), 100);
     const party = cleanIdentity(requestValue(request, 'party'), 20);
@@ -652,6 +676,7 @@ exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (reques
 exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (request, response) => {
   if (request.method === 'OPTIONS') return response.status(204).send('');
   if (request.method !== 'POST') return sendJson(response, 405, { ok: false, error: 'Method not allowed.' });
+  await logAppCheckStatus(request, 'confirmAccountabilityHandover');
   try {
     const sessionId = cleanIdentity(requestValue(request, 'session'), 100);
     const party = cleanIdentity(requestValue(request, 'party'), 20);
