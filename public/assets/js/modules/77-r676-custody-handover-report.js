@@ -59,7 +59,7 @@ function createModal(){
     '<div class="modal" style="width:900px;max-width:96vw;max-height:92vh;display:flex;flex-direction:column">'+
       '<div class="mh"><span class="mt">🧾 Custody Handover / محضر تسليم واستلام العهدة</span><button class="xbtn" type="button" data-close="mcustody-handover">✕</button></div>'+
       '<div style="padding:14px 18px;overflow:auto;flex:1">'+
-        '<div class="fl g8" style="margin-bottom:14px">'+
+        '<div class="fl g8" style="margin-bottom:14px;flex-wrap:wrap">'+
           '<button class="btn bp bsm" type="button" id="chr-tab-handover">Handover / تسليم عهدة</button>'+
           '<button class="btn bg bsm" type="button" id="chr-tab-return">Return / استلام عودة</button>'+
           '<button class="btn bg bsm" type="button" id="chr-tab-history">History / السجل</button>'+
