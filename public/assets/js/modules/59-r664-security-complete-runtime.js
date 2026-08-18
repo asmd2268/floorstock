@@ -243,12 +243,21 @@ window.__startAppExtensions.push(function(){setTimeout(boot,900)});
     if(!signedIn()||warningOpen)return;
     warningOpen=true;
     if(typeof window.uiConfirm==='function'){
-      window.uiConfirm('Your session will close in 2 minutes because no activity was detected.\n\nستنتهي الجلسة خلال دقيقتين بسبب عدم النشاط.\n\nContinue this session?',{title:'Session timeout / انتهاء الجلسة',okText:'Continue / متابعة',cancelText:'Sign out / تسجيل الخروج'}).then(function(continueSession){warningOpen=false;if(continueSession)reset(true);else forceLogout()});
+      // preventBackdropClose: this dialog's "false" branch signs the user out
+      // immediately (see forceLogout below) — a stray tap outside the box
+      // (very easy on a small mobile screen, especially mid-interaction with
+      // a form like expiry entry) must never be read as "sign out". Only the
+      // explicit Continue/Sign out buttons should resolve it.
+      window.uiConfirm('Your session will close in 2 minutes because no activity was detected.\n\nستنتهي الجلسة خلال دقيقتين بسبب عدم النشاط.\n\nContinue this session?',{title:'Session timeout / انتهاء الجلسة',okText:'Continue / متابعة',cancelText:'Sign out / تسجيل الخروج',preventBackdropClose:true}).then(function(continueSession){warningOpen=false;if(continueSession)reset(true);else forceLogout()});
     }else if(typeof window.toast==='function')window.toast('ستنتهي الجلسة خلال دقيقتين بسبب عدم النشاط.\nThe session will close in 2 minutes because no activity was detected.','info');
   }
   function schedule(){clearTimers();if(!signedIn())return;var elapsed=Date.now()-lastActivity;warningTimer=setTimeout(showWarning,Math.max(0,WARNING_MS-elapsed));logoutTimer=setTimeout(forceLogout,Math.max(0,LOGOUT_MS-elapsed))}
   function reset(force){if(warningOpen&&!force)return;var now=Date.now();if(!force&&now-lastReset<15000)return;lastReset=now;lastActivity=now;schedule()}
-  ['pointerdown','keydown','touchstart','scroll'].forEach(function(name){document.addEventListener(name,function(){reset(false)},{capture:true,passive:true})});
+  // 'input'/'focus' cover time spent inside a native mobile picker (date/
+  // select wheels are OS-level UI, not page DOM — no pointerdown/touchstart
+  // reaches the document while one is open) or just typing/selecting in a
+  // field without an incidental scroll/tap on the page around it.
+  ['pointerdown','keydown','touchstart','scroll','input','focus'].forEach(function(name){document.addEventListener(name,function(){reset(false)},{capture:true,passive:true})});
   document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible'){if(signedIn()&&Date.now()-lastActivity>=LOGOUT_MS)forceLogout();else schedule()}});
   function attach(){if(window.FB_AUTH&&typeof FB_AUTH.onAuthStateChanged==='function')FB_AUTH.onAuthStateChanged(function(user){if(user)reset(true);else clearTimers()});else setTimeout(attach,500)}
   attach();

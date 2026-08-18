@@ -60,7 +60,14 @@ function uiDialog(opts){
     bg.appendChild(box);document.body.appendChild(bg);
     function done(v){bg.style.opacity='0';bg.style.transition='opacity .15s';setTimeout(function(){bg.remove();resolve(v)},150)}
     close.onclick=function(){done(isConfirm?false:null)};cancel.onclick=close.onclick;
-    bg.onclick=function(e){if(e.target===bg)close.onclick()};
+    // A stray tap on the backdrop resolves the dialog the same as tapping the
+    // header's close button — for a plain confirm that's harmless (isConfirm
+    // resolves false, same as Cancel), but destructive callers (e.g. the
+    // session-timeout warning, where false triggers an immediate forced
+    // sign-out — see module 59) opt out via preventBackdropClose so an
+    // accidental tap outside the box on a small mobile screen can never be
+    // read as "sign out".
+    if(!opts.preventBackdropClose)bg.onclick=function(e){if(e.target===bg)close.onclick()};
     ok.onclick=function(){done(isConfirm?true:(input?input.value:true))};
     box.onkeydown=function(e){if(e.key==='Escape')close.onclick();if(e.key==='Enter'&&!opts.multiline&&e.target===input){e.preventDefault();ok.click()}};
     setTimeout(function(){(input||ok).focus();if(input&&input.select)input.select()},30);
