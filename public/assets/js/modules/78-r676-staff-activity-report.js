@@ -1,17 +1,34 @@
 (function(){
 'use strict';
-/* Staff activity report — for management (Master/pharmacy roles) to see
-   each individual user's contribution: entries/edits made (from the
-   existing audit_log — not re-logged here), active time spent in the app,
-   and their most-used buttons/icons (both from the new
-   user_activity_daily_v1 rows written by core/activity-tracking.js).
-   Filterable by department and date range. */
+/* Staff activity dashboard — for Master to compare individual users'
+   contribution, especially peers doing the SAME job (grouped by role by
+   default, since comparing a department clerk against a pharmacy director
+   is meaningless — comparing two department clerks against each other is
+   the actual ask). Entries/edits come from the existing audit_log; active
+   time and top icons come from the new user_activity_daily_v1 rows written
+   by core/activity-tracking.js. Bar comparisons reuse the app's own
+   existing .brow/.btrk/.bfil bar-chart CSS (already used in the Top
+   Medications analytics panel) rather than introducing a new charting
+   pattern — numbers are printed directly on each bar so identity/values
+   never rely on color alone. */
 
 function el(id){return document.getElementById(id)}
 function esc4(v){return window.esc?window.esc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function isManager(){
   return typeof window.isMaster==='function'&&window.isMaster();
 }
+
+var ROLE_LABELS={
+  department:'Department staff / موظفو الأقسام',
+  pharmacy:'Pharmacy / الصيدلية',
+  pharmacy_director:'Pharmacy director / مدير الصيدلية',
+  pharmacy_staff:'Pharmacy staff / طاقم الصيدلية',
+  inpatient_supervisor:'Inpatient supervisor / مشرف صيدلية التنويم',
+  outpatient_pharmacy_supervisor:'Outpatient supervisor / مشرف الصيدلية الخارجية',
+  controlled_pharmacy:'Controlled medicines officer / مسؤول الأدوية المخدرة',
+  warehouse:'Warehouse / المستودع'
+};
+function roleLabel(role){return ROLE_LABELS[role]||role||'Unknown role / دور غير معروف'}
 
 function usersDirectory(){return (window.S&&window.S.g?window.S.g('users')||[]:[])}
 function auditRows(){return (window.S&&window.S.g?window.S.g('audit_log')||[]:[])}
@@ -46,6 +63,7 @@ function buildReport(deptFilter,from,to){
         userName:u.username||u.displayName||u.email||uid,
         deptId:u.deptId||'',
         deptName:u.deptName||'',
+        role:u.role||'',
         entries:0,
         activeMinutes:0,
         icons:{}
@@ -71,7 +89,10 @@ function buildReport(deptFilter,from,to){
   var rows=Object.keys(byUser).map(function(uid){return byUser[uid]}).filter(function(row){
     return !deptFilter||String(row.deptId)===String(deptFilter);
   });
-  rows.sort(function(a,b){return (b.entries+b.activeMinutes)-(a.entries+a.activeMinutes)});
+  rows.forEach(function(r){
+    r.activeHours=r.activeMinutes/60;
+    r.entriesPerActiveHour=r.activeHours>0.05?Math.round((r.entries/r.activeHours)*10)/10:null;
+  });
   return rows;
 }
 
@@ -80,8 +101,29 @@ function topIcons(icons,n){
     .sort(function(a,b){return b.count-a.count}).slice(0,n||3);
 }
 function formatMinutes(mins){
-  var h=Math.floor(mins/60),m=mins%60;
+  var h=Math.floor(mins/60),m=Math.round(mins%60);
   return h?(h+'h '+m+'m'):(m+'m');
+}
+function avg(nums){return nums.length?nums.reduce(function(s,n){return s+n},0)/nums.length:0}
+
+function barList(rows,valueKey,formatter,barColor){
+  var max=Math.max.apply(null,rows.map(function(r){return r[valueKey]}).concat([1]));
+  return rows.map(function(r){
+    var pct=Math.max(4,Math.round(r[valueKey]/max*100));
+    return '<div class="brow"><div class="blbl" title="'+esc4(r.userName)+'">'+esc4(r.userName)+'</div>'+
+      '<div class="btrk"><div class="bfil" style="width:'+pct+'%;background:'+barColor+'"><span class="bval">'+formatter(r[valueKey])+'</span></div></div></div>';
+  }).join('');
+}
+
+function groupRows(rows,groupBy){
+  var groups={};
+  rows.forEach(function(r){
+    var key=groupBy==='dept'?(r.deptId||'—'):(r.role||'—');
+    var label=groupBy==='dept'?(r.deptName||r.deptId||'Unassigned / بلا قسم'):roleLabel(r.role);
+    if(!groups[key])groups[key]={key:key,label:label,rows:[]};
+    groups[key].rows.push(r);
+  });
+  return Object.keys(groups).map(function(k){return groups[k]}).sort(function(a,b){return b.rows.length-a.rows.length});
 }
 
 function createModal(){
@@ -89,42 +131,83 @@ function createModal(){
   var div=document.createElement('div');div.id='mstaff-activity';div.className='modal-bg';
   var depts=(typeof window.gd==='function'?window.gd():[])||[];
   div.innerHTML=
-    '<div class="modal" style="width:1100px;max-width:97vw;max-height:92vh;display:flex;flex-direction:column">'+
-      '<div class="mh"><span class="mt">👥 Staff Activity / نشاط الموظفين</span><button class="xbtn" type="button" data-close="mstaff-activity">✕</button></div>'+
+    '<div class="modal" style="width:1150px;max-width:97vw;max-height:92vh;display:flex;flex-direction:column">'+
+      '<div class="mh"><span class="mt">👥 Staff Activity Dashboard / لوحة نشاط الموظفين</span><button class="xbtn" type="button" data-close="mstaff-activity">✕</button></div>'+
       '<div style="padding:14px 18px;overflow:auto;flex:1">'+
         '<div class="fl g8" style="flex-wrap:wrap;margin-bottom:12px">'+
           '<select id="sar-dept"><option value="">All departments / كل الأقسام</option>'+
             depts.map(function(d){return '<option value="'+esc4(d.id)+'">'+esc4(d.name)+'</option>'}).join('')+
           '</select>'+
+          '<select id="sar-group"><option value="role">Compare by role / مقارنة حسب المهمة</option><option value="dept">Compare by department / مقارنة حسب القسم</option></select>'+
           '<input id="sar-from" type="date">'+
           '<input id="sar-to" type="date">'+
           '<button class="btn bp bsm" type="button" id="sar-apply">Apply / تطبيق</button>'+
         '</div>'+
-        '<div class="fhint" style="margin-bottom:10px">Entries/edits come from the existing audit log (~35 tracked action types — not every possible click). Active time and top icons are tracked from this update onward — no historical data before today. / عدد الإدخالات من سجل التدقيق الحالي (لا يغطي كل عملية ممكنة). الوقت النشط وأكثر الأيقونات استخدامًا تُحسب من الآن فصاعدًا فقط.</div>'+
-        '<div class="card" style="margin:0"><div class="tw"><table><thead><tr>'+
-          '<th>User / الموظف</th><th>Department / القسم</th><th>Entries/Edits / إدخالات وتعديلات</th><th>Active time / الوقت النشط</th><th>Most-used / الأكثر استخدامًا</th>'+
-        '</tr></thead><tbody id="sar-rows"></tbody></table></div></div>'+
+        '<div class="fhint" style="margin-bottom:10px">Entries/edits come from the existing audit log (~35 tracked action types — not every possible click). Active time and top icons are tracked from this update onward — no historical data before today. Groups compare peers doing the same job, so a fair ranking needs everyone signed in with their own individual account. / عدد الإدخالات من سجل التدقيق الحالي. الوقت النشط وأكثر الأيقونات تُحسب من الآن فصاعدًا. المقارنة عادلة فقط إذا كان كل موظف يستخدم حسابه الخاص.</div>'+
+        '<div id="sar-summary" class="ctl-stat-row" style="margin-bottom:14px"></div>'+
+        '<div id="sar-groups"></div>'+
       '</div>'+
     '</div>';
   document.body.appendChild(div);
   div.querySelectorAll('[data-close]').forEach(function(x){x.onclick=function(){CM('mstaff-activity')}});
   el('sar-apply').onclick=renderReport;
+  el('sar-group').onchange=renderReport;
   var today=new Date().toISOString().slice(0,10);
   var monthAgo=new Date(Date.now()-30*24*60*60*1000).toISOString().slice(0,10);
   el('sar-from').value=monthAgo;el('sar-to').value=today;
 }
 
-function renderReport(){
-  var deptFilter=el('sar-dept').value,from=el('sar-from').value,to=el('sar-to').value;
-  var rows=buildReport(deptFilter,from,to);
-  el('sar-rows').innerHTML=rows.length?rows.map(function(r){
+function groupSectionHtml(group){
+  var rows=group.rows.slice();
+  var byEntries=rows.slice().sort(function(a,b){return b.entries-a.entries});
+  var byTime=rows.slice().sort(function(a,b){return b.activeMinutes-a.activeMinutes});
+  var avgEntries=Math.round(avg(rows.map(function(r){return r.entries}))*10)/10;
+  var avgMinutes=Math.round(avg(rows.map(function(r){return r.activeMinutes})));
+
+  var tableRows=rows.slice().sort(function(a,b){return b.entries-a.entries}).map(function(r){
     var top=topIcons(r.icons,3).map(function(t){return esc4(iconLabel(t.key))+' ('+t.count+')'}).join(', ')||'—';
+    var rate=r.entriesPerActiveHour==null?'—':r.entriesPerActiveHour;
+    var vsAvgEntries=avgEntries>0?Math.round((r.entries-avgEntries)/avgEntries*100):null;
+    var vsAvgBadge=vsAvgEntries==null?'':(vsAvgEntries>=0?'<span class="badge bgn">▲ '+vsAvgEntries+'%</span>':'<span class="badge brd">▼ '+Math.abs(vsAvgEntries)+'%</span>');
     return '<tr><td style="text-align:left;font-weight:700">'+esc4(r.userName)+'</td>'+
-      '<td>'+esc4(r.deptName||r.deptId||'—')+'</td>'+
-      '<td style="font-family:var(--mono)">'+r.entries+'</td>'+
+      '<td style="font-family:var(--mono)">'+r.entries+' '+vsAvgBadge+'</td>'+
       '<td style="font-family:var(--mono)">'+formatMinutes(r.activeMinutes)+'</td>'+
+      '<td style="font-family:var(--mono)">'+rate+'</td>'+
       '<td class="fhint">'+top+'</td></tr>';
-  }).join(''):'<tr><td colspan="5" style="text-align:center;padding:20px;color:var(--tx2)">No activity in this range / لا يوجد نشاط بهذه الفترة</td></tr>';
+  }).join('');
+
+  return '<div class="card" style="margin:0 0 14px">'+
+    '<div class="ch"><span class="ct">'+esc4(group.label)+'</span><span class="badge bbl">'+rows.length+' staff / موظف</span></div>'+
+    '<div class="cb">'+
+    (rows.length>1?
+      '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:14px">'+
+        '<div><div class="fhint" style="margin-bottom:6px">Entries/edits / إدخالات وتعديلات — avg '+avgEntries+'</div>'+barList(byEntries,'entries',function(v){return String(v)},'var(--ac)')+'</div>'+
+        '<div><div class="fhint" style="margin-bottom:6px">Active time / الوقت النشط — avg '+formatMinutes(avgMinutes)+'</div>'+barList(byTime,'activeMinutes',formatMinutes,'var(--gnl,#1a7f37)')+'</div>'+
+      '</div>'
+      :'')+
+    '<div class="tw"><table><thead><tr><th>User / الموظف</th><th>Entries/Edits</th><th>Active time</th><th>Entries / active hour</th><th>Most-used / الأكثر استخدامًا</th></tr></thead><tbody>'+
+    (tableRows||'<tr><td colspan="5" style="text-align:center;padding:14px;color:var(--tx2)">No activity / لا يوجد نشاط</td></tr>')+
+    '</tbody></table></div>'+
+    '</div></div>';
+}
+
+function renderReport(){
+  var deptFilter=el('sar-dept').value,from=el('sar-from').value,to=el('sar-to').value,groupBy=el('sar-group').value;
+  var rows=buildReport(deptFilter,from,to);
+
+  var totalEntries=rows.reduce(function(s,r){return s+r.entries},0);
+  var totalMinutes=rows.reduce(function(s,r){return s+r.activeMinutes},0);
+  el('sar-summary').innerHTML=
+    _statCard('Staff with activity / موظفون نشطون',rows.length)+
+    _statCard('Total entries/edits / إجمالي الإدخالات',totalEntries)+
+    _statCard('Total active time / إجمالي الوقت النشط',formatMinutes(totalMinutes))+
+    _statCard('Avg entries/staff / متوسط الإدخالات',rows.length?Math.round(totalEntries/rows.length*10)/10:0);
+
+  var groups=groupRows(rows,groupBy);
+  el('sar-groups').innerHTML=groups.length?groups.map(groupSectionHtml).join(''):'<div class="fhint" style="text-align:center;padding:20px">No activity in this range / لا يوجد نشاط بهذه الفترة</div>';
+}
+function _statCard(label,val){
+  return '<div class="ctl-stat-card"><div class="ctl-stat-card-label">'+label+'</div><div class="ctl-stat-card-value">'+val+'</div></div>';
 }
 
 window.ctlOpenStaffActivity=function(){
@@ -138,12 +221,8 @@ function injectButton(){
   var tabs=el('anl-tabs');
   // #anl-tabs is static HTML present from first page load, before any
   // login — so on the very first call CU/isManager() is never ready yet.
-  // The old version only retried while the element itself was missing,
-  // never on the role check, so it gave up for good on that first check
-  // and the button never appeared even after a real Master signed in
-  // later. Keep polling on a timer for as long as the app runs instead of
-  // a bounded attempt count, and re-check every time in case CU changes
-  // (login, logout, or Master "acting as" another role).
+  // Poll continuously and add/remove the button based on live isManager()
+  // state (also handles logout and Master "acting as" role switching).
   if(!tabs)return;
   var existing=el('sar-open-btn');
   if(isManager()){
