@@ -344,7 +344,7 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   'crash_carts',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3',
-  'controlled_catalog'
+  'controlled_catalog','user_activity_daily_v1'
 ]);
 // These roles are deliberately restricted by Firestore Rules to individual
 // document reads.  They must never fall back to collection.list()/onSnapshot(),
@@ -357,7 +357,7 @@ globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'pharmacy_department_announcements','pharmacy_department_expiry_rules',
   'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1',
   'req_windows','disp_slots','daily_limits_v2','weekly_limits_v2','monthly_limits',
-  'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1'
+  'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1','user_activity_daily_v1'
 ]);
 function fsIsPharmacyScopedProfile(profile){
   return !!profile&&['inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor','pharmacy_staff'].includes(String(profile.role||''));
@@ -441,7 +441,7 @@ async function fsStateLoadScoped(keys,loader,source,profile){
 // It reads only the specific documents permitted by canReadScopedState() in firestore.rules.
 globalThis.WAREHOUSE_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','theme','audit_log',
-  'controlled_warehouse','controlled_moves','controlled_pdf_receipts'
+  'controlled_warehouse','controlled_moves','controlled_pdf_receipts','user_activity_daily_v1'
 ]);
 globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
@@ -450,7 +450,7 @@ globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
   'narcotic_restore_from_backup_20260728_v1',
   'controlled_dept_list_name_enrich_v1',
-  'controlled_custody_handover_log_v1','controlled_custody_handover_defaults_v1'
+  'controlled_custody_handover_log_v1','controlled_custody_handover_defaults_v1','user_activity_daily_v1'
 ]);
 function fsControlledPharmacyDeptKeys(cache){
   var ids=(Array.isArray(cache&&cache.departments)?cache.departments:[])
