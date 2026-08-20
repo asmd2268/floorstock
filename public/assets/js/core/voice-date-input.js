@@ -46,19 +46,39 @@ function findMonth(text){
   return null;
 }
 
-/* Returns {year,month,day} or null. Exported for testability. */
-function parseSpokenDate(rawText){
+function lastDayOfMonth(year,month){return new Date(year,month,0).getDate()}
+
+/* mode: 'full' (day+month+year, default) or 'monthYear' (month+year only —
+   any day mentioned is ignored and the LAST day of that month is used
+   instead, e.g. for stock where only the month of expiry is printed on the
+   box). Returns {year,month,day} or null. Exported for testability. */
+function parseSpokenDate(rawText,mode){
   if(!rawText)return null;
   var text=normalizeArabicDigits(rawText).trim();
+  var monthYearOnly=mode==='monthYear';
 
-  // Already a clean numeric date (dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd, etc.)
-  var iso=text.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
-  if(iso)return clampDate(Number(iso[1]),Number(iso[2]),Number(iso[3]));
-  var dmy=text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
-  if(dmy){var y=Number(dmy[3]);if(y<100)y+=2000;return clampDate(y,Number(dmy[2]),Number(dmy[1]));}
+  if(!monthYearOnly){
+    // Already a clean numeric date (dd/mm/yyyy, dd-mm-yyyy, yyyy-mm-dd, etc.)
+    var iso=text.match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);
+    if(iso)return clampDate(Number(iso[1]),Number(iso[2]),Number(iso[3]));
+    var dmy=text.match(/(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})/);
+    if(dmy){var y=Number(dmy[3]);if(y<100)y+=2000;return clampDate(y,Number(dmy[2]),Number(dmy[1]));}
+  }else{
+    // Month-year only numeric forms: mm/yyyy or yyyy-mm.
+    var my1=text.match(/(\d{1,2})[\/\-.](\d{4})/);
+    if(my1)return clampDate(Number(my1[2]),Number(my1[1]),null,true);
+    var my2=text.match(/(\d{4})[\/\-.](\d{1,2})(?!\d)/);
+    if(my2)return clampDate(Number(my2[1]),Number(my2[2]),null,true);
+  }
 
   var month=findMonth(text);
   var numbers=(text.match(/\d+/g)||[]).map(Number);
+
+  if(monthYearOnly){
+    var yearOnly=numbers.find(function(n){return n>=2000&&n<2100});
+    if(month&&yearOnly)return clampDate(yearOnly,month,null,true);
+    return null;
+  }
 
   if(month){
     var year=numbers.find(function(n){return n>=2000&&n<2100});
@@ -83,9 +103,10 @@ function parseSpokenDate(rawText){
   }
   return null;
 }
-function clampDate(year,month,day){
+function clampDate(year,month,day,useLastDay){
   if(!(year>=2000&&year<2100))return null;
   if(!(month>=1&&month<=12))return null;
+  if(useLastDay)day=lastDayOfMonth(year,month);
   if(!(day>=1&&day<=31))return null;
   return {year:year,month:month,day:day};
 }
@@ -94,6 +115,13 @@ function toISODateString(d){
 }
 
 function speechCtor(){return window.SpeechRecognition||window.webkitSpeechRecognition||null}
+
+// Per-device preference (each person picks their own default, stored
+// locally — not synced across devices, since it's a personal input habit
+// rather than data that needs to follow the account).
+var MODE_KEY='voiceDateInputMode';
+function getMode(){try{return localStorage.getItem(MODE_KEY)==='monthYear'?'monthYear':'full'}catch(e){return 'full'}}
+function setMode(mode){try{localStorage.setItem(MODE_KEY,mode)}catch(e){}}
 
 function attachMicButton(input){
   if(!input||input.dataset.voiceAttached)return;
@@ -107,19 +135,25 @@ function attachMicButton(input){
   btn.title='Speak the date / انطق التاريخ';
   btn.textContent='🎤';
   btn.style.cssText='margin-inline-start:6px;min-width:36px;min-height:36px;border-radius:8px;border:1px solid var(--bd);background:var(--s2);cursor:pointer;font-size:16px';
+
+  var modeSel=document.createElement('select');
+  modeSel.className='voice-date-mode';
+  modeSel.title='Voice date mode / وضع الإدخال الصوتي';
+  modeSel.style.cssText='margin-inline-start:6px;font-size:11px;padding:2px 4px;border-radius:6px;border:1px solid var(--bd);background:var(--s2)';
+  modeSel.innerHTML='<option value="full">Day+Month+Year / يوم+شهر+سنة</option><option value="monthYear">Month+Year → last day / شهر+سنة ← آخر يوم</option>';
+  modeSel.value=getMode();
+  modeSel.addEventListener('change',function(){setMode(modeSel.value)});
+
   if(input.parentNode){
-    if(getComputedStyle(input.parentNode).display==='block'){
-      var wrap=document.createElement('span');wrap.style.cssText='display:inline-flex;align-items:center;gap:6px;width:100%';
-      input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);wrap.appendChild(btn);
-    }else{
-      input.parentNode.insertBefore(btn,input.nextSibling);
-    }
+    var wrap=document.createElement('span');wrap.style.cssText='display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;width:100%';
+    input.parentNode.insertBefore(wrap,input);wrap.appendChild(input);wrap.appendChild(btn);wrap.appendChild(modeSel);
   }
 
   var recognition=null,listening=false;
   function stop(){listening=false;btn.textContent='🎤';btn.style.background='var(--s2)';try{if(recognition)recognition.stop()}catch(ignore){}}
   btn.addEventListener('click',function(){
     if(listening){stop();return;}
+    var mode=modeSel.value;
     recognition=new Ctor();
     recognition.lang='ar-SA';
     recognition.interimResults=false;
@@ -129,13 +163,15 @@ function attachMicButton(input){
       var alternatives=[];
       for(var i=0;i<event.results[0].length;i++)alternatives.push(event.results[0][i].transcript);
       var parsed=null,heard='';
-      for(var a=0;a<alternatives.length&&!parsed;a++){parsed=parseSpokenDate(alternatives[a]);heard=alternatives[a];}
+      for(var a=0;a<alternatives.length&&!parsed;a++){parsed=parseSpokenDate(alternatives[a],mode);heard=alternatives[a];}
       if(parsed){
         input.value=toISODateString(parsed);
         input.dispatchEvent(new Event('change',{bubbles:true}));
-        if(window.toast)window.toast('Heard: "'+heard+'" → '+toISODateString(parsed)+'. Check the date field, then press Save. / سمعت: "'+heard+'" ← تحقق من الحقل ثم اضغط حفظ.','info');
+        var suffix=mode==='monthYear'?' (last day of month / آخر يوم بالشهر)':'';
+        if(window.toast)window.toast('Heard: "'+heard+'" → '+toISODateString(parsed)+suffix+'. Check the date field, then press Save. / سمعت: "'+heard+'" ← تحقق من الحقل ثم اضغط حفظ.','info');
       }else if(window.toast){
-        window.toast('Could not understand a date in: "'+heard+'". Try saying it as day, month name, year. / لم أفهم تاريخًا من: "'+heard+'". جرّب: اليوم، اسم الشهر، السنة.','err');
+        var hint=mode==='monthYear'?'Try saying it as month name, year. / جرّب: اسم الشهر، السنة.':'Try saying it as day, month name, year. / جرّب: اليوم، اسم الشهر، السنة.';
+        window.toast('Could not understand a date in: "'+heard+'". '+hint,'err');
       }
     };
     recognition.onerror=function(error){
