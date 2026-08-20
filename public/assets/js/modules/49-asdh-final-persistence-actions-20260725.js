@@ -131,6 +131,7 @@ window.saveExpiry=async function(){
     if(button)button.disabled=true;
     if(editId)await updExpBatch(CU.deptId,editId,row);
     else await addExpBatch(CU.deptId,row);
+    if(typeof auditAction==='function')auditAction(editId?'expiry_edited':'expiry_added',{deptId:CU.deptId,medId:medId,date:date});
 
     CM('mexpiry');
     renderShelves();

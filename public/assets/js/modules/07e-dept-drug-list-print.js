@@ -157,6 +157,7 @@ async function doDeptPrint(){
       +'</body></html>';
     var pw=openBlobPrint(dpHtml);
     if(!pw){toast('Allow pop-ups to print the department drug list.','err');return false;}
+    if(typeof auditAction==='function')auditAction('drug_list_printed',{deptId:deptId,medCount:ms.length});
     return true;
   }catch(error){
     console.error('Department drug list print failed',error);

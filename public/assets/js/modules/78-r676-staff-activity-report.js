@@ -55,26 +55,40 @@ function buildReport(deptFilter,from,to){
   var usersById={};users.forEach(function(u){usersById[String(u.id||u.uid||'')]=u});
 
   var byUser={};
-  function ensure(uid){
+  // The directory join is best-effort, not required: an audit_log row
+  // already carries its own actor name / effectiveRole, and the specific
+  // action types written by department accounts (request_submitted,
+  // expiry_added/edited, drug_list_printed) already pass deptId in meta.
+  // Requiring a clean users-collection match before a row could ever show
+  // up meant any account not perfectly resolved there silently vanished
+  // from the report instead of just missing its nicer directory details.
+  function ensure(uid,fallback){
+    fallback=fallback||{};
     if(!byUser[uid]){
       var u=usersById[uid]||{};
       byUser[uid]={
         userId:uid,
-        userName:u.username||u.displayName||u.email||uid,
-        deptId:u.deptId||'',
-        deptName:u.deptName||'',
-        role:u.role||'',
+        userName:u.username||u.displayName||u.email||fallback.actor||uid||'Unknown',
+        deptId:u.deptId||fallback.deptId||'',
+        deptName:u.deptName||fallback.deptName||'',
+        role:u.role||fallback.role||'',
         entries:0,
         activeMinutes:0,
         icons:{}
       };
+    }else{
+      var row=byUser[uid];
+      if(!row.deptId&&fallback.deptId){row.deptId=fallback.deptId;row.deptName=row.deptName||fallback.deptName||''}
+      if(!row.role&&fallback.role)row.role=fallback.role;
     }
     return byUser[uid];
   }
 
   auditRows().forEach(function(a){
-    if(!a||!a.actorId||!inRange(a.at,from,to))return;
-    var row=ensure(String(a.actorId));
+    if(!a||!inRange(a.at,from,to))return;
+    var uid=String(a.actorId||('name:'+(a.actor||'Unknown')));
+    var meta=a.meta||{};
+    var row=ensure(uid,{actor:a.actor,deptId:meta.deptId,deptName:meta.deptName,role:a.effectiveRole});
     row.entries+=1;
   });
 
