@@ -408,10 +408,18 @@ window._r676PrintDept = function(name) {
       <tr><td>Dispensed units</td><td>${d.units || 0}</td></tr>
       <tr><td>Zero-dispense requests</td><td>${d.zeroDispenseReqs || 0}</td></tr>
     </tbody></table><div class="brand">By Ali Abudahash</div>`;
-  const w = window.open('', '_blank');
+  // Blob URL + window.open(url,...), not window.open('','_blank') +
+  // document.write(): Safari does not reliably fire 'load' on a document
+  // written that way, so window.print() below would silently never run
+  // there — same root cause confirmed behind the Crash Cart print bug in
+  // Safari. A blob: URL is a real navigation whose load lifecycle Safari
+  // handles normally; the unconditional setTimeout is a second safety net.
+  const fullHtml = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(name)}</title><style>${DEPT_PRINT_CSS}</style></head><body>${html}<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print();}if(document.readyState==='complete')setTimeout(g,400);else window.addEventListener('load',function(){setTimeout(g,400)},{once:true});setTimeout(g,1500);})()</sc` + `ript></body></html>`;
+  const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
   if (!w) return;
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(name)}</title><style>${DEPT_PRINT_CSS}</style></head><body>${html}<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print();}if(document.readyState==='complete')setTimeout(g,400);else window.addEventListener('load',function(){setTimeout(g,400)},{once:true});})()</sc` + `ript></body></html>`);
-  w.document.close();
 };
 
 function attach(root, stats) {
