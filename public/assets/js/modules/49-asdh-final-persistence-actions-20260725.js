@@ -673,8 +673,6 @@ function deptName(id){return window.fsDeptName?window.fsDeptName(id):String(id||
 window.crashPrint=function(id){
   var c=typeof crashCart==='function'?crashCart(id):null;
   if(!c){if(typeof toast==='function')toast('Crash Cart not found.','err');return false}
-  var w=window.open('','_blank');
-  if(!w){if(typeof toast==='function')toast('Allow pop-ups to print.','err');return false}
   function e(v){return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
   function q(v){var x=Number(v);return isFinite(x)?x:0}
   function near30(item){return (item.batches||[]).some(function(batch){var days=daysUntil(batch&&batch.expiry);return days!==null&&days>=0&&days<=30})}
@@ -702,7 +700,16 @@ window.crashPrint=function(id){
   '<table class="list"><colgroup><col style="width:2.5%"><col style="width:31.5%"><col style="width:13%"><col style="width:9%"><col style="width:9%"><col style="width:14%"><col style="width:21%"></colgroup><thead><tr><th>#</th><th>Generic name</th><th>Concentration</th><th>Standard quantity</th><th>Available</th><th>Stock status</th><th>Expiry date → Quantity</th></tr></thead><tbody>'+rows+'</tbody></table>'+
   '<div class="footer">Printed by: '+e(printUser)+' · '+e(actorInfo.user||window.CU&&CU.email||printUser)+'</div><div class="byline">By Ali Abudahash</div></div>'+
   '<script>'+qrPrintRuntime+'<\/script></body></html>';
-  try{w.document.open();w.document.write(h);w.document.close()}catch(err){console.error(err);w.close();if(typeof toast==='function')toast('Print preview could not be created.','err');return false}
+  // Blob URL + openBlobPrint (same pattern every other print path in this
+  // app already uses), not window.open('','_blank') + document.write():
+  // Safari does not reliably fire the 'load' event on a document written
+  // via document.write() into a blank popup, so the QR-ready→window.print()
+  // runtime script above (printRuntimeScript, which waits for 'load') would
+  // silently never run — the window opened with content but the print
+  // dialog itself never appeared. A blob: URL is a real navigation, whose
+  // load lifecycle Safari handles the same as any other page.
+  var w=typeof openBlobPrint==='function'?openBlobPrint(h):null;
+  if(!w){if(typeof toast==='function')toast('Allow pop-ups to print.','err');return false}
   try{Promise.resolve(publishPublic([c])).catch(function(err){console.warn('Crash Cart public sync deferred',err)})}catch(err){}
   return true
 };
