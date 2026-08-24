@@ -18,6 +18,8 @@ body.role-department #ctl-dept-authoritative-print-btn{display:inline-flex!impor
 /* ===== 50: asdh-authoritative-final-fixes-style ===== */
 .ccx-stock-out{color:#fff!important;border-color:#b91c1c!important;background:#b91c1c!important}
 .ccx-row-stock-out td{background:rgba(218,54,51,.15)!important}
+.ccx-stock-short{color:#fff!important;border-color:#b45309!important;background:#b45309!important}
+.ccx-row-stock-short td{background:rgba(217,119,6,.15)!important}
 body:not(.role-inpatient_supervisor):not(.role-pharmacy) #crash-add-btn{display:none!important}
 
 

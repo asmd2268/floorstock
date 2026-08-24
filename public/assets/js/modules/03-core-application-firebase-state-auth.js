@@ -366,7 +366,8 @@ globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'pharmacy_department_announcements','pharmacy_department_expiry_rules',
   'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1',
   'req_windows','disp_slots','daily_limits_v2','weekly_limits_v2','monthly_limits',
-  'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1','user_activity_daily_v1'
+  'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1','user_activity_daily_v1',
+  'crash_cart_min_seal_length'
 ]);
 function fsIsPharmacyScopedProfile(profile){
   return !!profile&&['inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor','pharmacy_staff'].includes(String(profile.role||''));

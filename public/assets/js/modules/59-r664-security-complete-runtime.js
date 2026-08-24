@@ -124,6 +124,7 @@ async function saveSealCorrection(){
   var newSeal=String(E('r664-seal-new').value||'').trim(),reason=String(E('r664-seal-reason').value||'').trim(),errorBox=E('r664-seal-error');
   function fail(message){errorBox.textContent=message;errorBox.style.display='block';toast(message,'err');return false}
   if(!newSeal)return fail('Enter the correct seal number. / أدخل رقم القفل الصحيح');
+  if(typeof window.crashCartSealMeetsMinLength==='function'&&!window.crashCartSealMeetsMinLength(newSeal))return fail('Seal is shorter than the configured minimum length ('+(window.crashCartMinSealLength?window.crashCartMinSealLength():0)+'). / رقم القفل أقصر من الحد الأدنى المحدد ('+(window.crashCartMinSealLength?window.crashCartMinSealLength():0)+').');
   if(reason.length<5)return fail('Enter a clear correction reason. / اكتب سببًا واضحًا للتصحيح');
   var original=JSON.parse(JSON.stringify(typeof crashCarts==='function'?(crashCarts()||[]):[]));
   var carts=JSON.parse(JSON.stringify(original)),cart=carts.find(function(c){return String(c.id)===SEAL_CART_ID});

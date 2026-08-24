@@ -569,7 +569,7 @@ function normalText(v){
     :String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ');
 }
 function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
-function canEdit(){return typeof canConfigureCrashCart==='function'&&canConfigureCrashCart()}
+function canEdit(){return typeof window.isMaster==='function'&&window.isMaster()}
 function actor(){return window.fsActor?window.fsActor():{name:'Unknown',user:'Unknown',id:''}}
 function now(){return typeof nowISO==='function'?nowISO():new Date().toISOString()}
 function rules(){var x={};try{x=(window.S&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){}var u=Math.max(1,num(x.urgentDays||7)),n=Math.max(u+1,num(x.nearDays||30));return {urgentDays:u,nearDays:n}}

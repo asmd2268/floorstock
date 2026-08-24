@@ -792,6 +792,20 @@ window.ctlCmpPrint=function(){
     if(!report||!report.inventoryDeductedAtReport)return;
     (report.consumed||[]).forEach(function(row){var item=(cart.items||[]).find(function(entry){return String(entry.id)===String(row.itemId)});if(!item)return;var restored=n(row.deductedQty||row.qty),batches=Array.isArray(item.batches)?item.batches.map(function(batch){return Object.assign({},batch)}):[];(row.deductionBatches||[]).forEach(function(part){var target=batches.find(function(batch){return (part.batchId&&String(batch.batchId||batch.id||'')===String(part.batchId))||(!part.batchId&&ccDateKey(batch.expiry)===ccDateKey(part.expiry)&&String(batch.lot||batch.batch||'')===String(part.lot||''))});if(target)target.qty=n(target.qty)+n(part.qty);else batches.push({batchId:part.batchId||('ccb_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)),expiry:ccDateKey(part.expiry),lot:part.lot||'',qty:n(part.qty),source:'restored_report_edit'})});item.batches=batches;item.present=Math.min(ccItemStandard(item),ccItemPresent(item)+restored);item.stockStatus=item.present<=0?'out_of_stock':item.present<ccItemStandard(item)?'partial':'available'});
   }
+  // Master sets a minimum accepted length for crash cart seal numbers to make
+  // trivial/guessable seals (e.g. a single digit) harder to slip past a
+  // pharmacy/inpatient-supervisor closure. The exact minimum is intentionally
+  // never revealed to non-master roles on rejection — only a generic message.
+  function crashCartMinSealLength(){try{return Math.max(0,parseInt((typeof S!=='undefined'&&S.g&&S.g('crash_cart_min_seal_length'))||0,10)||0)}catch(e){return 0}}
+  window.crashCartMinSealLength=crashCartMinSealLength;
+  function sealMeetsMinLength(seal){return String(seal||'').trim().length>=crashCartMinSealLength()}
+  window.crashCartSealMeetsMinLength=sealMeetsMinLength;
+  window.ccSetMinSealLength=async function(){
+    if(!(typeof window.isMaster==='function'&&window.isMaster()))return toast('Not authorized.','err');
+    var current=crashCartMinSealLength(),input=window.prompt('Minimum accepted seal number length (0 = no minimum) / الحد الأدنى لعدد خانات رقم القفل (0 = بدون حد أدنى):',String(current));
+    if(input==null)return;var next=parseInt(input,10);if(!isFinite(next)||next<0)return toast('Enter a valid non-negative number.','err');
+    await S.s('crash_cart_min_seal_length',next);if(typeof auditAction==='function')auditAction('crash_cart_min_seal_length_set',{value:next});toast('Minimum seal length saved ✓','succ');
+  };
   function ccUniqueSealAllowed(seal,cartId,reportId){var key=String(seal||'').trim().toLowerCase();if(!key)return false;var used=false;(crashCarts()||[]).forEach(function(c){if(String(c.id)!==String(cartId)&&String(c.seal||'').trim().toLowerCase()===key)used=true});(crashReports()||[]).forEach(function(r){if(String(r.id)===String(reportId))return;[r.oldSeal,r.newSeal].forEach(function(s){if(String(s||'').trim().toLowerCase()===key)used=true})});return !used}
 
   window.crashReportOpen=function(id){
@@ -830,12 +844,23 @@ window.ctlCmpPrint=function(){
   window.crashCloseReport=function(reportId){
     if(!canManageCrashCart())return toast('No permission','err');var r=(crashReports()||[]).find(function(x){return String(x.id)===String(reportId)});if(!r)return;var c=crashCart(r.cartId);if(!c)return toast('Crash Cart not found.','err');
     q('ccc-report-id').value=reportId;q('ccc-new-seal').value=r.newSeal||'';q('ccc-note').value=r.pharmacyNote||'';
-    q('ccc-items').innerHTML=(r.consumed||[]).map(function(x){
+    var reportedIds=(r.consumed||[]).map(function(x){return String(x.itemId)});
+    var reportedRows=(r.consumed||[]).map(function(x){
       var it=(c.items||[]).find(function(z){return String(z.id)===String(x.itemId)})||{},saved=(r.replacements||[]).find(function(z){return String(z.itemId)===String(x.itemId)})||{},savedUnavailable=!!saved.unavailable,qty=saved.qty!=null?n(saved.qty):n(x.qty),expiry=saved.expiry||'';
       var isKnownDate=!!expiry&&(ccDatedBatches(it).some(function(b){return ccDateKey(b.expiry)===ccDateKey(expiry)})||ccDateKey(expiry)===ccDateKey(x.reportedExpiry));
       var choiceValue=expiry?(isKnownDate?ccDateKey(expiry):'__new__'):'';
       return '<tr data-id="'+esc(x.itemId)+'" data-reported="'+n(x.qty)+'" data-reported-expiry="'+esc(x.reportedExpiry||'')+'"><td><b>'+esc(x.name)+'</b><div class="fhint">'+esc(x.strength||'')+'</div><label class="ccc-unavailable-label"><input type="checkbox" class="ccc-unavailable" '+(savedUnavailable?'checked':'')+' onchange="ccCrashUnavailableToggled(this)"> Not currently available / غير متوفر حالياً</label><div class="ccc-row-result"></div></td><td>'+n(x.qty)+(x.reportedExpiry?'<div class="fhint">Reported expiry: '+esc(x.reportedExpiry)+'</div>':'<div class="fhint">Expiry not reported</div>')+'</td><td><div class="crash-current-batches">'+ccBatchSummary(it)+'</div><div class="fhint">Present '+ccItemPresent(it)+' / Standard '+ccItemStandard(it)+'</div></td><td><select class="ccc-exp-choice" '+(savedUnavailable?'disabled':'')+' onchange="ccCrashExpiryChoiceChanged(this)"><option value="">Choose expiry date... / اختر تاريخ الانتهاء...</option>'+ccMergedExpiryOptions(it,x.reportedExpiry,choiceValue==='__new__'?'':choiceValue)+'<option value="__new__" '+(choiceValue==='__new__'?'selected':'')+'>+ New date / تاريخ جديد</option></select><input class="ccc-exp" type="date" value="'+esc(savedUnavailable?'':(choiceValue==='__new__'?expiry:''))+'" style="'+(choiceValue==='__new__'&&!savedUnavailable?'':'display:none')+'" '+(savedUnavailable?'disabled':'')+' onchange="ccCrashResponsePreview()"></td><td><input class="ccc-qty" type="number" min="0" step="any" value="'+(savedUnavailable?0:qty)+'" '+(savedUnavailable?'disabled':'')+' oninput="ccCrashResponsePreview()"></td></tr>';
     }).join('');
+    // While a cart is open for any reason, also allow topping up other medicines in the
+    // SAME cart that are already short (present < standard) even though nobody reported
+    // them specifically — still logged through this seal-correction workflow, not the
+    // unrestricted master-only editor.
+    var extraShort=(c.items||[]).filter(function(it){return reportedIds.indexOf(String(it.id))<0&&ccItemPresent(it)<ccItemStandard(it)});
+    var extraRows=extraShort.map(function(it){
+      var saved=(r.replacements||[]).find(function(z){return String(z.itemId)===String(it.id)})||{},qty=saved.qty!=null?n(saved.qty):0,expiry=saved.expiry||'',choiceValue=expiry?(ccDatedBatches(it).some(function(b){return ccDateKey(b.expiry)===ccDateKey(expiry)})?ccDateKey(expiry):'__new__'):'';
+      return '<tr data-id="'+esc(it.id)+'" data-reported="0" data-reported-expiry=""><td><b>'+esc(it.name)+'</b><div class="fhint">'+esc(it.strength||it.concentration||'')+'</div><div class="fhint">Also below standard in this cart / أيضًا أقل من المعياري في هذه العربة</div><input type="checkbox" class="ccc-unavailable" checked disabled style="display:none"><div class="ccc-row-result"></div></td><td>0<div class="fhint">Not part of this report / ليست ضمن هذا البلاغ</div></td><td><div class="crash-current-batches">'+ccBatchSummary(it)+'</div><div class="fhint">Present '+ccItemPresent(it)+' / Standard '+ccItemStandard(it)+'</div></td><td><select class="ccc-exp-choice" onchange="ccCrashExpiryChoiceChanged(this)"><option value="">Choose expiry date... / اختر تاريخ الانتهاء...</option>'+ccMergedExpiryOptions(it,'',choiceValue==='__new__'?'':choiceValue)+'<option value="__new__" '+(choiceValue==='__new__'?'selected':'')+'>+ New date / تاريخ جديد</option></select><input class="ccc-exp" type="date" value="'+esc(choiceValue==='__new__'?expiry:'')+'" style="'+(choiceValue==='__new__'?'':'display:none')+'" onchange="ccCrashResponsePreview()"></td><td><input class="ccc-qty" type="number" min="0" step="any" value="'+qty+'" oninput="ccCrashResponsePreview()"></td></tr>';
+    }).join('');
+    q('ccc-items').innerHTML=reportedRows+extraRows;
     var h=q('ccx-close-actor');if(h){var u=window.CU||{},name=typeof actualActorName==='function'?actualActorName():(u.name||u.username||u.email||'Unknown'),user=u.username||u.email||u.id||'Unknown';h.innerHTML='<b>Closing pharmacist / الصيدلي الذي سيغلق العربة:</b><br>'+esc(name)+'<br><b>System user / مستخدم النظام:</b> '+esc(user)}OM('mcc-close');setTimeout(ccCrashResponsePreview,0);
   };
   // Dry-run every row's final quantity/status without mutating state, so the
@@ -852,7 +877,7 @@ window.ctlCmpPrint=function(){
     return out;
   }
   window.ccSavePharmacyResponse=async function(){
-    var id=val('ccc-report-id'),originalReports=crashReports(),originalCarts=crashCarts(),rs=JSON.parse(JSON.stringify(originalReports||[])),carts=JSON.parse(JSON.stringify(originalCarts||[])),r=rs.find(function(x){return String(x.id)===String(id)});if(!r)return;var c=carts.find(function(x){return String(x.id)===String(r.cartId)});if(!c)return toast('Crash Cart not found.','err');var seal=val('ccc-new-seal').trim();if(!seal)return toast('Enter the new seal number / أدخل رقم القفل الجديد.','err');if(!ccUniqueSealAllowed(seal,c.id,id))return toast('The new seal number is already used. Enter a unique seal.','err');if(!ccCrashResponsePreview())return toast('Correct the highlighted replacement rows first.','err');
+    var id=val('ccc-report-id'),originalReports=crashReports(),originalCarts=crashCarts(),rs=JSON.parse(JSON.stringify(originalReports||[])),carts=JSON.parse(JSON.stringify(originalCarts||[])),r=rs.find(function(x){return String(x.id)===String(id)});if(!r)return;var c=carts.find(function(x){return String(x.id)===String(r.cartId)});if(!c)return toast('Crash Cart not found.','err');var seal=val('ccc-new-seal').trim();if(!seal)return toast('Enter the new seal number / أدخل رقم القفل الجديد.','err');if(!sealMeetsMinLength(seal))return toast('Enter a valid seal number. / أدخل رقم قفل صالح.','err');if(!ccUniqueSealAllowed(seal,c.id,id))return toast('The new seal number is already used. Enter a unique seal.','err');if(!ccCrashResponsePreview())return toast('Correct the highlighted replacement rows first.','err');
     var belowStandard=ccCrashResponseBelowStandardItems(r,c);
     if(belowStandard.length){
       var list=belowStandard.map(function(x){return '• '+x.name+' — '+x.result+' / '+x.standard+(x.outOfStock?' (نافد / out of stock)':'')}).join('\n');
