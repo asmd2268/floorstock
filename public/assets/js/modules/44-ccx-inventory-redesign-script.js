@@ -100,7 +100,7 @@ function reportCard(r,c){
   var canOperate=isPharmacy();
   var actions=isPending&&canOperate
     ?'<div style="display:flex;gap:6px;margin-top:8px"><button class="btn bg bsm" onclick="ccAcceptReport(\''+escx(r.id)+'\')">✔ قبول / Accept</button><button class="btn bd2c bsm" onclick="ccRejectReport(\''+escx(r.id)+'\')">✖ رفض / Reject</button></div>'
-    :isPending?'':'<div style="margin-top:8px"><span class="btn bd2c bsm" onclick="ccxOpenReport(\''+escx(r.id)+'\')">Open and respond / فتح والرد</span></div>';
+    :(isPending||!canOperate)?'':'<div style="margin-top:8px"><span class="btn bd2c bsm" onclick="ccxOpenReport(\''+escx(r.id)+'\')">Open and respond / فتح والرد</span></div>';
   return '<div class="ccx-alert-card"><div class="ccx-alert-title">⚠ '+escx(deptName(r.deptId))+' — '+escx((c&&c.name)||'Crash Cart')+badge+'</div><div class="fhint">'+escx(r.reason||'Opening report')+'</div><div class="fhint">'+escx(r.openedBy||'')+' · '+escx(fmt(r.openedAt))+'</div>'+actions+'</div>'
 }
 window.ccxOpenReport=function(reportId){var r=(typeof crashReports==='function'?crashReports():[]).find(function(x){return String(x.id)===String(reportId)});if(!r)return;var c=typeof crashCart==='function'?crashCart(r.cartId):null;if(E('ccx-dept')&&!isDepartment())E('ccx-dept').value=r.deptId||'';if(E('ccx-state'))E('ccx-state').value='open';if(E('ccx-search'))E('ccx-search').value='';window.renderCrashCarts();var card=E('ccx-cart-'+r.cartId);if(card)card.scrollIntoView({behavior:'smooth',block:'start'});if(canManage()&&r.status==='open'&&typeof crashCloseReport==='function')crashCloseReport(r.id);/* pending reports are handled via ccAcceptReport/ccRejectReport, not crashCloseReport */};
