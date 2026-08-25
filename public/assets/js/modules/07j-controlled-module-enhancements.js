@@ -539,7 +539,21 @@ async function assignSelectedMedsToShelf(){
 // Crash Cart
 function crashCarts(){return S.g('crash_carts')||[]}
 function crashReports(){return S.g('crash_cart_reports')||[]}
-function setCrashReports(v){return S.s('crash_cart_reports',v)}
+function setCrashReports(v){
+  var p=S.s('crash_cart_reports',v);
+  // Every legacy direct-write path (close/respond, bulk open+replace, seal
+  // correction) still only touches this state-doc array. Mirror the affected
+  // reports into crash_cart_reports_v2 afterward, best-effort, so scoped
+  // roles (inpatient_supervisor, pharmacy_staff) — who only read v2 — don't
+  // see a report stuck at a stale status.
+  Promise.resolve(p).then(function(){
+    if(typeof window.fsCallFunction!=='function')return;
+    var ids=(v||[]).map(function(r){return r&&r.id}).filter(Boolean);
+    if(!ids.length)return;
+    window.fsCallFunction('syncCrashCartReportsToV2',{reportIds:ids}).catch(function(e){console.warn('crash_cart_reports_v2 sync failed',e)});
+  });
+  return p;
+}
 function crashCart(id){return crashCarts().find(function(c){return c.id===id})}
 
 

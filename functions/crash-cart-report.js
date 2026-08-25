@@ -187,6 +187,38 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
   };
 });
 
+// Mirrors specific reports from the legacy floorstock_state/crash_cart_reports
+// array into the crash_cart_reports_v2 collection. Every crash-cart write path
+// that still updates the legacy array directly from the client (pharmacy
+// closing an open report, bulk opening/replacement, seal correction) calls
+// this right after, so inpatient_supervisor/pharmacy_staff — who only ever
+// read the v2 collection — don't end up looking at a report frozen in a
+// stale status forever.
+exports.syncCrashCartReportsToV2 = onCall(CALLABLE_OPTIONS, async (request) => {
+  const db = getFirestore();
+  const profile = await callerPharmacyProfile(db, request);
+  const tenantId = await assertWritableTenant(db, profile);
+  const data = request.data || {};
+  const reportIds = Array.isArray(data.reportIds) ? data.reportIds.map((x) => String(x || '').trim()).filter(Boolean) : [];
+  if (!reportIds.length) return { ok: true, synced: 0 };
+
+  const refs = stateRefs(db, tenantId);
+  const doc = await refs.reports.get();
+  const reports = doc.exists && Array.isArray(doc.data().value) ? doc.data().value : [];
+  const byId = new Map(reports.map((r) => [String(r && r.id || ''), r]));
+  const updatedAt = FieldValue.serverTimestamp();
+  const batch = db.batch();
+  let synced = 0;
+  reportIds.forEach((id) => {
+    const report = byId.get(id);
+    if (!report) return;
+    batch.set(refs.reportsCollection.doc(id), { ...report, updatedAt }, { merge: false });
+    synced++;
+  });
+  if (synced) await batch.commit();
+  return { ok: true, synced };
+});
+
 // Pharmacy accepts a pending report — executes inventory deduction.
 exports.acceptCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
   const db = getFirestore();
