@@ -513,16 +513,25 @@ async function fsStateLoadPharmacyScoped(profile,loader,source){
   return initial;
 }
 async function fsStateMergeCrashReports(resultPromise,profile){
+  // The crash-reports collection list has no dependency on the scoped state
+  // fetch's result, so it used to be a needless extra sequential round trip
+  // (await resultPromise, THEN start this) on every login/poll for every
+  // scoped role — fire both at once instead.
+  var crashPromise=fsStateLoadCrashReportsViaRest(profile).then(
+    function(reports){return {ok:true,reports:reports}},
+    function(error){return {ok:false,error:error}}
+  );
   var result=await resultPromise;
-  try{
-    result.cache.crash_cart_reports=await fsStateLoadCrashReportsViaRest(profile);
-  }catch(error){
+  var crash=await crashPromise;
+  if(crash.ok){
+    result.cache.crash_cart_reports=crash.reports;
+  }else{
     // Leave the key out of the returned cache entirely and record it as
     // failed instead — pollRest() already restores a failed key's previous
     // cached value from before this poll (same guard it uses for every
     // other document read), so a transient network/permission hiccup here
     // can't blank out crash cart reports the way an unconditional [] would.
-    console.warn('crash_cart_reports_v2 REST load failed for this poll.',error);
+    console.warn('crash_cart_reports_v2 REST load failed for this poll.',crash.error);
     result.failedKeys=(result.failedKeys||[]).concat('crash_cart_reports');
   }
   return result;
