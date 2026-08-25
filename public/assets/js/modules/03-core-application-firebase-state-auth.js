@@ -504,13 +504,23 @@ function fsPharmacyDepartmentStateKeys(cache,profile){
   return keys;
 }
 async function fsStateLoadPharmacyScoped(profile,loader,source){
-  var initial=await fsStateLoadScoped(PHARMACY_SCOPED_STATE_KEYS,loader,source,profile);
-  var dynamicKeys=fsPharmacyDepartmentStateKeys(initial.cache,profile);
-  if(!dynamicKeys.length)return initial;
-  var dynamic=await fsStateLoadScoped(dynamicKeys,loader,source,profile);
-  Object.assign(initial.cache,dynamic.cache);
-  initial.failedKeys=(initial.failedKeys||[]).concat(dynamic.failedKeys||[]);
-  return initial;
+  // The per-department keys (meds_/expiry_/shelves_/... for every
+  // department) can only be listed once `departments` is known, but that
+  // never required the OTHER ~24 static keys first — fetching them one big
+  // wave, then waiting for it to fully settle before even starting the
+  // department wave, cost a full extra sequential round trip on every cold
+  // login. Fetch `departments` alone first (one small document), then fire
+  // the rest of the static wave and the department wave together.
+  var deptOnly=await fsStateLoadScoped(['departments'],loader,source,profile);
+  var restKeys=PHARMACY_SCOPED_STATE_KEYS.filter(function(k){return k!=='departments'});
+  var dynamicKeys=fsPharmacyDepartmentStateKeys(deptOnly.cache,profile);
+  var pair=await Promise.all([
+    fsStateLoadScoped(restKeys,loader,source,profile),
+    dynamicKeys.length?fsStateLoadScoped(dynamicKeys,loader,source,profile):Promise.resolve({cache:{},failedKeys:[]})
+  ]);
+  var cache=Object.assign({},deptOnly.cache,pair[0].cache,pair[1].cache);
+  var failedKeys=(deptOnly.failedKeys||[]).concat(pair[0].failedKeys||[],pair[1].failedKeys||[]);
+  return {cache:cache,source:source,failedKeys:failedKeys};
 }
 async function fsStateMergeCrashReports(resultPromise,profile){
   // The crash-reports collection list has no dependency on the scoped state
