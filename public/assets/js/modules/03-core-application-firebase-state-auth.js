@@ -945,12 +945,20 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     S.startSelfProfileWatch();
 
     // Scoped roles may read their allowed documents but are intentionally not
-    // allowed to list the state collection. Poll explicit document reads so a
-    // denied collection listener can never erase a valid Crash Cart view.
-    if(fsStateKeysForProfile(S.scopeProfile)){
-      S.transport='rest';
-      S.pollRest();
-      S.pollTimer=setInterval(function(){S.pollRest();},30000);
+    // allowed to list the whole state collection (no `list`/collection
+    // onSnapshot). A single-document onSnapshot only needs the same `get`
+    // permission a one-off read already uses, though — so watch every
+    // allowed document individually instead of falling all the way back to
+    // 30s full-collection REST polling.
+    var scopedKeys=fsStateKeysForProfile(S.scopeProfile);
+    if(scopedKeys){
+      if(window.__ASDH_FORCE_REST_SCOPED){
+        S.transport='rest';
+        S.pollRest();
+        S.pollTimer=setInterval(function(){S.pollRest();},30000);
+        return;
+      }
+      S.startScopedListeners(scopedKeys);
       return;
     }
 
@@ -1021,6 +1029,62 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
 
     S.pollTimer=setInterval(function(){S.pollRest();},30000);
   },
+  // Real-time replacement for scoped-role REST polling. One onSnapshot per
+  // allowed document (same permission as a single get()), fanned out over
+  // one shared Firestore SDK connection, instead of re-fetching every
+  // document from scratch every 30 seconds regardless of whether anything
+  // changed. Falls back to REST polling automatically if any listener
+  // reports a permission/setup error (e.g. Firestore Rules drift).
+  startScopedListeners:function(baseKeys){
+    var profile=S.scopeProfile;
+    var keys=baseKeys.slice();
+    if(fsIsPharmacyScopedProfile(profile)){
+      // meds_/expiry_/shelves_/... per-department keys can only be computed
+      // once `departments` is known — already true here, since S.ready only
+      // flips after the initial full load (REST or SDK) has completed.
+      keys=keys.concat(fsPharmacyDepartmentStateKeys(S.cache,profile));
+    }
+    S.transport='sdk-scoped-listen';
+    var fellBack=false;
+    function fallBackToRest(error){
+      if(fellBack)return;
+      fellBack=true;
+      console.error('Scoped realtime listener failed; falling back to REST polling.',error);
+      S.stopRealtime();
+      S.transport='rest';
+      S.startSelfProfileWatch();
+      S.pollRest();
+      S.pollTimer=setInterval(function(){S.pollRest();},30000);
+    }
+    S.scopedUnsubs=keys.map(function(key){
+      return fsStateSdkCollection().doc(key).onSnapshot(function(snapshot){
+        var next=snapshot.exists?snapshot.data().value:null;
+        if(!stateValueEqual(S.cache[key],next)){
+          S.cache[key]=next;
+          S.scheduleRefresh();
+        }
+      },fallBackToRest);
+    });
+    // crash_cart_reports_v2 (or its per-tenant equivalent) grants list/get to
+    // any active user regardless of role — not gated the way floorstock_state
+    // is — so the same collection listener master uses already works here.
+    S.__crashReportsById=S.__crashReportsById||{};
+    S.crashReportsUnsub=crashReportsCollectionRef(FB_DB,profile).onSnapshot(function(snapshot){
+      snapshot.docChanges().forEach(function(change){
+        if(change.type==='removed'){delete S.__crashReportsById[change.doc.id];return;}
+        var data=change.doc.data()||{};
+        var report=Object.assign({},data);
+        delete report.updatedAt;delete report._migratedAt;
+        S.__crashReportsById[change.doc.id]=report;
+      });
+      var next=Object.keys(S.__crashReportsById).map(function(id){return S.__crashReportsById[id];})
+        .sort(function(a,b){return String(a.openedAt||'').localeCompare(String(b.openedAt||''))||String(a.id||'').localeCompare(String(b.id||''));});
+      if(!stateValueEqual(S.cache.crash_cart_reports,next)){
+        S.cache.crash_cart_reports=next;
+        S.scheduleRefresh();
+      }
+    },function(error){console.error('crash_cart_reports_v2 realtime error (scoped).',error)});
+  },
   pollRest:async function(){
     if(S.pollBusy||!S.ready||document.visibilityState==='hidden')return;
     S.pollBusy=true;
@@ -1063,6 +1127,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     }
   },
   stopRealtime:function(){
+    if(Array.isArray(S.scopedUnsubs)){S.scopedUnsubs.forEach(function(fn){try{fn()}catch(e){}});S.scopedUnsubs=null;}
     if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
     if(S.crashReportsUnsub){S.crashReportsUnsub();S.crashReportsUnsub=null;S.__crashReportsById={};}
     if(S.selfProfileUnsub){S.selfProfileUnsub();S.selfProfileUnsub=null;}
