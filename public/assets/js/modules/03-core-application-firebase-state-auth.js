@@ -988,6 +988,11 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
         });
         S.__crashReportsById=S.__crashReportsById||{};
         S.crashReportsUnsub=crashReportsCollectionRef(FB_DB,S.scopeProfile).onSnapshot(function(snapshot){
+          // A listener attached to an empty in-memory SDK cache can fire an
+          // initial near-empty snapshot before the server-confirmed one
+          // arrives a moment later — skip it rather than blank out reports
+          // the cold-load already fetched.
+          if(snapshot.metadata.fromCache)return;
           snapshot.docChanges().forEach(function(change){
             if(change.type==='removed'){delete S.__crashReportsById[change.doc.id];return;}
             var data=change.doc.data()||{};
@@ -1058,6 +1063,14 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     }
     S.scopedUnsubs=keys.map(function(key){
       return fsStateSdkCollection().doc(key).onSnapshot(function(snapshot){
+        // A document Firestore has never cached locally can fire an initial
+        // "exists: false" snapshot straight from the empty local cache,
+        // before the real server response arrives a moment later. Since the
+        // cold-load already populated S.cache with real data before any
+        // listener attached, never let a from-cache "not found" blank out a
+        // key we already have a value for — wait for the server-confirmed
+        // snapshot instead. A genuine deletion still lands right after.
+        if(snapshot.metadata.fromCache&&!snapshot.exists&&Object.prototype.hasOwnProperty.call(S.cache,key))return;
         var next=snapshot.exists?snapshot.data().value:null;
         if(!stateValueEqual(S.cache[key],next)){
           S.cache[key]=next;
@@ -1070,6 +1083,12 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     // is — so the same collection listener master uses already works here.
     S.__crashReportsById=S.__crashReportsById||{};
     S.crashReportsUnsub=crashReportsCollectionRef(FB_DB,profile).onSnapshot(function(snapshot){
+      // Same from-cache caveat as the per-document listeners above: a
+      // collection listener attached to an empty in-memory SDK cache can
+      // fire an initial near-empty snapshot before the server-confirmed one
+      // arrives. Skip it entirely rather than let it blank out the reports
+      // the cold-load already fetched — the real snapshot follows promptly.
+      if(snapshot.metadata.fromCache)return;
       snapshot.docChanges().forEach(function(change){
         if(change.type==='removed'){delete S.__crashReportsById[change.doc.id];return;}
         var data=change.doc.data()||{};
