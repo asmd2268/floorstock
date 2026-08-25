@@ -441,8 +441,13 @@ window.openSimilarMedicinesAllDepartments=function(){if(!canManage())return type
 (window.__showPgAfterExtensions=window.__showPgAfterExtensions||[]).push(function(id){
   if(id!=='pg-crashcart')return;
   if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
-  var scoped=isDepartmentRole()||(window.CU&&CU.role==='outpatient_pharmacy_supervisor'),deptId=scoped?String((window.CU&&CU.deptId)||''):'';
-  var hasOpen=(typeof crashReports==='function'?crashReports():[]).some(function(r){return (r.status==='open'||r.status==='pending')&&(!scoped||String(r.deptId)===deptId)});
+  // This closure runs in a separate top-level IIFE from the rest of this
+  // file (see the earlier isDepartmentRole/canManage duplicate-scope bugs
+  // fixed this session) — use only window-global helpers here, never a
+  // bare identifier from another IIFE's lexical scope.
+  var effRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');
+  var scoped=effRole==='department'||effRole==='department_employee'||effRole==='outpatient_pharmacy_supervisor',deptId=scoped?String((window.CU&&window.CU.deptId)||''):'';
+  var hasOpen=(typeof window.crashReports==='function'?window.crashReports():[]).some(function(r){return (r.status==='open'||r.status==='pending')&&(!scoped||String(r.deptId)===deptId)});
   var sel=E('ccx-state');
   if(sel&&hasOpen&&sel.value!=='open'){sel.value='open';window.renderCrashCarts()}
 });
