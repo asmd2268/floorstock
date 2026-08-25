@@ -770,6 +770,23 @@ test('scoped pharmacy roles load permitted state documents without collection li
   assert.match(requestSource, /function fsStateLoadPharmacyScoped\(/);
   assert.match(requestSource, /function fsPharmacyDepartmentStateKeys\(/);
   assert.match(requestSource, /Promise\.allSettled\(keys\.map/);
-  assert.match(requestSource, /if\(fsStateKeysForProfile\(S\.scopeProfile\)\)\{/);
+  assert.match(requestSource, /var scopedKeys=fsStateKeysForProfile\(S\.scopeProfile\);/);
+  assert.match(requestSource, /if\(scopedKeys\)\{/);
   assert.match(firestoreRulesSource, /allow list: if sameTenant\(tenant\) && !scopedStateUser\(\);/);
+});
+
+test('scoped-role realtime uses per-document listeners, never a collection query', () => {
+  // A per-document onSnapshot needs the same `get`-style permission as a
+  // one-off read (see canReadScopedState above); a collection-level
+  // onSnapshot/list does not, and must stay unreachable for these roles.
+  assert.match(requestSource, /function fsStateSdkCollection\(profile\)/);
+  assert.match(requestSource, /startScopedListeners:function\(baseKeys\)\{/);
+  assert.match(requestSource, /fsStateSdkCollection\(\)\.doc\(key\)\.onSnapshot\(/);
+  // A listener attached to an empty in-memory SDK cache can fire once from
+  // that empty cache before the server-confirmed snapshot arrives; both
+  // realtime paths must ignore that transient event instead of blanking
+  // data the cold-load already fetched (regression: briefly showed 0
+  // inventory / a wrong crash-cart-report count right after login).
+  const fromCacheGuards = requestSource.match(/snapshot\.metadata\.fromCache/g) || [];
+  assert.equal(fromCacheGuards.length >= 3, true);
 });
