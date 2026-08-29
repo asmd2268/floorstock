@@ -92,13 +92,13 @@ service cloud.firestore {
 
     function canReadScopedState(docId) {
       return (role() in ['department', 'outpatient_pharmacy_supervisor'] && canReadDepartmentState(docId))
-        || (role() == 'controlled_pharmacy' && (docId.matches('^(controlled_.*|psychotropic_.*|narcotic_.*)$') || docId in ['departments', 'deleted_departments', 'custom_categories', 'facility_logo', 'theme', 'audit_log', 'user_activity_daily_v1']))
-        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'theme', 'audit_log', 'user_activity_daily_v1']))
+        || (role() == 'controlled_pharmacy' && (docId.matches('^(controlled_.*|psychotropic_.*|narcotic_.*)$') || docId in ['departments', 'deleted_departments', 'custom_categories', 'facility_logo', 'theme', 'audit_log', 'user_activity_daily_v1', 'classification_lists_v1']))
+        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'theme', 'audit_log', 'user_activity_daily_v1', 'classification_lists_v1']))
         || (role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'] && canReadPharmacyState(docId));
     }
 
     function canReadPharmacyState(docId) {
-      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia', 'user_activity_daily_v1', 'crash_cart_min_seal_length']
+      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia', 'user_activity_daily_v1', 'crash_cart_min_seal_length', 'classification_lists_v1']
         || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
     }
 
@@ -240,7 +240,7 @@ service cloud.firestore {
           'pharmacy_category_config', 'pharmacy_department_announcements',
           'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3',
           'medication_visibility_rules_v3', 'shelves_anesthesia',
-          'controlled_catalog', 'user_activity_daily_v1'
+          'controlled_catalog', 'user_activity_daily_v1', 'classification_lists_v1'
         ]
         || docId == 'meds_' + departmentId()
         || docId == 'expiry_' + departmentId()

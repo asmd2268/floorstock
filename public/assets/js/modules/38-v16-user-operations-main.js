@@ -287,6 +287,7 @@ function showPgCore(id){
   if(id==='pg-print')resetPrintPageState();
   if(id==='pg-backup-restore'&&typeof window.refreshBackupRestorePage==='function')window.refreshBackupRestorePage();
   if(id==='pg-zebra-labels'&&typeof window.renderZebraPageUi==='function')window.renderZebraPageUi();
+  if(id==='pg-classification-lists'&&typeof window.renderClassificationLists==='function')window.renderClassificationLists();
   if(id==='pg-controlled'&&typeof window.renderDepartmentControlledPanel==='function')window.renderDepartmentControlledPanel();
   if(typeof window.enforceRoleUi==='function')window.enforceRoleUi();
   return res;

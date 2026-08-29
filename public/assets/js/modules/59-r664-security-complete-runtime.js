@@ -327,7 +327,8 @@ var ALLOWED=new Set((
   'bulkReplacementToggleLimits runBulkReplacement aaFinalSaveExpiryRules phExpiryToggleDept phExpirySetView phExpirySelectAllDepartments phExpiryClearDepartments phExpiryEditRules '+
   'v13InventorySelect updateAllInventoryMergeCount v13SelectVisibleInventory v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge v13OpenBulkClassification v13WLoadMore v13ApplyControlledClassification v13BulkReplacementClassOnly '+
   'v13XClose v13XAddBatch v13XSaveCatalogMed v13XSaveStock valQ v14SaveEditReq2 v14SetPrintFilter v16ToggleScope v16ToggleMultiApplicable v16ApplyMultiClean v16ManageHiddenCategories v16SaveHiddenCats '+
-  'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print'
+  'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
+  'clGenerate clCancelReview clConfirmSave clPrint clToggleRole'
 ).split(/\s+/).filter(Boolean));
 
 var ATTRIBUTE_EVENTS={onclick:'click',onchange:'change',oninput:'input',onsubmit:'submit',onkeydown:'keydown',onkeyup:'keyup'};
