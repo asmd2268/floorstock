@@ -205,6 +205,7 @@ async function doLogin(){
   }
   try{
     await waitForFirebase(15000);
+    if(FB_AUTH.setPersistence)await FB_AUTH.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     credential=await fsLoginTimeout(FB_AUTH.signInWithEmailAndPassword(email,password),30000,'Firebase sign-in timed out.');
     window.__fsAuthenticatedUser=credential.user;
     setLoginStage('Verifying profile…');
