@@ -344,8 +344,9 @@ window.fsOutpatientDeptId=function(){var ds=typeof gd==='function'?(gd()||[]):[]
 function populateInvDeptSel(){
   var sel=el('inv-dept-sel');if(!sel)return;
   var cur=sel.value;
-  sel.innerHTML='<option value="">Select Dept...</option>'+gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
-  if(cur&&gd().some(function(d){return d.id===cur}))sel.value=cur;else sel.value='';
+  var ds=typeof window.fsAllowedDepts==='function'?window.fsAllowedDepts():gd();
+  sel.innerHTML='<option value="">Select Dept...</option>'+ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+  if(cur&&ds.some(function(d){return d.id===cur}))sel.value=cur;else sel.value='';
 }
 
 // ── DASHBOARD ────────────────────────────────────────────

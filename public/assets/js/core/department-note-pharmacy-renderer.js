@@ -3,14 +3,18 @@ function renderPharmNotes(){
   var role=globalThis.fsEffectiveRole?globalThis.fsEffectiveRole():String((globalThis.CU&&globalThis.CU.role)||'');
   var filter=el('notes-filter-dept'), type=el('notes-filter-type'), status=el('notes-filter-status');
   var scope=role==='outpatient_pharmacy_supervisor'&&globalThis.fsOutpatientDeptId?globalThis.fsOutpatientDeptId():'';
-  if(filter&&filter.options.length<=1){
-    var departments=(globalThis.gd?globalThis.gd():[]).filter(function(d){return !scope||String(d.id)===String(scope)});
+  if(filter){
+    var allDepts=globalThis.fsAllowedDepts?globalThis.fsAllowedDepts():(globalThis.gd?globalThis.gd():[]);
+    var departments=allDepts.filter(function(d){return !scope||String(d.id)===String(scope)});
+    var cur=filter.value;
+    filter.innerHTML='<option value="">All Departments</option>';
     departments.forEach(function(d){filter.innerHTML+='<option value="'+utils.noteEsc(d.id)+'">'+utils.noteEsc(d.name)+'</option>'});
+    if(cur&&departments.some(function(d){return d.id===cur}))filter.value=cur;
   }
   if(filter&&scope){filter.value=scope;filter.disabled=true}
   var dept=filter?filter.value:'' , typ=type?type.value:'', stat=status?status.value:'';
-  var notes=notesStore.getNotes().slice().reverse().filter(function(n){return (!scope||String(n.deptId)===String(scope))&&(!dept||n.deptId===dept)&&(!typ||n.type===typ)&&(!stat||n.status===stat)});
-  var all=notesStore.getNotes(), summary=el('notes-summary');
+  var notes=notesStore.getNotes().slice().reverse().filter(function(n){return (!scope||String(n.deptId)===String(scope))&&(typeof globalThis.fsCanAccessDepartment==='function'?globalThis.fsCanAccessDepartment(n.deptId):true)&&(!dept||n.deptId===dept)&&(!typ||n.type===typ)&&(!stat||n.status===stat)});
+  var all=notesStore.getNotes().filter(function(n){return (typeof globalThis.fsCanAccessDepartment==='function'?globalThis.fsCanAccessDepartment(n.deptId):true)}), summary=el('notes-summary');
   if(summary)summary.innerHTML='Total: <b>'+all.length+'</b> &nbsp;|&nbsp; Open: <b style="color:var(--yll)">'+all.filter(function(n){return n.status==='open'||n.status==='urgent'}).length+'</b>&nbsp;|&nbsp; Urgent: <b style="color:var(--rdl)">'+all.filter(function(n){return n.status==='urgent'}).length+'</b>';
   var list=el('pharm-notes-list'); if(!list)return;
   if(!notes.length){list.innerHTML='<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📝</div><div style="margin-top:10px">No notes matching filters</div></div>';return;}

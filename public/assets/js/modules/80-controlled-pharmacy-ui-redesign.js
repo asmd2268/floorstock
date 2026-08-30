@@ -757,6 +757,7 @@ window.ctlCmpPrint=function(){
   function ccUpdateBadges(){
     var open=openReports().length, reqRows=(typeof gr==='function'?(gr()||[]):[]), badgeRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
     if(badgeRole==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var badgeDept=window.fsOutpatientDeptId();reqRows=reqRows.filter(function(r){return String(r.deptId)===String(badgeDept)})}
+    if(typeof window.fsCanAccessDepartment==='function')reqRows=reqRows.filter(function(r){return window.fsCanAccessDepartment(r.deptId)});
     var req=reqRows.filter(function(r){return r.status==='pending'}).length;
     var cb=document.querySelector('[data-pg="pg-crashcart"]'),rb=document.querySelector('[data-pg="pg-reqs"]');
     if(cb){cb.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});if(open)cb.insertAdjacentHTML('beforeend','<span class="cc-badge">'+open+'</span>')}
@@ -767,6 +768,7 @@ window.ctlCmpPrint=function(){
   window.renderCrashDashboardSummary=function(){var d=q('dstats');if(d&&isPharmacyCrashRole()){
     var open=openReports().length,reqRows=(typeof gr==='function'?(gr()||[]):[]),badgeRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
     if(badgeRole==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var badgeDept=window.fsOutpatientDeptId();reqRows=reqRows.filter(function(r){return String(r.deptId)===String(badgeDept)})}
+    if(typeof window.fsCanAccessDepartment==='function')reqRows=reqRows.filter(function(r){return window.fsCanAccessDepartment(r.deptId)});
     var req=reqRows.filter(function(r){return r.status==='pending'}).length;
     var existing=q('cc-dashboard-extra');if(existing)existing.remove();var wrap=document.createElement('div');wrap.id='cc-dashboard-extra';wrap.className='g2 mb14';wrap.innerHTML='<div class="sc"><div class="sl">Open Crash Cart Reports</div><div class="sv">'+open+'</div><div class="ss">Awaiting pharmacy response</div></div><div class="sc"><div class="sl">Pending Requests</div><div class="sv">'+req+'</div><div class="ss">Awaiting fulfillment</div></div>';d.parentNode.insertBefore(wrap,d.nextSibling)}ccUpdateBadges()};
 

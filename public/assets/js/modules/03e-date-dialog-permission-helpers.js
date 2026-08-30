@@ -140,6 +140,7 @@ window.fsActualUser=function(){return (window.MASTER_ACTUAL||window.CU||{})};
 window.fsActor=function(){var u=window.fsActualUser(),name=(typeof window.actualActorName==='function'?window.actualActorName():(u.name||u.fullName||u.displayName||u.username||u.email||'Unknown'));return {name:name,user:u.email||u.username||u.id||u.uid||'Unknown',id:u.id||u.uid||''}};
 window.fsHasCapability=function(capability){return hasCapability(window.fsEffectiveUser(),capability)};
 window.fsCanAccessDepartment=function(departmentId){return canAccessDepartment(window.fsEffectiveUser(),departmentId)};
+window.fsAllowedDepts=function(){var all=typeof gd==='function'?(gd()||[]):[];return typeof window.fsCanAccessDepartment==='function'?all.filter(function(d){return window.fsCanAccessDepartment(d.id)}):all};
 window.fsCanManage=function(){return window.fsHasCapability('inventory.manage')};
 window.fsCanManageCrashCart=function(){return window.fsHasCapability('crashCart.operate')};
 window.fsDeptName=function(id){try{var list=typeof window.gd==='function'?(window.gd()||[]):[],d=list.find(function(x){return String(x.id)===String(id)});return d?(d.name||d.nameEn||d.nameAr||String(id||'—')):String(id||'—')}catch(e){return String(id||'—')}};
