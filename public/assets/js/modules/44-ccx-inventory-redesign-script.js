@@ -437,7 +437,14 @@ async function mergeGroup(groupId){
  await migrateRuleMap('medication_visibility_rules_v3',checked,canonical);await migrateRuleMap('medication_freeze_rules_v3',checked,canonical);await migrateRuleMap('global_request_freeze_v2',checked,canonical);
  state.selected.clear();state.groups=buildGroups();renderGroups();var msg=E('sim-message');if(msg)msg.textContent='Merged the selected names only. '+unselected.length+' unselected name(s) remain independent and will not be grouped again. / تم دمج المحدد فقط وإبقاء البقية مستقلة.';if(typeof toast==='function')toast('Merged selected names across '+changed+' department(s); '+removed+' duplicate record(s) removed.','succ')
 }
-window.openSimilarMedicinesAllDepartments=function(){if(!canManage())return typeof toast==='function'?toast('Not authorized.','err'):null;renderModal()};
+window.openSimilarMedicinesAllDepartments=function(){
+  // canManage() lives in this file's FIRST top-level IIFE; this function is
+  // in a later, separate one — bare-identifier access threw an uncaught
+  // ReferenceError here (silently, no toast) every time this was clicked.
+  var allowed=window.fsCanManageCrashCart?window.fsCanManageCrashCart():(typeof canManageCrashCart==='function'&&canManageCrashCart());
+  if(!allowed)return typeof toast==='function'?toast('Not authorized.','err'):null;
+  renderModal();
+};
 (window.__showPgAfterExtensions=window.__showPgAfterExtensions||[]).push(function(id){
   if(id!=='pg-crashcart')return;
   if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
