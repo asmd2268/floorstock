@@ -103,7 +103,7 @@ function clMasterTypeCard(type){
   var medCount=entry?(entry.medicines||[]).length:0;
   var visibleRoles=(entry&&entry.visibleRoles)||[];
   var rolesHtml=CL_ALL_ROLES.map(function(r){
-    return '<label class="cl-role-chk"><input type="checkbox" onchange="window.clToggleRole(this,\''+type+'\',\''+r+'\')" '+(visibleRoles.indexOf(r)>=0?'checked':'')+'> '+esc(CL_ROLE_LABELS[r])+'</label>';
+    return '<label class="cl-role-chk"><input type="checkbox" onchange="window.clToggleRole(this,\''+type+'\',\''+r+'\')" '+(visibleRoles.indexOf(r)>=0?'checked':'')+'><span>'+esc(CL_ROLE_LABELS[r])+'</span></label>';
   }).join('');
   var reviewHtml='';
   if(st){

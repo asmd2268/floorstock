@@ -33,8 +33,10 @@
 /* R6.71 temporary dual-QR accountability handover */
 .r671-qr-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:14px}.r671-qr-grid section{border:1px solid var(--bd);border-radius:14px;padding:14px;text-align:center;background:var(--bg2)}.r671-qr-grid img{display:block;width:min(100%,300px);aspect-ratio:1;margin:10px auto;border-radius:10px;background:#fff;padding:8px}.r671-qr-grid textarea{width:100%;min-height:74px;resize:none;font-size:11px;direction:ltr}.acc2-qr-dept-card{margin-top:12px}@media(max-width:760px){.r671-qr-grid{grid-template-columns:1fr}}
 /* R6.76 classification lists (High Alert / Hazard / LASA) */
-.cl-roles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:6px;margin-top:6px}
-.cl-role-chk{display:flex;align-items:center;gap:6px;font-size:12px;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2)}
+.cl-roles-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:6px;margin-top:6px}
+.cl-role-chk{display:flex;align-items:flex-start;gap:6px;font-size:12px;padding:6px 8px;border:1px solid var(--bd);border-radius:8px;background:var(--bg2);line-height:1.4}
+.cl-role-chk input{width:16px;height:16px;flex:none;margin:2px 0 0}
+.cl-role-chk span{flex:1;min-width:0;overflow-wrap:break-word}
 .cl-dup-row{padding:8px 0;border-bottom:1px solid var(--bd)}
 .cl-dup-row:last-child{border-bottom:none}
 .cl-dup-name{width:100%;margin-top:4px}
