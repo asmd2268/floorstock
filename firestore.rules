@@ -98,7 +98,7 @@ service cloud.firestore {
     }
 
     function canReadPharmacyState(docId) {
-      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia', 'user_activity_daily_v1', 'crash_cart_min_seal_length', 'classification_lists_v1', 'page_visibility_overrides_v1']
+      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia', 'user_activity_daily_v1', 'crash_cart_min_seal_length', 'classification_lists_v1', 'page_visibility_overrides_v1', 'user_dept_restrictions_v1']
         || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
     }
 

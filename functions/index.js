@@ -398,6 +398,54 @@ exports.setMasterAccess = onCall(CALLABLE_OPTIONS, async (request) => {
   return { ok: true, master };
 });
 
+exports.setDeptRestrictions = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  requirePharmacy(caller);
+  await requireWritableSubscription(caller);
+
+  const uid = String((request.data || {}).uid || '');
+  const rawBlocked = (request.data || {}).blockedDepts;
+  if (!uid) throw new HttpsError('invalid-argument', 'User ID is required.');
+  if (!Array.isArray(rawBlocked)) throw new HttpsError('invalid-argument', 'blockedDepts must be an array.');
+
+  const blockedDepts = rawBlocked.map((d) => String(d).trim().toLowerCase()).filter(Boolean);
+  if (blockedDepts.length > 200) throw new HttpsError('invalid-argument', 'Too many blocked departments.');
+
+  const ref = db.collection('users').doc(uid);
+  const snap = await ref.get();
+  if (!snap.exists) throw new HttpsError('not-found', 'User profile not found.');
+  const target = snap.data();
+  requireSameTenant(caller, target);
+
+  const restrictableRoles = ['pharmacy_staff', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor'];
+  if (!restrictableRoles.includes(target.role)) {
+    throw new HttpsError('failed-precondition', 'Department restrictions can only be set for pharmacy_staff or inpatient_supervisor users.');
+  }
+
+  const existingClaims = await auth.getUser(uid).then((u) => u.customClaims || {});
+  const newClaims = { ...existingClaims };
+  if (blockedDepts.length > 0) {
+    newClaims.blockedDepts = blockedDepts;
+  } else {
+    delete newClaims.blockedDepts;
+  }
+  await auth.setCustomUserClaims(uid, newClaims);
+
+  const updateData = { updatedAt: FieldValue.serverTimestamp(), updatedBy: caller.uid };
+  if (blockedDepts.length > 0) {
+    updateData.blockedDepts = blockedDepts;
+  } else {
+    updateData.blockedDepts = FieldValue.delete();
+  }
+  await ref.update(updateData);
+
+  await audit('user.dept_restrictions.set', caller, uid, {
+    email: target.email || null,
+    blockedDepts
+  });
+  return { ok: true, blockedDepts };
+});
+
 exports.getSaasContext = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   const platformAdmin = isPlatformAdmin(request, caller);

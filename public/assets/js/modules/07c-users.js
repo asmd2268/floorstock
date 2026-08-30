@@ -172,10 +172,15 @@ async function toggleMasterUser(id,isMaster){
   catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
 }
 
-function openDeptRestrictModal(uid, email) {
+async function openDeptRestrictModal(uid, email) {
   var ds = fsRoleScopedDepts(gd());
-  var restrictions = (S.g('user_dept_restrictions_v1') || {});
-  var blocked = Array.isArray(restrictions[uid]) ? restrictions[uid] : [];
+  // Read current blocked list from the user's Firestore profile (source of truth).
+  var blocked = [];
+  try{
+    var us = gu();
+    var target = us.find(function(u){return u.id===uid});
+    blocked = Array.isArray(target&&target.blockedDepts) ? target.blockedDepts : [];
+  }catch(_){}
   var existing = document.getElementById('modal-dept-restrict');
   if(existing) existing.remove();
   var modal = document.createElement('div');
@@ -195,15 +200,18 @@ function openDeptRestrictModal(uid, email) {
   document.body.appendChild(modal);
   modal.querySelector('#dept-restrict-close').onclick = modal.querySelector('#dept-restrict-cancel').onclick = function(){ modal.remove(); };
   modal.querySelector('#dept-restrict-save').onclick = async function(){
-    var checked = Array.from(modal.querySelectorAll('[data-dept-block]:checked')).map(function(el){return el.getAttribute('data-dept-block')});
-    var all = Object.assign({}, S.g('user_dept_restrictions_v1') || {});
-    if(checked.length) all[uid] = checked; else delete all[uid];
+    var checked = Array.from(modal.querySelectorAll('[data-dept-block]:checked')).map(function(cb){return cb.getAttribute('data-dept-block')});
+    var saveBtn = modal.querySelector('#dept-restrict-save');
+    saveBtn.disabled = true; saveBtn.textContent = 'Saving…';
     try{
-      await S.s('user_dept_restrictions_v1', all);
+      // Stores in /users/{uid}.blockedDepts and sets Firebase Auth custom claims
+      // via setDeptRestrictions Cloud Function — restrictions are server-side.
+      await window.fsCallFunction('setDeptRestrictions', { uid: uid, blockedDepts: checked });
+      await S.loadUsers();
       toast('Department restrictions saved ✓', 'succ');
       modal.remove();
       renderUsers();
-    }catch(e){ toast((e&&e.message)||'Save failed','err'); }
+    }catch(e){ toast((e&&e.message)||'Save failed','err'); saveBtn.disabled=false; saveBtn.textContent='Save / حفظ'; }
   };
 }
 

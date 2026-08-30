@@ -72,7 +72,8 @@ function selRole(r){
 }
 function fillDS(){
   var sel=el('dsel');if(!sel)return;
-  sel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
+  var ds=typeof window.fsAllowedDepts==='function'?window.fsAllowedDepts():gd();
+  sel.innerHTML=ds.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');
 }
 globalThis.fsLoginTimeout = withTimeout;
 function fsLoginRestValue(value){
@@ -238,6 +239,17 @@ async function doLogin(){
     // filter or private relay interrupts the request. Never leave the login
     // button stuck in “Loading data…”; fail cleanly and allow a retry.
     await fsLoginTimeout(S.init(setLoginStage,stateProfile),25000,'Loading Floor Stock data timed out. Check the network and retry.');
+    // Load blocked-dept custom claims from the Firebase Auth token.
+    // The token is cached locally; forceRefresh=false is enough unless
+    // the pharmacy director just updated restrictions in this session.
+    try{
+      var tokenResult=await credential.user.getIdTokenResult(false);
+      var claimedBlocked=tokenResult&&tokenResult.claims&&tokenResult.claims.blockedDepts;
+      globalThis.__fsBlockedDepts=Array.isArray(claimedBlocked)?claimedBlocked:[];
+    }catch(tokenErr){
+      globalThis.__fsBlockedDepts=[];
+      console.warn('Could not read dept restriction claims.',tokenErr);
+    }
     window.startApp();
     if(window.FSArchitecture)FSArchitecture.emit('app:started',FSArchitecture.session());
 
@@ -458,9 +470,9 @@ function renderInv(){
     var bc=sortDeptInventoryCategories(deptId,getCategories().concat(ms.map(function(m){return m.category}).filter(function(v,i,a){return a.indexOf(v)===i})).filter(function(v,i,a){return a.indexOf(v)===i}));
     bcs.innerHTML='<option value="">Change category to...</option>'+bc.map(function(c){return '<option value="'+esc(c)+'">'+esc(c)+'</option>'}).join('');
   }
-  // Drug modal dept sel
+  // Drug modal dept sel (filtered to allowed depts)
   var ddsel=el('ddept-sel');
-  if(ddsel){ddsel.disabled=true;ddsel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'"'+(d.id===deptId?' selected':'')+'>'+esc(d.name)+'</option>'}).join('');}
+  if(ddsel){var _dds=typeof window.fsAllowedDepts==='function'?window.fsAllowedDepts():gd();ddsel.disabled=true;ddsel.innerHTML=_dds.map(function(d){return '<option value="'+esc(d.id)+'"'+(d.id===deptId?' selected':'')+'>'+esc(d.name)+'</option>'}).join('');}
 
   if(!deptId){
     var ds=gd();
@@ -537,7 +549,7 @@ function openAddDrug(){
   el('dmin').value='1';el('dmax').value='10';el('dmly').value='';
   el('cha2').checked=false;el('chaz').checked=false;el('chls').checked=false;if(el('chcool'))el('chcool').checked=false;
   var ddsel=el('ddept-sel');
-  if(ddsel){ddsel.disabled=false;ddsel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');}
+  if(ddsel){var _ads=typeof window.fsAllowedDepts==='function'?window.fsAllowedDepts():gd();ddsel.disabled=false;ddsel.innerHTML=_ads.map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');}
   OM('mdrug');
 }
 function openEditDrug(id,deptId){
@@ -548,7 +560,7 @@ function openEditDrug(id,deptId){
   el('dmin').value=m.min;el('dmax').value=m.max;el('dmly').value=m.monthly||'';
   el('cha2').checked=!!m.high_alert;el('chaz').checked=!!m.hazard;el('chls').checked=!!m.lasa;if(el('chcool'))el('chcool').checked=!!m.refrigerated;
   var ddsel=el('ddept-sel');
-  if(ddsel){ddsel.innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'"'+(d.id===deptId?' selected':'')+'>'+esc(d.name)+'</option>'}).join('');}
+  if(ddsel){var _eds=typeof window.fsAllowedDepts==='function'?window.fsAllowedDepts():gd();ddsel.innerHTML=_eds.map(function(d){return '<option value="'+esc(d.id)+'"'+(d.id===deptId?' selected':'')+'>'+esc(d.name)+'</option>'}).join('');}
   OM('mdrug');
 }
 async function delDrug(id,deptId){
