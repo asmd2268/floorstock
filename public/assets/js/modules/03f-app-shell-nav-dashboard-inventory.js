@@ -351,6 +351,7 @@ function populateInvDeptSel(){
 // ── DASHBOARD ────────────────────────────────────────────
 function renderDash(){
   var allDs=gd(),ds=typeof window.fsRoleScopedDepts==='function'?window.fsRoleScopedDepts(allDs):allDs;
+  if(typeof window.fsCanAccessDepartment==='function')ds=ds.filter(function(d){return window.fsCanAccessDepartment(d.id)});
   var allowedDash={};ds.forEach(function(d){allowedDash[String(d.id)]=true});
   var rs=gr().filter(function(r){return !r.deptId||allowedDash[String(r.deptId)]});
   var pend=rs.filter(function(r){return r.status==='pending'});
