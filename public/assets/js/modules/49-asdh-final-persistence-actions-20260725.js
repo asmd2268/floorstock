@@ -540,9 +540,26 @@ window.__restorePageTransientUiExtensions.push(function(id){setTimeout(function(
 document.addEventListener('input',function(event){if(restoring)return;var page=event.target.closest&&event.target.closest('.pg');if(!page)return;if(page.id==='pg-newreq'){dirty.newreq=true}else if(page.id==='pg-crash-ops'){dirty.bulk=true}else return;clearTimeout(timer);timer=setTimeout(persist,120)});
 document.addEventListener('change',function(event){if(restoring)return;var page=event.target.closest&&event.target.closest('.pg');if(page&&(page.id==='pg-newreq'||page.id==='pg-crash-ops')){dirty[page.id==='pg-newreq'?'newreq':'bulk']=true;persist()}});
 window.addEventListener('beforeunload',persist);window.addEventListener('pagehide',persist);document.addEventListener('visibilitychange',function(){if(document.visibilityState==='hidden')persist()});
-window.floorstockShouldProtectAutoRefresh=function(pageId){var type=pageId==='pg-newreq'?'newreq':pageId==='pg-crash-ops'?'bulk':'';if(!type||!dirty[type])return false;persist();notice('Unsaved form protected from automatic refresh / تم حماية البيانات غير المرسلة من التحديث التلقائي');return true};
+// Medication Accountability's Custody-setup form (department select +
+// medicine name + quantity + reasons) rebuilds from scratch on every
+// automatic refresh (any watched Firestore key changing schedules one),
+// which never preserves an in-progress, unsaved selection/keystroke — it
+// only remembers a previously-saved assignment being edited. inpatient_
+// supervisor's per-document realtime listeners make this fire often enough
+// that a department pick or a typed medicine name got wiped almost
+// immediately. Unlike newreq/bulk this doesn't need draft persistence
+// across reloads — just skip the refresh while the form visibly has
+// unsaved input, checked live rather than via a dirty flag + listeners.
+function accountabilityFormHasUnsavedInput(){
+  return ['acc2-assignment-dept','acc2-assignment-med','acc2-assignment-quota','acc2-assignment-reasons'].some(function(id){
+    var el=E(id);return el&&String(el.value||'').trim();
+  });
+}
+window.floorstockShouldProtectAutoRefresh=function(pageId){
+  if(pageId==='pg-med-accountability')return accountabilityFormHasUnsavedInput();
+  var type=pageId==='pg-newreq'?'newreq':pageId==='pg-crash-ops'?'bulk':'';if(!type||!dirty[type])return false;persist();notice('Unsaved form protected from automatic refresh / تم حماية البيانات غير المرسلة من التحديث التلقائي');return true};
 var originalRefresh=window.refreshCurrentPage;
-if(typeof originalRefresh==='function')window.refreshCurrentPage=function(){var active=document.querySelector('.pg.on'),type=active&&active.id==='pg-newreq'?'newreq':active&&active.id==='pg-crash-ops'?'bulk':'';if(type&&dirty[type]){persist();notice('Unsaved form protected from automatic refresh / تم حماية البيانات غير المرسلة من التحديث التلقائي');return}return originalRefresh.apply(this,arguments)};
+if(typeof originalRefresh==='function')window.refreshCurrentPage=function(){var active=document.querySelector('.pg.on'),type=active&&active.id==='pg-newreq'?'newreq':active&&active.id==='pg-crash-ops'?'bulk':'';if(active&&active.id==='pg-med-accountability'&&accountabilityFormHasUnsavedInput())return;if(type&&dirty[type]){persist();notice('Unsaved form protected from automatic refresh / تم حماية البيانات غير المرسلة من التحديث التلقائي');return}return originalRefresh.apply(this,arguments)};
 var originalSubmit=window.submitReq;if(typeof originalSubmit==='function')window.submitReq=async function(){var before=(typeof gr==='function'?(gr()||[]):[]).length,result=await originalSubmit.apply(this,arguments),after=(typeof gr==='function'?(gr()||[]):[]).length;if(after>before)clear('newreq');return result};
 var r17BulkBeforeCount=0;
 window.__r17CrashExecuteBulkBeforeExtensions=window.__r17CrashExecuteBulkBeforeExtensions||[];
