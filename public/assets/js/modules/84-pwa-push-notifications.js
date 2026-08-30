@@ -4,7 +4,7 @@
 
   // VAPID public key — generate from Firebase Console → Project Settings → Cloud Messaging
   // Replace this placeholder before enabling push sends from the server
-  var VAPID_KEY = 'REPLACE_WITH_YOUR_VAPID_PUBLIC_KEY';
+  var VAPID_KEY = 'BIfCkwFW3lLKKmJyfaa3eeeJsFSeILTduZ96MUV0Zk7TAuyr-jRrrSRI2GQCaT6pLd2shd5pN7Q_jKGCgfK1tOs';
 
   var tokenSaved = false;
 
