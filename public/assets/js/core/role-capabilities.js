@@ -65,7 +65,14 @@ export function canAccessDepartment(profile, departmentId) {
   const user = profile || {};
   const role = normalizeRole(user.role);
   const target = String(departmentId || '').trim().toLowerCase();
-  if (!target || user.master === true || role === 'pharmacy' || role === 'pharmacy_staff') return true;
+  if (!target || user.master === true || role === 'pharmacy') return true;
+  // Per-user blocked departments stored in tenant state
+  if (user.uid && globalThis.S && typeof globalThis.S.g === 'function') {
+    const restrictions = globalThis.S.g('user_dept_restrictions_v1') || {};
+    const blocked = Array.isArray(restrictions[user.uid]) ? restrictions[user.uid] : [];
+    if (blocked.some(function(d){ return String(d).trim().toLowerCase() === target; })) return false;
+  }
+  if (role === 'pharmacy_staff') return true;
   const own = String(user.deptId || user.departmentId || '').trim().toLowerCase();
   if (role === 'department') return !!own && own === target;
   if (role === 'outpatient_pharmacy_supervisor') return target === 'outpatient' || target === 'outpatient department' || (!!own && own === target);

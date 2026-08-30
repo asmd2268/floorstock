@@ -37,11 +37,13 @@ function renderUsers(){
       var roleLabel=u.role==='pharmacy'?'Pharmacy Director':(u.role==='inpatient_supervisor'?'Inpatient Pharmacy Supervisor':(u.role==='outpatient_pharmacy_supervisor'?'Outpatient Pharmacy Supervisor':(u.role==='pharmacy_staff'?'Pharmacy Employee':(u.role==='controlled_pharmacy'?'Controlled medicines pharmacy officer':(u.role==='warehouse'?'Warehouse':'Department')))));
       var masterBadge=u.master===true?' <span class="badge bpu">Master</span>':'';
       var actions='';
+      var canRestrict=canManageUsers()&&['inpatient_supervisor','pharmacy_staff'].includes(u.role)&&u.id!==CU.id;
       if(CU&&CU.master===true&&u.id!==CU.id){
         actions+='<button class="btn bg bxs" data-user-action="toggle-master" data-id="'+esc(u.id)+'" data-master="'+(u.master===true?'1':'0')+'">'+(u.master===true?'Remove Master':'Grant Master')+'</button> ';
         actions+='<button class="btn bd2c bxs" data-user-action="delete" data-id="'+esc(u.id)+'">Delete permanently</button>';
       }else if(u.id===CU.id){actions='<span style="font-size:11px;color:var(--tx2)">Current user</span>';}
       else{actions='<span style="font-size:11px;color:var(--tx2)">Master only</span>';}
+      if(canRestrict)actions+=' <button class="btn bs bxs" data-user-action="dept-restrict" data-id="'+esc(u.id)+'" data-email="'+esc(u.email||'')+'">🏥 Dept Restrictions</button>';
       return '<tr><td style="font-family:var(--mono)">'+esc(u.email||'')+'</td>'
         +'<td>'+roleLabel+masterBadge+(d?' — '+esc(d.name):'')+'</td>'
         +'<td><span class="badge '+(u.active===false?'brd':'bgn')+'">'+(u.active===false?'Inactive':'Active')+'</span></td>'
@@ -169,6 +171,47 @@ async function toggleMasterUser(id,isMaster){
   try{await window.fsCallFunction('setMasterAccess',{uid:id,master:!isMaster});await S.loadUsers();toast('Master access updated ✓','succ');renderUsers();}
   catch(err){console.error(err);toast((err&&err.message)||'Could not update Master access','err');}
 }
+
+function openDeptRestrictModal(uid, email) {
+  var ds = fsRoleScopedDepts(gd());
+  var restrictions = (S.g('user_dept_restrictions_v1') || {});
+  var blocked = Array.isArray(restrictions[uid]) ? restrictions[uid] : [];
+  var existing = document.getElementById('modal-dept-restrict');
+  if(existing) existing.remove();
+  var modal = document.createElement('div');
+  modal.id = 'modal-dept-restrict';
+  modal.className = 'modal-bg on';
+  modal.innerHTML = '<div class="modal" style="max-width:480px"><div class="mh"><span class="mt">Department Restrictions — '+esc(email)+'</span><button class="xbtn" id="dept-restrict-close">✕</button></div>'
+    +'<div class="cb"><div class="fhint" style="margin-bottom:12px">Tick the departments you want to <b>block</b> from this user. They will not see requests, crash carts, or notes for blocked departments.</div>'
+    +'<div style="display:flex;flex-direction:column;gap:8px">'
+    +ds.map(function(d){
+      var isBlocked=blocked.some(function(b){return String(b).trim().toLowerCase()===String(d.id).trim().toLowerCase()});
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--bd);border-radius:6px;cursor:pointer">'
+        +'<input type="checkbox" data-dept-block="'+esc(d.id)+'" '+(isBlocked?'checked':'')+'>'
+        +'<span>'+esc(d.name)+'</span></label>';
+    }).join('')
+    +'</div></div>'
+    +'<div class="mf"><button class="btn bp" id="dept-restrict-save">Save / حفظ</button><button class="btn bg" id="dept-restrict-cancel">Cancel</button></div></div>';
+  document.body.appendChild(modal);
+  modal.querySelector('#dept-restrict-close').onclick = modal.querySelector('#dept-restrict-cancel').onclick = function(){ modal.remove(); };
+  modal.querySelector('#dept-restrict-save').onclick = async function(){
+    var checked = Array.from(modal.querySelectorAll('[data-dept-block]:checked')).map(function(el){return el.getAttribute('data-dept-block')});
+    var all = Object.assign({}, S.g('user_dept_restrictions_v1') || {});
+    if(checked.length) all[uid] = checked; else delete all[uid];
+    try{
+      await S.s('user_dept_restrictions_v1', all);
+      toast('Department restrictions saved ✓', 'succ');
+      modal.remove();
+      renderUsers();
+    }catch(e){ toast((e&&e.message)||'Save failed','err'); }
+  };
+}
+
+document.addEventListener('click', function(event){
+  var btn = event.target && event.target.closest && event.target.closest('[data-user-action="dept-restrict"]');
+  if(!btn) return;
+  openDeptRestrictModal(btn.getAttribute('data-id'), btn.getAttribute('data-email'));
+}, true);
 
 publishLegacy("07c-users.js", {
   fsRoleScopedDepts,

@@ -353,7 +353,7 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   'crash_carts',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3',
-  'controlled_catalog','user_activity_daily_v1','classification_lists_v1','page_visibility_overrides_v1',
+  'controlled_catalog','user_activity_daily_v1','classification_lists_v1','page_visibility_overrides_v1','user_dept_restrictions_v1',
   // Department's own Medication Accountability tab (custody balances, usage
   // history, receipt/handover records) reads these three keys directly —
   // they were readable per firestore.rules but never fetched into a
