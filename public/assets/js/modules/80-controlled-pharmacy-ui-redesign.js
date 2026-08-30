@@ -748,6 +748,7 @@ window.ctlCmpPrint=function(){
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
     if((typeof isMasterActual==='function'&&isMasterActual())||(CU&&rRole==='pharmacy')){var zb=document.createElement('button');zb.id='zebra-labels-nav';zb.className='nb';zb.dataset.pg='pg-zebra-labels';zb.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';zb.onclick=function(){showPg('pg-zebra-labels')};nav.appendChild(zb)}
+    (window.__buildNavAfterExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('buildNav extension failed',e)}});
     ccUpdateBadges();
     if(typeof window.scheduleNavigationRefresh==='function')window.scheduleNavigationRefresh('');
     if(typeof window.enforceRoleUi==='function')window.enforceRoleUi();
