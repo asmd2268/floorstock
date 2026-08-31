@@ -9,6 +9,10 @@ function assignments(){return state('accountability_assignments_v2').filter(func
 function matchingDept(value){var target=norm(value);return assignments().find(function(row){return norm(row.deptId)===target||norm(deptName(row.deptId))===target})}
 function selectedDept(){var select=document.getElementById('acc2-regimen-dept');return select&&select.value||''}
 function renderRegimenRoster(){
+  // The new independent-regimens tab (module 79) also contains .acc2-regimen-items
+  // but uses acc3-regimen-dept. If acc2-regimen-dept does not exist we are on the
+  // new tab — bail out to avoid an infinite renderMedicationAccountability() loop.
+  if(!document.getElementById('acc2-regimen-dept'))return;
   var host=document.querySelector('#r17-accountability-root .acc2-regimen-items');
   if(!host||host.dataset.r676Roster==='1'||host.querySelector('[data-acc2-regimen-assignment]')||host.querySelector('[data-acc3-regimen-catalog]'))return;
   var selected=selectedDept(),candidate=matchingDept(selected)||assignments()[0];
