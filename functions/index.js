@@ -446,6 +446,151 @@ exports.setDeptRestrictions = onCall(CALLABLE_OPTIONS, async (request) => {
   return { ok: true, blockedDepts };
 });
 
+// Strong server-side enforcement for per-user department restrictions.
+// pharmacy_staff and inpatient_supervisor write to accountability docs through
+// this CF so blockedDepts from token claims can be validated before any mutation
+// reaches Firestore (Admin SDK bypasses Firestore rules, so the check lives here).
+exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  const restrictedRoles = new Set(['pharmacy_staff', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']);
+  if (!restrictedRoles.has(caller.role)) {
+    throw new HttpsError('permission-denied', 'This function is only available to pharmacy_staff and inpatient_supervisor roles.');
+  }
+  await requireWritableSubscription(caller);
+
+  const data = request.data || {};
+  const action = String(data.action || '');
+  const tenantId = caller.tenantId || '';
+
+  const tokenClaims = request.auth.token || {};
+  const blockedDepts = Array.isArray(tokenClaims.blockedDepts)
+    ? tokenClaims.blockedDepts.map((d) => String(d).trim().toLowerCase())
+    : [];
+
+  function isDeptBlocked(deptId) {
+    return blockedDepts.includes(String(deptId || '').trim().toLowerCase());
+  }
+
+  const assignmentsRef = stateRef('accountability_assignments_v2', tenantId);
+  const usageRef = stateRef('accountability_usage_v2', tenantId);
+
+  if (action === 'saveAssignment') {
+    const { id, deptId, medName, quota, reasons, active } = data;
+    if (!deptId || !medName || !(Number(quota) > 0) || !Array.isArray(reasons) || !reasons.length) {
+      throw new HttpsError('invalid-argument', 'Department, medicine, positive quota, and at least one reason are required.');
+    }
+    if (isDeptBlocked(deptId)) {
+      throw new HttpsError('permission-denied', 'Access to this department is restricted for your account.');
+    }
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(assignmentsRef);
+      const list = stateArray(snap).map((x) => ({ ...x }));
+      const now = new Date().toISOString();
+      const actorName = caller.name || caller.email || '';
+      const existing = list.find((x) => String(x.id) === String(id || ''));
+      if (existing) {
+        const deficit = Math.max(0, Number(existing.quota) - Number(existing.balance));
+        existing.deptId = deptId;
+        existing.medName = medName;
+        existing.quota = Number(quota);
+        existing.balance = Math.max(0, Math.min(Number(quota), Number(quota) - deficit));
+        existing.reasons = reasons;
+        existing.active = active !== false;
+        existing.updatedAt = now;
+        existing.updatedBy = actorName;
+      } else {
+        list.push({
+          id: `acc2a_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          deptId, medName, quota: Number(quota), balance: Number(quota),
+          reasons, active: active !== false,
+          createdAt: now, createdBy: actorName,
+          updatedAt: now, updatedBy: actorName
+        });
+      }
+      writeState(tx, assignmentsRef, list);
+    });
+    return { ok: true };
+  }
+
+  if (action === 'toggleAssignment') {
+    const { id } = data;
+    if (!id) throw new HttpsError('invalid-argument', 'id is required.');
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(assignmentsRef);
+      const list = stateArray(snap).map((x) => ({ ...x }));
+      const row = list.find((x) => String(x.id) === String(id));
+      if (!row) throw new HttpsError('not-found', 'Assignment not found.');
+      if (isDeptBlocked(row.deptId)) {
+        throw new HttpsError('permission-denied', 'Access to this department is restricted for your account.');
+      }
+      row.active = row.active === false;
+      row.updatedAt = new Date().toISOString();
+      row.updatedBy = caller.name || caller.email || '';
+      writeState(tx, assignmentsRef, list);
+    });
+    return { ok: true };
+  }
+
+  if (action === 'deleteAssignment') {
+    const { id } = data;
+    if (!id) throw new HttpsError('invalid-argument', 'id is required.');
+    await db.runTransaction(async (tx) => {
+      const [assignSnap, usageSnap] = await Promise.all([tx.get(assignmentsRef), tx.get(usageRef)]);
+      const list = stateArray(assignSnap).map((x) => ({ ...x }));
+      const usage = stateArray(usageSnap);
+      const row = list.find((x) => String(x.id) === String(id));
+      if (!row) throw new HttpsError('not-found', 'Assignment not found.');
+      if (isDeptBlocked(row.deptId)) {
+        throw new HttpsError('permission-denied', 'Access to this department is restricted for your account.');
+      }
+      const hasPending = usage.some((u) => String(u.assignmentId) === String(id) && u.status === 'approved_waiting_receipt');
+      if (hasPending) throw new HttpsError('failed-precondition', 'This custody has a request awaiting receipt and cannot be deleted. Deactivate it instead.');
+      const hasHistory = usage.some((u) => String(u.assignmentId) === String(id));
+      if (hasHistory) throw new HttpsError('failed-precondition', 'This custody has transaction history and cannot be deleted. Deactivate it instead.');
+      writeState(tx, assignmentsRef, list.filter((x) => String(x.id) !== String(id)));
+    });
+    return { ok: true };
+  }
+
+  if (action === 'decision') {
+    const { id, decision, note } = data;
+    if (!id || !['approve', 'reject'].includes(decision)) {
+      throw new HttpsError('invalid-argument', 'id and decision (approve/reject) are required.');
+    }
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(usageRef);
+      const rows = stateArray(snap).map((x) => ({ ...x }));
+      const u = rows.find((x) => String(x.id) === String(id));
+      if (!u || u.status !== 'pending_pharmacy') throw new HttpsError('failed-precondition', 'This request is no longer pending.');
+      if (isDeptBlocked(u.deptId)) {
+        throw new HttpsError('permission-denied', 'Access to this department is restricted for your account.');
+      }
+      const now = new Date().toISOString();
+      const actorName = caller.name || caller.email || '';
+      const actorEmail = caller.email || '';
+      const noteStr = String(note || '').trim();
+      if (decision === 'approve') {
+        u.status = 'approved_waiting_receipt';
+        u.approvedAt = now;
+        u.approvedBy = actorName;
+        u.approvedByUser = actorEmail;
+        u.pharmacyNote = noteStr;
+      } else {
+        u.status = 'rejected';
+        u.rejectedAt = now;
+        u.rejectedBy = actorName;
+        u.rejectedByUser = actorEmail;
+        u.rejectionReason = noteStr;
+        u.pharmacyNote = noteStr;
+      }
+      writeState(tx, usageRef, rows);
+    });
+    return { ok: true };
+  }
+
+  throw new HttpsError('invalid-argument', `Unknown action: ${action}`);
+});
+
 exports.getSaasContext = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   const platformAdmin = isPlatformAdmin(request, caller);
