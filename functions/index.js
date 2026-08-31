@@ -462,10 +462,17 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
   const action = String(data.action || '');
   const tenantId = caller.tenantId || '';
 
+  // Read blockedDepts from token claims (fast path) or Firestore profile
+  // (fallback for the window between setDeptRestrictions and next token refresh).
   const tokenClaims = request.auth.token || {};
-  const blockedDepts = Array.isArray(tokenClaims.blockedDepts)
+  let blockedDepts = Array.isArray(tokenClaims.blockedDepts)
     ? tokenClaims.blockedDepts.map((d) => String(d).trim().toLowerCase())
-    : [];
+    : null;
+  if (!blockedDepts) {
+    const profileSnap = await db.collection('users').doc(request.auth.uid).get();
+    const profileBlocked = profileSnap.exists ? (profileSnap.data().blockedDepts || []) : [];
+    blockedDepts = profileBlocked.map((d) => String(d).trim().toLowerCase());
+  }
 
   function isDeptBlocked(deptId) {
     return blockedDepts.includes(String(deptId || '').trim().toLowerCase());

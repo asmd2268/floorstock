@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js';
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=1';
 
 // ── DATE/DIALOG/PERMISSION HELPERS ──────────────────────────────────────
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module

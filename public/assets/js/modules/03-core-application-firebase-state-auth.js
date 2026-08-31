@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=1';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
@@ -13,8 +13,8 @@ import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js';
 import { withTimeout } from '../core/promise-timeout.js';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js';
-import { tenantIdFromProfile, stateCollectionPath, crashReportsCollectionPath } from '../core/firestore-scope.js';
-import { stateCollectionRef, crashReportsCollectionRef } from '../core/firestore-sdk-scope.js';
+import { tenantIdFromProfile, stateCollectionPath, crashReportsCollectionPath } from '../core/firestore-scope.js?v=1';
+import { stateCollectionRef, crashReportsCollectionRef } from '../core/firestore-sdk-scope.js?v=1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
