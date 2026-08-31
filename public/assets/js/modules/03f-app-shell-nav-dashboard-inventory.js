@@ -228,7 +228,7 @@ async function doLogin(){
       if(dept)deptId=dept.id;
     }
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
-    CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:(profile.deptName||profile.departmentName||''),controlledCustodian:!!profile.controlledCustodian};
+    CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:(profile.deptName||profile.departmentName||''),controlledCustodian:!!profile.controlledCustodian,blockedDepts:Array.isArray(profile.blockedDepts)?profile.blockedDepts:[]};
     var stateProfile=Object.assign({},profile,{uid:credential.user.uid,deptId:deptId});
     if(typeof window.startApp!=='function'){
       throw new Error('Application startup is unavailable. Reload the file and try again.');
@@ -245,9 +245,11 @@ async function doLogin(){
     try{
       var tokenResult=await credential.user.getIdTokenResult(false);
       var claimedBlocked=tokenResult&&tokenResult.claims&&tokenResult.claims.blockedDepts;
-      globalThis.__fsBlockedDepts=Array.isArray(claimedBlocked)?claimedBlocked:[];
+      // If token has no claims yet (user hasn't re-logged since CF set them),
+      // fall back to the Firestore profile field written by setDeptRestrictions.
+      globalThis.__fsBlockedDepts=Array.isArray(claimedBlocked)?claimedBlocked:(Array.isArray(profile.blockedDepts)?profile.blockedDepts:[]);
     }catch(tokenErr){
-      globalThis.__fsBlockedDepts=[];
+      globalThis.__fsBlockedDepts=Array.isArray(profile.blockedDepts)?profile.blockedDepts:[];
       console.warn('Could not read dept restriction claims.',tokenErr);
     }
     window.startApp();
