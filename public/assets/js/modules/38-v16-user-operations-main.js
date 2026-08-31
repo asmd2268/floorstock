@@ -720,7 +720,7 @@ window.renderPrint=function(){
 
   var allReqs=(typeof gr==='function'?gr():[]).slice().reverse();
   if((window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''))==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var opd=window.fsOutpatientDeptId();allReqs=allReqs.filter(function(r){return String(r.deptId)===String(opd)})}
-  if((window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||''))==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var opd=window.fsOutpatientDeptId();allReqs=allReqs.filter(function(r){return String(r.deptId)===String(opd)})}
+  if(typeof window.fsCanAccessDepartment==='function')allReqs=allReqs.filter(function(r){return window.fsCanAccessDepartment(r.deptId)})
   var fulfilled=allReqs.filter(function(r){return r.status==='fulfilled'||r.status==='partial'}).sort(function(a,b){return new Date(b.fulfilledAt||b.created||0)-new Date(a.fulfilledAt||a.created||0)});
   var pending=allReqs.filter(function(r){return r.status==='pending'}).sort(function(a,b){return new Date(b.created||0)-new Date(a.created||0)});
 

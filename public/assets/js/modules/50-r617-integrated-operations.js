@@ -10,7 +10,7 @@ function permission(name,roles){var p=window.CU&&CU.permissions;if(p&&typeof p[n
 function clone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
 function uid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8)}
 function norm(v){return window.fsMedNorm?window.fsMedNorm(v):String(v||'').toLowerCase().trim()}
-function depts(){return typeof gd==='function'?(gd()||[]):[]}
+function depts(){var all=typeof gd==='function'?(gd()||[]):[];return typeof window.fsCanAccessDepartment==='function'?all.filter(function(d){return window.fsCanAccessDepartment(d.id)}):all}
 function deptName(id){return window.fsDeptName?window.fsDeptName(id):String(id||'—')}
 function actor(){return window.fsActor?window.fsActor():{name:'Unknown',user:'Unknown',id:''}}
 
@@ -240,8 +240,8 @@ function acc2RegimenScopeDept(){
   if(['outpatient_pharmacy_supervisor','inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor'].indexOf(r)<0)return '';
   return String(CU&&((CU.deptId!=null&&CU.deptId)||(CU.departmentId!=null&&CU.departmentId))||'').trim();
 }
-function acc2Assignments(){var a=acc2Array(ACC2_ASSIGNMENTS_KEY),d=acc2ScopeDept();return d?a.filter(function(x){return String(x.deptId)===d}):a}
-function acc2Usage(){var a=acc2Array(ACC2_USAGE_KEY),d=acc2ScopeDept();return d?a.filter(function(x){return String(x.deptId)===d}):a}
+function acc2Assignments(){var a=acc2Array(ACC2_ASSIGNMENTS_KEY),d=acc2ScopeDept();var r=d?a.filter(function(x){return String(x.deptId)===d}):a;return typeof window.fsCanAccessDepartment==='function'?r.filter(function(x){return window.fsCanAccessDepartment(x.deptId)}):r}
+function acc2Usage(){var a=acc2Array(ACC2_USAGE_KEY),d=acc2ScopeDept();var r=d?a.filter(function(x){return String(x.deptId)===d}):a;return typeof window.fsCanAccessDepartment==='function'?r.filter(function(x){return window.fsCanAccessDepartment(x.deptId)}):r}
 function acc2Receipts(){return acc2Array(ACC2_RECEIPTS_KEY)}
 function acc2Regimens(){return acc2Array(ACC2_REGIMENS_KEY)}
 function acc2EffectiveMaster(){return master()&&!window.MASTER_EFFECTIVE}
