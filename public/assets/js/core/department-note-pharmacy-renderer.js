@@ -6,10 +6,14 @@ function renderPharmNotes(){
   if(filter){
     var allDepts=globalThis.fsAllowedDepts?globalThis.fsAllowedDepts():(globalThis.gd?globalThis.gd():[]);
     var departments=allDepts.filter(function(d){return !scope||String(d.id)===String(scope)});
-    var cur=filter.value;
-    filter.innerHTML='<option value="">All Departments</option>';
-    departments.forEach(function(d){filter.innerHTML+='<option value="'+utils.noteEsc(d.id)+'">'+utils.noteEsc(d.name)+'</option>'});
-    if(cur&&departments.some(function(d){return d.id===cur}))filter.value=cur;
+    var deptKey=departments.map(function(d){return d.id}).join(',');
+    if(filter.dataset.deptKey!==deptKey){
+      var cur=filter.value;
+      filter.innerHTML='<option value="">All Departments</option>';
+      departments.forEach(function(d){filter.innerHTML+='<option value="'+utils.noteEsc(d.id)+'">'+utils.noteEsc(d.name)+'</option>'});
+      filter.dataset.deptKey=deptKey;
+      if(cur&&departments.some(function(d){return d.id===cur}))filter.value=cur;
+    }
   }
   if(filter&&scope){filter.value=scope;filter.disabled=true}
   var dept=filter?filter.value:'' , typ=type?type.value:'', stat=status?status.value:'';

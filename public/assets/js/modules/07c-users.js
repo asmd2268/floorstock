@@ -187,7 +187,7 @@ async function openDeptRestrictModal(uid, email) {
   modal.id = 'modal-dept-restrict';
   modal.className = 'modal-bg on';
   modal.innerHTML = '<div class="modal" style="max-width:480px"><div class="mh"><span class="mt">Department Restrictions — '+esc(email)+'</span><button class="xbtn" id="dept-restrict-close">✕</button></div>'
-    +'<div class="cb"><div class="fhint" style="margin-bottom:12px">Tick the departments you want to <b>block</b> from this user. They will not see requests, crash carts, or notes for blocked departments.</div>'
+    +'<div class="cb"><div class="fhint" style="margin-bottom:12px">Tick the departments you want to <b>block</b> from this user. They will not see requests, crash carts, or notes for blocked departments.</div><div class="fhint" style="margin-bottom:12px;border:1px solid var(--bd);border-radius:7px;padding:7px 10px">⏱ Restrictions take effect within 1 hour, or immediately when the user signs out and back in. / تسري القيود خلال ساعة، أو فوراً عند إعادة تسجيل دخول المستخدم.</div>'
     +'<div style="display:flex;flex-direction:column;gap:8px">'
     +ds.map(function(d){
       var isBlocked=blocked.some(function(b){return String(b).trim().toLowerCase()===String(d.id).trim().toLowerCase()});
