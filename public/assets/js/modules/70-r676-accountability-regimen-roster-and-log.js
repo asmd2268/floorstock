@@ -136,9 +136,9 @@ document.addEventListener('click',function(event){var target=event.target&&event
 document.addEventListener('input',function(event){var field=event.target&&event.target.dataset&&event.target.dataset.acc2LogFilter;if(field){filters()[field]=event.target.value;renderLog()}},true);
 document.addEventListener('change',function(event){var field=event.target&&event.target.dataset&&event.target.dataset.acc2LogFilter;if(field){filters()[field]=event.target.value;renderLog()}},true);
 var previous=window.renderMedicationAccountability;
-if(typeof previous==='function'&&!previous.__r676HandoverLogView){var wrapped=function(){var result=previous.apply(this,arguments);setTimeout(function(){var root=document.getElementById('r17-accountability-root');if(!root)return;root.querySelectorAll('#r676-accountability-handover-log').forEach(function(node){node.remove()});if(!window.__acc2HandoverLogOpen){hideBase(root,false);ensureButton(root)}else renderLog()},0);return result};wrapped.__r676HandoverLogView=true;window.renderMedicationAccountability=wrapped}
+if(typeof previous==='function'&&!previous.__r676HandoverLogView){var wrapped=function(){var result=previous.apply(this,arguments);setTimeout(function(){var root=document.getElementById('r17-accountability-root');if(!root)return;root.querySelectorAll('#r676-accountability-handover-log').forEach(function(node){node.remove()});if(window.acc2DepartmentRole&&window.acc2DepartmentRole()&&!window.acc2EffectiveMaster())return;if(!window.__acc2HandoverLogOpen){hideBase(root,false);ensureButton(root)}else renderLog()},0);return result};wrapped.__r676HandoverLogView=true;window.renderMedicationAccountability=wrapped}
 document.addEventListener('click',function(event){var tab=event.target&&event.target.closest&&event.target.closest('.acc2-tab');if(tab&&!tab.dataset.acc2HandoverLog)window.__acc2HandoverLogOpen=false},true);
-setTimeout(function(){var root=document.getElementById('r17-accountability-root');if(root){ensureButton(root);root.querySelectorAll('#r676-accountability-handover-log').forEach(function(node){node.remove()})}},0);
+setTimeout(function(){var root=document.getElementById('r17-accountability-root');if(!root)return;root.querySelectorAll('#r676-accountability-handover-log').forEach(function(node){node.remove()});if(!(window.acc2DepartmentRole&&window.acc2DepartmentRole()&&!window.acc2EffectiveMaster()))ensureButton(root)},0);
 })();
 
 // --- Merged from 79-r676-independent-regimen-database.js (Phase 6 consolidation) ---
@@ -249,6 +249,7 @@ function planUsageReview(){
   '</div></div>';
 }
 window.acc3SubmitPlanUsage=async function(planId){
+  if(!window.S||typeof window.S.s!=='function')return toast('Data store is not ready. Please wait a moment and try again. / البيانات غير جاهزة، انتظر لحظة وحاول مجدداً.','err');
   var plan=rows(REGIMENS).find(function(r){return String(r.id)===String(planId)});
   if(!plan||plan.paused)return toast('Plan not available.','err');
   var v=activeVersion(plan);
