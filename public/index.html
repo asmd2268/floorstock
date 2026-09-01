@@ -24,7 +24,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
-<link href="./assets/css/modules/01-styles-01-06.css?v=R6.76.20" rel="stylesheet"/><link href="./assets/css/modules/02-styles-07-12.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/03-styles-13-18.css?v=R6.76.116" rel="stylesheet"/><link href="./assets/css/modules/04-styles-19-24.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/05-styles-25-30.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/06-styles-31-36.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/07-styles-37-42.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/08-styles-43-48.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/09-styles-49-54.css?v=R6.76.20" rel="stylesheet"/><link href="./assets/css/modules/10-styles-55-59.css?v=R6.76.24" rel="stylesheet"/><link href="./assets/css/modules/11-design-refresh.css?v=R6.76.64" rel="stylesheet"/>
+<link href="./assets/css/modules/01-styles-01-06.css?v=R6.76.22" rel="stylesheet"/><link href="./assets/css/modules/02-styles-07-12.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/03-styles-13-18.css?v=R6.76.119" rel="stylesheet"/><link href="./assets/css/modules/04-styles-19-24.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/05-styles-25-30.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/06-styles-31-36.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/07-styles-37-42.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/08-styles-43-48.css?v=R6.76.19" rel="stylesheet"/><link href="./assets/css/modules/09-styles-49-54.css?v=R6.76.20" rel="stylesheet"/><link href="./assets/css/modules/10-styles-55-59.css?v=R6.76.24" rel="stylesheet"/><link href="./assets/css/modules/11-design-refresh.css?v=R6.76.64" rel="stylesheet"/>
 
 
 
@@ -904,6 +904,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="pg" id="pg-crash-ops">
 <div class="stitle">Crash Cart Operations / عمليات عربات الطوارئ</div>
 <div class="ssub">Rename or move carts and complete multi-cart opening, replacement and unique sealing on one page.</div>
+<div class="card" id="cc-nc-settings-card" style="display:none"><div class="ch"><span class="ct">No-Consumption Report Settings / إعدادات بلاغ عدم الاستهلاك</span></div><div class="cb" id="cc-nc-settings-panel"></div></div>
 <div class="card"><div class="ch"><span class="ct">Cart details / بيانات العربات</span></div><div class="cb" id="r17-crash-admin-list"></div></div>
 <div class="card"><div class="ch"><div><span class="ct">Bulk opening &amp; replacement / الفتح والاستبدال الجماعي</span><div class="fhint">Choose a medicine and source expiry. The system finds every cart with the same date, then lets you select all or some.</div></div></div>
 <div class="cb">
@@ -1351,6 +1352,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 <div class="pg" id="pg-classification-lists"></div>
 <div class="pg" id="pg-permissions-control"></div>
+<div class="pg" id="pg-class-colors"></div>
 <div class="pg" id="pg-zebra-labels">
 <div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">
 <div>
@@ -1482,7 +1484,14 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div class="fg"><label>Reason for opening / سبب فتح العربة</label><select id="ccr-reason"><option disabled="" selected="" value="">Select reason / اختر سبب فتح العربة...</option><option>Code Blue / كود بلو</option><option>Emergency intubation / تنبيب طارئ</option><option>Rapid response / الاستجابة السريعة</option><option>Medication emergency / طوارئ دوائية</option><option>Training or drill / تدريب أو محاكاة</option><option value="other">Other / سبب آخر</option></select></div>
 <div class="fg"><label>Old seal number / رقم القفل القديم *</label><input id="ccr-old-seal" required placeholder="Old seal number / رقم القفل القديم"/></div>
 </div>
-<div class="card"><div class="ch"><div><span class="ct">Used medications / الأدوية المستخدمة</span><div class="fhint">Select the medicine and consumed quantity. Selecting the consumed expiry is optional at reporting time; pharmacy will confirm it during replacement.</div></div></div><div class="cb" id="ccr-items"></div></div>
+<div class="fg acc2-check-field" style="margin:10px 0">
+  <label><input type="checkbox" id="ccr-no-consumption" onchange="ccToggleNoConsumption(this.checked)"> <b>No medications consumed / لا يوجد استهلاك</b> — فحص روتيني بدون استخدام أي دواء</label>
+</div>
+<div class="fg" id="ccr-note-row" style="display:none;margin-bottom:8px">
+  <label>Note / ملاحظة (optional)</label>
+  <input id="ccr-note" type="text" placeholder="e.g. Routine check — all items intact / فحص روتيني — جميع البنود سليمة"/>
+</div>
+<div id="ccr-items-card" class="card"><div class="ch"><div><span class="ct">Used medications / الأدوية المستخدمة</span><div class="fhint">Select the medicine and consumed quantity. Selecting the consumed expiry is optional at reporting time; pharmacy will confirm it during replacement.</div></div></div><div class="cb" id="ccr-items"></div></div>
 <div class="fl g8" style="justify-content:flex-end"><button class="btn bg" data-asdh-binding="b192">Cancel / إلغاء</button><button class="btn bd2c" data-asdh-binding="b193">Submit report / إرسال البلاغ</button></div>
 </div>
 </div>
@@ -1535,7 +1544,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <!-- Public-snapshot Crash Cart recovery removed in the hardened production build.
      Operational carts are loaded only from authenticated floorstock_state/crash_carts. -->
 <script src="./assets/js/vendor/qrcode-generator.js?v=R6.76.19"></script>
-<script type="module" src="./assets/js/auth-bootstrap.js?v=R6.76.83"></script>
+<script type="module" src="./assets/js/auth-bootstrap.js?v=R6.76.125"></script>
 <script>
 (function(){
   if(!('serviceWorker' in navigator))return;

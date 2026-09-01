@@ -1222,9 +1222,9 @@ globalThis.FS_R6_CRASH_FILTER = '';
 globalThis.FS_R6_ORDER_NAMES = ['Adrenaline (Epinephrine)','Amiodarone','Atropine','Calcium Chloride','Calcium Gluconate','Dextrose','Dobutamine','Dopamine','Lidocaine','Magnesium Sulfate','Naloxone','Norepinephrine','Sodium Bicarbonate'];
 
 function fsR6CrashCanBulk(){
-  if(window.fsHasCapability)return window.fsHasCapability('crashCart.configure');
+  if(window.fsHasCapability)return window.fsHasCapability('crashCart.operate');
   var role=String((window.CU&&CU.role)||'');
-  return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor'].indexOf(role)>=0));
+  return !!(window.CU&&(CU.master===true||['pharmacy','pharmacy_director','inpatient_supervisor','pharmacy_staff'].indexOf(role)>=0));
 }
 function fsR6CrashCarts(){return typeof window.crashCarts==='function'?(window.crashCarts()||[]):[]}
 function fsR6CrashFilter(){return String((fsR6E('ccx-expiry')||{}).value||'')}
