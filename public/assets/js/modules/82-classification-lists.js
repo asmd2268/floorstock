@@ -138,8 +138,10 @@ function clMasterTypeCard(type){
       '<div class="fl g8" style="margin-top:10px"><button class="btn bs bsm" onclick="window.clConfirmSave(\''+type+'\')">✔ Confirm &amp; save list / تأكيد وحفظ</button><button class="btn bg bsm" onclick="window.clCancelReview(\''+type+'\')">Cancel / إلغاء</button></div>'+
       '</div></div>';
   }
+  var defaultDate=(entry&&entry.approvedAt?entry.approvedAt:new Date().toISOString()).slice(0,10);
   return '<div class="card" style="margin-bottom:14px"><div class="ch"><span class="ct">'+esc(lbl.en)+' / '+esc(lbl.ar)+'</span>'+clStatusBadge(entry)+'</div><div class="cb">'+
     '<div class="fg"><label>Reference relied upon / المرجع المعتمد</label><input type="text" class="cl-ref" id="cl-ref-'+type+'" value="'+esc(entry&&entry.referenceName||'')+'" placeholder="e.g. ISMP List of High-Alert Medications 2024"></div>'+
+    '<div class="fg" style="max-width:220px"><label>Approval date / تاريخ الاعتماد</label><input type="date" id="cl-approval-date-'+type+'" value="'+esc(defaultDate)+'"></div>'+
     '<div class="fhint">'+medCount+' medicine(s) currently on this list'+(entry&&entry.approvedAt?(' · Approved '+esc((entry.approvedAt||'').slice(0,10))+' · Effective '+esc((entry.effectiveAt||'').slice(0,10))):'')+'</div>'+
     '<div class="fl g8" style="margin-top:8px"><button class="btn bp bsm" onclick="window.clGenerate(\''+type+'\')">🔄 Generate / Refresh from all departments</button><button class="btn bg bsm" onclick="window.clPrint(\''+type+'\')" '+(medCount?'':'disabled')+'>🖨 Print</button></div>'+
     '<label class="cl-role-chk" style="margin-top:10px;max-width:420px"><input type="checkbox" onchange="window.clTogglePerDeptFilter(this,\''+type+'\')" '+(entry&&entry.perDepartmentFilter===true?'checked':'')+'><span>Departments each see only their own medicines on this list / كل قسم يشوف أدويته فقط بهذي القائمة</span></label>'+
@@ -168,17 +170,35 @@ function clPrint(type){
   var entry=clEntry(type);if(!entry||!(entry.medicines||[]).length)return toast&&toast('Generate the list first / أنشئ القائمة أولاً','err');
   var meds=clMedicinesForViewer(entry);
   var lbl=CL_LABELS[type];
-  var rows=meds.map(function(m,i){return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b></td><td>'+esc(m.concentration||'—')+'</td></tr>'}).join('');
-  var html='<h1 style="font-size:14pt;margin:0 0 2px">'+esc(lbl.en)+'</h1><h2 style="font-size:12pt;margin:0 0 10px;font-weight:600" dir="rtl">'+esc(lbl.ar)+'</h2>'+
-    '<div style="font-size:9.5pt;margin-bottom:10px;line-height:1.7">'+
-      '<div><b>Reference relied upon / المرجع المعتمد:</b> '+esc(entry.referenceName||'—')+'</div>'+
-      '<div><b>Approval date / تاريخ الاعتماد:</b> '+esc((entry.approvedAt||'').slice(0,10))+' &nbsp; <b>Effective date / تاريخ الفعالية:</b> '+esc((entry.effectiveAt||'').slice(0,10))+'</div>'+
-      '<div><b>Valid until / صالح حتى:</b> '+esc((entry.expiresAt||'').slice(0,10))+' (1 year from approval / سنة من تاريخ الاعتماد)</div>'+
+  var approvedDate=esc((entry.approvedAt||'').slice(0,10));
+  var effectiveDate=esc((entry.effectiveAt||'').slice(0,10));
+  var expiresDate=esc((entry.expiresAt||'').slice(0,10));
+  var rows=meds.map(function(m,i){return '<tr><td style="text-align:center">'+(i+1)+'</td><td><b>'+esc(m.name)+'</b></td><td>'+esc(m.concentration||'—')+'</td></tr>'}).join('');
+  var qrUrl='https://chart.googleapis.com/chart?chs=110x110&cht=qr&choe=UTF-8&chl='+encodeURIComponent('https://floorstock-one.vercel.app');
+  var html=
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
+      '<div style="flex:1">'+
+        '<h1 style="font-size:15pt;margin:0 0 3px;font-weight:700">'+esc(lbl.en)+'</h1>'+
+        '<h2 style="font-size:13pt;margin:0 0 10px;font-weight:700;direction:rtl">'+esc(lbl.ar)+'</h2>'+
+        '<div style="font-size:9.5pt;line-height:1.85;border-top:1px solid #ccc;padding-top:8px">'+
+          '<div><b>Reference relied upon / المرجع المعتمد:</b> '+esc(entry.referenceName||'—')+'</div>'+
+          '<div><b>Approval date / تاريخ الاعتماد:</b> '+approvedDate+'&emsp;<b>Effective date / تاريخ الفعالية:</b> '+effectiveDate+'</div>'+
+          '<div><b>Valid until / صالح حتى:</b> '+expiresDate+' &nbsp;<span style="color:#555">(1 year from approval / سنة من تاريخ الاعتماد)</span></div>'+
+        '</div>'+
+      '</div>'+
+      '<div style="margin-left:18px;text-align:center">'+
+        '<img src="'+qrUrl+'" width="110" height="110" style="display:block;border:1px solid #ddd;padding:3px">'+
+        '<div style="font-size:7.5pt;color:#555;margin-top:3px">Scan to open app</div>'+
+      '</div>'+
     '</div>'+
-    '<table style="width:100%;border-collapse:collapse" border="1" cellpadding="5"><thead><tr style="background:#eee"><th>#</th><th>Generic name / الاسم العلمي</th><th>Concentration / التركيز</th></tr></thead><tbody>'+rows+'</tbody></table>';
-  window.fsOfficialPrint({title:lbl.en,html:html,css:'table{font-size:9.5pt}th,td{border:1px solid #999;padding:5px}'});
+    '<table style="width:100%;border-collapse:collapse;font-size:9.5pt" border="1" cellpadding="5">'+
+      '<thead><tr style="background:#e8e8e8"><th style="width:36px;text-align:center">#</th><th>Generic name / الاسم العلمي</th><th style="width:160px">Concentration / التركيز</th></tr></thead>'+
+      '<tbody>'+rows+'</tbody>'+
+    '</table>';
+  window.fsOfficialPrint({title:lbl.en,html:html,css:'body{font-family:Arial,sans-serif}table{font-size:9.5pt}th,td{border:1px solid #bbb;padding:5px}thead tr{background:#e8e8e8}tr:nth-child(even){background:#f9f9f9}'});
 }
 
+function injectClsListTabBar(){var pg=E('pg-classification-lists');if(!pg||pg.querySelector('.cls-tab-bar'))return;if(!(typeof window.isMasterActual==='function'&&window.isMasterActual()))return;var bar=document.createElement('div');bar.className='cls-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';bar.innerHTML='<button class="btn bp bsm" disabled><b>⚠ Classification Lists</b></button><button class="btn bg bsm" onclick="clTabColors()">🎨 Badge Colors</button>';pg.insertBefore(bar,pg.firstChild)}
 window.renderClassificationLists=function(){
   var host=E('pg-classification-lists');if(!host)return;
   var master=clIsMaster();
@@ -191,6 +211,7 @@ window.renderClassificationLists=function(){
     ?CL_TYPES.map(clMasterTypeCard).join('')
     :clVisibleTypesForRole().map(clReadOnlyTypeCard).join('');
   host.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div>'+title+'</div></div>'+body;
+  injectClsListTabBar();
 };
 
 window.clGenerate=function(type){
@@ -213,12 +234,15 @@ window.clConfirmSave=function(type){
   var refInput=E('cl-ref-'+type);
   var referenceName=(refInput&&refInput.value||'').trim();
   if(!referenceName)return toast&&toast('Enter the reference relied upon first / أدخل المرجع المعتمد أولاً','err');
-  var now=new Date(),expires=new Date(now.getTime());expires.setFullYear(expires.getFullYear()+1);
+  var dateInput=E('cl-approval-date-'+type);
+  var approvalStr=(dateInput&&dateInput.value)||new Date().toISOString().slice(0,10);
+  var approvalDate=new Date(approvalStr+'T00:00:00');
+  var expires=new Date(approvalDate);expires.setFullYear(expires.getFullYear()+1);
   var existing=clEntry(type)||{};
   var entry={
     referenceName:referenceName,
-    approvedAt:now.toISOString(),
-    effectiveAt:now.toISOString(),
+    approvedAt:approvalDate.toISOString(),
+    effectiveAt:approvalDate.toISOString(),
     expiresAt:expires.toISOString(),
     medicines:medicines,
     visibleRoles:existing.visibleRoles||[],
