@@ -176,61 +176,109 @@ function builder(dept){var existing=UI.edit?rows(REGIMENS).find(function(r){retu
 var ROUTE_LABEL={'IV':'IV','IM':'IM','IV_IM':'IV/IM','oral':'Oral','SQ':'SQ','inh':'Inhal.','top':'Topical','rec':'Rectal','other':'Other'};
 function regimenTable(){var list=rows(REGIMENS),manage=canManage();return '<div class="card"><div class="ch"><span class="ct">Treatment plans / الخطط العلاجية</span></div><div class="cb">'+(list.length?list.map(function(row){var v=activeVersion(row);var itemsHtml=(v.items||[]).map(function(i){var routeBadge=i.route?'<span class="badge bbl" style="font-size:10px;padding:1px 5px;margin:0 3px">'+esc(ROUTE_LABEL[i.route]||i.route)+'</span>':'';var doseInfo=i.doseType==='per_kg'&&i.doseRate?'<span style="font-size:11px;opacity:.75">'+esc(String(i.doseRate))+' '+(i.doseUnit||i.unitLabel||'mg')+'/kg</span>':i.dose?'<span style="font-size:11px;opacity:.75">'+esc(String(i.dose))+' '+esc(i.doseUnit||i.unitLabel||'')+'</span>':'';var countInfo=i.custodyQty?'<span style="font-size:11px;opacity:.55;margin-left:4px">× '+esc(String(i.custodyQty))+(i.form?' '+esc(i.form):'')+'</span>':'';var noteHtml=i.note?'<div style="font-size:11px;color:#e67e22;margin-top:2px">⚠ '+esc(i.note)+'</div>':'';return '<div style="border:1px solid var(--br);border-radius:4px;padding:5px 8px;margin-bottom:5px"><div class="fl g6 ic"><b style="flex:1">'+esc(i.medName)+'</b>'+routeBadge+doseInfo+countInfo+'</div>'+noteHtml+'</div>'}).join('');var statusBadge=row.paused?'<span class="badge bgr" style="margin-left:6px">Paused</span>':'';return '<div style="border:1px solid var(--br);border-radius:8px;padding:14px;margin-bottom:14px"><div class="fl g8 ic" style="margin-bottom:8px;flex-wrap:wrap"><div style="flex:1"><b style="font-size:15px">'+esc(row.name)+'</b>'+statusBadge+'<div class="fhint" style="margin-top:2px">'+esc(deptName(row.deptId))+' · '+esc(row.infectionSource||'—')+' · '+esc(({first_line:'1st-line',second_line:'2nd-line',third_line:'3rd-line'})[v.lineType]||v.lineType||'—')+'<span class="badge '+(/^(high|critical)/i.test(String(v.severity||''))?'brd':'bbl')+'" style="margin:0 6px">'+esc(severity(v.severity))+'</span>'+esc(v.label||'')+(row.minAge||row.maxAge?' · Age '+((row.minAge||'0')+'–'+(row.maxAge||'∞'))+' yrs':'')+'</div></div><div class="fl g6">'+planQR(row)+'</div></div><div>'+itemsHtml+'</div>'+(manage?'<div class="fl g6" style="margin-top:8px"><button class="btn bg bsm" type="button" onclick="acc3EditRegimen(\''+esc(row.id)+'\')">Edit / تعديل</button><button class="btn bp bsm" type="button" onclick="acc3PrintRegimen(\''+esc(row.id)+'\')">Print / طباعة</button><button class="btn '+(row.paused?'bs':'bd2c')+' bsm" type="button" onclick="acc3ToggleRegimen(\''+esc(row.id)+'\')">'+(row.paused?'Resume / استئناف':'Pause / إيقاف')+'</button></div>':'<div class="fl g6" style="margin-top:8px"><button class="btn bp bsm" type="button" onclick="acc3PrintRegimen(\''+esc(row.id)+'\')">Print / طباعة</button></div>')+'</div>'}).join(''):'<div class="acc2-empty">No treatment plans yet. / لا توجد خطط علاجية بعد.</div>')+'</div></div>'}
 function todayStr(){return new Date().toISOString().slice(0,10)}
-function puStatusLabel(s){return {pending_pharmacy:'Pending / قيد المراجعة',approved:'Approved / مقبول',rejected:'Rejected / مرفوض'}[s]||'Pending'}
-function puStatusClass(s){return {approved:'bbl',rejected:'brd',pending_pharmacy:'bgr'}[s]||'bgr'}
+function puStatusLabel(s){return {pending_pharmacy:'Pending / قيد المراجعة',approved_waiting_receipt:'Approved — awaiting receipt / معتمد وبانتظار الاستلام',received_locked:'Received / تم الاستلام',rejected:'Rejected / مرفوض'}[s]||'Pending'}
+function puStatusClass(s){return {approved_waiting_receipt:'bbl',received_locked:'bgn',rejected:'brd',pending_pharmacy:'bgr'}[s]||'bgr'}
+function acc3ExpiryAlertBanner(deptId){
+  var today=todayStr();
+  var soon=new Date();soon.setDate(soon.getDate()+30);var soonStr=soon.toISOString().slice(0,10);
+  var assignments=rows('accountability_assignments_v2').filter(function(a){return String(a.deptId)===String(deptId)&&a.active!==false});
+  var expired=[],expiringSoon=[];
+  assignments.forEach(function(a){
+    var dates=[];
+    if(a.expiryDate)dates.push({med:a.medName,date:a.expiryDate});
+    (a.expiryBatches||[]).forEach(function(b){if(b.date)dates.push({med:a.medName,date:b.date})});
+    dates.forEach(function(d){if(d.date<=today)expired.push(d);else if(d.date<=soonStr)expiringSoon.push(d)});
+  });
+  var html='';
+  if(expired.length)html+='<div class="alert-banner" style="margin-bottom:8px">🔴 Expired batches / دفعات منتهية الصلاحية: '+expired.map(function(d){return '<b>'+esc(d.med)+'</b> ('+esc(d.date)+')'}).join(' · ')+'</div>';
+  if(expiringSoon.length)html+='<div class="alert-banner-y" style="margin-bottom:8px">⚠ Expiring within 30 days / تنتهي خلال 30 يوم: '+expiringSoon.map(function(d){return '<b>'+esc(d.med)+'</b> ('+esc(d.date)+')'}).join(' · ')+'</div>';
+  return html;
+}
 function acc3DeptPlanView(deptId){
-  var planList=rows(REGIMENS).filter(function(r){return !r.paused});
+  var planList=rows(REGIMENS).filter(function(r){return !r.paused&&String(r.deptId)===String(deptId)});
   var allUsages=rows(PLAN_USAGE_KEY);
-  if(!planList.length)return '<div class="acc2-empty">No treatment plans available. Contact pharmacy to create plans. / لا توجد خطط علاجية. تواصل مع الصيدلية لإنشاء الخطط.</div>';
-  return '<div class="fhint" style="margin-bottom:12px">Select a plan, enter quantities used for each medicine, fill in patient details, then submit to pharmacy. / اختر خطة، أدخل كميات كل دواء، أضف بيانات المريض، ثم أرفع للصيدلية.</div>'+planList.map(function(plan){
-    var v=activeVersion(plan);
-    var deptUsages=allUsages.filter(function(u){return String(u.planId)===String(plan.id)&&String(u.deptId)===String(deptId)}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}).slice(0,8);
-    var pid=esc(plan.id);
-    var medicineInputs=(v.items||[]).map(function(item){
-      var doseLabel=item.doseType==='per_kg'&&item.doseRate?String(item.doseRate)+' '+(item.doseUnit||item.unitLabel||'mg')+'/kg':(item.dose?String(item.dose)+' '+(item.doseUnit||item.unitLabel||''):'');
-      var routeLabel=ROUTE_LABEL[item.route]||item.route||'';
-      var noteHtml=item.note?'<div style="font-size:11px;color:#e67e22">⚠ '+esc(item.note)+'</div>':'';
-      return '<div style="border:1px solid var(--br);border-radius:4px;padding:7px 10px;margin-bottom:5px">'+
-        '<div class="fl g6 ic"><b style="flex:1">'+esc(item.medName)+'</b>'+
-        (doseLabel?'<span style="opacity:.65;font-size:11px">'+esc(doseLabel)+'</span>':'')+
-        (routeLabel?'<span class="badge bbl" style="font-size:10px;padding:1px 5px">'+esc(routeLabel)+'</span>':'')+
-        '<input class="acc3-pu-qty" data-plan-id="'+pid+'" data-med="'+esc(item.medName)+'" type="number" min="0" step="any" placeholder="Qty used / الكمية" style="width:100px">'+
-        '<span style="opacity:.6;font-size:12px">'+esc(item.doseUnit||item.unitLabel||item.form||'unit')+'</span>'+
-        '</div>'+noteHtml+'</div>';
-    }).join('');
-    var histHtml=deptUsages.length?
-      '<div style="margin-top:12px"><div class="fhint" style="margin-bottom:5px">Submission history / سجل الاستخدام</div><div class="tw"><table class="acc2-table" style="font-size:12px"><thead><tr><th>Date / التاريخ</th><th>Patient file / رقم الملف</th><th>Doctor / الطبيب</th><th>Medicines / الأدوية</th><th>Status / الحالة</th></tr></thead><tbody>'+
-      deptUsages.map(function(u){return '<tr><td>'+esc(u.consumptionDate||'—')+'</td><td>'+esc(u.patientFile||'—')+'</td><td>'+esc(u.doctor||'—')+'</td><td style="font-size:11px">'+esc((u.medicines||[]).map(function(m){return m.medName+'×'+m.actualQty}).join(', ')||'—')+'</td><td><span class="badge '+puStatusClass(u.status)+'">'+puStatusLabel(u.status)+'</span></td></tr>'}).join('')+
-      '</tbody></table></div></div>':'';
-    var ageNote=plan.minAge||plan.maxAge?'<div class="fhint" style="margin-top:2px">Age / العمر: '+(plan.minAge||'0')+'–'+(plan.maxAge||'∞')+' yrs</div>':'';
-    return '<div style="border:1px solid var(--br);border-radius:8px;padding:14px;margin-bottom:14px">'+
-      '<div class="fl g8 ic" style="margin-bottom:10px;flex-wrap:wrap">'+
-        '<div style="flex:1"><b style="font-size:15px">'+esc(plan.name)+'</b>'+
-          '<div class="fhint" style="margin-top:2px">'+esc(plan.infectionSource||'—')+' · '+esc(({first_line:'1st-line',second_line:'2nd-line',third_line:'3rd-line'})[v.lineType]||'')+
-          ' <span class="badge '+(/^(high|critical)/i.test(String(v.severity||''))?'brd':'bbl')+'">'+esc(severity(v.severity))+'</span></div>'+ageNote+'</div>'+
-        planQR(plan)+
-      '</div>'+
-      '<details><summary style="cursor:pointer;padding:6px 0;font-weight:600;list-style:none;user-select:none">▶ Submit plan usage / تسجيل استهلاك الخطة</summary>'+
-        '<div style="margin-top:10px">'+
-          '<div style="font-size:12px;opacity:.7;margin-bottom:8px">Enter actual quantity used for each medicine / أدخل الكمية المستهلكة فعلياً لكل دواء:</div>'+
-          medicineInputs+
-          '<div class="acc2-form-grid" style="margin-top:10px">'+
-            '<div class="fg"><label>Consumption date / تاريخ الاستهلاك *</label><input class="acc3-pu-date" data-plan-id="'+pid+'" type="date" value="'+todayStr()+'" max="'+todayStr()+'"></div>'+
-            '<div class="fg"><label>Patient file / رقم الملف *</label><input class="acc3-pu-file" data-plan-id="'+pid+'" placeholder="File number / رقم الملف"></div>'+
-            '<div class="fg"><label>Doctor / الطبيب *</label><input class="acc3-pu-doctor" data-plan-id="'+pid+'" placeholder="Doctor name / اسم الطبيب"></div>'+
-            '<div class="fg"><label>Notes / ملاحظات</label><input class="acc3-pu-note" data-plan-id="'+pid+'" placeholder="Optional / اختياري"></div>'+
+  var assignments=rows('accountability_assignments_v2');
+  function getAssignment(medName){return assignments.find(function(a){return String(a.deptId)===String(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
+  var pendingReceipts=allUsages.filter(function(u){return String(u.deptId)===String(deptId)&&u.status==='approved_waiting_receipt'});
+  var pendingReceiptHtml='';
+  if(pendingReceipts.length){
+    pendingReceiptHtml='<div class="card" style="border-left:4px solid var(--blue,#2196f3);margin-bottom:14px"><div class="ch"><span class="ct">🔔 Awaiting receipt / بانتظار استلام أدوية</span><div class="fhint">Pharmacy approved the following plan usages — confirm receipt after collecting the medicines.</div></div><div class="cb">'+
+      pendingReceipts.map(function(u){
+        var medsHtml=(u.medicines||[]).map(function(m){return '<span class="chip">'+esc(m.medName)+' × '+esc(m.actualQty)+'</span>'}).join(' ');
+        return '<div style="border:1px solid var(--br);border-radius:6px;padding:10px;margin-bottom:8px">'+
+          '<div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:4px">'+
+            '<b>'+esc(u.planName||'—')+'</b>'+
+            '<span class="fhint">'+esc(u.consumptionDate||'—')+'</span>'+
+            '<span class="fhint">File: '+esc(u.patientFile||'—')+'</span>'+
+            '<span class="fhint">Dr: '+esc(u.doctor||'—')+'</span>'+
           '</div>'+
-          '<button class="btn bp" style="margin-top:10px" type="button" onclick="acc3SubmitPlanUsage(\''+pid+'\')">Submit to pharmacy / رفع للصيدلية</button>'+
+          '<div style="margin:6px 0">'+medsHtml+'</div>'+
+          '<button class="btn bs" type="button" onclick="acc3RecordPlanReceipt(\''+esc(u.id)+'\')">✓ Confirm receipt / تأكيد الاستلام</button>'+
+        '</div>';
+      }).join('')+
+    '</div></div>';
+  }
+  if(!planList.length)return acc3ExpiryAlertBanner(deptId)+pendingReceiptHtml+'<div class="acc2-empty">No treatment plans available for this department. / لا توجد خطط علاجية. تواصل مع الصيدلية.</div>';
+  return acc3ExpiryAlertBanner(deptId)+pendingReceiptHtml+
+    '<div class="fhint" style="margin-bottom:12px">Select a plan, enter quantities used for each medicine, fill in patient details, then submit to pharmacy. / اختر خطة، أدخل كميات كل دواء، أضف بيانات المريض، ثم أرفع للصيدلية.</div>'+
+    planList.map(function(plan){
+      var v=activeVersion(plan);
+      var deptUsages=allUsages.filter(function(u){return String(u.planId)===String(plan.id)&&String(u.deptId)===String(deptId)}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}).slice(0,8);
+      var pid=esc(plan.id);
+      var medicineInputs=(v.items||[]).map(function(item){
+        var doseLabel=item.doseType==='per_kg'&&item.doseRate?String(item.doseRate)+' '+(item.doseUnit||item.unitLabel||'mg')+'/kg':(item.dose?String(item.dose)+' '+(item.doseUnit||item.unitLabel||''):'');
+        var routeLabel=ROUTE_LABEL[item.route]||item.route||'';
+        var noteHtml=item.note?'<div style="font-size:11px;color:#e67e22">⚠ '+esc(item.note)+'</div>':'';
+        var asgn=getAssignment(item.medName);
+        var expiryHtml='';
+        if(asgn&&(asgn.expiryBatches||[]).length){
+          var today=todayStr();
+          var hasExpired=(asgn.expiryBatches||[]).some(function(b){return b.date&&b.date<=today});
+          expiryHtml='<div style="font-size:11px;margin-top:2px;opacity:.75">'+(hasExpired?'🔴':'📅')+' Exp: '+(asgn.expiryBatches||[]).map(function(b){return esc(b.date||'—')+(b.qty?'('+b.qty+')':'')}).join(', ')+'</div>';
+        }
+        return '<div style="border:1px solid var(--br);border-radius:4px;padding:7px 10px;margin-bottom:5px">'+
+          '<div class="fl g6 ic"><b style="flex:1">'+esc(item.medName)+'</b>'+
+          (doseLabel?'<span style="opacity:.65;font-size:11px">'+esc(doseLabel)+'</span>':'')+
+          (routeLabel?'<span class="badge bbl" style="font-size:10px;padding:1px 5px">'+esc(routeLabel)+'</span>':'')+
+          '<input class="acc3-pu-qty" data-plan-id="'+pid+'" data-med="'+esc(item.medName)+'" type="number" min="0" step="any" placeholder="Qty used / الكمية" style="width:100px">'+
+          '<span style="opacity:.6;font-size:12px">'+esc(item.doseUnit||item.unitLabel||item.form||'unit')+'</span>'+
+          '</div>'+noteHtml+expiryHtml+'</div>';
+      }).join('');
+      var histHtml=deptUsages.length?
+        '<div style="margin-top:12px"><div class="fhint" style="margin-bottom:5px">Submission history / سجل الاستخدام</div><div class="tw"><table class="acc2-table" style="font-size:12px"><thead><tr><th>Date / التاريخ</th><th>Patient file / رقم الملف</th><th>Doctor / الطبيب</th><th>Medicines / الأدوية</th><th>Status / الحالة</th></tr></thead><tbody>'+
+        deptUsages.map(function(u){return '<tr><td>'+esc(u.consumptionDate||'—')+'</td><td>'+esc(u.patientFile||'—')+'</td><td>'+esc(u.doctor||'—')+'</td><td style="font-size:11px">'+esc((u.medicines||[]).map(function(m){return m.medName+'×'+m.actualQty}).join(', ')||'—')+'</td><td><span class="badge '+puStatusClass(u.status)+'">'+puStatusLabel(u.status)+'</span></td></tr>'}).join('')+
+        '</tbody></table></div></div>':'';
+      var ageNote=plan.minAge||plan.maxAge?'<div class="fhint" style="margin-top:2px">Age / العمر: '+(plan.minAge||'0')+'–'+(plan.maxAge||'∞')+' yrs</div>':'';
+      return '<div style="border:1px solid var(--br);border-radius:8px;padding:14px;margin-bottom:14px">'+
+        '<div class="fl g8 ic" style="margin-bottom:10px;flex-wrap:wrap">'+
+          '<div style="flex:1"><b style="font-size:15px">'+esc(plan.name)+'</b>'+
+            '<div class="fhint" style="margin-top:2px">'+esc(plan.infectionSource||'—')+' · '+esc(({first_line:'1st-line',second_line:'2nd-line',third_line:'3rd-line'})[v.lineType]||'')+
+            ' <span class="badge '+(/^(high|critical)/i.test(String(v.severity||''))?'brd':'bbl')+'">'+esc(severity(v.severity))+'</span></div>'+ageNote+'</div>'+
+          planQR(plan)+
         '</div>'+
-      '</details>'+
-      histHtml+
-    '</div>';
-  }).join('');
+        '<details><summary style="cursor:pointer;padding:6px 0;font-weight:600;list-style:none;user-select:none">▶ Submit plan usage / تسجيل استهلاك الخطة</summary>'+
+          '<div style="margin-top:10px">'+
+            '<div style="font-size:12px;opacity:.7;margin-bottom:8px">Enter actual quantity used for each medicine / أدخل الكمية المستهلكة فعلياً لكل دواء:</div>'+
+            medicineInputs+
+            '<div class="acc2-form-grid" style="margin-top:10px">'+
+              '<div class="fg"><label>Consumption date / تاريخ الاستهلاك *</label><input class="acc3-pu-date" data-plan-id="'+pid+'" type="date" value="'+todayStr()+'" max="'+todayStr()+'"></div>'+
+              '<div class="fg"><label>Patient file / رقم الملف *</label><input class="acc3-pu-file" data-plan-id="'+pid+'" placeholder="File number / رقم الملف"></div>'+
+              '<div class="fg"><label>Doctor / الطبيب *</label><input class="acc3-pu-doctor" data-plan-id="'+pid+'" placeholder="Doctor name / اسم الطبيب"></div>'+
+              '<div class="fg"><label>Notes / ملاحظات</label><input class="acc3-pu-note" data-plan-id="'+pid+'" placeholder="Optional / اختياري"></div>'+
+            '</div>'+
+            '<button class="btn bp" style="margin-top:10px" type="button" onclick="acc3SubmitPlanUsage(\''+pid+'\')">Submit to pharmacy / رفع للصيدلية</button>'+
+          '</div>'+
+        '</details>'+
+        histHtml+
+      '</div>';
+    }).join('');
 }
 function planUsageReview(){
   var pending=rows(PLAN_USAGE_KEY).filter(function(u){return u.status==='pending_pharmacy'}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))});
-  if(!pending.length)return '<div class="alert-banner-y" style="margin-top:14px">No pending plan usage submissions. / لا توجد طلبات استهلاك معلقة.</div>';
-  return '<div class="card" style="margin-top:16px"><div class="ch"><span class="ct">Plan usage review / مراجعة استهلاك الخطط</span><div class="fhint">Submitted by nursing staff — approve or reject each record.</div></div><div class="cb">'+
+  var waitingReceipt=rows(PLAN_USAGE_KEY).filter(function(u){return u.status==='approved_waiting_receipt'}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))});
+  var waitHtml=waitingReceipt.length?'<div class="card" style="margin-top:10px;border-left:4px solid var(--blue,#2196f3)"><div class="ch"><span class="ct">⏳ Awaiting dept receipt / بانتظار استلام الأقسام</span></div><div class="cb">'+waitingReceipt.map(function(u){var meds=(u.medicines||[]).map(function(m){return '<span class="chip">'+esc(m.medName)+' × '+esc(m.actualQty)+'</span>'}).join(' ');return '<div style="border:1px solid var(--br);border-radius:6px;padding:8px;margin-bottom:8px"><div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:4px"><b>'+esc(u.planName||'—')+'</b><span class="fhint">'+esc(deptName(u.deptId))+'</span><span class="fhint">'+esc(u.consumptionDate||'—')+'</span></div><div style="margin:4px 0">'+meds+'</div></div>'}).join('')+'</div></div>':'';
+  if(!pending.length)return waitHtml+'<div class="alert-banner-y" style="margin-top:14px">No pending plan usage submissions. / لا توجد طلبات استهلاك معلقة.</div>';
+  return waitHtml+'<div class="card" style="margin-top:16px"><div class="ch"><span class="ct">Plan usage review / مراجعة استهلاك الخطط</span><div class="fhint">Submitted by nursing staff — approve to deduct balances and send for receipt.</div></div><div class="cb">'+
     pending.map(function(u){
       var medsHtml=(u.medicines||[]).map(function(m){return '<span class="chip">'+esc(m.medName)+' × '+esc(m.actualQty)+'</span>'}).join(' ');
       return '<div style="border:1px solid var(--br);border-radius:6px;padding:10px;margin-bottom:10px">'+
@@ -268,8 +316,17 @@ window.acc3SubmitPlanUsage=async function(planId){
   });
   if(!medicines.length)return toast('Enter at least one medicine quantity. / أدخل كمية علاج واحد على الأقل.','err');
   var record={id:id('acc3pu'),planId:plan.id,planName:plan.name,deptId:String((window.CU&&CU.deptId)||''),deptName:deptName(String((window.CU&&CU.deptId)||'')),medicines:medicines,consumptionDate:dateVal,patientFile:fileVal,doctor:doctorVal,note:noteVal,status:'pending_pharmacy',submittedAt:now(),submittedBy:actor()};
+  // deduct from matching custody assignment balances
+  var asgns=rows('accountability_assignments_v2').map(function(a){return Object.assign({},a)});
+  var balanceErrors=[];
+  medicines.forEach(function(m){
+    var a=asgns.find(function(x){return String(x.deptId)===String(record.deptId)&&String(x.medName||'').trim().toLowerCase()===String(m.medName||'').trim().toLowerCase()&&x.active!==false});
+    if(a){var newBal=(a.balance||0)-m.actualQty;if(newBal<0)balanceErrors.push(m.medName+' (balance: '+(a.balance||0)+', requested: '+m.actualQty+')');else a.balance=newBal;}
+  });
+  if(balanceErrors.length)return toast('Insufficient balance for: '+balanceErrors.join('; ') + ' / رصيد غير كافٍ.','err');
   var all=rows(PLAN_USAGE_KEY).concat([record]);
   await save(PLAN_USAGE_KEY,all);
+  try{await window.S.s('accountability_assignments_v2',asgns)}catch(e){console.warn('Balance deduction failed:',e)}
   toast('Submitted to pharmacy ✓ / تم الرفع للصيدلية ✓');
   window.renderMedicationAccountability();
 };
@@ -278,7 +335,7 @@ window.acc3ApprovePlanUsage=async function(usageId){
   var all=rows(PLAN_USAGE_KEY).map(function(u){return Object.assign({},u)});
   var rec=all.find(function(u){return String(u.id)===String(usageId)});
   if(!rec)return;
-  rec.status='approved';rec.approvedAt=now();rec.approvedBy=actor();
+  rec.status='approved_waiting_receipt';rec.approvedAt=now();rec.approvedBy=actor();
   await save(PLAN_USAGE_KEY,all);
   toast('Plan usage approved ✓');
   window.renderMedicationAccountability();
@@ -291,6 +348,22 @@ window.acc3RejectPlanUsage=async function(usageId){
   rec.status='rejected';rec.rejectedAt=now();rec.rejectedBy=actor();
   await save(PLAN_USAGE_KEY,all);
   toast('Plan usage rejected.');
+  window.renderMedicationAccountability();
+};
+window.acc3RecordPlanReceipt=async function(usageId){
+  if(!window.S||typeof window.S.s!=='function')return toast('Data store not ready.','err');
+  var allUsages=rows(PLAN_USAGE_KEY).map(function(u){return Object.assign({},u)});
+  var rec=allUsages.find(function(u){return String(u.id)===String(usageId)});
+  if(!rec||rec.status!=='approved_waiting_receipt')return toast('This record is no longer awaiting receipt. / السجل ليس بانتظار الاستلام.','err');
+  var asgns=rows('accountability_assignments_v2').map(function(a){return Object.assign({},a)});
+  (rec.medicines||[]).forEach(function(m){
+    var a=asgns.find(function(x){return String(x.deptId)===String(rec.deptId)&&String(x.medName||'').trim().toLowerCase()===String(m.medName||'').trim().toLowerCase()});
+    if(a)a.balance=(a.balance||0)+m.actualQty;
+  });
+  rec.status='received_locked';rec.receivedAt=now();rec.receivedBy=actor();rec.locked=true;
+  await save(PLAN_USAGE_KEY,allUsages);
+  try{await window.S.s('accountability_assignments_v2',asgns)}catch(e){console.warn('Balance replenishment failed:',e)}
+  toast('Receipt confirmed — balances replenished ✓ / تم الاستلام وتم تعويض الرصيد ✓');
   window.renderMedicationAccountability();
 };
 window.acc2IndependentRegimensTab=function(){
