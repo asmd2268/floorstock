@@ -94,8 +94,10 @@ function plPageCard(pageId){
   return '<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">'+esc(page.label)+'</span></div><div class="cb"><div class="cl-roles-grid">'+rolesHtml+'</div></div></div>';
 }
 
+function injectPermTabBar(){var pg=E('pg-permissions-control');if(!pg||pg.querySelector('.usr-tab-bar'))return;var bar=document.createElement('div');bar.className='usr-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';bar.innerHTML='<button class="btn bg bsm" onclick="usrTabUsers()">👤 Users</button><button class="btn bp bsm" disabled><b>🔐 Permissions</b></button>';pg.insertBefore(bar,pg.firstChild)}
 window.renderPermissionsControl=function(){
   var host=E('pg-permissions-control');if(!host)return;
+  injectPermTabBar();
   if(!(typeof window.isMaster==='function'&&window.isMaster())){
     host.innerHTML='<div class="card"><div class="cb" style="text-align:center;color:var(--tx2)">Master only. / للماستر فقط.</div></div>';
     return;
@@ -103,6 +105,7 @@ window.renderPermissionsControl=function(){
   var title='<div class="stitle">🔐 Permissions Control / التحكم بالصلاحيات</div><div class="ssub" style="margin:0">Hide an existing page from a role that already has access to it. This never grants a role access it doesn\'t already have. / إخفاء صفحة موجودة عن دور يملك صلاحيتها أصلًا فقط — لا يمنح أي صلاحية جديدة.</div>';
   var body=Object.keys(PL_PAGES).map(plPageCard).join('');
   host.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div>'+title+'</div></div>'+body;
+  injectPermTabBar();
 };
 
 // Layer 1 (cosmetic): filter buildNav's own items array for hidden pages,
@@ -118,16 +121,6 @@ window.__buildNavAfterExtensions.push(function(){
       if(PL_PAGES[pageId]&&PL_PAGES[pageId].roles.indexOf(role)>=0&&plIsHiddenForCurrentRole(pageId))btn.remove();
     });
     return;
-  }
-  // Master-only nav entry; not part of buildNav's per-role items array,
-  // added the same way the zebra-labels button is.
-  var nav=E('mnav');
-  if(nav&&!document.getElementById('permissions-control-nav')){
-    var pb=document.createElement('button');
-    pb.id='permissions-control-nav';pb.className='nb';pb.dataset.pg='pg-permissions-control';
-    pb.innerHTML='🔐 Permissions';
-    pb.onclick=function(){showPg('pg-permissions-control')};
-    nav.appendChild(pb);
   }
 });
 

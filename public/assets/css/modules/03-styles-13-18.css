@@ -24,10 +24,10 @@
 .v13-review input,.v13-review select{margin:0}
 .v13-class-icons{display:inline-flex;gap:4px;margin-inline-start:6px;vertical-align:middle}
 .v13-ci{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:6px;font-size:10px;font-weight:800;border:1px solid}
-.v13-ha{color:#fff;background:#dc2626;border-color:#991b1b}
-.v13-lasa{color:#fff;background:#2563eb;border-color:#1d4ed8}
-.v13-ref{color:#fff;background:#7c3aed;border-color:#6d28d9}
-.v13-haz{color:#111;background:#facc15;border-color:#ca8a04}
+.v13-ha{color:var(--cls-ha-tx);background:rgba(var(--cls-ha-rgb),1);border-color:rgba(var(--cls-ha-rgb),.7)}
+.v13-lasa{color:var(--cls-lasa-tx);background:rgba(var(--cls-lasa-rgb),1);border-color:rgba(var(--cls-lasa-rgb),.7)}
+.v13-ref{color:var(--cls-ref-tx);background:rgba(var(--cls-ref-rgb),1);border-color:rgba(var(--cls-ref-rgb),.7)}
+.v13-haz{color:var(--cls-haz-tx);background:rgba(var(--cls-haz-rgb),1);border-color:rgba(var(--cls-haz-rgb),.7)}
 @media(max-width:760px){.v13-wide{width:99vw!important;padding:12px!important}}
 
 

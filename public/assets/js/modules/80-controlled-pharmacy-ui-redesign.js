@@ -734,13 +734,13 @@ window.ctlCmpPrint=function(){
   window.buildNav=function(){
     if(!window.CU)return;
     var nav=q('mnav');nav.innerHTML='';
-    var commonFull=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-controlled','🔒 Controlled custody'],['pg-ctl-analytics','📊 Controlled analytics'],['pg-crashcart','🚑 Crash Carts'],['pg-crash-ops','🛠 Crash Cart Operations'],['pg-med-accountability','🧾 Medication Accountability']];
+    var commonFull=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-controlled','🔒 Controlled custody'],['pg-ctl-analytics','📊 Controlled analytics'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
     var items;
     var rRole=String((window.CU&&CU.role)||'');
     if(rRole==='pharmacy')items=commonFull.filter(function(x){return x[0]!=='pg-controlled'}).concat([['pg-users','Users']]);
-    else if(rRole==='inpatient_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-crashcart','🚑 Crash Carts'],['pg-crash-ops','🛠 Crash Cart Operations'],['pg-med-accountability','🧾 Medication Accountability']];
-    else if(rRole==='outpatient_pharmacy_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-crash-ops','🛠 Crash Cart Operations'],['pg-med-accountability','🧾 Medication Accountability']];
-    else if(rRole==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-inv','Inventory status / حالة الأدوية'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-crash-ops','🛠 Crash Cart Operations'],['pg-med-accountability','🧾 Medication Accountability']];
+    else if(rRole==='inpatient_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
+    else if(rRole==='outpatient_pharmacy_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
+    else if(rRole==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-inv','Inventory status / حالة الأدوية'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
     else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']];
     else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
     else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody'],['pg-med-accountability','🧾 Medication documentation']];
@@ -755,7 +755,21 @@ window.ctlCmpPrint=function(){
   };
 
   function ccUpdateBadges(){
-    var open=openReports().length, reqRows=(typeof gr==='function'?(gr()||[]):[]), badgeRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+    var allOpen=openReports(), reqRows=(typeof gr==='function'?(gr()||[]):[]), badgeRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+    var deptRoles=['nurse','head_nurse','doctor','department_head','technician','pharmacist_incharge'];
+    var openFiltered;
+    if(deptRoles.indexOf(badgeRole)>=0){
+      // Department users: only show badge for reports whose cart belongs to their department
+      var myDeptId=String((window.CU&&CU.deptId)||'');
+      var myCarts=(typeof window.crashCarts==='function'?(window.crashCarts()||[]):[]).filter(function(c){return String(c.deptId)===myDeptId});
+      var myCartIds=myCarts.map(function(c){return String(c.id)});
+      openFiltered=allOpen.filter(function(r){return myCartIds.indexOf(String(r.cartId))>=0});
+    } else {
+      // Pharmacy/master roles: filter by allowed departments
+      openFiltered=allOpen;
+      if(typeof window.fsCanAccessDepartment==='function')openFiltered=openFiltered.filter(function(r){return window.fsCanAccessDepartment(r.deptId)});
+    }
+    var open=openFiltered.length;
     if(badgeRole==='outpatient_pharmacy_supervisor'&&window.fsOutpatientDeptId){var badgeDept=window.fsOutpatientDeptId();reqRows=reqRows.filter(function(r){return String(r.deptId)===String(badgeDept)})}
     if(typeof window.fsCanAccessDepartment==='function')reqRows=reqRows.filter(function(r){return window.fsCanAccessDepartment(r.deptId)});
     var req=reqRows.filter(function(r){return r.status==='pending'}).length;
@@ -774,7 +788,7 @@ window.ctlCmpPrint=function(){
 
   /* Crash Cart reporting and exact dated replacement. */
   function ccDateKey(value){return String(value||'').slice(0,10)}
-  function ccItemPresent(item){return n(item&&item.present!=null?item.present:item&&item.qty)}
+  function ccItemPresent(item){if(item&&item.stockStatus==='out_of_stock'&&item.present==null)return 0;return n(item&&item.present!=null?item.present:item&&item.qty)}
   function ccItemStandard(item){return n(item&&item.qty)}
   function ccDatedBatches(item){return ((item&&item.batches)||[]).filter(function(b){return ccDateKey(b.expiry)&&n(b.qty)>0})}
   function ccExpiryQuantity(item,date){return ccDatedBatches(item).filter(function(b){return ccDateKey(b.expiry)===ccDateKey(date)}).reduce(function(sum,b){return sum+n(b.qty)},0)}
@@ -822,7 +836,7 @@ window.ctlCmpPrint=function(){
       var prior=existing&&(existing.consumed||[]).find(function(row){return String(row.itemId)===String(it.id)}),displayItem=JSON.parse(JSON.stringify(it));
       if(prior&&existing.inventoryDeductedAtReport)ccRestoreReported({items:[displayItem]},{inventoryDeductedAtReport:true,consumed:[prior]});
       var max=ccItemPresent(displayItem),checked=!!prior,qty=prior?n(prior.qty):(max>0?1:0),reportedExpiry=prior&&prior.reportedExpiry||'';
-      return '<div class="cc-med-choice '+(checked?'on':'')+'" data-id="'+esc(it.id)+'"><div class="cc-med-head"><label><input type="checkbox" '+(checked?'checked ':'')+(max>0?'':'disabled ')+'onchange="this.closest(\'.cc-med-choice\').classList.toggle(\'on\',this.checked)"><span>'+esc(it.name)+' <small style="color:var(--tx2)">'+esc(it.strength||it.concentration||'')+'</small></span></label><span class="chip">Available: '+max+' / Standard: '+ccItemStandard(it)+'</span></div><div class="cc-med-qty"><div class="cc-report-item-grid"><div class="fg"><label>Consumed quantity / الكمية المستخدمة</label><input class="ccr-qty" type="number" min="0.001" max="'+max+'" step="any" value="'+qty+'"><div class="fhint">Maximum allowed: '+max+'</div></div><div class="fg"><label>Consumed expiry — optional / تاريخ الكمية المستخدمة — اختياري</label><select class="ccr-expiry">'+ccExpiryOptions(displayItem,reportedExpiry,true)+'</select><div class="fhint">Leave blank if the department does not know the batch date.</div></div></div></div></div>';
+      return '<div class="cc-med-choice '+(checked?'on':'')+'" data-id="'+esc(it.id)+'"><div class="cc-med-head"><label><input type="checkbox" '+(checked?'checked ':'')+(max>0?'':'disabled ')+'onchange="this.closest(\'.cc-med-choice\').classList.toggle(\'on\',this.checked)"><span>'+esc(it.name)+' <small style="color:var(--tx2)">'+esc(it.strength||it.concentration||'')+'</small></span></label><span class="chip">Available: '+max+' / Standard: '+ccItemStandard(it)+'</span></div><div class="cc-med-qty"><div class="cc-report-item-grid"><div class="fg"><label>Consumed quantity / الكمية المستخدمة</label><input class="ccr-qty" type="number" min="0.001" max="'+max+'" step="any" value="'+qty+'" oninput="var v=parseFloat(this.value),mx=parseFloat(this.max);if(!isNaN(v)&&!isNaN(mx)&&v>mx){this.value=mx;this.style.outline=\'2px solid var(--err,#ef4444)\';setTimeout(function(el){el.style.outline=\'\'}.bind(null,this),1200);}"><div class="fhint">Maximum / الحد الأقصى: '+max+'</div></div><div class="fg"><label>Consumed expiry — optional / تاريخ الكمية المستخدمة — اختياري</label><select class="ccr-expiry">'+ccExpiryOptions(displayItem,reportedExpiry,true)+'</select><div class="fhint">Leave blank if the department does not know the batch date.</div></div></div></div></div>';
     }).join('')||'<div class="fhint">No medicines configured.</div>';
     OM('mcc-report');
   };

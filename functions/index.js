@@ -482,7 +482,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
   const usageRef = stateRef('accountability_usage_v2', tenantId);
 
   if (action === 'saveAssignment') {
-    const { id, deptId, medName, quota, reasons, active } = data;
+    const { id, deptId, medName, quota, reasons, active, expiryDate, itemDetails } = data;
     if (!deptId || !medName || !(Number(quota) > 0) || !Array.isArray(reasons) || !reasons.length) {
       throw new HttpsError('invalid-argument', 'Department, medicine, positive quota, and at least one reason are required.');
     }
@@ -503,6 +503,8 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         existing.balance = Math.max(0, Math.min(Number(quota), Number(quota) - deficit));
         existing.reasons = reasons;
         existing.active = active !== false;
+        existing.expiryDate = expiryDate || '';
+        existing.itemDetails = Array.isArray(itemDetails) ? itemDetails : [];
         existing.updatedAt = now;
         existing.updatedBy = actorName;
       } else {
@@ -510,6 +512,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
           id: `acc2a_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
           deptId, medName, quota: Number(quota), balance: Number(quota),
           reasons, active: active !== false,
+          expiryDate: expiryDate || '', itemDetails: Array.isArray(itemDetails) ? itemDetails : [],
           createdAt: now, createdBy: actorName,
           updatedAt: now, updatedBy: actorName
         });

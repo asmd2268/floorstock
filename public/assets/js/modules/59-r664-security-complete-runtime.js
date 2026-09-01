@@ -317,7 +317,7 @@ var ALLOWED=new Set((
   'impToggleRow impEdit ctlPdfSetField ctlSavePendingPdfExpiry ctlAddBatchEditorRow ctlSaveBatchEditor ctlDispTypeChanged ctlConfirmDispense ctlSavePrintLogo ctlToggleDeptMed ctlEditDeptMedicine ctlRemoveDeptMedicine '+
   'ctlAddCatalogMedicine ctlEditCatalogMedicine ctlEditWarehouseStock ctlSendToPharmacy ctlEditPharmacyStock ctlOpenDispense ctlReceiveDelivery ctlImportMasterFile ctlImportMasterText '+
   'ctlDeptFinalApply ctlDeptFinalToggle ctlConfirmDepartmentPrint ctlOpenDepartmentPrintOptions renderDepartmentControlledPanel '+
-  'crashPrint crashAddItem crashReportOpen ccxOpenReport ccCrashExpiryChoiceChanged ccCrashUnavailableToggled ccCrashResponsePreview v13asViewReport setCrashSealPolicy ccAcceptReport ccRejectReport '+
+  'crashPrint crashAddItem crashReportOpen ccxOpenReport ccCrashExpiryChoiceChanged ccCrashUnavailableToggled ccCrashResponsePreview v13asViewReport setCrashSealPolicy ccAcceptReport ccRejectReport ccToggleNoConsumption ccSaveNCSettings '+
   'r17CrashSaveDetails r18OpenCrashCorrection r18CrashCorrectionAddBatch r17CrashRenderMatrix '+
   'acc2SetAdminTab acc2RefreshMedicationList acc2SaveAssignment acc2CancelAssignmentEdit acc2EditAssignment acc2ToggleAssignment acc2DeleteAssignment acc2SetFilter acc2Decision acc2SetReceiptDept acc2RegimenDeptChanged acc2SaveRegimenVersion acc2CancelRegimenEdit acc2ActivateRegimen acc2ToggleRegimenPause acc2StartRegimenVersion acc2DeleteRegimen acc2SubmitUsage acc2ToggleAllReceipt acc2CreateReceipt '+
   'acc3SetDept acc3AddMedicine acc3ToggleMedicine acc3SaveRegimen acc3CancelEdit acc3EditRegimen acc3PrintRegimen acc3ToggleRegimen '+
@@ -328,7 +328,10 @@ var ALLOWED=new Set((
   'v13InventorySelect updateAllInventoryMergeCount v13SelectVisibleInventory v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge v13OpenBulkClassification v13WLoadMore v13ApplyControlledClassification v13BulkReplacementClassOnly '+
   'v13XClose v13XAddBatch v13XSaveCatalogMed v13XSaveStock valQ v14SaveEditReq2 v14SetPrintFilter v16ToggleScope v16ToggleMultiApplicable v16ApplyMultiClean v16ManageHiddenCategories v16SaveHiddenCats '+
   'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
-  'clGenerate clCancelReview clConfirmSave clPrint clToggleRole clTogglePerDeptFilter plToggle'
+  'clGenerate clCancelReview clConfirmSave clPrint clToggleRole clTogglePerDeptFilter plToggle '+
+  'acc2SaveClassColors acc2ResetClassColors '+
+  'ccTabCarts ccTabOps clTabLists clTabColors usrTabUsers usrTabPerms ccOpsTab '+
+  'acc2AddExpiryRow acc2RemoveExpiryRow acc2SaveExpiryBatches'
 ).split(/\s+/).filter(Boolean));
 
 var ATTRIBUTE_EVENTS={onclick:'click',onchange:'change',oninput:'input',onsubmit:'submit',onkeydown:'keydown',onkeyup:'keyup'};

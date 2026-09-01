@@ -212,22 +212,39 @@ function collectCrashReport(){
     if(!other)throw new Error('Enter the other reason.');
     reason='Other / سبب آخر: '+other;
   }
+  var noConsumption=!!(document.getElementById('ccr-no-consumption')&&document.getElementById('ccr-no-consumption').checked);
   var consumed=[];
-  document.querySelectorAll('#ccr-items .cc-med-choice').forEach(function(row){
-    var checkbox=row.querySelector('input[type="checkbox"]');if(!checkbox||!checkbox.checked)return;
-    var item=(cart.items||[]).find(function(entry){return String(entry&&entry.id||'')===String(row.dataset.id||'')});
-    if(!item)throw new Error('A selected medicine no longer exists in the Crash Cart.');
-    var quantity=numberValue((row.querySelector('.ccr-qty')||{}).value),available=numberValue(item.present==null?item.qty:item.present);
-    if(!(quantity>0)||quantity>available)throw new Error(String(item.name||'Medicine')+': quantity exceeds available stock.');
-    consumed.push({itemId:String(item.id),qty:quantity,reportedExpiry:dateKey((row.querySelector('.ccr-expiry')||{}).value)});
-  });
+  if(!noConsumption){
+    document.querySelectorAll('#ccr-items .cc-med-choice').forEach(function(row){
+      var checkbox=row.querySelector('input[type="checkbox"]');if(!checkbox||!checkbox.checked)return;
+      var item=(cart.items||[]).find(function(entry){return String(entry&&entry.id||'')===String(row.dataset.id||'')});
+      if(!item)throw new Error('A selected medicine no longer exists in the Crash Cart.');
+      var quantity=numberValue((row.querySelector('.ccr-qty')||{}).value),available=(item.stockStatus==='out_of_stock'&&item.present==null)?0:numberValue(item.present==null?item.qty:item.present);
+      if(!(quantity>0)||quantity>available)throw new Error(String(item.name||'Medicine')+': quantity exceeds available stock.');
+      consumed.push({itemId:String(item.id),qty:quantity,reportedExpiry:dateKey((row.querySelector('.ccr-expiry')||{}).value)});
+    });
+    if(!consumed.length)throw new Error('Select at least one medicine, or check "No medications consumed".\nاختر دواءً واحداً على الأقل، أو ضع علامة "لا يوجد استهلاك".');
+  } else {
+    var ncLimit=ccNCLimitForCart(id);
+    var ncCount=ccNCCountThisMonth(id);
+    if(ncCount>=ncLimit)throw new Error('Monthly no-consumption report limit reached for this cart ('+ncLimit+'x/month).\nتم استنفاد الحد الشهري لبلاغات عدم الاستهلاك لهذه العربة ('+ncLimit+' مرة/شهر).');
+  }
+  var ncNote=noConsumption?String((document.getElementById('ccr-note')||{}).value||'').trim():'';
   var oldSeal=String((E('ccr-old-seal')||{}).value||'').trim();
   if(!oldSeal)throw new Error('Enter the old seal number before submitting the report.');
-  return {cartId:id,reason:reason,oldSeal:oldSeal,consumed:consumed};
+  return {cartId:id,reason:reason,oldSeal:oldSeal,consumed:consumed,noConsumption:noConsumption,noConsumptionNote:ncNote};
 }
 
 window.ccSubmitReport=async function(){
   if(crashReportSaving)return false;
+  var confirmed=await uiConfirm(
+    'تأكيد إرسال البلاغ / Confirm Report Submission\n\n'+
+    '⚠ تنبيه: البلاغ بعد إرساله لا يمكن تعديله أو حذفه بدون موافقة الصيدلية.\n'+
+    'أنت مسؤول عن صحة المعلومات المدخلة.\n\n'+
+    '⚠ Warning: Once submitted, this report cannot be modified or deleted without pharmacy approval.\n'+
+    'You are responsible for the accuracy of the information provided.'
+  );
+  if(!confirmed)return false;
   var button=document.querySelector('#mcc-report .fl.g8 .btn.bd2c'),oldText=button&&button.textContent;
   crashReportSaving=true;if(button){button.disabled=true;button.textContent='جاري الحفظ… / Saving…'}
   try{
@@ -391,5 +408,45 @@ function install(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',install,{once:true});else install();
 })();
+
+/* ===== No-Consumption crash cart report support ===== */
+var CC_NC_SETTINGS_KEY='crash_cart_nc_settings_v1';
+function ccNCSettings(){var s={};try{s=(window.S&&S.g?S.g(CC_NC_SETTINGS_KEY):null)||{}}catch(e){}return {defaultLimit:Math.max(1,Number(s.defaultLimit||s.monthlyLimit)||2),cartLimits:s.cartLimits&&typeof s.cartLimits==='object'?s.cartLimits:{}}}
+function ccNCLimitForCart(cartId){var s=ccNCSettings();var perCart=s.cartLimits[String(cartId)];return perCart!=null?Math.max(1,Number(perCart)):s.defaultLimit}
+function ccNCCountThisMonth(cartId){
+  var ym=new Date().toISOString().slice(0,7);
+  var reports=typeof crashReports==='function'?(crashReports()||[]):[];
+  return reports.filter(function(r){return String(r.cartId)===String(cartId)&&r.noConsumption===true&&String(r.openedAt||'').slice(0,7)===ym}).length;
+}
+
+window.ccToggleNoConsumption=function(checked){
+  var card=document.getElementById('ccr-items-card');
+  var noteRow=document.getElementById('ccr-note-row');
+  if(card)card.style.display=checked?'none':'';
+  if(noteRow)noteRow.style.display=checked?'':'none';
+  if(!checked&&document.getElementById('ccr-note'))document.getElementById('ccr-note').value='';
+};
+
+/* Master settings for no-consumption monthly limit — per cart */
+window.renderCCNoConsumptionSettings=function(){
+  var el=document.getElementById('cc-nc-settings-panel');if(!el)return;
+  var s=ccNCSettings();
+  var allCarts=typeof window.crashCarts==='function'?(window.crashCarts()||[]):[];
+  var cartRows=allCarts.map(function(c){
+    var cartLimit=s.cartLimits[String(c.id)]!=null?s.cartLimits[String(c.id)]:'';
+    return '<tr><td style="padding:4px 8px"><b>'+esc(c.name||c.id)+'</b><div class="fhint">'+esc(typeof deptName==='function'?deptName(c.deptId):c.deptId)+'</div></td><td style="padding:4px 8px"><input class="cc-nc-cart-limit" data-cart-id="'+esc(String(c.id))+'" type="number" min="1" max="20" placeholder="'+s.defaultLimit+'" value="'+esc(String(cartLimit))+'" style="width:70px"></td></tr>';
+  }).join('');
+  el.innerHTML='<div class="card"><div class="ch"><span class="ct">No-Consumption Report Limits / حدود بلاغات عدم الاستهلاك</span></div><div class="cb"><div class="fg" style="max-width:320px;margin-bottom:12px"><label>Default monthly limit (applies to all carts without a specific limit) / الحد الشهري الافتراضي</label><input id="cc-nc-default-limit" type="number" min="1" max="20" value="'+s.defaultLimit+'"></div>'+(cartRows?'<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:4px 8px;text-align:left">Cart / العربة</th><th style="padding:4px 8px;text-align:left">Monthly limit (blank = default) / الحد الشهري</th></tr></thead><tbody>'+cartRows+'</tbody></table>':'<div class="fhint">No carts configured yet.</div>')+'<button class="btn bp bsm" style="margin-top:12px" onclick="ccSaveNCSettings()">Save / حفظ</button></div></div>';
+};
+window.ccSaveNCSettings=async function(){
+  if(!window.CU||!CU.master)return;
+  var defaultLimit=Math.max(1,parseInt((document.getElementById('cc-nc-default-limit')||{}).value||'2',10));
+  var cartLimits={};
+  document.querySelectorAll('.cc-nc-cart-limit').forEach(function(inp){
+    var val=inp.value.trim();
+    if(val){var n=Math.max(1,parseInt(val,10));if(n)cartLimits[inp.dataset.cartId]=n}
+  });
+  try{await S.s(CC_NC_SETTINGS_KEY,{defaultLimit:defaultLimit,cartLimits:cartLimits});if(typeof toast==='function')toast('No-consumption limits saved ✓','succ')}catch(e){if(typeof toast==='function')toast(String(e&&e.message||e),'err')}
+};
 
 export {};

@@ -1093,5 +1093,10 @@ export default [
     "id": "b217",
     "event": "click",
     "source": "hideSelectedZeroDispense()"
+  },
+  {
+    "id": "b218",
+    "event": "change",
+    "source": "ccToggleNoConsumption(this.checked)"
   }
 ];

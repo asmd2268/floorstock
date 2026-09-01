@@ -119,6 +119,8 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
   const reason = String(data.reason || '').trim();
   const oldSeal = String(data.oldSeal || '').trim();
   const consumed = cleanConsumed(data.consumed);
+  const noConsumption = data.noConsumption === true && consumed.length === 0;
+  const noConsumptionNote = noConsumption ? String(data.noConsumptionNote || '').trim() : '';
   if (!cartId) throw new HttpsError('invalid-argument', 'Crash Cart ID is required.');
   if (!reason) throw new HttpsError('invalid-argument', 'Select a reason for opening the Crash Cart.');
 
@@ -139,6 +141,31 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
       const reports = reportSnapshot.exists && Array.isArray(reportSnapshot.data().value)
         ? reportSnapshot.data().value
         : [];
+      // Enforce no-consumption monthly limit
+      if (noConsumption) {
+        let defaultLimit = 2;
+        let cartLimits = {};
+        try {
+          const ncRef = refs.carts.parent.doc('crash_cart_nc_settings_v1');
+          const ncSnap = await transaction.get(ncRef);
+          if (ncSnap.exists) {
+            const ncData = ncSnap.data() || {};
+            defaultLimit = Math.max(1, Number(ncData.defaultLimit || ncData.monthlyLimit) || 2);
+            cartLimits = (ncData.cartLimits && typeof ncData.cartLimits === 'object') ? ncData.cartLimits : {};
+          }
+        } catch (_) {}
+        const perCartLimit = cartLimits[String(cartId)];
+        const ncLimit = perCartLimit != null ? Math.max(1, Number(perCartLimit)) : defaultLimit;
+        const ym = stamp.slice(0, 7);
+        const ncCountThisMonth = reports.filter(r =>
+          String(r.cartId) === String(cartId) &&
+          r.noConsumption === true &&
+          String(r.openedAt || '').slice(0, 7) === ym
+        ).length;
+        if (ncCountThisMonth >= ncLimit) {
+          throw new Error(`Monthly no-consumption report limit reached for this cart (${ncLimit}x/month).`);
+        }
+      }
       result = applyCrashCartReport({
         carts,
         reports,
@@ -147,6 +174,8 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
         reason,
         oldSeal,
         consumed,
+        noConsumption,
+        noConsumptionNote,
         actorName,
         stamp,
       });

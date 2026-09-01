@@ -16,6 +16,7 @@ function dateKey(value) {
 }
 
 function itemPresent(item) {
+  if (item && item.stockStatus === 'out_of_stock' && item.present == null) return 0;
   return number(item && item.present != null ? item.present : item && item.qty);
 }
 
@@ -112,6 +113,8 @@ function applyCrashCartReport({
   reason,
   oldSeal,
   consumed,
+  noConsumption = false,
+  noConsumptionNote = '',
   actorName,
   stamp = new Date().toISOString(),
 }) {
@@ -121,6 +124,13 @@ function applyCrashCartReport({
   if (!cart) throw new Error('Crash Cart not found.');
   if (String(cart.deptId || cart.departmentId || '') !== String(departmentId || '')) {
     throw new Error('This Crash Cart is not assigned to the authenticated department.');
+  }
+  // Verify the reported seal matches the cart's current seal — proves physical access.
+  const cartSeal = String(cart.seal || '').trim();
+  const submittedSeal = String(oldSeal || '').trim();
+  if (!submittedSeal) throw new Error('Old seal number is required.');
+  if (cartSeal && submittedSeal !== cartSeal) {
+    throw new Error('The seal number does not match the current cart seal. Please verify the seal and try again.');
   }
 
   // Block new submission if a pending report already exists for this cart.
@@ -195,6 +205,8 @@ function applyCrashCartReport({
     lastReportedAt: stamp,
     lastReportedBy: actorName,
     inventoryDeductedAtReport: false,
+    noConsumption: noConsumption === true,
+    noConsumptionNote: noConsumption ? String(noConsumptionNote || '') : undefined,
   };
   if (!report.reason) throw new Error('Select a reason for opening the Crash Cart.');
   if (report.reason.length > 500) throw new Error('Crash Cart report reason is too long.');

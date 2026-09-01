@@ -88,10 +88,10 @@ function toast(msg,type){
 function bdg(m){
   if(!m)return '';
   var b='';
-  if(m.high_alert)b+='<span class="badge brd">🔴 High Alert</span> ';
-  if(m.hazard)b+='<span class="badge byl">⚠ Hazard</span> ';
-  if(m.lasa)b+='<span class="badge bpu">🔵 LASA</span> ';
-  if(m.refrigerated)b+='<span class="badge bfr">❄ Refrigerated</span> ';
+  if(m.high_alert)b+='<span class="badge brd-cls">● High Alert</span> ';
+  if(m.hazard)b+='<span class="badge byl-cls">● Hazard</span> ';
+  if(m.lasa)b+='<span class="badge bpu-cls">● LASA</span> ';
+  if(m.refrigerated)b+='<span class="badge bfr-cls">● Refrigerated</span> ';
   return b||'<span class="badge bgr">Std</span>';
 }
 function rowCls(m){

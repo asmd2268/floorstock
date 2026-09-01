@@ -353,7 +353,7 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   'crash_carts',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3',
-  'controlled_catalog','user_activity_daily_v1','classification_lists_v1','page_visibility_overrides_v1','user_dept_restrictions_v1',
+  'controlled_catalog','user_activity_daily_v1','classification_lists_v1','page_visibility_overrides_v1','user_dept_restrictions_v1','classification_colors_v1',
   // Department's own Medication Accountability tab (custody balances, usage
   // history, receipt/handover records) reads these three keys directly —
   // they were readable per firestore.rules but never fetched into a
@@ -373,7 +373,7 @@ globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1',
   'req_windows','disp_slots','daily_limits_v2','weekly_limits_v2','monthly_limits',
   'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1','user_activity_daily_v1',
-  'crash_cart_min_seal_length','classification_lists_v1','page_visibility_overrides_v1','user_dept_restrictions_v1'
+  'crash_cart_min_seal_length','classification_lists_v1','page_visibility_overrides_v1','user_dept_restrictions_v1','classification_colors_v1'
 ]);
 function fsIsPharmacyScopedProfile(profile){
   return !!profile&&['inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor','pharmacy_staff'].includes(String(profile.role||''));

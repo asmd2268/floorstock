@@ -18,7 +18,9 @@ function fsRoleScopedDepts(allDepts){
   }
   return allDepts;
 }
+function injectUsersTabBar(){var pg=document.getElementById('pg-users');if(!pg||pg.querySelector('.usr-tab-bar'))return;if(!(typeof window.isMasterActual==='function'&&window.isMasterActual()))return;var bar=document.createElement('div');bar.className='usr-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';bar.innerHTML='<button class="btn bp bsm" disabled><b>👤 Users</b></button><button class="btn bg bsm" onclick="usrTabPerms()">🔐 Permissions</button>';pg.insertBefore(bar,pg.firstChild)}
 function renderUsers(){
+  injectUsersTabBar();
   if(typeof canManageUsers==='function'&&!canManageUsers()){el('utbl').innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px">User management is restricted to the Pharmacy Director.</td></tr>';return}
   var us=gu(),ds=fsRoleScopedDepts(gd());
   if(!us.length&&typeof window.S!=='undefined'&&typeof S.loadUsers==='function'&&!window.__usersPageLoadPending){

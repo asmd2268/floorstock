@@ -1376,7 +1376,21 @@ function crashStatsForYears(fromY, toY) {
     });
   });
 
-  return { totalOpenings, totalReplacements, avgReplacementsPerOpening, top5, bottom2, topMeds, deptMedCounts, cartsSorted };
+  // Opening reason breakdown (includes no-consumption)
+  const reasonCounts = {};
+  reports.forEach(r => {
+    if (String(r.operation || 'open') === 'seal_correction') return;
+    let reason = r.noConsumption
+      ? 'No medications consumed / فحص روتيني بدون استهلاك'
+      : String(r.reason || '—').trim();
+    if (reason.length > 90) reason = reason.slice(0, 90) + '…';
+    reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+  });
+  const reasonBreakdown = Object.entries(reasonCounts)
+    .map(([reason, count]) => ({ reason, count }))
+    .sort((a, b) => b.count - a.count);
+
+  return { totalOpenings, totalReplacements, avgReplacementsPerOpening, top5, bottom2, topMeds, deptMedCounts, cartsSorted, reasonBreakdown };
 }
 
 function renderCrashSection() {
@@ -1452,6 +1466,30 @@ function renderCrashSection() {
           <td>${m.count}</td>
           <td>${shareBadge(pct(m.count, st.totalReplacements))}</td>
           <td style="font-size:12px;color:var(--cl-sub,#94a3b8)">${topDepts || '—'}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  }
+  html += `</div>`;
+
+  // Opening reasons breakdown
+  html += `<div class="car-section">
+    <div class="car-section-title">📋 Opening reasons / أسباب الفتح</div>`;
+  if (!st.reasonBreakdown.length) {
+    html += `<div class="car-empty">No opening records in this period.</div>`;
+  } else {
+    const maxR = st.reasonBreakdown[0].count;
+    html += `<div style="overflow-x:auto"><table class="car-table">
+      <thead><tr><th>#</th><th>Reason / السبب</th><th>Count / العدد</th><th>Share % / النسبة</th><th>Chart</th></tr></thead>
+      <tbody>${st.reasonBreakdown.map((r, i) => {
+        const w = Math.max(2, Math.round(r.count / maxR * 100));
+        const isNC = r.reason.includes('No medications consumed');
+        return `<tr>
+          <td>${i + 1}</td>
+          <td>${esc(r.reason)}</td>
+          <td><b>${r.count}</b></td>
+          <td>${shareBadge(pct(r.count, st.totalOpenings))}</td>
+          <td><div class="car-meter" style="min-width:60px"><i style="width:${w}%;background:${isNC ? '#059669' : '#2563eb'}"></i></div></td>
         </tr>`;
       }).join('')}</tbody>
     </table></div>`;
@@ -1756,6 +1794,13 @@ function printCrashReport() {
       return `<tr><td>${i+1}</td><td><b>${esc(m.name)}</b></td><td>${m.count}</td><td>${shareBadge(pct(m.count, st.totalReplacements))}</td><td>${topDepts || '—'}</td></tr>`;
     }).join('')}</tbody>
     </table></div>`;
+
+  if (st.reasonBreakdown.length) {
+    body += `<div class="section"><h2>Opening Reasons / أسباب الفتح</h2>
+      <table><thead><tr><th>#</th><th>Reason / السبب</th><th>Count / العدد</th><th>Share % / النسبة</th></tr></thead>
+      <tbody>${st.reasonBreakdown.map((r, i) => `<tr><td>${i+1}</td><td>${esc(r.reason)}</td><td><b>${r.count}</b></td><td>${pct(r.count, st.totalOpenings)}%</td></tr>`).join('')}</tbody>
+      </table></div>`;
+  }
 
   openPrintWindow('Crash Cart Analytics', body);
 }

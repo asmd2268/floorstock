@@ -47,6 +47,8 @@ async function doDeptPrint(){
       grp[m.category].push(m);
     });
 
+    var _cs=getComputedStyle(document.documentElement);
+    var pClr={ha:_cs.getPropertyValue('--cls-ha-rgb').trim()||'239,68,68',haz:_cs.getPropertyValue('--cls-haz-rgb').trim()||'234,179,8',lasa:_cs.getPropertyValue('--cls-lasa-rgb').trim()||'14,165,233',ref:_cs.getPropertyValue('--cls-ref-rgb').trim()||'147,51,234'};
     var rows='';
     var medNumber=0;
     var catCfg=typeof getPharmacyCategoryConfig==='function'
@@ -64,11 +66,11 @@ async function doDeptPrint(){
       grp[cat].forEach(function(m){
         medNumber++;
         var bands=[],flags=[];
-        if(m.high_alert){bands.push('#ffe0e0');flags.push('HIGH ALERT / تنبيه عالي')}
-        if(m.hazard){bands.push('#fff2b8');flags.push('HAZARD / خطر')}
-        if(m.lasa){bands.push('#dbeafe');flags.push('LASA')}
-        if(m.refrigerated){bands.push('#f3e8ff');flags.push('REFRIGERATED / مبرد')}
-        var bc=m.high_alert?'#da3633':m.hazard?'#d29922':m.lasa?'#2563eb':m.refrigerated?'#7e22ce':'transparent';
+        if(m.high_alert){bands.push('rgba('+pClr.ha+',.13)');flags.push('HIGH ALERT / تنبيه عالي')}
+        if(m.hazard){bands.push('rgba('+pClr.haz+',.18)');flags.push('HAZARD / خطر')}
+        if(m.lasa){bands.push('rgba('+pClr.lasa+',.13)');flags.push('LASA')}
+        if(m.refrigerated){bands.push('rgba('+pClr.ref+',.13)');flags.push('REFRIGERATED / مبرد')}
+        var bc=m.high_alert?('rgba('+pClr.ha+',1)'):m.hazard?('rgba('+pClr.haz+',1)'):m.lasa?('rgba('+pClr.lasa+',1)'):m.refrigerated?('rgba('+pClr.ref+',1)'):'transparent';
         var bg=bands.length<2
           ?(bands[0]||'#ffffff')
           :'linear-gradient(180deg,'+bands.map(function(c,i){
@@ -77,15 +79,7 @@ async function doDeptPrint(){
             return c+' '+a+'% '+b+'%';
           }).join(',')+')';
         var flagTxt=flags.join(' + ');
-        var flagColor=m.high_alert
-          ?'#b91c1c'
-          :m.hazard
-            ?'#92400e'
-            :m.lasa
-              ?'#1d4ed8'
-              :m.refrigerated
-                ?'#6b21a8'
-                :'#000';
+        var flagColor=m.high_alert?('rgba('+pClr.ha+',1)'):m.hazard?('rgba('+pClr.haz+',1)'):m.lasa?('rgba('+pClr.lasa+',1)'):m.refrigerated?('rgba('+pClr.ref+',1)'):'#000';
         var medBatches=expiryRows.filter(function(batch){
           return String(batch.medId)===String(m.id);
         }).sort(function(a,b){
