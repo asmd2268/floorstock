@@ -331,7 +331,8 @@ var ALLOWED=new Set((
   'clGenerate clCancelReview clConfirmSave clPrint clToggleRole clTogglePerDeptFilter plToggle '+
   'acc2SaveClassColors acc2ResetClassColors '+
   'ccTabCarts ccTabOps clTabLists clTabColors usrTabUsers usrTabPerms ccOpsTab '+
-  'acc2AddExpiryRow acc2RemoveExpiryRow acc2SaveExpiryBatches'
+  'acc2AddExpiryRow acc2RemoveExpiryRow acc2SaveExpiryBatches '+
+  'parseFloat isNaN'
 ).split(/\s+/).filter(Boolean));
 
 var ATTRIBUTE_EVENTS={onclick:'click',onchange:'change',oninput:'input',onsubmit:'submit',onkeydown:'keydown',onkeyup:'keyup'};

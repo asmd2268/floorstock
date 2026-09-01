@@ -301,10 +301,7 @@ service cloud.firestore {
             r in ['pharmacy', 'pharmacy_director']
             || (
               r in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']
-              // accountability_assignments_v2 and accountability_usage_v2 are intentionally excluded:
-              // these roles must write through the accountabilityMutation CF so that
-              // blockedDepts token claims are enforced server-side.
-              && docId.matches('^(crash_.*|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|audit_log|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|audit_log|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'outpatient_pharmacy_supervisor'
