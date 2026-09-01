@@ -309,9 +309,7 @@ service cloud.firestore {
             )
             || (
               r == 'pharmacy_staff'
-              // accountability_assignments_v2 and accountability_usage_v2 are intentionally excluded:
-              // must write through accountabilityMutation CF for blockedDepts enforcement.
-              && docId.matches('^(crash_carts|crash_cart_reports|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|audit_log|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|crash_cart_reports|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|audit_log|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'controlled_pharmacy'
