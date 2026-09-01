@@ -184,6 +184,9 @@ function clPrint(type){
           '<div><b>Reference relied upon / المرجع المعتمد:</b> '+esc(entry.referenceName||'—')+'</div>'+
           '<div><b>Approval date / تاريخ الاعتماد:</b> '+approvedDate+'&emsp;<b>Effective date / تاريخ الفعالية:</b> '+effectiveDate+'</div>'+
           '<div><b>Valid until / صالح حتى:</b> '+expiresDate+' &nbsp;<span style="color:#555">(1 year from approval / سنة من تاريخ الاعتماد)</span></div>'+
+          '<div style="margin-top:6px;padding:5px 8px;background:#f0f4ff;border-right:3px solid #3a6fd8;font-size:8.5pt;color:#333">'+
+            '✔ هذه القائمة معتمدة إلكترونياً ولا تحتاج إلى ختم أو توقيع يدوي. &nbsp;|&nbsp; This list is electronically approved and does not require a stamp or manual signature.'+
+          '</div>'+
         '</div>'+
       '</div>'+
       '<div style="margin-left:18px;text-align:center">'+

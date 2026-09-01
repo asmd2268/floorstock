@@ -1,4 +1,4 @@
-/* ASDHealth R6.76.128 ES-module entrypoint. Import order is intentional. */
+/* ASDHealth R6.76.129 ES-module entrypoint. Import order is intentional. */
 import './core/legacy-registry.js?v=R6.76.19';
 import './core/dom-utils.js?v=R6.76.19';
 import './core/runtime-health.js?v=R6.76.19';
@@ -71,7 +71,7 @@ import './modules/28-v13-final-controlled-bulk-print-fix.js?v=R6.76.120';
 import './modules/69-r676-narcotic-catalog-restore-20260728.js?v=R6.76.119';
 import './modules/80-controlled-pharmacy-ui-redesign.js?v=R6.76.133';
 import './modules/81-public-live-view.js?v=R6.76.117';
-import './modules/82-classification-lists.js?v=R6.76.7';
+import './modules/82-classification-lists.js?v=R6.76.8';
 import './modules/83-permissions-control.js?v=R6.76.3';
 import './modules/84-pwa-push-notifications.js?v=R6.76.2';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.19';
