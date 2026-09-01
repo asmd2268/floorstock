@@ -5,7 +5,65 @@ import { publishLegacy } from '../core/legacy-registry.js';
 // split). Everything referenced here that isn't declared in this file
 // (S, CU, esc, el, gd, gr, getMeds, deptName) is already published to
 // globalThis by its owning module.
-function anlSwitchTab(name){var panels=['top','alert','compare','zero','crash','period'];panels.forEach(function(t){var p=el('anl-panel-'+t);if(p)p.style.display=t===name?'':'none'});document.querySelectorAll('#anl-tabs .anl-tab').forEach(function(b){var on=b.dataset.anl===name;b.classList.toggle('bp',on);b.classList.toggle('bg',!on);b.style.opacity=on?'1':'0.65';b.style.borderBottom=on?'3px solid var(--ac)':'none'})}
+function anlSwitchTab(name){var panels=['top','alert','compare','zero','crash','period','accountability'];panels.forEach(function(t){var p=el('anl-panel-'+t);if(p)p.style.display=t===name?'':'none'});document.querySelectorAll('#anl-tabs .anl-tab').forEach(function(b){var on=b.dataset.anl===name;b.classList.toggle('bp',on);b.classList.toggle('bg',!on);b.style.opacity=on?'1':'0.65';b.style.borderBottom=on?'3px solid var(--ac)':'none'});if(name==='accountability')renderAccAnalytics()}
+function acc2Num(v){return Number(v)||0}
+function accBar(pct,color){return '<div style="height:10px;background:var(--br,#334155);border-radius:10px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.max(2,Math.round(pct))+'%;background:'+color+';border-radius:10px;transition:width .4s"></div></div>'}
+function renderAccAnalytics(){
+  var host=el('anl-panel-accountability');if(!host)return;
+  var usage=(window.S&&typeof S.g==='function'?S.g('accountability_usage_v2'):[])||[];
+  var assign=(window.S&&typeof S.g==='function'?S.g('accountability_assignments_v2'):[])||[];
+  var regimens=(window.S&&typeof S.g==='function'?S.g('accountability_regimens_v3'):[])||[];
+  var activeAssign=assign.filter(function(a){return a.active!==false});
+  var totalQuota=activeAssign.reduce(function(s,a){return s+acc2Num(a.quota)},0);
+  var totalBalance=activeAssign.reduce(function(s,a){return s+acc2Num(a.balance)},0);
+  var totalUsed=totalQuota-totalBalance;
+  var ym=new Date().toISOString().slice(0,7);
+  var monthUnits=usage.filter(function(u){return(u.consumptionDate||'').slice(0,7)===ym}).reduce(function(s,u){return s+acc2Num(u.units)},0);
+  var pending=usage.filter(function(u){return u.status==='pending_pharmacy'}).length;
+  var waitReceipt=usage.filter(function(u){return u.status==='approved_waiting_receipt'}).length;
+  var rejected=usage.filter(function(u){return u.status==='rejected'}).length;
+  var activeRegimens=regimens.filter(function(r){return!r.paused});
+  var palette=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#ec4899'];
+  function kpi(label,val,sub,color){return '<div style="background:var(--cl-card,var(--card,#1e293b));border:1px solid var(--cl-border,var(--br,#334155));border-top:4px solid '+color+';border-radius:8px;padding:14px 16px"><div style="font-size:11px;opacity:.6;margin-bottom:6px">'+label+'</div><div style="font-size:28px;font-weight:800;line-height:1;color:var(--cl-text,var(--tx,#f1f5f9))">'+val+'</div><div style="font-size:12px;opacity:.55;margin-top:4px">'+sub+'</div></div>'}
+  var medMap={},deptMap={};
+  usage.forEach(function(u){medMap[u.medName]=(medMap[u.medName]||0)+acc2Num(u.units);deptMap[u.deptId]=(deptMap[u.deptId]||0)+acc2Num(u.units)});
+  var topMeds=Object.keys(medMap).map(function(k){return[k,medMap[k]]}).sort(function(a,b){return b[1]-a[1]}).slice(0,10);
+  var topDepts=Object.keys(deptMap).map(function(k){return[k,deptMap[k]]}).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
+  var maxMed=topMeds[0]?topMeds[0][1]:1,maxDept=topDepts[0]?topDepts[0][1]:1;
+  var months=[];for(var mi=5;mi>=0;mi--){var md=new Date();md.setMonth(md.getMonth()-mi);var mym=md.toISOString().slice(0,7),mlbl=md.toLocaleDateString('en',{month:'short',year:'2-digit'}),mtot=usage.filter(function(u){return(u.consumptionDate||'').slice(0,7)===mym}).reduce(function(s,u){return s+acc2Num(u.units)},0);months.push({label:mlbl,total:mtot})}
+  var maxMonth=Math.max.apply(null,months.map(function(m){return m.total}).concat([1]));
+  var html='<div style="padding:4px 0 16px">'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 class="anl-section-title" style="margin:0;border:none;background:none;padding:0;font-size:15px">📋 Accountability Analytics / إحصاء العهدة والخطط العلاجية</h3><button class="btn bp bsm" onclick="anlPrintAccountability()">🖨 Print / طباعة</button></div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px">'
+      +kpi('Approved custody / إجمالي العهدة',totalQuota,activeAssign.length+' medicines','#3b82f6')
+      +kpi('Current balance / الرصيد المتاح',totalBalance,Math.round(totalBalance/(totalQuota||1)*100)+'% remaining',totalBalance>0?'#10b981':'#ef4444')
+      +kpi('Total consumed / إجمالي الاستهلاك',totalUsed,Math.round(totalUsed/(totalQuota||1)*100)+'% of custody','#f59e0b')
+      +kpi('This month / هذا الشهر',monthUnits,'units consumed','#8b5cf6')
+      +kpi('Pending review / بانتظار المراجعة',pending,pending>0?'action required':'all clear',pending>0?'#ef4444':'#10b981')
+      +kpi('Waiting receipt / بانتظار الاستلام',waitReceipt,'approved requests','#f97316')
+      +kpi('Active treatment plans / الخطط الفعالة',activeRegimens.length,'of '+regimens.length+' total','#10b981')
+      +kpi('Rejected requests / مرفوضة',rejected,'out of '+usage.length+' total',rejected>0?'#ef4444':'#10b981')
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">'
+      +'<div class="card"><div class="ch"><div class="anl-section-title" style="margin:0;border-left:4px solid #3b82f6;padding-left:10px">Top medicines by consumption / أكثر الأدوية استهلاكًا</div></div><div class="cb">'
+        +(topMeds.length?topMeds.map(function(m,i){return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><b>'+esc(m[0])+'</b><span class="anl-kpi-delta">'+m[1]+' units</span></div>'+accBar(m[1]/maxMed*100,palette[i%palette.length])+'</div>'}).join(''):'<div class="anl-empty">No usage data yet</div>')
+      +'</div></div>'
+      +'<div class="card"><div class="ch"><div class="anl-section-title" style="margin:0;border-left:4px solid #10b981;padding-left:10px">Top departments / الأقسام الأعلى استهلاكًا</div></div><div class="cb">'
+        +(topDepts.length?topDepts.map(function(d,i){var name=typeof deptName==='function'?deptName(d[0]):(gd().find(function(x){return String(x.id)===String(d[0])})||{name:d[0]}).name;return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><b>'+esc(name)+'</b><span class="anl-kpi-delta">'+d[1]+' units</span></div>'+accBar(d[1]/maxDept*100,palette[(i+2)%palette.length])+'</div>'}).join(''):'<div class="anl-empty">No usage data yet</div>')
+      +'</div></div>'
+    +'</div>'
+    +'<div class="card" style="margin-bottom:14px"><div class="ch"><div class="anl-section-title" style="margin:0;border-left:4px solid #8b5cf6;padding-left:10px">Monthly usage trend / الاستهلاك الشهري (last 6 months)</div></div><div class="cb">'
+      +'<div style="display:flex;align-items:flex-end;gap:6px;height:110px">'
+        +months.map(function(m,i){var h=Math.max(4,Math.round(m.total/maxMonth*90));return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:11px;font-weight:700;color:var(--cl-text,var(--tx,#f1f5f9))">'+m.total+'</div><div style="width:100%;height:'+h+'px;background:'+palette[i%palette.length]+';border-radius:4px 4px 0 0"></div><div class="anl-kpi-delta">'+esc(m.label)+'</div></div>'}).join('')
+      +'</div>'
+    +'</div></div>'
+    +(activeRegimens.length?'<div class="card"><div class="ch"><div class="anl-section-title" style="margin:0;border-left:4px solid #f59e0b;padding-left:10px">Active treatment plans / الخطط العلاجية الفعالة</div></div><div class="cb"><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">'
+      +activeRegimens.slice(0,16).map(function(r){var v=(r.versions||[]).find(function(x){return x.id===r.activeVersionId})||{};var sev=String(v.severity||'');var col=/^(high|critical)/i.test(sev)?'#ef4444':sev==='low'?'#10b981':'#f59e0b';var lname=typeof deptName==='function'?deptName(r.deptId):(gd().find(function(x){return String(x.id)===String(r.deptId)})||{name:r.deptId}).name;return '<div style="border:1px solid var(--cl-border,var(--br,#334155));border-radius:8px;padding:10px;border-top:3px solid '+col+'"><div style="font-weight:700;font-size:13px;color:var(--cl-text,var(--tx,#f1f5f9))">'+esc(r.name)+'</div><div class="anl-kpi-delta">'+esc(lname)+' · '+esc(r.infectionSource||'—')+'</div><div style="margin-top:6px"><span class="anl-spike-badge '+(col==='#ef4444'?'high':col==='#10b981'?'low':'mid')+'">'+esc(sev||'—')+'</span> <span class="anl-kpi-delta">'+esc(({first_line:'1st line',second_line:'2nd line',third_line:'3rd line'})[v.lineType]||v.lineType||'—')+'</span></div></div>'}).join('')
+      +'</div></div></div>':'')
+    +'</div>';
+  host.innerHTML=html;
+  var printBtn=host.querySelector('button[onclick]');if(printBtn&&!printBtn.dataset.bound){printBtn.dataset.bound='1';printBtn.addEventListener('click',window.anlPrintAccountability)}
+}
 function renderAn(){
   if(!el('anl-tabs').__anlBound){el('anl-tabs').__anlBound=true;el('anl-tabs').addEventListener('click',function(ev){var b=ev.target.closest('.anl-tab');if(b)anlSwitchTab(b.dataset.anl)})}
   var p=el('aperiod').value;
@@ -189,9 +247,16 @@ window.hideSelectedZeroDispense=async function(){
   }
 };
 
+window.anlPrintAccountability=function(){
+  var host=el('anl-panel-accountability');if(!host)return;
+  if(typeof window.fsOfficialPrint==='function')window.fsOfficialPrint({title:'Accountability Analytics / إحصاء العهدة',html:host.innerHTML,css:'body{font:13px Arial,sans-serif;color:#111}button{display:none!important}.anl-kpi-delta{font-size:11px;opacity:.6}'});
+};
+
 publishLegacy("07d-analytics.js", {
   renderAn,
+  renderAccAnalytics,
   hideSelectedZeroDispense: window.hideSelectedZeroDispense,
+  anlPrintAccountability: window.anlPrintAccountability,
 });
 
 export {};
