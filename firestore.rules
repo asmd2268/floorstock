@@ -235,6 +235,7 @@ service cloud.firestore {
           'req_windows', 'disp_slots', 'request_count_limits_v1', 'request_hour_grids_v1',
           'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports',
           'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2',
+          'accountability_regimens_v2', 'accountability_regimens_v3', 'accountability_regimen_catalog_v1',
           'fulfillment_edit_settings_v1',
           'theme', 'facility_logo',
           'pharmacy_category_config', 'pharmacy_department_announcements',
