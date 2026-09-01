@@ -196,7 +196,7 @@ function acc3ExpiryAlertBanner(deptId){
   return html;
 }
 function acc3DeptPlanView(deptId){
-  var planList=rows(REGIMENS).filter(function(r){return !r.paused});
+  var planList=rows(REGIMENS).filter(function(r){return !r.paused&&String(r.deptId)===String(deptId)});
   var allUsages=rows(PLAN_USAGE_KEY);
   var assignments=rows('accountability_assignments_v2');
   function getAssignment(medName){return assignments.find(function(a){return String(a.deptId)===String(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
