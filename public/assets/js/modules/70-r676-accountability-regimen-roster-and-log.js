@@ -345,7 +345,19 @@ window.acc3CancelPlanUsage=async function(usageId,redirectTab){
   var ok=window.confirm('Delete this plan submission? / حذف طلب الخطة هذا؟');
   if(!ok)return;
   var newList=all.filter(function(x){return String(x.id)!==String(usageId)});
-  try{await save(PLAN_USAGE_KEY,newList);toast('Deleted ✓','succ');if(redirectTab&&window.ACC2_UI)window.ACC2_UI.deptTab=redirectTab;window.renderMedicationAccountability&&window.renderMedicationAccountability()}catch(e){toast(String(e&&e.message||e),'err')}
+  var originalAsgns=rows('accountability_assignments_v2');
+  var asgns=originalAsgns.map(function(a){return Object.assign({},a)});
+  (u.medicines||[]).forEach(function(m){
+    var a=asgns.find(function(x){return sameDept(x.deptId,u.deptId)&&norm(x.medName||'')===norm(m.medName||'')&&x.active!==false});
+    if(a)a.balance=(a.balance||0)+m.actualQty;
+  });
+  try{
+    await save(PLAN_USAGE_KEY,newList);
+    try{await window.S.s('accountability_assignments_v2',asgns)}catch(e){await save(PLAN_USAGE_KEY,all);throw e}
+    toast('Deleted; balances restored ✓ / تم الحذف وإرجاع الرصيد ✓','succ');
+    if(redirectTab&&window.ACC2_UI)window.ACC2_UI.deptTab=redirectTab;
+    window.renderMedicationAccountability&&window.renderMedicationAccountability()
+  }catch(e){toast(String(e&&e.message||e),'err')}
 };
 window.acc3ApprovePlanUsage=async function(usageId){
   if(!canManage())return toast('Not authorized.','err');
