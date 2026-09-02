@@ -361,7 +361,8 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   // assigned medicines regardless of pharmacy-created custody records.
   'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2',
   // Treatment plans and plan usage visible to dept users (read-only).
-  'accountability_regimens_v3','accountability_plan_usage_v1','accountability_expiry_batches_v1'
+  'accountability_regimens_v3','accountability_plan_usage_v1','accountability_expiry_batches_v1',
+  'accountability_regimen_catalog_v1'
 ]);
 // These roles are deliberately restricted by Firestore Rules to individual
 // document reads.  They must never fall back to collection.list()/onSnapshot(),
@@ -370,7 +371,9 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
 globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','requests','dept_notes','notes',
   'crash_carts','accountability_assignments_v2','accountability_usage_v2',
-  'accountability_receipts_v2','theme','facility_logo','pharmacy_category_config',
+  'accountability_receipts_v2','accountability_regimens_v3','accountability_plan_usage_v1',
+  'accountability_expiry_batches_v1','accountability_regimen_catalog_v1',
+  'theme','facility_logo','pharmacy_category_config',
   'pharmacy_department_announcements','pharmacy_department_expiry_rules',
   'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1',
   'req_windows','disp_slots','daily_limits_v2','weekly_limits_v2','monthly_limits',

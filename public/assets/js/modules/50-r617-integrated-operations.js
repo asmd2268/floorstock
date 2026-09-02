@@ -8,7 +8,7 @@ function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((w
 function master(){try{return !!(window.MASTER_ACTUAL&&MASTER_ACTUAL.master===true)||!!(window.CU&&CU.master===true)}catch(e){return false}}
 function permission(name,roles){var p=window.CU&&CU.permissions;if(p&&typeof p[name]==='boolean')return p[name];return master()||roles.indexOf(role())>=0}
 function clone(v){return JSON.parse(JSON.stringify(v==null?null:v))}
-function uid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,8)}
+function uid(prefix){return prefix+'_'+Date.now().toString(36)+'_'+(typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID().replace(/-/g,'').slice(0,16):Math.random().toString(36).slice(2)+Math.random().toString(36).slice(2))}
 function norm(v){return window.fsMedNorm?window.fsMedNorm(v):String(v||'').toLowerCase().trim()}
 function depts(){var all=typeof gd==='function'?(gd()||[]):[];return typeof window.fsCanAccessDepartment==='function'?all.filter(function(d){return window.fsCanAccessDepartment(d.id)}):all}
 function deptName(id){return window.fsDeptName?window.fsDeptName(id):String(id||'—')}
