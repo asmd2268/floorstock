@@ -359,7 +359,9 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   // they were readable per firestore.rules but never fetched into a
   // department account's scoped state, so the page always showed zero
   // assigned medicines regardless of pharmacy-created custody records.
-  'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2'
+  'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2',
+  // Treatment plans and plan usage visible to dept users (read-only).
+  'accountability_regimens_v3','accountability_plan_usage_v1','accountability_expiry_batches_v1'
 ]);
 // These roles are deliberately restricted by Firestore Rules to individual
 // document reads.  They must never fall back to collection.list()/onSnapshot(),
