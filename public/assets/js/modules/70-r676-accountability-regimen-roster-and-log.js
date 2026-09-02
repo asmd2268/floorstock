@@ -149,6 +149,7 @@ var CATALOG='accountability_regimen_catalog_v1',REGIMENS='accountability_regimen
 function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function rows(key){var value=window.S&&S.g&&S.g(key);return Array.isArray(value)?value:[]}
 function norm(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g,'')}
+function sameDept(a,b){if(!a&&!b)return true;if(!a||!b)return false;if(norm(a)===norm(b))return true;var da=depts().find(function(d){return norm(d.id)===norm(a)||norm(d.name||'')===norm(a)});var db=depts().find(function(d){return norm(d.id)===norm(b)||norm(d.name||'')===norm(b)});return !!(da&&db&&String(da.id)===String(db.id))}
 function save(key,value){return window.S&&S.s?S.s(key,value):Promise.reject(new Error('Medication Accountability data store is unavailable.'))}
 function user(){return window.CU||{}}
 function role(){return String(user().role||'').trim().toLowerCase()}
@@ -183,7 +184,7 @@ function puStatusClass(s){return {approved_waiting_receipt:'bbl',received_locked
 function acc3ExpiryAlertBanner(deptId){
   var today=todayStr();
   var soon=new Date();soon.setDate(soon.getDate()+30);var soonStr=soon.toISOString().slice(0,10);
-  var assignments=rows('accountability_assignments_v2').filter(function(a){return a&&norm(a.deptId)===norm(deptId)&&a.active!==false});
+  var assignments=rows('accountability_assignments_v2').filter(function(a){return a&&sameDept(a.deptId,deptId)&&a.active!==false});
   var expired=[],expiringSoon=[];
   assignments.forEach(function(a){
     var dates=[];
@@ -198,11 +199,11 @@ function acc3ExpiryAlertBanner(deptId){
   return html;
 }
 function acc3DeptPlanView(deptId){
-  var planList=rows(REGIMENS).filter(function(r){return !r.paused&&norm(r.deptId)===norm(deptId)});
+  var planList=rows(REGIMENS).filter(function(r){return !r.paused&&sameDept(r.deptId,deptId)});
   var allUsages=rows(PLAN_USAGE_KEY);
   var assignments=rows('accountability_assignments_v2');
-  function getAssignment(medName){return assignments.find(function(a){return a&&norm(a.deptId)===norm(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
-  var pendingReceipts=allUsages.filter(function(u){return u&&norm(u.deptId)===norm(deptId)&&u.status==='approved_waiting_receipt'});
+  function getAssignment(medName){return assignments.find(function(a){return a&&sameDept(a.deptId,deptId)&&norm(a.medName||'')===norm(medName||'')&&a.active!==false})}
+  var pendingReceipts=allUsages.filter(function(u){return u&&sameDept(u.deptId,deptId)&&u.status==='approved_waiting_receipt'});
   var pendingReceiptHtml='';
   if(pendingReceipts.length){
     pendingReceiptHtml='<div class="card" style="border-left:4px solid var(--blue,#2196f3);margin-bottom:14px"><div class="ch"><span class="ct">🔔 Awaiting receipt / بانتظار استلام أدوية</span><div class="fhint">Pharmacy approved the following plan usages — confirm receipt after collecting the medicines.</div></div><div class="cb">'+
@@ -226,7 +227,7 @@ function acc3DeptPlanView(deptId){
     '<div class="fhint" style="margin-bottom:12px">Select a plan, enter quantities used for each medicine, fill in patient details, then submit to pharmacy. / اختر خطة، أدخل كميات كل دواء، أضف بيانات المريض، ثم أرفع للصيدلية.</div>'+
     planList.map(function(plan){
       var v=activeVersion(plan);
-      var deptUsages=allUsages.filter(function(u){return u&&String(u.planId)===String(plan.id)&&norm(u.deptId)===norm(deptId)}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}).slice(0,8);
+      var deptUsages=allUsages.filter(function(u){return u&&String(u.planId)===String(plan.id)&&sameDept(u.deptId,deptId)}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}).slice(0,8);
       var pid=esc(plan.id);
       var medicineInputs=(v.items||[]).map(function(item){
         var doseLabel=item.doseType==='per_kg'&&item.doseRate?String(item.doseRate)+' '+(item.doseUnit||item.unitLabel||'mg')+'/kg':(item.dose?String(item.dose)+' '+(item.doseUnit||item.unitLabel||''):'');
