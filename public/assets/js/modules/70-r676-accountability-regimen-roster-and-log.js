@@ -148,6 +148,7 @@ setTimeout(function(){var root=document.getElementById('r17-accountability-root'
 var CATALOG='accountability_regimen_catalog_v1',REGIMENS='accountability_regimens_v3',PLAN_USAGE_KEY='accountability_plan_usage_v1',UI={dept:'',edit:''};
 function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function rows(key){var value=window.S&&S.g&&S.g(key);return Array.isArray(value)?value:[]}
+function norm(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g,'')}
 function save(key,value){return window.S&&S.s?S.s(key,value):Promise.reject(new Error('Medication Accountability data store is unavailable.'))}
 function user(){return window.CU||{}}
 function role(){return String(user().role||'').trim().toLowerCase()}
