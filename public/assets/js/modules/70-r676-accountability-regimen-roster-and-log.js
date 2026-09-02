@@ -336,16 +336,16 @@ window.acc3SubmitPlanUsage=async function(planId){
   toast('Submitted to pharmacy ✓ / تم الرفع للصيدلية ✓');
   window.renderMedicationAccountability();
 };
-window.acc3CancelPlanUsage=async function(usageId){
+window.acc3CancelPlanUsage=async function(usageId,redirectTab){
   if(canManage())return toast('Use pharmacy controls to manage submissions.','err');
   var all=rows(PLAN_USAGE_KEY),u=all.find(function(x){return String(x.id)===String(usageId)});
-  if(!u||u.status!=='pending_pharmacy')return toast('This submission can no longer be cancelled. / لا يمكن إلغاء هذا الطلب.','err');
+  if(!u||!(u.status==='pending_pharmacy'||u.status==='rejected'))return toast('This submission can no longer be modified. / لا يمكن تعديل هذا الطلب.','err');
   var deptId=String((window.CU&&window.CU.deptId)||'');
   if(!sameDept(u.deptId,deptId))return toast('Access denied.','err');
-  var ok=window.confirm('Cancel this plan submission? / إلغاء طلب الخطة هذا؟');
+  var ok=window.confirm('Delete this plan submission? / حذف طلب الخطة هذا؟');
   if(!ok)return;
   var newList=all.filter(function(x){return String(x.id)!==String(usageId)});
-  try{await save(PLAN_USAGE_KEY,newList);toast('Submission cancelled ✓','succ');window.renderMedicationAccountability&&window.renderMedicationAccountability()}catch(e){toast(String(e&&e.message||e),'err')}
+  try{await save(PLAN_USAGE_KEY,newList);toast('Deleted ✓','succ');if(redirectTab&&window.ACC2_UI)window.ACC2_UI.deptTab=redirectTab;window.renderMedicationAccountability&&window.renderMedicationAccountability()}catch(e){toast(String(e&&e.message||e),'err')}
 };
 window.acc3ApprovePlanUsage=async function(usageId){
   if(!canManage())return toast('Not authorized.','err');
