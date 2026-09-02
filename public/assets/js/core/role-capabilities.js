@@ -124,7 +124,7 @@ export function canWriteStateKey(profile, key) {
     const deptId = String(user.deptId || user.departmentId || '');
     const ownSnapshotPrefix = deptId ? `inventory_snapshot_${deptId}_` : '';
     return value === 'requests' || value === 'dept_notes' || value === 'notes' || value === 'crash_cart_reports' ||
-      value === 'accountability_usage_v2' || value === 'accountability_receipts_v2' ||
+      value === 'accountability_usage_v2' || value === 'accountability_receipts_v2' || value === 'accountability_expiry_batches_v1' ||
       (!!deptId && (value === `meds_${deptId}` || value === `expiry_${deptId}` || value === `shelves_${deptId}` ||
         value === `alerts_${deptId}` ||
         value === `inventory_integrity_${deptId}` || value === `inventory_snapshot_index_${deptId}` ||

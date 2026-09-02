@@ -278,7 +278,7 @@ service cloud.firestore {
               // atomically). Direct browser writes to crash_cart_reports bypass
               // that atomic seal/cart-status update and are therefore disallowed.
               'requests', 'dept_notes', 'notes',
-              'accountability_usage_v2', 'accountability_receipts_v2',
+              'accountability_usage_v2', 'accountability_receipts_v2', 'accountability_expiry_batches_v1',
               'audit_log', 'theme', 'user_activity_daily_v1',
               'meds_' + dept, 'expiry_' + dept, 'shelves_' + dept,
               'alerts_' + dept,
