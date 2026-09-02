@@ -201,7 +201,7 @@ function acc3DeptPlanView(deptId){
   var allUsages=rows(PLAN_USAGE_KEY);
   var assignments=rows('accountability_assignments_v2');
   function getAssignment(medName){return assignments.find(function(a){return norm(a.deptId)===norm(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
-  var pendingReceipts=allUsages.filter(function(u){return norm(u.deptId)===norm(deptId)&&u.status==='approved_waiting_receipt'});
+  var pendingReceipts=allUsages.filter(function(u){return u&&norm(u.deptId)===norm(deptId)&&u.status==='approved_waiting_receipt'});
   var pendingReceiptHtml='';
   if(pendingReceipts.length){
     pendingReceiptHtml='<div class="card" style="border-left:4px solid var(--blue,#2196f3);margin-bottom:14px"><div class="ch"><span class="ct">🔔 Awaiting receipt / بانتظار استلام أدوية</span><div class="fhint">Pharmacy approved the following plan usages — confirm receipt after collecting the medicines.</div></div><div class="cb">'+
@@ -225,7 +225,7 @@ function acc3DeptPlanView(deptId){
     '<div class="fhint" style="margin-bottom:12px">Select a plan, enter quantities used for each medicine, fill in patient details, then submit to pharmacy. / اختر خطة، أدخل كميات كل دواء، أضف بيانات المريض، ثم أرفع للصيدلية.</div>'+
     planList.map(function(plan){
       var v=activeVersion(plan);
-      var deptUsages=allUsages.filter(function(u){return String(u.planId)===String(plan.id)&&String(u.deptId)===String(deptId)}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}).slice(0,8);
+      var deptUsages=allUsages.filter(function(u){return u&&String(u.planId)===String(plan.id)&&norm(u.deptId)===norm(deptId)}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))}).slice(0,8);
       var pid=esc(plan.id);
       var medicineInputs=(v.items||[]).map(function(item){
         var doseLabel=item.doseType==='per_kg'&&item.doseRate?String(item.doseRate)+' '+(item.doseUnit||item.unitLabel||'mg')+'/kg':(item.dose?String(item.dose)+' '+(item.doseUnit||item.unitLabel||''):'');
