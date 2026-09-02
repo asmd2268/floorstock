@@ -182,13 +182,13 @@ function puStatusClass(s){return {approved_waiting_receipt:'bbl',received_locked
 function acc3ExpiryAlertBanner(deptId){
   var today=todayStr();
   var soon=new Date();soon.setDate(soon.getDate()+30);var soonStr=soon.toISOString().slice(0,10);
-  var assignments=rows('accountability_assignments_v2').filter(function(a){return norm(a.deptId)===norm(deptId)&&a.active!==false});
+  var assignments=rows('accountability_assignments_v2').filter(function(a){return a&&norm(a.deptId)===norm(deptId)&&a.active!==false});
   var expired=[],expiringSoon=[];
   assignments.forEach(function(a){
     var dates=[];
     if(a.expiryDate)dates.push({med:a.medName,date:a.expiryDate});
     var deptExpiryRec=(rows('accountability_expiry_batches_v1')||[]).find(function(x){return String(x.assignmentId)===String(a.id)});
-    (a.expiryBatches||[]).concat(deptExpiryRec?deptExpiryRec.batches||[]:[]).forEach(function(b){if(b.date)dates.push({med:a.medName,date:b.date})});
+    (a.expiryBatches||[]).concat(deptExpiryRec?deptExpiryRec.batches||[]:[]).forEach(function(b){if(b&&b.date)dates.push({med:a.medName,date:b.date})});
     dates.forEach(function(d){if(d.date<=today)expired.push(d);else if(d.date<=soonStr)expiringSoon.push(d)});
   });
   var html='';
@@ -200,7 +200,7 @@ function acc3DeptPlanView(deptId){
   var planList=rows(REGIMENS).filter(function(r){return !r.paused&&norm(r.deptId)===norm(deptId)});
   var allUsages=rows(PLAN_USAGE_KEY);
   var assignments=rows('accountability_assignments_v2');
-  function getAssignment(medName){return assignments.find(function(a){return norm(a.deptId)===norm(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
+  function getAssignment(medName){return assignments.find(function(a){return a&&norm(a.deptId)===norm(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
   var pendingReceipts=allUsages.filter(function(u){return u&&norm(u.deptId)===norm(deptId)&&u.status==='approved_waiting_receipt'});
   var pendingReceiptHtml='';
   if(pendingReceipts.length){
