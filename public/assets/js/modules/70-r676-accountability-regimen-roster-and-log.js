@@ -187,7 +187,8 @@ function acc3ExpiryAlertBanner(deptId){
   assignments.forEach(function(a){
     var dates=[];
     if(a.expiryDate)dates.push({med:a.medName,date:a.expiryDate});
-    (a.expiryBatches||[]).forEach(function(b){if(b.date)dates.push({med:a.medName,date:b.date})});
+    var deptExpiryRec=(rows('accountability_expiry_batches_v1')||[]).find(function(x){return String(x.assignmentId)===String(a.id)});
+    (a.expiryBatches||[]).concat(deptExpiryRec?deptExpiryRec.batches||[]:[]).forEach(function(b){if(b.date)dates.push({med:a.medName,date:b.date})});
     dates.forEach(function(d){if(d.date<=today)expired.push(d);else if(d.date<=soonStr)expiringSoon.push(d)});
   });
   var html='';
@@ -232,10 +233,12 @@ function acc3DeptPlanView(deptId){
         var noteHtml=item.note?'<div style="font-size:11px;color:#e67e22">⚠ '+esc(item.note)+'</div>':'';
         var asgn=getAssignment(item.medName);
         var expiryHtml='';
-        if(asgn&&(asgn.expiryBatches||[]).length){
+        var deptExRec=(rows('accountability_expiry_batches_v1')||[]).find(function(x){return asgn&&String(x.assignmentId)===String(asgn.id)});
+        var allBatches=(asgn?asgn.expiryBatches||[]:[]).concat(deptExRec?deptExRec.batches||[]:[]);
+        if(asgn&&allBatches.length){
           var today=todayStr();
-          var hasExpired=(asgn.expiryBatches||[]).some(function(b){return b.date&&b.date<=today});
-          expiryHtml='<div style="font-size:11px;margin-top:2px;opacity:.75">'+(hasExpired?'🔴':'📅')+' Exp: '+(asgn.expiryBatches||[]).map(function(b){return esc(b.date||'—')+(b.qty?'('+b.qty+')':'')}).join(', ')+'</div>';
+          var hasExpired=allBatches.some(function(b){return b.date&&b.date<=today});
+          expiryHtml='<div style="font-size:11px;margin-top:2px;opacity:.75">'+(hasExpired?'🔴':'📅')+' Exp: '+allBatches.map(function(b){return esc(b.date||'—')+(b.qty?'('+b.qty+')':'')}).join(', ')+'</div>';
         }
         return '<div style="border:1px solid var(--br);border-radius:4px;padding:7px 10px;margin-bottom:5px">'+
           '<div class="fl g6 ic"><b style="flex:1">'+esc(item.medName)+'</b>'+
