@@ -182,7 +182,7 @@ function puStatusClass(s){return {approved_waiting_receipt:'bbl',received_locked
 function acc3ExpiryAlertBanner(deptId){
   var today=todayStr();
   var soon=new Date();soon.setDate(soon.getDate()+30);var soonStr=soon.toISOString().slice(0,10);
-  var assignments=rows('accountability_assignments_v2').filter(function(a){return String(a.deptId)===String(deptId)&&a.active!==false});
+  var assignments=rows('accountability_assignments_v2').filter(function(a){return norm(a.deptId)===norm(deptId)&&a.active!==false});
   var expired=[],expiringSoon=[];
   assignments.forEach(function(a){
     var dates=[];
@@ -197,11 +197,11 @@ function acc3ExpiryAlertBanner(deptId){
   return html;
 }
 function acc3DeptPlanView(deptId){
-  var planList=rows(REGIMENS).filter(function(r){return !r.paused&&String(r.deptId)===String(deptId)});
+  var planList=rows(REGIMENS).filter(function(r){return !r.paused&&norm(r.deptId)===norm(deptId)});
   var allUsages=rows(PLAN_USAGE_KEY);
   var assignments=rows('accountability_assignments_v2');
-  function getAssignment(medName){return assignments.find(function(a){return String(a.deptId)===String(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
-  var pendingReceipts=allUsages.filter(function(u){return String(u.deptId)===String(deptId)&&u.status==='approved_waiting_receipt'});
+  function getAssignment(medName){return assignments.find(function(a){return norm(a.deptId)===norm(deptId)&&String(a.medName||'').trim().toLowerCase()===String(medName||'').trim().toLowerCase()&&a.active!==false})}
+  var pendingReceipts=allUsages.filter(function(u){return norm(u.deptId)===norm(deptId)&&u.status==='approved_waiting_receipt'});
   var pendingReceiptHtml='';
   if(pendingReceipts.length){
     pendingReceiptHtml='<div class="card" style="border-left:4px solid var(--blue,#2196f3);margin-bottom:14px"><div class="ch"><span class="ct">🔔 Awaiting receipt / بانتظار استلام أدوية</span><div class="fhint">Pharmacy approved the following plan usages — confirm receipt after collecting the medicines.</div></div><div class="cb">'+
