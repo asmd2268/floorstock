@@ -332,6 +332,7 @@ var ALLOWED=new Set((
   'acc2SaveClassColors acc2ResetClassColors '+
   'ccTabCarts ccTabOps clTabLists clTabColors usrTabUsers usrTabPerms ccOpsTab '+
   'acc2AddExpiryRow acc2RemoveExpiryRow acc2SaveExpiryBatches '+
+  'acc2CancelUsage acc3CancelPlanUsage '+
   'parseFloat isNaN'
 ).split(/\s+/).filter(Boolean));
 
