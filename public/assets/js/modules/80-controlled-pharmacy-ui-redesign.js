@@ -733,26 +733,54 @@ window.ctlCmpPrint=function(){
   /* Role menus exactly as requested. */
   window.buildNav=function(){
     if(!window.CU)return;
-    var nav=q('mnav');nav.innerHTML='';
-    var commonFull=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-controlled','🔒 Controlled custody'],['pg-ctl-analytics','📊 Controlled analytics'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
+    var nav=q('mnav');
+    // Purge stale tab bars only when role changes, so they re-render with correct permissions
+    var _newRole=String((window.CU&&CU.role)||'');
+    if(window.__buildNavLastRole!==_newRole){window.__buildNavLastRole=_newRole;document.querySelectorAll('.cc-tab-bar,.inv-tab-bar,.an-tab-bar,.req-tab-bar,.usr-tab-bar,.prn-tab-bar,.sys-tab-bar').forEach(function(el){el.parentNode&&el.parentNode.removeChild(el)})}
+    nav.innerHTML='';
+    // Internal tabs (not nav buttons): pg-ctl-analytics (inside Analytics), pg-import (inside Users), pg-schedule (inside Requests)
+    var commonFull=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','👥 Users'],['pg-controlled','🔒 Controlled custody'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
     var items;
     var rRole=String((window.CU&&CU.role)||'');
-    if(rRole==='pharmacy')items=commonFull.filter(function(x){return x[0]!=='pg-controlled'}).concat([['pg-users','Users']]);
-    else if(rRole==='inpatient_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-schedule','⏰ Schedule'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-import','⬇ Import'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
+    if(rRole==='pharmacy')items=commonFull.filter(function(x){return x[0]!=='pg-controlled'});
+    else if(rRole==='inpatient_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','👥 Users'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
     else if(rRole==='outpatient_pharmacy_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
     else if(rRole==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-inv','Inventory status / حالة الأدوية'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
-    else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines'],['pg-ctl-analytics','📊 Controlled analytics']];
-    else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody'],['pg-ctl-analytics','📊 Dispensing analytics']];
+    else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines']];
+    else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody']];
     else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody'],['pg-med-accountability','🧾 Medication documentation']];
-    if((typeof isMasterActual==='function'&&isMasterActual())||(typeof window.clHasVisibleLists==='function'&&window.clHasVisibleLists()))items.push(['pg-classification-lists','⚠ Classification Lists']);
+    // pg-classification-lists is a tab inside pg-inv — no nav button needed
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
-    if((typeof isMasterActual==='function'&&isMasterActual())||(CU&&rRole==='pharmacy')){var zb=document.createElement('button');zb.id='zebra-labels-nav';zb.className='nb';zb.dataset.pg='pg-zebra-labels';zb.innerHTML='🦓 Zebra Labels <small style="opacity:.72">Beta</small>';zb.onclick=function(){showPg('pg-zebra-labels')};nav.appendChild(zb)}
     (window.__buildNavAfterExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('buildNav extension failed',e)}});
     ccUpdateBadges();
     if(typeof window.scheduleNavigationRefresh==='function')window.scheduleNavigationRefresh('');
     if(typeof window.enforceRoleUi==='function')window.enforceRoleUi();
+    // System Health is a tab inside Subscriptions — strip its standalone nav button after enforceRoleUi adds it
+    var _shBtn=document.querySelector('#mnav #nb-system-health,#mnav [data-pg="pg-system-health"]');
+    if(_shBtn&&_shBtn.parentNode)_shBtn.parentNode.removeChild(_shBtn);
   };
+
+  // Inject sub-tabs via showPg hook — runs after any page navigation
+  window.__showPgAfterExtensions=window.__showPgAfterExtensions||[];
+  window.__showPgAfterExtensions.push(function(id){
+    if(id==='pg-system-health'||id==='pg-platform-subscriptions'){
+      var pg=document.getElementById(id);
+      if(!pg||pg.querySelector('.sys-tab-bar'))return;
+      var subExists=!!document.getElementById('pg-platform-subscriptions');
+      if(!subExists)return;
+      var bar=document.createElement('div');bar.className='sys-tab-bar';
+      bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+      [['pg-platform-subscriptions','💳 Subscriptions'],['pg-system-health','🩺 System Health']].forEach(function(t){
+        var on=t[0]===id;
+        var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';if(on)b.disabled=true;
+        b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];
+        if(!on)b.onclick=function(){showPg(t[0])};
+        bar.appendChild(b);
+      });
+      pg.insertBefore(bar,pg.firstChild);
+    }
+  });
 
   function ccUpdateBadges(){
     var allOpen=openReports(), reqRows=(typeof gr==='function'?(gr()||[]):[]), badgeRole=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');

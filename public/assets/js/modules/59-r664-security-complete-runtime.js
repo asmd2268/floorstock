@@ -330,9 +330,9 @@ var ALLOWED=new Set((
   'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
   'clGenerate clCancelReview clConfirmSave clPrint clToggleRole clTogglePerDeptFilter plToggle '+
   'acc2SaveClassColors acc2ResetClassColors '+
-  'ccTabCarts ccTabOps clTabLists clTabColors usrTabUsers usrTabPerms ccOpsTab '+
+  'ccTabCarts ccTabOps usrTabPerms ccOpsTab '+
   'acc2AddExpiryRow acc2RemoveExpiryRow acc2SaveExpiryBatches '+
-  'acc2CancelUsage acc3CancelPlanUsage acc3SavePlanExpiry '+
+  'acc2CancelUsage acc3CancelPlanUsage acc3SavePlanExpiry acc2SetCustFilter acc2ResetBalance dispSlotAllToggle '+
   'parseFloat isNaN'
 ).split(/\s+/).filter(Boolean));
 

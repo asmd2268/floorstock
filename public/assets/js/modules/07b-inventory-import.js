@@ -14,6 +14,7 @@ function renderImport(){
   el('imp-ptitle').textContent='Preview';
   var ia=el('imp-actions');if(ia)ia.style.cssText='display:none';
   el('imp-prev').innerHTML='<div style="text-align:center;padding:40px 0;opacity:.5;color:var(--tx2)"><div style="font-size:36px;margin-bottom:8px">📄</div>Upload or paste, then click Parse</div>';
+  if(typeof window.injectUsersTabBar==='function')window.injectUsersTabBar('pg-import');
 }
 function clearImport(){
   if(typeof window.clearImportDraftState==='function')window.clearImportDraftState();

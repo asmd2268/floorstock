@@ -123,10 +123,10 @@ function legacyRenderPharmNotes(){
     return (!outpatientScope&&(!deptF||n.deptId===deptF)||outpatientScope&&String(n.deptId)===outpatientScope)&&(!typeF||n.type===typeF)&&(!statusF||n.status===statusF);
   });
 
-  // Summary
-  var all=getNotes();
-  var openCount=all.filter(function(n){return n.status==='open'||n.status==='urgent'}).length;
-  var urgentCount=all.filter(function(n){return n.status==='urgent'}).length;
+  // Summary scoped to role only (not dept dropdown filter)
+  var allScoped=outpatientScope?getNotes().filter(function(n){return String(n.deptId)===outpatientScope}):getNotes();
+  var openCount=allScoped.filter(function(n){return n.status==='open'||n.status==='urgent'}).length;
+  var urgentCount=allScoped.filter(function(n){return n.status==='urgent'}).length;
   var smEl=el('notes-summary');
   if(smEl)smEl.innerHTML='Total: <b>'+all.length+'</b> &nbsp;|&nbsp; Open: <b style="color:var(--yll)">'+openCount+'</b>&nbsp;|&nbsp; Urgent: <b style="color:var(--rdl)">'+urgentCount+'</b>';
 
@@ -268,7 +268,7 @@ function getMonthlyLimit(deptId){return typeof canonicalGetMonthlyLimit==='funct
 function renderSchedule(){
   // Populate dept dropdowns in modals
   var deptOpts=globalThis.scheduleDepartmentOptions();
-  ['rwin-dept','dslot-dept'].forEach(function(id){var s=el(id);if(s)s.innerHTML=deptOpts;});
+  var rwDept=el('rwin-dept');if(rwDept)rwDept.innerHTML=deptOpts;
 
   // Request windows
   var wins=getReqWindows();
@@ -290,6 +290,7 @@ function renderSchedule(){
   if(typeof renderRequestHourGridUI==='function')window.renderRequestHourGridUI();
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
+  if(typeof window.injectReqTabBar==='function')window.injectReqTabBar('pg-schedule');
 }
 
 // ── Request Window CRUD ───────────────────────────────────

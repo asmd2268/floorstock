@@ -26,7 +26,28 @@ function renderReqs(){
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
   if(typeof window.renderFulfillmentEditSettings==='function')window.renderFulfillmentEditSettings();
+  injectReqTabBar('pg-reqs');
 }
+function injectReqTabBar(activePg){
+  var pg=document.getElementById(activePg);
+  if(!pg||pg.querySelector('.req-tab-bar'))return;
+  var role=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+  var canSeeSchedule=['pharmacy','inpatient_supervisor'].indexOf(role)>=0;
+  if(!canSeeSchedule&&activePg==='pg-reqs')return;
+  var bar=document.createElement('div');bar.className='req-tab-bar';
+  bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  var tabs=[['pg-reqs','📋 Requests']];
+  if(canSeeSchedule)tabs.push(['pg-schedule','⏰ Schedule']);
+  tabs.forEach(function(t){
+    var on=t[0]===activePg;
+    var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';if(on)b.disabled=true;
+    b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];
+    if(!on)b.onclick=function(){showPg(t[0])};
+    bar.appendChild(b);
+  });
+  pg.insertBefore(bar,pg.firstChild);
+}
+window.injectReqTabBar=injectReqTabBar;
 function installRequestActionBindings(){
   if(globalThis._requestActionBindingsInstalled)return;
   globalThis._requestActionBindingsInstalled=true;

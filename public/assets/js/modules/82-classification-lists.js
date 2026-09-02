@@ -11,7 +11,7 @@ import { publishLegacy } from '../core/legacy-registry.js';
 'use strict';
 var CL_TYPES=['high_alert','hazard','lasa'];
 var CL_LABELS={
-  high_alert:{en:'High-Alert Medications',ar:'الأدوية عالية التنبيه'},
+  high_alert:{en:'High-Alert Medications',ar:'الأدوية عالية الخطورة'},
   hazard:{en:'Hazardous Medications',ar:'الأدوية الخطرة'},
   lasa:{en:'Look-Alike Sound-Alike (LASA) Medications',ar:'الأدوية متشابهة الاسم أو الشكل'}
 };
@@ -37,6 +37,15 @@ async function clSave(type,entry){
   next[type]=entry;
   await S.s('classification_lists_v1',next);
   if(typeof auditAction==='function')auditAction('classification_list_saved',{type:type,referenceName:entry.referenceName,medicineCount:(entry.medicines||[]).length,visibleRoles:entry.visibleRoles});
+  // Write public copy for QR access (no login required)
+  if(clIsMaster()&&window.FB_DB){
+    try{
+      var lbl2=CL_LABELS[type]||{};
+      var tid=window.CU&&CU.tenantId||'';
+      var col=tid?window.FB_DB.collection('tenants').doc(tid).collection('public_classification'):window.FB_DB.collection('public_classification');
+      await col.doc(type).set({type:type,labelsEn:lbl2.en||'',labelsAr:lbl2.ar||'',medicines:entry.medicines||[],approvedAt:entry.approvedAt||'',effectiveAt:entry.effectiveAt||'',expiresAt:entry.expiresAt||'',referenceName:entry.referenceName||'',updatedAt:window.firebase&&firebase.firestore?firebase.firestore.FieldValue.serverTimestamp():new Date().toISOString()});
+    }catch(e2){console.warn('public_classification write failed',e2);}
+  }
 }
 function clVisibleTypesForRole(){
   if(clIsMaster())return CL_TYPES.slice();
@@ -139,9 +148,13 @@ function clMasterTypeCard(type){
       '</div></div>';
   }
   var defaultDate=(entry&&entry.approvedAt?entry.approvedAt:new Date().toISOString()).slice(0,10);
+  var existingYears=1;if(entry&&entry.approvedAt&&entry.expiresAt){var _diff=new Date(entry.expiresAt)-new Date(entry.approvedAt);existingYears=Math.max(1,Math.round(_diff/(365.25*24*3600*1000)));}
   return '<div class="card" style="margin-bottom:14px"><div class="ch"><span class="ct">'+esc(lbl.en)+' / '+esc(lbl.ar)+'</span>'+clStatusBadge(entry)+'</div><div class="cb">'+
     '<div class="fg"><label>Reference relied upon / المرجع المعتمد</label><input type="text" class="cl-ref" id="cl-ref-'+type+'" value="'+esc(entry&&entry.referenceName||'')+'" placeholder="e.g. ISMP List of High-Alert Medications 2024"></div>'+
+    '<div class="fl g8" style="flex-wrap:wrap">'+
     '<div class="fg" style="max-width:220px"><label>Approval date / تاريخ الاعتماد</label><input type="date" id="cl-approval-date-'+type+'" value="'+esc(defaultDate)+'"></div>'+
+    '<div class="fg" style="max-width:180px"><label>Validity / مدة الاعتماد</label><div class="fl ic g6"><input type="number" id="cl-validity-years-'+type+'" min="1" max="20" value="'+existingYears+'" style="width:70px;margin:0"><span style="font-size:12px;color:var(--tx2)">year(s) / سنة</span></div></div>'+
+    '</div>'+
     '<div class="fhint">'+medCount+' medicine(s) currently on this list'+(entry&&entry.approvedAt?(' · Approved '+esc((entry.approvedAt||'').slice(0,10))+' · Effective '+esc((entry.effectiveAt||'').slice(0,10))):'')+'</div>'+
     '<div class="fl g8" style="margin-top:8px"><button class="btn bp bsm" onclick="window.clGenerate(\''+type+'\')">🔄 Generate / Refresh from all departments</button><button class="btn bg bsm" onclick="window.clPrint(\''+type+'\')" '+(medCount?'':'disabled')+'>🖨 Print</button></div>'+
     '<label class="cl-role-chk" style="margin-top:10px;max-width:420px"><input type="checkbox" onchange="window.clTogglePerDeptFilter(this,\''+type+'\')" '+(entry&&entry.perDepartmentFilter===true?'checked':'')+'><span>Departments each see only their own medicines on this list / كل قسم يشوف أدويته فقط بهذي القائمة</span></label>'+
@@ -173,35 +186,37 @@ function clPrint(type){
   var approvedDate=esc((entry.approvedAt||'').slice(0,10));
   var effectiveDate=esc((entry.effectiveAt||'').slice(0,10));
   var expiresDate=esc((entry.expiresAt||'').slice(0,10));
-  var rows=meds.map(function(m,i){return '<tr><td style="text-align:center">'+(i+1)+'</td><td><b>'+esc(m.name)+'</b></td><td>'+esc(m.concentration||'—')+'</td></tr>'}).join('');
-  var qrUrl='https://chart.googleapis.com/chart?chs=110x110&cht=qr&choe=UTF-8&chl='+encodeURIComponent('https://floorstock-one.vercel.app');
+  var cols=3,perCol=Math.ceil(meds.length/cols);
+  var tables=[];
+  for(var c=0;c<cols;c++){
+    var slice=meds.slice(c*perCol,(c+1)*perCol);
+    if(!slice.length)break;
+    var trows=slice.map(function(m,i){var gi=c*perCol+i;var bg=gi%2===0?'#fff':'#ddd';return '<tr style="background:'+bg+';-webkit-print-color-adjust:exact;print-color-adjust:exact"><td style="text-align:center;padding:3px 5px;font-size:7.5pt">'+(gi+1)+'</td><td style="padding:3px 6px;font-size:8pt"><b>'+esc(m.name)+'</b></td></tr>';}).join('');
+    tables.push('<table style="border-collapse:collapse;flex:1;width:100%;min-width:0" border="1"><thead><tr style="background:#bbb;-webkit-print-color-adjust:exact;print-color-adjust:exact"><th style="width:26px;text-align:center;padding:3px 4px;font-size:7.5pt">#</th><th style="padding:3px 6px;font-size:8pt">Generic name / الاسم العلمي</th></tr></thead><tbody>'+trows+'</tbody></table>');
+  }
+  var _tid=window.CU&&CU.tenantId||'';
+  var pubUrl='https://floorstock-one.vercel.app/?view=classification&type='+encodeURIComponent(type)+(_tid?'&tenant='+encodeURIComponent(_tid):'');
+  var qrSrc=window.ASD_QR&&window.ASD_QR.available()?window.ASD_QR.dataUrl(pubUrl,{cellSize:4,margin:2}):null;
+  var qrBlock=qrSrc?'<img src="'+qrSrc+'" width="100" height="100" style="display:block;border:1px solid #ddd;padding:2px"><div style="font-size:7pt;color:#555;margin-top:2px">Scan to view list</div>':'';
   var html=
-    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px">'+
-      '<div style="flex:1">'+
-        '<h1 style="font-size:15pt;margin:0 0 3px;font-weight:700">'+esc(lbl.en)+'</h1>'+
-        '<h2 style="font-size:13pt;margin:0 0 10px;font-weight:700;direction:rtl">'+esc(lbl.ar)+'</h2>'+
-        '<div style="font-size:9.5pt;line-height:1.85;border-top:1px solid #ccc;padding-top:8px">'+
-          '<div><b>Reference relied upon / المرجع المعتمد:</b> '+esc(entry.referenceName||'—')+'</div>'+
-          '<div><b>Approval date / تاريخ الاعتماد:</b> '+approvedDate+'&emsp;<b>Effective date / تاريخ الفعالية:</b> '+effectiveDate+'</div>'+
-          '<div><b>Valid until / صالح حتى:</b> '+expiresDate+' &nbsp;<span style="color:#555">(1 year from approval / سنة من تاريخ الاعتماد)</span></div>'+
-          '<div style="margin-top:6px;padding:5px 8px;background:#f0f4ff;border-right:3px solid #3a6fd8;font-size:8.5pt;color:#333">'+
-            '✔ هذه القائمة معتمدة إلكترونياً ولا تحتاج إلى ختم أو توقيع يدوي. &nbsp;|&nbsp; This list is electronically approved and does not require a stamp or manual signature.'+
-          '</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
+      '<div style="flex:1;text-align:center">'+
+        '<h1 style="font-size:14pt;margin:0 0 2px;font-weight:700;direction:rtl">'+esc(lbl.ar)+'</h1>'+
+        '<h2 style="font-size:12pt;margin:0 0 8px;font-weight:700">'+esc(lbl.en)+'</h2>'+
+        '<div style="font-size:8.5pt;line-height:1.5;border-top:1px solid #ccc;padding-top:6px">'+
+          '<div><b>Approval date / تاريخ الاعتماد:</b> '+approvedDate+'&emsp;<b>Effective date / تاريخ الفعالية:</b> '+effectiveDate+'&emsp;<b>Valid until / صالح حتى:</b> '+expiresDate+' <span style="color:#555">(1 year from approval / سنة من تاريخ الاعتماد)</span></div>'+
         '</div>'+
       '</div>'+
-      '<div style="margin-left:18px;text-align:center">'+
-        '<img src="'+qrUrl+'" width="110" height="110" style="display:block;border:1px solid #ddd;padding:3px">'+
-        '<div style="font-size:7.5pt;color:#555;margin-top:3px">Scan to open app</div>'+
-      '</div>'+
+      '<div style="margin-left:14px;text-align:center;flex-shrink:0">'+qrBlock+'</div>'+
     '</div>'+
-    '<table style="width:100%;border-collapse:collapse;font-size:9.5pt" border="1" cellpadding="5">'+
-      '<thead><tr style="background:#e8e8e8"><th style="width:36px;text-align:center">#</th><th>Generic name / الاسم العلمي</th><th style="width:160px">Concentration / التركيز</th></tr></thead>'+
-      '<tbody>'+rows+'</tbody>'+
-    '</table>';
-  window.fsOfficialPrint({title:lbl.en,html:html,css:'body{font-family:Arial,sans-serif}table{font-size:9.5pt}th,td{border:1px solid #bbb;padding:5px}thead tr{background:#e8e8e8}tr:nth-child(even){background:#f9f9f9}'});
+    '<div style="display:flex;gap:6px;align-items:flex-start">'+tables.join('')+'</div>'+
+    '<div style="margin-top:12px;padding:5px 10px;background:#e8e8e8;border:1px solid #aaa;font-size:8pt;color:#111;text-align:center">'+
+      '✔ هذه القائمة معتمدة إلكترونياً ولا تحتاج إلى ختم أو توقيع يدوي. &nbsp;|&nbsp; This list is electronically approved and does not require a stamp or manual signature.'+
+    '</div>';
+  var footerRef='<div style="position:fixed;bottom:3mm;left:0;right:0;text-align:center;font-size:6.5pt;color:#777;border-top:1px solid #ddd;padding-top:2px">Reference relied upon / المرجع المعتمد: '+esc(entry.referenceName||'—')+'</div>';
+  window.fsOfficialPrint({title:lbl.en,html:html+footerRef,css:'body{font-family:Arial,sans-serif;-webkit-print-color-adjust:exact;print-color-adjust:exact}th,td{border:1px solid #888}@media print{@page{size:A4;margin:8mm 8mm 14mm}*{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}}'});
 }
 
-function injectClsListTabBar(){var pg=E('pg-classification-lists');if(!pg||pg.querySelector('.cls-tab-bar'))return;if(!(typeof window.isMasterActual==='function'&&window.isMasterActual()))return;var bar=document.createElement('div');bar.className='cls-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';bar.innerHTML='<button class="btn bp bsm" disabled><b>⚠ Classification Lists</b></button><button class="btn bg bsm" onclick="clTabColors()">🎨 Badge Colors</button>';pg.insertBefore(bar,pg.firstChild)}
 window.renderClassificationLists=function(){
   var host=E('pg-classification-lists');if(!host)return;
   var master=clIsMaster();
@@ -214,7 +229,7 @@ window.renderClassificationLists=function(){
     ?CL_TYPES.map(clMasterTypeCard).join('')
     :clVisibleTypesForRole().map(clReadOnlyTypeCard).join('');
   host.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div>'+title+'</div></div>'+body;
-  injectClsListTabBar();
+  if(typeof window.injectInvTabBar==='function')window.injectInvTabBar('pg-classification-lists');
 };
 
 window.clGenerate=function(type){
@@ -240,7 +255,9 @@ window.clConfirmSave=function(type){
   var dateInput=E('cl-approval-date-'+type);
   var approvalStr=(dateInput&&dateInput.value)||new Date().toISOString().slice(0,10);
   var approvalDate=new Date(approvalStr+'T00:00:00');
-  var expires=new Date(approvalDate);expires.setFullYear(expires.getFullYear()+1);
+  var yearsInput=E('cl-validity-years-'+type);
+  var years=Math.max(1,Math.min(20,Number(yearsInput&&yearsInput.value)||1));
+  var expires=new Date(approvalDate);expires.setFullYear(expires.getFullYear()+years);
   var existing=clEntry(type)||{};
   var entry={
     referenceName:referenceName,
@@ -253,7 +270,7 @@ window.clConfirmSave=function(type){
   };
   delete staged[type];
   clSave(type,entry).then(function(){
-    toast&&toast('Classification list saved — valid for 1 year ✓','succ');
+    toast&&toast('Classification list saved — valid for '+years+' year(s) ✓','succ');
     window.renderClassificationLists();
   }).catch(function(err){toast&&toast('Save failed: '+String(err&&err.message||err),'err')});
 };

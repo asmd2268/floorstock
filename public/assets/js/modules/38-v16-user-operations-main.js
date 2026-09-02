@@ -714,6 +714,27 @@ function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((w
 ══════════════════════════════════════════════════════════════ */
 var _v14PrintFilter='today'; /* default for all print users: fulfilled today */
 
+window.injectPrintTabBar=function(activePg){
+  activePg=activePg||'pg-print';
+  var pg=document.getElementById(activePg);
+  if(!pg||pg.querySelector('.prn-tab-bar'))return;
+  var role=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+  var canSeeZebra=role==='pharmacy'||(typeof window.isMasterActual==='function'&&window.isMasterActual());
+  if(!canSeeZebra&&activePg==='pg-print')return;
+  var bar=document.createElement('div');bar.className='prn-tab-bar';
+  bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  var tabs=[['pg-print','🖨 Print']];
+  if(canSeeZebra)tabs.push(['pg-zebra-labels','🦓 Zebra Labels']);
+  tabs.forEach(function(t){
+    var on=t[0]===activePg;
+    var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';if(on)b.disabled=true;
+    b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];
+    if(!on)b.onclick=function(){showPg(t[0])};
+    bar.appendChild(b);
+  });
+  pg.insertBefore(bar,pg.firstChild);
+};
+
 window.renderPrint=function(){
   /* أصل renderPrint */
   var purgeBtn=E('purge-old-orders-btn');
@@ -794,6 +815,7 @@ window.renderPrint=function(){
   } else {
     tbl.innerHTML='<tr><td colspan="6" style="text-align:center;color:var(--tx2);padding:18px">No requests found</td></tr>';
   }
+  if(typeof window.injectPrintTabBar==='function')window.injectPrintTabBar('pg-print');
 };
 
 window.v14SetPrintFilter=function(f){

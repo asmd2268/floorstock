@@ -18,9 +18,30 @@ function fsRoleScopedDepts(allDepts){
   }
   return allDepts;
 }
-function injectUsersTabBar(){var pg=document.getElementById('pg-users');if(!pg||pg.querySelector('.usr-tab-bar'))return;if(!(typeof window.isMasterActual==='function'&&window.isMasterActual()))return;var bar=document.createElement('div');bar.className='usr-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';bar.innerHTML='<button class="btn bp bsm" disabled><b>👤 Users</b></button><button class="btn bg bsm" onclick="usrTabPerms()">🔐 Permissions</button>';pg.insertBefore(bar,pg.firstChild)}
+function injectUsersTabBar(activePg){
+  activePg=activePg||'pg-users';
+  var pg=document.getElementById(activePg);
+  if(!pg||pg.querySelector('.usr-tab-bar'))return;
+  if(!(typeof window.isMasterActual==='function'&&window.isMasterActual()))return;
+  var bar=document.createElement('div');bar.className='usr-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  var tabs=[
+    ['pg-users','👤 Users',function(){showPg('pg-users')}],
+    ['pg-import','⬇ Import',function(){showPg('pg-import')}],
+    ['pg-permissions-control','🔐 Permissions',function(){if(typeof usrTabPerms==='function')usrTabPerms()}]
+  ];
+  tabs.forEach(function(t){
+    var on=t[0]===activePg;
+    var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';
+    if(on)b.disabled=true;
+    b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];
+    if(!on)b.onclick=t[2];
+    bar.appendChild(b);
+  });
+  pg.insertBefore(bar,pg.firstChild);
+}
+window.injectUsersTabBar=injectUsersTabBar;
 function renderUsers(){
-  injectUsersTabBar();
+  injectUsersTabBar('pg-users');
   if(typeof canManageUsers==='function'&&!canManageUsers()){el('utbl').innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px">User management is restricted to the Pharmacy Director.</td></tr>';return}
   var us=gu(),ds=fsRoleScopedDepts(gd());
   if(!us.length&&typeof window.S!=='undefined'&&typeof S.loadUsers==='function'&&!window.__usersPageLoadPending){

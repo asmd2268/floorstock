@@ -362,7 +362,12 @@ function notes(){try{return typeof window.getNotes==='function'?(window.getNotes
 function badgeMarkup(count,color){return count>0?' <span style="background:'+color+';color:#fff;border-radius:10px;padding:1px 6px;font-size:10px;font-weight:700">'+count+'</span>':''}
 function refreshNotesBadge(){
   if(!window.CU)return;
-  var list=notes(),pharmacyCount=list.filter(unresolvedNote).length;
+  var list=notes();
+  var noteRole=window.fsEffectiveRole?window.fsEffectiveRole():String(CU.role||'');
+  var outpatientScope=(noteRole==='outpatient_pharmacy_supervisor'&&typeof window.fsOutpatientDeptId==='function')?String(window.fsOutpatientDeptId()||''):'';
+  var scopedList=outpatientScope?list.filter(function(n){return String(n&&n.deptId||'')===outpatientScope}):list;
+  if(typeof window.fsCanAccessDepartment==='function')scopedList=scopedList.filter(function(n){return window.fsCanAccessDepartment(n&&n.deptId)});
+  var pharmacyCount=scopedList.filter(unresolvedNote).length;
   document.querySelectorAll('.nb[data-pg="pg-notes-ph"]').forEach(function(button){
     var html='📝 Notes'+badgeMarkup(pharmacyCount,'var(--rd)');if(button.innerHTML!==html)button.innerHTML=html;
   });

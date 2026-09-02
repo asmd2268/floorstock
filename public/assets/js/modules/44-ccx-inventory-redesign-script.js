@@ -67,12 +67,9 @@ function isDepartment(){return isDepartmentRole()}
 /* ── Tab navigation helpers (named so module 59 whitelist accepts them) ── */
 window.ccTabCarts=function(){if(typeof showPg==='function')showPg('pg-crashcart')};
 window.ccTabOps=function(){if(typeof showPg==='function'){showPg('pg-crash-ops');if(typeof renderCrashOperations==='function')renderCrashOperations()}};
-window.clTabLists=function(){if(typeof showPg==='function')showPg('pg-classification-lists')};
-window.clTabColors=function(){if(typeof showPg==='function')showPg('pg-class-colors')};
-window.usrTabUsers=function(){if(typeof showPg==='function')showPg('pg-users')};
 window.usrTabPerms=function(){if(typeof showPg==='function')showPg('pg-permissions-control')};
 function mkTabBar(tabs,activeId){var bar=document.createElement('div');bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';bar.innerHTML=tabs.map(function(t){var on=t[0]===activeId;return '<button class="btn '+(on?'bp':'bg')+' bsm" '+(on?'disabled':'')+' onclick="'+t[2]+'()">'+(on?'<b>'+t[1]+'</b>':t[1])+'</button>'}).join('');return bar}
-function injectCcTabBar(activePg){var pg=E(activePg);if(!pg||pg.querySelector('.cc-tab-bar'))return;if(!canManage()&&!isDepartmentRole())return;var r=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');var showOps=canManage()&&r!=='pharmacy_staff';if(!showOps)return;var bar=mkTabBar([['pg-crashcart','🚑 Crash Carts','ccTabCarts'],['pg-crash-ops','⚙ Operations','ccTabOps']],activePg);bar.className='cc-tab-bar';pg.insertBefore(bar,pg.firstChild)}
+function injectCcTabBar(activePg){var pg=E(activePg);if(!pg||pg.querySelector('.cc-tab-bar'))return;if(!canManage()&&!isDepartmentRole())return;var r=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');var showOps=canManage()&&r!=='pharmacy_staff'&&r!=='outpatient_pharmacy_supervisor';if(!showOps)return;var bar=mkTabBar([['pg-crashcart','🚑 Crash Carts','ccTabCarts'],['pg-crash-ops','⚙ Operations','ccTabOps']],activePg);bar.className='cc-tab-bar';pg.insertBefore(bar,pg.firstChild)}
 function ensureUI(){var pg=E('pg-crashcart'),alerts=E('crash-open-alerts'),list=E('crash-list');if(!pg||!alerts||!list)return false;
  injectCcTabBar('pg-crashcart');
  var head=pg.querySelector('.fl.ic.jb.mb14');

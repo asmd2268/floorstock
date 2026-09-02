@@ -217,8 +217,32 @@ function renderAn(){
 
     host.innerHTML=html;
   })();
+  injectAnTabBar('pg-analytics');
 }
 
+function injectAnTabBar(activePg){
+  var pg=document.getElementById(activePg);
+  if(!pg||pg.querySelector('.an-tab-bar'))return;
+  var role=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'');
+  var isMaster=typeof window.isMasterActual==='function'&&window.isMasterActual();
+  var canAnalytics=isMaster||['pharmacy','inpatient_supervisor'].indexOf(role)>=0;
+  var canCtlAnalytics=isMaster||['pharmacy','controlled_pharmacy','warehouse'].indexOf(role)>=0;
+  var tabs=[];
+  if(canAnalytics)tabs.push(['pg-analytics','📊 Analytics']);
+  if(canCtlAnalytics)tabs.push(['pg-ctl-analytics','📊 Controlled analytics']);
+  if(tabs.length<2)return;
+  var bar=document.createElement('div');bar.className='an-tab-bar';
+  bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  tabs.forEach(function(t){
+    var on=t[0]===activePg;
+    var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';if(on)b.disabled=true;
+    b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];
+    if(!on)b.onclick=function(){showPg(t[0])};
+    bar.appendChild(b);
+  });
+  pg.insertBefore(bar,pg.firstChild);
+}
+window.injectAnTabBar=injectAnTabBar;
 
 /* Hide selected zero-dispense medicines from New Request only — reuses the
    exact same medication_visibility_rules_v3 map/shape that the Inventory

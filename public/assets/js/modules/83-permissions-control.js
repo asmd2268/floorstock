@@ -94,18 +94,17 @@ function plPageCard(pageId){
   return '<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">'+esc(page.label)+'</span></div><div class="cb"><div class="cl-roles-grid">'+rolesHtml+'</div></div></div>';
 }
 
-function injectPermTabBar(){var pg=E('pg-permissions-control');if(!pg||pg.querySelector('.usr-tab-bar'))return;var bar=document.createElement('div');bar.className='usr-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';bar.innerHTML='<button class="btn bg bsm" onclick="usrTabUsers()">👤 Users</button><button class="btn bp bsm" disabled><b>🔐 Permissions</b></button>';pg.insertBefore(bar,pg.firstChild)}
 window.renderPermissionsControl=function(){
   var host=E('pg-permissions-control');if(!host)return;
-  injectPermTabBar();
   if(!(typeof window.isMaster==='function'&&window.isMaster())){
     host.innerHTML='<div class="card"><div class="cb" style="text-align:center;color:var(--tx2)">Master only. / للماستر فقط.</div></div>';
+    if(typeof window.injectUsersTabBar==='function')window.injectUsersTabBar('pg-permissions-control');
     return;
   }
   var title='<div class="stitle">🔐 Permissions Control / التحكم بالصلاحيات</div><div class="ssub" style="margin:0">Hide an existing page from a role that already has access to it. This never grants a role access it doesn\'t already have. / إخفاء صفحة موجودة عن دور يملك صلاحيتها أصلًا فقط — لا يمنح أي صلاحية جديدة.</div>';
   var body=Object.keys(PL_PAGES).map(plPageCard).join('');
   host.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div>'+title+'</div></div>'+body;
-  injectPermTabBar();
+  if(typeof window.injectUsersTabBar==='function')window.injectUsersTabBar('pg-permissions-control');
 };
 
 // Layer 1 (cosmetic): filter buildNav's own items array for hidden pages,

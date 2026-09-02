@@ -59,6 +59,6 @@
   window.zebraPrintLabels=function(){if(!allowed())return;if(!clean(E('zebra-name').value))return message('Select or enter a medicine name.','err');if(E('zebra-template').value==='name_strength_expiry'&&!E('zebra-expiry').value)return message('Enter the expiry date.','err');var mode=E('zebra-mode').value;if(mode==='browser')return browserPrint();if(mode==='download')return zebraDownloadZPL(false);sendZPL(false)};
   window.zebraTestLabel=function(){if(E('zebra-mode').value==='browser')return browserPrint();if(E('zebra-mode').value==='download')return zebraDownloadZPL(true);sendZPL(true)};
   function initPage(){var ok=allowed();if(E('zebra-access-denied'))E('zebra-access-denied').style.display=ok?'none':'block';if(E('zebra-main'))E('zebra-main').style.display=ok?'block':'none';if(!ok)return;loadDB();zebraTemplateChanged();['zebra-width','zebra-height','zebra-dpi','zebra-copies'].forEach(function(id){var x=E(id);if(x)x.oninput=zebraUpdatePreview});zebraUpdatePreview();if(!zdb.length)zebraImportDatabase();setTimeout(zebraRefreshPrinters,250)}
-  window.renderZebraPageUi=initPage;
+  window.renderZebraPageUi=function(){initPage();if(typeof window.injectPrintTabBar==='function')window.injectPrintTabBar('pg-zebra-labels')};
 })();
 export {};

@@ -542,7 +542,28 @@ function renderInv(){
   if(typeof window.restoreInventorySelection==='function')window.restoreInventorySelection();
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
+  injectInvTabBar('pg-inv');
 }
+
+function injectInvTabBar(activePg){
+  var pg=document.getElementById(activePg);
+  if(!pg||pg.querySelector('.inv-tab-bar'))return;
+  if(!(typeof window.clHasVisibleLists==='function'&&window.clHasVisibleLists())&&!(typeof isMasterActual==='function'&&isMasterActual()))return;
+  var isMaster=typeof isMasterActual==='function'&&isMasterActual();
+  var bar=document.createElement('div');bar.className='inv-tab-bar';
+  bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  var tabs=[['pg-inv','📦 Inventory'],['pg-classification-lists','⚠ Classification Lists']];
+  if(isMaster)tabs.push(['pg-class-colors','🎨 Badge Colors']);
+  tabs.forEach(function(t){
+    var on=t[0]===activePg;
+    var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';if(on)b.disabled=true;
+    b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];
+    if(!on)b.onclick=function(){showPg(t[0])};
+    bar.appendChild(b);
+  });
+  pg.insertBefore(bar,pg.firstChild);
+}
+window.injectInvTabBar=injectInvTabBar;
 
 function openAddDrug(){
   EDID=null;window.EDDEPT=null;

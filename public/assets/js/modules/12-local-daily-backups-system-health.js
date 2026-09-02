@@ -179,12 +179,10 @@ function encodeValue(v){
   var RESTRICTED={
     controlled_pharmacy:[
       ['pg-controlled','🔒 Controlled & psychotropic medicines'],
-      ['pg-ctl-analytics','📊 Controlled analytics'],
       ['pg-announcements','📢 Announcements / الإعلانات']
     ],
     warehouse:[
-      ['pg-controlled','🔒 Warehouse controlled custody'],
-      ['pg-ctl-analytics','📊 Warehouse analytics']
+      ['pg-controlled','🔒 Warehouse controlled custody']
     ]
   };
   var RENDERERS={'pg-controlled':'renderControlled','pg-ctl-analytics':'renderCtlAnalytics','pg-announcements':'renderAnnouncements'};
@@ -222,7 +220,8 @@ function encodeValue(v){
   }
   function strictRestrictedShow(id){var allowed=restrictedPages(role());if(allowed.indexOf(id)<0)id=fallbackFor(role());activatePage(id,true);rebuildRestrictedNav();syncActiveNav();removeMasterOnlyForNonMaster()}
   function enforce(){setRoleClass();var restricted=rebuildRestrictedNav();removeMasterOnlyForNonMaster();if(!restricted)ensureMasterHealth();var allowed=restrictedPages(role()),active=document.querySelector('.pg.on');if(allowed.length&&(!active||allowed.indexOf(active.id)<0))activatePage(fallbackFor(role()),true);syncActiveNav()}
-  function allowedTarget(id){if((id==='pg-system-health'||id==='pg-backup-restore'||id==='pg-zebra-labels')&&!realMaster())return fallbackFor(role());var allowed=restrictedPages(role());if(allowed.length&&allowed.indexOf(id)<0)return fallbackFor(role());return id}
+  var EXTRA_ALLOWED={'controlled_pharmacy':['pg-ctl-analytics'],'warehouse':['pg-ctl-analytics']};
+  function allowedTarget(id){if((id==='pg-system-health'||id==='pg-backup-restore'||id==='pg-zebra-labels')&&!realMaster())return fallbackFor(role());var allowed=restrictedPages(role());var extra=(EXTRA_ALLOWED[role()]||[]);if(allowed.length&&allowed.indexOf(id)<0&&extra.indexOf(id)<0)return fallbackFor(role());return id}
 
   window.resolveAllowedPageTarget=allowedTarget;
   window.handleRestrictedPage=function(id){if(specFor(role())){strictRestrictedShow(id);return true}if(id==='pg-system-health'&&realMaster()){activatePage(id,false);return true}return false};
