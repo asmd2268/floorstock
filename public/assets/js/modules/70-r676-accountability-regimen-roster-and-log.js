@@ -222,7 +222,7 @@ function acc3DeptPlanView(deptId){
       }).join('')+
     '</div></div>';
   }
-  if(!planList.length)return acc3ExpiryAlertBanner(deptId)+pendingReceiptHtml+'<div class="acc2-empty">No treatment plans available for this department. / لا توجد خطط علاجية. تواصل مع الصيدلية.</div>';
+  if(!planList.length){var _allPlans=rows(REGIMENS);var _dbg='<details style="margin:8px 0;font-size:11px;opacity:.6"><summary>Debug info</summary><pre>CU.deptId='+esc(deptId)+'\nTotal plans='+_allPlans.length+'\nPlan deptIds='+JSON.stringify(_allPlans.map(function(r){return r.deptId}))+'\nDepts='+JSON.stringify(depts().map(function(d){return {id:d.id,name:d.name}}))+'\nsameDept tests='+JSON.stringify(_allPlans.map(function(r){return {deptId:r.deptId,match:sameDept(r.deptId,deptId)}}))+'\ncanManage='+String(canManage())+'</pre></details>';return acc3ExpiryAlertBanner(deptId)+pendingReceiptHtml+'<div class="acc2-empty">No treatment plans available for this department. / لا توجد خطط علاجية. تواصل مع الصيدلية.</div>'+_dbg;}
   return acc3ExpiryAlertBanner(deptId)+pendingReceiptHtml+
     '<div class="fhint" style="margin-bottom:12px">Select a plan, enter quantities used for each medicine, fill in patient details, then submit to pharmacy. / اختر خطة، أدخل كميات كل دواء، أضف بيانات المريض، ثم أرفع للصيدلية.</div>'+
     planList.map(function(plan){
