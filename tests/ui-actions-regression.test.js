@@ -280,7 +280,13 @@ test('every legacy inline action name in the module set is covered by the CSP br
     if (!file.endsWith('.js') || file === '59-r664-security-complete-runtime.js') continue;
     const source = fs.readFileSync(new URL(file, modulesDir), 'utf8');
     for (const handler of source.matchAll(/on(?:click|change|input|submit|keydown|keyup)=(["'])([\s\S]*?)\1/g)) {
-      for (const call of handler[2].matchAll(/(?:window\.)?([A-Za-z_$][\w$]*)\s*\(/g)) {
+      // These handlers are built by string concatenation, so an attribute can
+      // contain '+fn(x)+' — a call made while building the markup, whose result is
+      // baked into the attribute. Only what survives into the emitted HTML is ever
+      // executed by the bridge, so drop the interpolated segments first; counting
+      // them produced false positives that would mask a genuinely missing name.
+      const emitted = handler[2].replace(/'\s*\+[\s\S]*?\+\s*'/g, '');
+      for (const call of emitted.matchAll(/(?:window\.)?([A-Za-z_$][\w$]*)\s*\(/g)) {
         if (!ignored.has(call[1])) names.add(call[1]);
       }
     }
@@ -703,8 +709,14 @@ test('inpatient supervisor capabilities align across Inventory, Crash Cart, Acco
 });
 
 test('Accountability supports independent medicines and temporary two-party QR confirmation without OTP', () => {
-  assert.match(accountabilitySource, /Independent department custody/);
-  assert.match(accountabilitySource, /never adds it to meds_&lt;department&gt;/);
+  // The page subtitle is static markup in index.html, not built by module 50,
+  // so it is asserted against the document that actually carries it.
+  assert.match(indexSource, /Independent department custody/);
+  // This checked for a help sentence that has since been removed from the UI. The
+  // property it stood for — custody is independent of the department drug list —
+  // is asserted directly instead: the module writes only its own accountability
+  // keys and never meds_<department>, which is what the sentence promised.
+  assert.doesNotMatch(accountabilitySource, /setMeds\s*\(|'meds_'\s*\+/);
   assert.match(accountabilitySource, /Temporary dual-QR handover/);
   assert.match(accountabilitySource, /Expired — may reissue/);
   assert.match(permissionQrSource, /fsCallFunction\('createAccountabilityHandover'/);
@@ -721,13 +733,17 @@ test('Accountability supports independent medicines and temporary two-party QR c
 });
 
 test('all QR features use one local generator and printing continues with a visible fallback', () => {
-  assert.match(indexSource, /assets\/js\/vendor\/qrcode-generator\.js\?v=R6\.[0-9.]+/);
+  // The ?v= stamp is derived from the file's content hash by
+  // tools/stamp_module_hashes.mjs; it used to be a hand-written release number.
+  assert.match(indexSource, /assets\/js\/vendor\/qrcode-generator\.js\?v=[0-9a-f]{10}/);
   assert.match(localQrVendorSource, /Licensed under the MIT license/);
   assert.match(localQrRuntimeSource, /window\.ASD_QR=api/);
   assert.match(localQrRuntimeSource, /window\.makeReadableQR=createQrDataUrl/);
   assert.match(localQrRuntimeSource, /placeholderDataUrl/);
   assert.match(localQrRuntimeSource, /printing will continue without a scannable QR code/);
-  assert.equal((publicJsSource.match(/window\.makeReadableQR=/g) || []).length, 1);
+  // Assignment only: the previous pattern also matched a `typeof x==='function'`
+  // guard, so a module checking for the generator counted as defining a second one.
+  assert.equal((publicJsSource.match(/window\.makeReadableQR\s*=[^=]/g) || []).length, 1);
   assert.doesNotMatch(publicJsSource, /api\.qrserver\.com|cdn\.jsdelivr\.net\/npm\/qrcode-generator/);
   assert.match(usersSource, /window\.makeReadableQR\(getPublicExpiryUrl\(deptId\)\)/);
   assert.match(accountabilitySource, /window\.makeReadableQR\(publicUrl\)/);

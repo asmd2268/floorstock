@@ -853,10 +853,22 @@ window.piDoPrint=function(){
   win.document.close();setTimeout(function(){win.print()},400);
 };
 
-// Simple QR SVG via qrserver (inline fallback: just show text)
+/* Rendered by the bundled generator (window.makeReadableQR), which every other QR
+   in the app uses. This used to point at a third-party QR image service, which the
+   page's own CSP blocks under img-src 'self' data: blob: — so the code never
+   actually appeared — and it sent the encoded value off-site. A data: URI also prints and
+   works offline, which an external image does not. Falls back to the plain text
+   if the generator is unavailable, so a label still carries the value. */
 function piQrSvg(data,size){
-  // Use img pointing to a QR API — wrapped in a data URI won't work offline; use text as fallback
-  return '<img src="https://api.qrserver.com/v1/create-qr-code/?size='+size+'x'+size+'&data='+encodeURIComponent(data)+'" width="'+size+'" height="'+size+'" style="image-rendering:pixelated">';
+  var value=String(data==null?'':data);
+  if(!value)return '—';
+  try{
+    if(typeof window.makeReadableQR==='function'){
+      var src=window.makeReadableQR(value);
+      if(src)return '<img src="'+src+'" width="'+size+'" height="'+size+'" style="image-rendering:pixelated" alt="'+piEsc(value)+'">';
+    }
+  }catch(error){console.warn('QR generation failed; showing the value instead.',error)}
+  return '<span style="font-size:9px;font-family:var(--mono)">'+piEsc(value)+'</span>';
 }
 
 // ══════════════════════════════════════════════════════════
