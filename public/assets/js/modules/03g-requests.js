@@ -192,7 +192,11 @@ function renderMyReqs(){
     +'</div>';
   var listHtml=rs.length?rs.map(function(r){return rcard(r,false)}).join('')
     :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests / لا توجد طلبات</div></div>';
-  el('mrlst').innerHTML=filterBar+listHtml;
+  // Same reason as renderReqForm: a department session's state refreshes fire for
+  // keys this page never reads, and a full innerHTML rebuild would drop focus and
+  // the caret out of the search box mid-typing. Write only when the markup differs.
+  var mrHost=el('mrlst'),mrHtml=filterBar+listHtml;
+  if(mrHost&&mrHost.innerHTML!==mrHtml)mrHost.innerHTML=mrHtml;
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
   if(typeof window.enhanceRequests==='function')window.enhanceRequests();
