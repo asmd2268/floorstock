@@ -83,7 +83,7 @@
 }
 .ctl-dept-custody-table{
   width:100%!important;
-  min-width:1180px!important;
+  min-width:860px!important;
   table-layout:fixed!important
 }
 .ctl-dept-custody-table th,
@@ -91,27 +91,22 @@
   vertical-align:top!important;
   overflow-wrap:anywhere!important
 }
-.ctl-dept-custody-table th:nth-child(8),
-.ctl-dept-custody-table th:nth-child(9){
+.ctl-dept-custody-table th:nth-child(8){
   background:var(--s3)!important;
   color:var(--tx)!important
 }
-.ctl-batch-number-cell,
-.ctl-expiry-date-cell{
-  min-width:170px!important;
+.ctl-batch-number-cell{
+  min-width:190px!important;
   white-space:normal!important
 }
-.ctl-batch-line,
-.ctl-expiry-line{
+.ctl-batch-line{
   display:block!important;
   padding:3px 0!important;
   border-bottom:1px dotted var(--bd2)!important;
   color:var(--tx)!important
 }
-.ctl-batch-line:last-child,
-.ctl-expiry-line:last-child{
-  border-bottom:0!important
-}
+.ctl-batch-line:last-child{border-bottom:0!important}
+.ctl-batch-expiry{font-family:var(--mono);font-size:11px;white-space:nowrap}
 
 
 /* ===== 09: request-grid-orphan-cleanup-r614 ===== */

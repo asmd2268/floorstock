@@ -484,22 +484,23 @@ function fsR12HasNearExpiry(batches,days,printDayUtc){
   });
 }
 
-function fsR12BatchLotHtml(batches){
-  if(!Array.isArray(batches)||!batches.length)return '—';
-  return batches.map(function(batch,index){
-    var lot=fsR5S(batch&&batch.lot,'');
-    var qty=batch&&batch.qty!==''&&batch.qty!=null?fsR5N(batch.qty):'';
-    return '<div class="ctl-batch-line">'+(lot?'<b>'+fsR5Esc(lot)+'</b>':'')+
-      (qty!==''?' <span class="chip">'+fsR5Esc(qty)+'</span>':'')+'</div>';
-  }).join('');
-}
-
-function fsR12BatchExpiryHtml(batches){
+/* A batch is one (lot, quantity, expiry) fact, but it used to be split across two
+   columns that together needed a third of a 1180px-wide table, so the expiry
+   column sat off the right edge behind a horizontal scrollbar and a department
+   reading the list saw only the quantity chip - and with no lot recorded, that
+   bare number sat under a "Batch No." heading. Rendering the three parts on one
+   line per batch keeps them together and lets the table fit without scrolling. */
+function fsR12BatchSummaryHtml(batches){
   if(!Array.isArray(batches)||!batches.length)return '—';
   return batches.map(function(batch){
-    return '<div class="ctl-expiry-line">'+
-      fsR5Esc(fsR5DMY(batch&&batch.expiry))+
-      '</div>';
+    var lot=fsR5S(batch&&batch.lot,'');
+    var qty=batch&&batch.qty!==''&&batch.qty!=null?fsR5N(batch.qty):'';
+    var expiry=fsR5DMY(batch&&batch.expiry);
+    var parts='';
+    if(lot)parts+='<b>'+fsR5Esc(lot)+'</b> ';
+    if(qty!=='')parts+='<span class="chip">'+fsR5Esc(qty)+'</span> ';
+    parts+='<span class="ctl-batch-expiry">'+fsR5Esc(expiry||'—')+'</span>';
+    return '<div class="ctl-batch-line">'+parts+'</div>';
   }).join('');
 }
 
@@ -616,13 +617,12 @@ window.renderDepartmentControlledPanel=async function(){
         '<td>'+fsR5Esc(fsR5Class(row.classification))+'</td>'+
         '<td>'+fsR5Esc(row.required)+'</td>'+
         '<td>'+fsR5Esc(row.actual)+'</td>'+
-        '<td class="ctl-batch-number-cell">'+fsR12BatchLotHtml(row.batches)+'</td>'+
-        '<td class="ctl-expiry-date-cell">'+fsR12BatchExpiryHtml(row.batches)+'</td>'+
+        '<td class="ctl-batch-number-cell">'+fsR12BatchSummaryHtml(row.batches)+'</td>'+
       '</tr>';
     }).join('');
 
     if(!body){
-      body='<tr><td colspan="9" style="text-align:center;padding:24px">'+
+      body='<tr><td colspan="8" style="text-align:center;padding:24px">'+
         'No medicines are assigned to this department custody / لا توجد أدوية مسندة لعهدة هذا القسم'+
       '</td></tr>';
     }
@@ -656,19 +656,17 @@ window.renderDepartmentControlledPanel=async function(){
         fsR5Esc(result.source||'unknown')+'</div></div></div>'+
       '<div class="card">'+
         '<div class="ch"><span class="ct">Controlled and Restricted Medicines List / قائمة الأدوية المخدرة والمقيدة</span></div>'+
-        '<div class="fhint" style="padding:0 14px 8px">Scroll horizontally when needed to view Batch No. and Expiry Date / مرّر أفقيًا عند الحاجة لرؤية رقم التشغيلة وتاريخ الصلاحية</div>'+
-        '<div class="tw ctl-dept-custody-scroll">'+
+                '<div class="tw ctl-dept-custody-scroll">'+
           '<table class="ctl-dept-custody-table">'+
             '<colgroup>'+
-              '<col style="width:4%"><col style="width:8%"><col style="width:9%">'+
-              '<col style="width:22%"><col style="width:10%"><col style="width:7%">'+
-              '<col style="width:7%"><col style="width:17%"><col style="width:16%">'+
+              '<col style="width:4%"><col style="width:9%"><col style="width:10%">'+
+              '<col style="width:24%"><col style="width:11%"><col style="width:8%">'+
+              '<col style="width:8%"><col style="width:26%">'+
             '</colgroup>'+
             '<thead><tr>'+
               '<th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th>'+
               '<th>Class</th><th>Required</th><th>Actual</th>'+
-              '<th>Batch No. / رقم التشغيلة</th>'+
-              '<th>Expiry Date / تاريخ الصلاحية</th>'+
+              '<th>Batches / الدفعات — Lot · Qty · Expiry</th>'+
             '</tr></thead>'+
             '<tbody>'+body+'</tbody>'+
           '</table>'+
@@ -2020,8 +2018,7 @@ const __asdhLegacyApi = {
   fsR12PrintDate: fsR12PrintDate,
   fsR12ExpiryDays: fsR12ExpiryDays,
   fsR12HasNearExpiry: fsR12HasNearExpiry,
-  fsR12BatchLotHtml: fsR12BatchLotHtml,
-  fsR12BatchExpiryHtml: fsR12BatchExpiryHtml,
+  fsR12BatchSummaryHtml: fsR12BatchSummaryHtml,
   fsR5BatchText: fsR5BatchText,
   fsR5Class: fsR5Class,
   fsR5ExpiryDays: fsR5ExpiryDays,
@@ -2126,8 +2123,7 @@ export {
   fsR12PrintDate,
   fsR12ExpiryDays,
   fsR12HasNearExpiry,
-  fsR12BatchLotHtml,
-  fsR12BatchExpiryHtml,
+  fsR12BatchSummaryHtml,
   fsR5BatchText,
   fsR5Class,
   fsR5ExpiryDays,
