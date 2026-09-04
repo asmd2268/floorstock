@@ -50,10 +50,20 @@ body.role-department #ctl-log{pointer-events:none}
 
 /* ===== 24: inline-style-24 ===== */
 #ctl-dept-public-panel{display:none}
-#ctl-dept-public-panel .ctl-rulebar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
-#ctl-dept-public-panel .ctl-rulebar .fg{margin:0;min-width:150px}
-#ctl-dept-public-panel .ctl-rulebar input{margin:0;width:120px}
-#ctl-dept-public-panel .ctl-summary{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:10px;margin-bottom:12px}
-#ctl-dept-public-panel .expired td{background:rgba(218,54,51,.10)!important}
-#ctl-dept-public-panel .soon td{background:rgba(210,153,34,.10)!important}
-@media(max-width:700px){#ctl-dept-public-panel .ctl-summary{grid-template-columns:1fr}}
+#ctl-dept-public-panel .ctl-rulebar,
+#ctl-dept-only-panel .ctl-rulebar{display:flex;gap:8px;align-items:end;flex-wrap:wrap;margin-bottom:12px}
+#ctl-dept-public-panel .ctl-rulebar .fg,
+#ctl-dept-only-panel .ctl-rulebar .fg{margin:0;min-width:150px}
+#ctl-dept-public-panel .ctl-rulebar input,
+#ctl-dept-only-panel .ctl-rulebar input{margin:0;width:120px}
+/* The summary cards render into #ctl-dept-only-panel as well, and this rule was
+   scoped to the public panel alone, so in the department view the selector never
+   matched and the three cards fell back to full-width blocks stacked down the
+   page. Both panels use the same markup, so both get the same grid. */
+#ctl-dept-public-panel .ctl-summary,
+#ctl-dept-only-panel .ctl-summary{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:10px;margin-bottom:12px}
+#ctl-dept-public-panel .expired td,
+#ctl-dept-only-panel .expired td{background:rgba(218,54,51,.10)!important}
+#ctl-dept-public-panel .soon td,
+#ctl-dept-only-panel .soon td{background:rgba(210,153,34,.10)!important}
+@media(max-width:700px){#ctl-dept-public-panel .ctl-summary,#ctl-dept-only-panel .ctl-summary{grid-template-columns:1fr}}
