@@ -148,8 +148,15 @@ function printShelfList(){
   var shelfLabel=shelfId==='all'?'All Shelves':(shelves.find(function(s){return s.id===shelfId})||{name:'?'}).name;
   var slHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"><title>'+deptName+' — Shelf List</title><style>'
     +'@page{size:A4;margin:10mm 10mm 18mm 10mm}'
-    +'body{font-family:Arial,sans-serif;font-size:8.5pt;color:#000;margin:0}'
-    +'table{width:100%;border-collapse:collapse}'
+    /* A4 portrait with 10mm margins leaves 190mm of printable width. Constraining
+       the document to it makes the on-screen preview render at the same width as
+       the paper, instead of stretching across a 2000px window and opening a gap
+       between the medicine name and the columns beside it. */
+    +'body{font-family:Arial,sans-serif;font-size:8.5pt;color:#000;margin:0 auto;max-width:190mm}'
+    /* Fixed layout with explicit widths: auto layout gave the leftover width to
+       the Medication column, which is why its short names sat far from the rest. */
+    +'table{width:100%;border-collapse:collapse;table-layout:fixed}'
+    +'td{overflow-wrap:anywhere}'
     +'th{background:#1f2328;color:#fff;padding:5px 6px;text-align:left;font-size:7.5pt}'
     +'th.c{text-align:center}'
     +'tr{page-break-inside:avoid}'
@@ -158,7 +165,7 @@ function printShelfList(){
     +'</style></head><body>'
     +officialPrintHeaderHTML()
     +'<div style="position:relative;min-height:96px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #000">'
-    +'<div style="text-align:center;padding:0 200px">'
+    +'<div style="text-align:center;padding:0 200px 0 40px">'
     +'<div style="font-size:13pt;font-weight:700">'+deptName+' — Floor Stock / &#x623;&#x62F;&#x648;&#x64A;&#x629; &#x627;&#x644;&#x642;&#x633;&#x645;</div>'
     +'<div style="font-size:8pt;color:#333;margin-top:3px">Date: <b>'+today+'</b> &nbsp;|&nbsp; Shelf: <b>'+shelfLabel+'</b> &nbsp;|&nbsp; Filter: <b>'+filterLabel+'</b> &nbsp;|&nbsp; Items: <b>'+filtered.length+'</b></div>'
     +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+(profile.username||profile.email||'Department')+' &nbsp;|&nbsp; Developed by Ali Abudahash | ASDHealth</div>'
@@ -168,7 +175,9 @@ function printShelfList(){
     +'<div style="text-align:center"><img src="'+qrUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">Expiry Monitor'+(shelfId&&shelfId!=='all'?' — '+shelfLabel:'')+'</div></div>'
     +'</div>'
     +'</div>'
-    +'<table><thead><tr>'
+    +'<table>'
+    +'<colgroup><col style="width:48%"><col style="width:26%"><col style="width:13%"><col style="width:13%"></colgroup>'
+    +'<thead><tr>'
     +'<th>Medication / &#x627;&#x644;&#x62F;&#x648;&#x627;&#x621;</th>'
     +'<th>Classification / &#x627;&#x644;&#x62A;&#x635;&#x646;&#x64A;&#x641;</th>'
     +'<th class="c">Min / &#x627;&#x644;&#x623;&#x62F;&#x646;&#x649;</th>'
