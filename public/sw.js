@@ -18,7 +18,13 @@ const CACHE = 'floorstock-v2';
    successful navigation rather than frozen at install time. */
 const OFFLINE_DOC = '/index.html';
 
+/* True when this worker is replacing an earlier one rather than installing for
+   the first time. Only in that case can a client be holding a document cached by
+   the previous worker, which is what needs reloading. */
+let replacedOlderWorker = false;
+
 self.addEventListener('install', function (event) {
+  replacedOlderWorker = !!self.registration.active;
   event.waitUntil(
     caches.open(CACHE).then(function (cache) {
       return cache.add(new Request(OFFLINE_DOC, { cache: 'reload' })).catch(function () {});
@@ -33,7 +39,23 @@ self.addEventListener('activate', function (event) {
       // Drops floorstock-v1, whose cached document is what pinned the version.
       return Promise.all(keys.filter(function (k) { return k !== CACHE; })
         .map(function (k) { return caches.delete(k); }));
-    }).then(function () { return self.clients.claim(); })
+    }).then(function () {
+      return self.clients.claim();
+    }).then(function () {
+      /* The previous worker served the document cache-first, so an open tab can
+         be pinned to a build whose hashed modules no longer match the deploy, and
+         a plain reload goes through that same cached document. Once the stale
+         cache is gone and this worker is in control, navigating each client
+         re-fetches the document from the network and recovers it without anyone
+         having to clear site data. Skipped on a first install, where there is no
+         stale document and a reload would be gratuitous. */
+      if (!replacedOlderWorker) return;
+      return self.clients.matchAll({ type: 'window' }).then(function (clients) {
+        clients.forEach(function (client) {
+          if (typeof client.navigate === 'function') client.navigate(client.url).catch(function () {});
+        });
+      });
+    })
   );
 });
 
