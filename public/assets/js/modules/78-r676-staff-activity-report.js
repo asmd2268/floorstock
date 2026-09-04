@@ -252,7 +252,16 @@ function injectButton(){
     existing.remove();
   }
 }
-setInterval(injectButton,1000);
+/* This polled once a second forever because #anl-tabs is static markup present
+   before login, so the first call runs while CU is still empty, and the button has
+   to appear or disappear as the session changes. buildNav runs on exactly those
+   moments — login, logout and a master switching roles — and injectButton is
+   idempotent, adding or removing based on live isManager() state. Navigation is
+   covered too, since the button lives on the analytics page. */
+window.__buildNavAfterExtensions = window.__buildNavAfterExtensions || [];
+window.__buildNavAfterExtensions.push(injectButton);
+window.__showPgAfterExtensions = window.__showPgAfterExtensions || [];
+window.__showPgAfterExtensions.push(injectButton);
 injectButton();
 })();
 export {};

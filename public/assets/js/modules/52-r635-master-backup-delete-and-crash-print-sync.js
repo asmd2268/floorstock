@@ -181,7 +181,6 @@ import { formatOrderingUnavailable } from '../core/bilingual-ordering-message.js
 'use strict';
 
 var crashReportSaving=false;
-var noteBadgeTimer=null;
 var scheduleFixBusy=false;
 
 var E=window.fsE;
@@ -381,7 +380,11 @@ function refreshNotesBadge(){
 window.updateNotesBadge=refreshNotesBadge;
 function wrapNotesRender(name){var original=window[name];if(typeof original!=='function'||original.__r676Notes)return;var wrapped=function(){var result=original.apply(this,arguments);setTimeout(refreshNotesBadge,0);return result};wrapped.__r676Notes=true;window[name]=wrapped}
 ['renderDeptNotes','renderPharmNotes','buildNav'].forEach(wrapNotesRender);
-function startNotesBadgeRefresh(){if(noteBadgeTimer)return;refreshNotesBadge();noteBadgeTimer=setInterval(function(){if(document.visibilityState==='visible')refreshNotesBadge()},1000)}
+/* The badge was polled once a second for the life of the session. Everything that
+   can change it already calls it: refreshCurrentPage() invokes updateNotesBadge on
+   every state refresh, and renderDeptNotes/renderPharmNotes/buildNav are wrapped
+   above. A single call on start covers the initial paint. */
+function startNotesBadgeRefresh(){refreshNotesBadge()}
 
 function fixOrderingBanner(){
   if(scheduleFixBusy)return;scheduleFixBusy=true;
