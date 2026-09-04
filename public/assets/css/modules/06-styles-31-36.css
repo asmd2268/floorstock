@@ -35,9 +35,14 @@
 
 
 /* ===== 33: v13-final-controlled-print-style ===== */
-/* Hide the redundant Class column in Inpatient Departments. */
-#ctl-departments-view table th:nth-child(6),
-#ctl-departments-view table td:nth-child(6){display:none!important}
+/* Hide the redundant Class column in Inpatient Departments.
+   Scoped to the custodian panel's own table. It used to match every table inside
+   #ctl-departments-view, and the department read-only custody panel lives there
+   too with a different column order — its sixth column is Required, not Class —
+   so this silently blanked the wrong column there and shifted the row against the
+   fixed colgroup, which is why Required and the batches column never appeared. */
+#ctl-departments-custodian-panel table th:nth-child(6),
+#ctl-departments-custodian-panel table td:nth-child(6){display:none!important}
 .v13-final-modal .modal{width:min(940px,96vw)}
 .v13-final-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .v13-final-scope{max-height:330px;overflow:auto;border:1px solid var(--bd);border-radius:9px;padding:8px}

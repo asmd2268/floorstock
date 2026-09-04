@@ -38,13 +38,18 @@
 
 
 /* ===== 23: inline-style-23 ===== */
+/* Controls a department must not use. The table-level selectors are scoped to the
+   custodian panel: they used to match every table inside #ctl-departments-view,
+   and the department read-only custody panel is in there too, so its last column —
+   the batches/expiry column — was hidden along with the custodian table's
+   row-actions column. */
 body.role-department #ctl-departments-view #ctl-assign-btn,
 body.role-department #ctl-departments-view #ctl-sign-btn,
 body.role-department #ctl-departments-view #ctl-bulk-shelf-btn,
 body.role-department #ctl-departments-view #ctl-dept-select-all,
-body.role-department #ctl-departments-view tbody input[type=checkbox],
-body.role-department #ctl-departments-view td:last-child,
-body.role-department #ctl-departments-view th:last-child{display:none!important}
+body.role-department #ctl-departments-custodian-panel tbody input[type=checkbox],
+body.role-department #ctl-departments-custodian-panel td:last-child,
+body.role-department #ctl-departments-custodian-panel th:last-child{display:none!important}
 body.role-department #ctl-log{pointer-events:none}
 
 
