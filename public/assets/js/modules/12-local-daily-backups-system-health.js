@@ -15,6 +15,52 @@
   function enc(v){if(v===null||v===undefined||typeof v==='string'||typeof v==='number'||typeof v==='boolean')return v;if(v instanceof Date)return{__pharm_type:'date',value:v.toISOString()};if(v&&typeof v.toDate==='function'&&typeof v.seconds==='number')return{__pharm_type:'timestamp',seconds:v.seconds,nanoseconds:v.nanoseconds||0};if(Array.isArray(v))return v.map(enc);if(typeof v==='object'){var o={};Object.keys(v).forEach(function(k){o[k]=enc(v[k])});return o}return null}
   async function readCol(name){var snap=await FB_DB.collection(name).get();return snap.docs.map(function(d){return{id:d.id,data:enc(d.data())}})}
   async function payload(){var cols={};for(var i=0;i<AH_COLLECTIONS.length;i++)cols[AH_COLLECTIONS[i]]=await readCol(AH_COLLECTIONS[i]);return{format:'ASDHealth-Firestore-Backup',product:'ASDHealth',module:'Pharmacy Operations',version:2,projectId:(window.FIREBASE_CONFIG&&FIREBASE_CONFIG.projectId)||'',exportedAt:new Date().toISOString(),collections:cols}}
+  /* Firestore caps a document at 1MiB. Every state key here is one document
+     holding an entire array, so `requests` grows with each order and stops
+     accepting writes outright the moment it crosses the cap - a hard failure,
+     not a gradual slowdown. order-retention.js can archive and trim it, but it
+     is a deliberately manual, master-confirmed action (the full-detail JSON
+     export cannot be automated, and medical records should not be auto-deleted),
+     so it only helps if someone knows it is time. Surface the largest document
+     against the cap and warn well before it becomes urgent. */
+  var FIRESTORE_DOC_LIMIT = 1048576;
+  var SIZE_WATCHED_KEYS = ['requests','accountability_usage_v2','audit_log','controlled_moves','crash_cart_reports','accountability_plan_usage_v1'];
+  function measureStateDocuments(){
+    if(!window.S||typeof S.g!=='function')return [];
+    var encoder = typeof TextEncoder==='function' ? new TextEncoder() : null;
+    return SIZE_WATCHED_KEYS.map(function(key){
+      var value;
+      try{ value = S.g(key); }catch(e){ return null; }
+      if(value==null)return null;
+      var json;
+      try{ json = JSON.stringify(value); }catch(e){ return null; }
+      // Arabic text is multi-byte, so count encoded bytes rather than characters.
+      var bytes = encoder ? encoder.encode(json).length : json.length;
+      return {key:key, bytes:bytes, pct:(bytes/FIRESTORE_DOC_LIMIT)*100};
+    }).filter(Boolean).sort(function(a,b){return b.bytes-a.bytes});
+  }
+  window.fsMeasureStateDocuments = measureStateDocuments;
+
+  /* One check per login, not a timer: the numbers only move when orders are
+     written, and a master who never opens System Health would otherwise meet
+     the cap as a sudden write failure. Registered through the startApp registry
+     so it runs after state is loaded without wrapping window.startApp. */
+  window.__startAppExtensions = window.__startAppExtensions || [];
+  window.__startAppExtensions.push(function(){
+    if(!masterOnly())return;
+    setTimeout(function(){
+      try{
+        var biggest=measureStateDocuments()[0];
+        if(!biggest||biggest.pct<70)return;
+        var critical=biggest.pct>=85;
+        var msg=(critical?'⚠ ':'')+biggest.key+' is at '+biggest.pct.toFixed(0)+'% of the 1 MiB document limit. '
+          +'Archive old orders from Requests to avoid write failures.\n'
+          +biggest.key+' وصل '+biggest.pct.toFixed(0)+'% من حد المستند. أرشف الطلبات القديمة لتفادي توقف الحفظ.';
+        if(typeof window.toast==='function')window.toast(msg,critical?'err':'info');
+        console.warn('[state-size]',biggest.key,biggest.bytes,'bytes',biggest.pct.toFixed(1)+'%');
+      }catch(e){console.error('State size check failed',e)}
+    },4000);
+  });
   function sizeLabel(n){if(!n&&n!==0)return'—';if(n<1024)return n+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';return(n/1048576).toFixed(2)+' MB'}
   function ahClose(db){try{if(db)db.close()}catch(ignore){}}
   async function allBackups(){try{var db=await ahOpen(),a;try{a=await ahReq(db.transaction(AH_STORE,'readonly').objectStore(AH_STORE).getAll())}finally{ahClose(db)}return(a||[]).sort(function(x,y){return String(y.createdAt).localeCompare(String(x.createdAt))})}catch(e){return AH_TRANSIENT?[AH_TRANSIENT]:[]}}
@@ -60,7 +106,16 @@
       if(downloaded&&window.toast)toast('Local backup saved to this device ✓','succ');
     }finally{if(btn)btn.disabled=false}
   };
-  window.masterRefreshSystemHealth=async function(){if(!masterOnly())return;try{var depts=typeof gd==='function'?gd():[],users=typeof gu==='function'?gu():[],reqs=typeof gr==='function'?gr():[],meds=0;depts.forEach(function(d){try{meds+=(getMeds(d.id)||[]).length}catch(e){}});var carts=typeof crashCarts==='function'?crashCarts():[],reports=typeof crashReports==='function'?crashReports():[],ctl=typeof ctlCatalog==='function'?ctlCatalog():[],a=await allBackups(),last=a[0]||null;var vals={"health-depts":depts.length,"health-users":users.length,"health-meds":meds,"health-requests":reqs.length,"health-carts":carts.length,"health-controlled":ctl.length,"health-cart-pending":reports.filter(function(r){return r.status==='pending'}).length,"health-backup-count":a.length};Object.keys(vals).forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=vals[id]});var e=document.getElementById('health-last-backup');if(e)e.textContent=last?new Date(last.createdAt).toLocaleString():'No local backup yet';e=document.getElementById('health-backup-size');if(e)e.textContent=last?sizeLabel(last.size):'—';e=document.getElementById('health-last-restore');if(e)e.textContent=localStorage.getItem('abhealth_last_restore')||'Never recorded';e=document.getElementById('auto-backup-state');if(e){e.textContent=last?'Protected':'Not backed up';e.className='badge '+(last?'bgn':'byl')}}catch(err){console.error(err)}};
+  window.masterRefreshSystemHealth=async function(){if(!masterOnly())return;try{var depts=typeof gd==='function'?gd():[],users=typeof gu==='function'?gu():[],reqs=typeof gr==='function'?gr():[],meds=0;depts.forEach(function(d){try{meds+=(getMeds(d.id)||[]).length}catch(e){}});var carts=typeof crashCarts==='function'?crashCarts():[],reports=typeof crashReports==='function'?crashReports():[],ctl=typeof ctlCatalog==='function'?ctlCatalog():[],a=await allBackups(),last=a[0]||null;var vals={"health-depts":depts.length,"health-users":users.length,"health-meds":meds,"health-requests":reqs.length,"health-carts":carts.length,"health-controlled":ctl.length,"health-cart-pending":reports.filter(function(r){return r.status==='pending'}).length,"health-backup-count":a.length};Object.keys(vals).forEach(function(id){var e=document.getElementById(id);if(e)e.textContent=vals[id]});var e=document.getElementById('health-last-backup');if(e)e.textContent=last?new Date(last.createdAt).toLocaleString():'No local backup yet';e=document.getElementById('health-backup-size');if(e)e.textContent=last?sizeLabel(last.size):'—';e=document.getElementById('health-last-restore');if(e)e.textContent=localStorage.getItem('abhealth_last_restore')||'Never recorded';e=document.getElementById('auto-backup-state');if(e){e.textContent=last?'Protected':'Not backed up';e.className='badge '+(last?'bgn':'byl')}
+    var docs=measureStateDocuments(),biggest=docs[0];
+    e=document.getElementById('health-doc-size');
+    if(e){
+      e.textContent=biggest?sizeLabel(biggest.bytes)+' ('+biggest.pct.toFixed(1)+'%)':'—';
+      e.style.color=biggest&&biggest.pct>=70?'var(--rd)':biggest&&biggest.pct>=50?'var(--yl)':'';
+    }
+    e=document.getElementById('health-doc-size-hint');
+    if(e)e.textContent=biggest?biggest.key+' — 1 MiB limit'+(biggest.pct>=50?' · archive old orders soon / أرشف الطلبات القديمة':''):'';
+  }catch(err){console.error(err)}};
   async function daily(){if(!masterOnly()||!window.FB_DB)return;var today=new Date().toISOString().slice(0,10),last=String(localStorage.getItem('abhealth_last_auto_backup')||'').slice(0,10);if(last!==today)await window.masterCreateLocalBackup(false);else await window.masterRefreshSystemHealth()}
   window.runDailyBackup=function(){return daily().catch(function(){})};
   window.refreshBackupRestorePage=function(){daily().catch(function(){});Promise.resolve(window.masterRefreshSystemHealth()).catch(function(){})};
