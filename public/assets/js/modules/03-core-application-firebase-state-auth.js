@@ -1275,7 +1275,15 @@ async function syncPublicExpiry(deptId,rows){
     return {
       medication:medicine.name||row.medication||row.name||'',
       date:String(row.date||row.expiry||''),
-      qty:row.qty==null?'':Number(row.qty)
+      qty:row.qty==null?'':Number(row.qty),
+      // Classification flags travel with the batch so the public Expiry Monitor
+      // can colour its rows. It previously received only name/date/qty and had
+      // nothing to colour by. Booleans are normalised because the monitor is a
+      // no-login reader that cannot look the medicine up.
+      highAlert:!!medicine.high_alert,
+      lasa:!!medicine.lasa,
+      hazard:!!medicine.hazard,
+      refrigerated:!!medicine.refrigerated
     };
   });
 

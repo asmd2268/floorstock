@@ -97,13 +97,21 @@ function printShelfList(){
     Object.keys(byCat).sort().forEach(function(cat){
       rows+='<tr><td colspan="4" style="background:#e8e8e8;font-weight:600;font-size:7.5pt;text-transform:uppercase;padding:3px 8px;color:#555">'+cat+' / '+catAr(cat)+'</td></tr>';
       byCat[cat].forEach(function(m){
-        var bc=m.high_alert?'#da3633':m.hazard?'#d29922':m.lasa?'#8957e5':'transparent';
-        var bg=m.high_alert?'#fff0f0':m.hazard?'#fffbea':m.lasa?'#f5f0ff':'#fff';
-        var flag='';
-        if(m.high_alert&&m.hazard)flag='<span style="color:#da3633;font-weight:700;font-size:6.5pt">HIGH ALERT + HAZARD</span>';
-        else if(m.high_alert)flag='<span style="color:#da3633;font-weight:700;font-size:6.5pt">HIGH ALERT</span>';
-        else if(m.hazard)flag='<span style="color:#b07d00;font-weight:700;font-size:6.5pt">HAZARD</span>';
-        else if(m.lasa)flag='<span style="color:#6639ba;font-weight:700;font-size:6.5pt">LASA</span>';
+        // The row border and tint follow the most severe class, but the label
+        // lists every class that applies: this was an if/else-if chain, so a
+        // medicine flagged HIGH ALERT + LASA + REFRIGERATED printed as HIGH ALERT
+        // alone and the other two were invisible on paper. Refrigerated was not
+        // represented at all.
+        var bc=m.high_alert?'#da3633':m.hazard?'#d29922':m.lasa?'#8957e5':m.refrigerated?'#8250df':'transparent';
+        var bg=m.high_alert?'#fff0f0':m.hazard?'#fffbea':m.lasa?'#f5f0ff':m.refrigerated?'#f3f0ff':'#fff';
+        var classes=[];
+        if(m.high_alert)classes.push(['HIGH ALERT','#da3633']);
+        if(m.lasa)classes.push(['LASA','#6639ba']);
+        if(m.hazard)classes.push(['HAZARD','#b07d00']);
+        if(m.refrigerated)classes.push(['REFRIGERATED','#6f42c1']);
+        var flag=classes.map(function(c){
+          return '<span style="color:'+c[1]+';font-weight:700;font-size:6.5pt;white-space:nowrap">'+c[0]+'</span>';
+        }).join('<span style="color:#bbb;font-size:6.5pt"> &middot; </span>');
         rows+='<tr style="background:'+bg+';border-left:3px solid '+bc+'">'
           +'<td style="padding:3px 6px;border:1px solid #ddd;font-weight:500">'+m.name+'</td>'
           +'<td style="padding:3px 6px;border:1px solid #ddd;text-align:center">'+flag+'</td>'
@@ -126,13 +134,13 @@ function printShelfList(){
     +'#footer{position:fixed;bottom:0;left:0;right:0;font-size:6.5pt;color:#555;display:flex;justify-content:space-between;align-items:center;padding:4px 10px;border-top:1px solid #ccc;background:#fff}'
     +'</style></head><body>'
     +officialPrintHeaderHTML()
-    +'<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #000">'
-    +'<div>'
-    +'<div style="font-size:13pt;font-weight:700">'+deptName+' — Floor Stock / &#x645;&#x62E;&#x632;&#x648;&#x646; &#x627;&#x644;&#x623;&#x631;&#x636;&#x64A;&#x629;</div>'
+    +'<div style="position:relative;min-height:96px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #000">'
+    +'<div style="text-align:center;padding:0 200px">'
+    +'<div style="font-size:13pt;font-weight:700">'+deptName+' — Floor Stock / &#x623;&#x62F;&#x648;&#x64A;&#x629; &#x627;&#x644;&#x642;&#x633;&#x645;</div>'
     +'<div style="font-size:8pt;color:#333;margin-top:3px">Date: <b>'+today+'</b> &nbsp;|&nbsp; Shelf: <b>'+shelfLabel+'</b> &nbsp;|&nbsp; Filter: <b>'+filterLabel+'</b> &nbsp;|&nbsp; Items: <b>'+filtered.length+'</b></div>'
     +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+(profile.username||profile.email||'Department')+' &nbsp;|&nbsp; Developed by Ali Abudahash | ASDHealth</div>'
     +'</div>'
-    +'<div style="display:flex;gap:8px">'
+    +'<div style="position:absolute;top:0;right:0;display:flex;gap:8px">'
     +'<div style="text-align:center"><img src="'+qrSiteUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">System</div></div>'
     +'<div style="text-align:center"><img src="'+qrUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">Expiry Monitor</div></div>'
     +'</div>'

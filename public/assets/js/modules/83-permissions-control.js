@@ -273,7 +273,7 @@ export {};
     'icu':'العناية المركزة',
     'nicu':'الحضانة',
     'male medical':'باطنية الرجال',
-    'female surgical':'باطنية النساء'
+    'female surgical':'جراحة النساء'
   };
   function norm(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ')}
   function saved(){
