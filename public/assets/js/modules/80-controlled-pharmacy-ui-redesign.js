@@ -334,8 +334,13 @@ function syncHeroBtns(){
   var view=window.CTL_VIEW||'overview';
   var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');
   var btns='';
-  if(view==='departments'&&role!=='warehouse')
-    btns+='<button class="btn bp" onclick="ctlOpenDepartmentPrintOptions()">🖨 Print custody</button>';
+  // A department session already gets the canonical print button
+  // (#ctl-dept-authoritative-print-btn) inside its own custody panel, and both
+  // call the same handler, so this header copy only duplicated it there. That
+  // panel renders for the department role alone, so every other non-warehouse
+  // role still needs this one.
+  if(view==='departments'&&role!=='warehouse'&&role!=='department')
+    btns+='<button class="btn bp" onclick="ctlOpenDepartmentPrintOptions()">🖨 Print custody / طباعة العهدة</button>';
   if(view==='overview'&&(role==='controlled_pharmacy'||typeof window.isMaster==='function'&&window.isMaster()))
     btns+='<button class="btn bg bsm" onclick="ctlAddCatalogMedicine()">+ Add medicine</button>';
   if(view==='overview'&&(role==='controlled_pharmacy'||typeof window.isMaster==='function'&&window.isMaster())&&typeof window.ctlOpenHijriLedger==='function')
