@@ -30,13 +30,27 @@
     if(x.refrigerated)out.push(['REFRIGERATED','#6f42c1']);
     return out;
   }
-  function renderExpiry(d,dept){var r=publicRoot(),b=d.batches||[],rows=b.map(function(x,i){var dt=x.date||x.expiry||'';
+  /* A QR may target one drawer (?shelf=<id>) or the whole department. Filtering
+     happens here on the published shelfIds so the reader needs no access to the
+     department's private shelf list. With no shelf parameter the whole department
+     is listed; a shelf that matches nothing lists nothing, rather than silently
+     falling back to everything and implying the drawer holds the full list. */
+  function expiryShelfFilter(){
+    try{return String(new URLSearchParams(location.search).get('shelf')||'').trim()}catch(e){return ''}
+  }
+  function renderExpiry(d,dept){var r=publicRoot(),all=d.batches||[];
+    var wantShelf=expiryShelfFilter();
+    var b=wantShelf?all.filter(function(x){return (x.shelfIds||[]).map(String).indexOf(wantShelf)>=0}):all;
+    var rows=b.map(function(x,i){var dt=x.date||x.expiry||'';
     var cls=expiryClasses(x);
     var bg=x.highAlert?'#fff0f0':x.hazard?'#fffbea':x.lasa?'#f5f0ff':x.refrigerated?'#f3f0ff':'';
     var bc=x.highAlert?'#da3633':x.hazard?'#d29922':x.lasa?'#8957e5':x.refrigerated?'#8250df':'transparent';
     var tags=cls.map(function(c){return '<span style="color:'+c[1]+';font-weight:700;font-size:10px;white-space:nowrap">'+c[0]+'</span>'}).join('<span style="color:#bbb"> &middot; </span>');
     return '<tr style="'+(bg?'background:'+bg+';':'')+'border-left:3px solid '+bc+';print-color-adjust:exact;-webkit-print-color-adjust:exact">'
-      +'<td>'+(i+1)+'</td><td><b>'+esc2(x.medication||x.name||'')+'</b>'+(tags?'<div style="margin-top:2px">'+tags+'</div>':'')+'</td>'
+      +'<td>'+(i+1)+'</td><td><b>'+esc2(x.medication||x.name||'')+'</b>'
+      +(x.outOfStock?' <span style="color:#6e7781;font-weight:700;font-size:10px">OUT OF STOCK / نفد</span>':'')
+      +((x.shelfNames||[]).length?'<div style="font-size:10px;color:#666;margin-top:2px">'+(x.shelfNames||[]).map(esc2).join(' · ')+'</div>':'')
+      +(tags?'<div style="margin-top:2px">'+tags+'</div>':'')+'</td>'
       +'<td>'+dateOnly(dt)+'</td><td>'+esc2(x.qty==null?'—':x.qty)+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Expiry Monitor</h1><h2>'+esc2(d.departmentName||dept||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Expiry date</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveExpiry(dept){var r=publicRoot(),collection=window.fsTenantCollection?fsTenantCollection('public_expiry'):FB_DB.collection('public_expiry');r.innerHTML='<h2>Loading latest expiry data…</h2>';return collection.doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public expiry list was not found.</h2>';return}renderExpiry(s.data()||{},dept)},function(e){r.innerHTML='<h2>Could not load the public expiry page.</h2><p>'+esc2(e.message||e)+'</p>'})}
 

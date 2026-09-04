@@ -439,12 +439,16 @@ async function bulkSetMedicationFlag(flag){
 
 // ── DEPARTMENT SHELF MEDICATION DATABASE ─────────────────
 globalThis.SHELF_MED_SELECTED = {};
+/* Filter values that are not shelf ids. Kept in one place so adding a filter
+   does not mean extending a chain of !== comparisons that silently treats a new
+   sentinel as a shelf id and matches nothing. */
+var SHELF_MED_SENTINELS=['all','__none__','__no_expiry__','__expiring_soon__','__multi_shelf__','__out_of_stock__'];
 function shelfSelectedIds(){return Object.keys(SHELF_MED_SELECTED).filter(function(id){return SHELF_MED_SELECTED[id]})}
 function shelfMedMatches(m){
   var q=((el('shelf-med-search')||{}).value||'').trim().toLowerCase();
   var f=((el('shelf-med-filter')||{}).value||'all');
   if(q && !(String(m.name||'').toLowerCase().includes(q)||String(m.category||'').toLowerCase().includes(q)))return false;
-  if(f==='__none__' && m.shelfId)return false;
+  if(f==='__none__' && fsMedShelfIds(m).length)return false;
   if(f==='__no_expiry__'){
     var hasExpiry=getExpiry(CU.deptId).some(function(b){return b.medId===m.id&&String(b.date||'').trim();});
     if(hasExpiry)return false;
@@ -458,7 +462,10 @@ function shelfMedMatches(m){
     });
     if(!isSoon)return false;
   }
-  if(f!=='all'&&f!=='__none__'&&f!=='__no_expiry__'&&f!=='__expiring_soon__'&&m.shelfId!==f)return false;
+  if(f==='__multi_shelf__'&&fsMedShelfIds(m).length<2)return false;
+  if(f==='__out_of_stock__'&&!m.outOfStock)return false;
+  // Anything left is a shelf id, matched against every drawer the medicine is in.
+  if(SHELF_MED_SENTINELS.indexOf(f)<0&&fsMedShelfIds(m).indexOf(f)<0)return false;
   return true;
 }
 function shelfExpiryCell(medId){
@@ -499,7 +506,7 @@ function renderShelfMedicationDatabase(){
   var filter=el('shelf-med-filter'),target=el('shelf-bulk-target');
   if(filter){
     var fv=filter.value;
-    filter.innerHTML='<option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option>'+shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');
+    filter.innerHTML='<option value="all">All medications / كل الأدوية</option><option value="__none__">Unassigned / غير معيّنة لدرج</option><option value="__no_expiry__">No expiry date / بدون تاريخ انتهاء</option><option value="__expiring_soon__">Expiring soon / قريبة الانتهاء</option><option value="__multi_shelf__">In more than one drawer / في أكثر من درج</option><option value="__out_of_stock__">Out of stock / نفد المخزون</option>'+shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');
     if(Array.from(filter.options).some(function(o){return o.value===fv}))filter.value=fv;
   }
   if(target){var tv=target.value;target.innerHTML='<option value="">Choose drawer...</option><option value="__none__">Remove from drawer</option>'+shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');if(Array.from(target.options).some(function(o){return o.value===tv}))target.value=tv}
@@ -514,7 +521,12 @@ function renderShelfMedicationDatabase(){
     rowNo++;
     html+='<tr><td><input type="checkbox" '+(SHELF_MED_SELECTED[m.id]?'checked':'')+' data-mid="'+m.id+'" onchange="toggleShelfMedication(this.dataset.mid,this.checked)"></td>'
       +'<td>'+rowNo+'</td><td><b>'+esc(m.name)+'</b>'+requestColdMarker(m)+'</td><td>'+esc(category)+'</td><td>'+bdg(m)+'</td>'
-      +'<td>'+(m.shelfId?'<span class="shelf-badge">'+esc(getShelfName(m.shelfId))+'</span>':'<span class="badge bgr">Unassigned</span>')+'</td>'
+      +'<td>'+(function(){
+          var sids=fsMedShelfIds(m);
+          if(!sids.length)return '<span class="badge bgr">Unassigned</span>';
+          var badges=sids.map(function(sid){return '<span class="shelf-badge">'+esc(getShelfName(sid))+'</span>'}).join(' ');
+          return badges+(sids.length>1?' <span class="badge byl" title="In more than one drawer">⚠ '+sids.length+'</span>':'');
+        })()+(m.outOfStock?' <span class="badge brd">Out of stock / نفد</span>':'')+'</td>'
       +'<td>'+shelfExpiryCell(m.id)+'</td>'
       +'<td style="text-align:center">'+esc(m.min==null?'—':m.min)+'</td><td style="text-align:center">'+esc(m.max==null?'—':m.max)+'</td></tr>';
   });
@@ -526,14 +538,70 @@ function renderShelfMedicationDatabase(){
 function toggleShelfMedication(id,v){SHELF_MED_SELECTED[id]=v;renderShelfMedicationDatabase()}
 function toggleAllShelfMedications(v){getMeds(CU.deptId).filter(shelfMedMatches).forEach(function(m){SHELF_MED_SELECTED[m.id]=v});renderShelfMedicationDatabase()}
 function clearShelfMedicationSelection(){SHELF_MED_SELECTED={};renderShelfMedicationDatabase()}
+/* Shelf membership.
+ *
+ * A medicine used to carry a single shelfId, but departments legitimately keep the
+ * same medicine in more than one drawer. shelfIds is the list; shelfId is kept in
+ * sync with its first entry so every existing reader (the shelves page, the
+ * printouts, the filters) keeps working unchanged against older records that only
+ * ever had shelfId. */
+function fsMedShelfIds(m){
+  if(!m)return [];
+  if(Array.isArray(m.shelfIds))return m.shelfIds.filter(Boolean).map(String);
+  return m.shelfId?[String(m.shelfId)]:[];
+}
+function fsWithShelfIds(m,ids){
+  var list=[];
+  ids.forEach(function(id){id=String(id||'');if(id&&list.indexOf(id)<0)list.push(id)});
+  var next=Object.assign({},m);
+  next.shelfIds=list;
+  next.shelfId=list[0]||'';
+  return next;
+}
+window.fsMedShelfIds=fsMedShelfIds;
+
+/* Departments mark what has run out so the shelf list reflects reality without
+   deleting the medicine, which would lose its min/max and drawer assignment. */
+async function setSelectedMedsOutOfStock(flag){
+  var ids=shelfSelectedIds();
+  if(!ids.length)return toast('Select one or more medications first','err');
+  var meds=getMeds(CU.deptId).map(function(m){
+    return ids.includes(m.id)?Object.assign({},m,{outOfStock:!!flag}):m;
+  });
+  await setMeds(CU.deptId,meds);
+  auditAction('department_bulk_out_of_stock',{deptId:CU.deptId,ids:ids,outOfStock:!!flag});
+  SHELF_MED_SELECTED={};renderShelves();
+  toast(ids.length+(flag?' marked out of stock ✓ / نفد المخزون':' marked back in stock ✓ / متوفر')+'','succ');
+}
+window.setSelectedMedsOutOfStock=setSelectedMedsOutOfStock;
+
 async function assignSelectedMedsToShelf(){
   var ids=shelfSelectedIds(),target=(el('shelf-bulk-target')||{}).value;
+  var mode=(el('shelf-bulk-mode')||{}).value||'move';
   if(!ids.length)return toast('Select one or more medications first','err');
   if(!target)return toast('Choose a drawer first','err');
   var shelfId=target==='__none__'?'':target;
-  var meds=getMeds(CU.deptId).map(function(m){return ids.includes(m.id)?Object.assign({},m,{shelfId:shelfId}):m});
-  await setMeds(CU.deptId,meds);auditAction('department_bulk_shelf',{deptId:CU.deptId,ids:ids,shelfId:shelfId});
-  SHELF_MED_SELECTED={};renderShelves();toast(ids.length+' medications updated ✓','succ');
+  // 'add' keeps existing drawers so a medicine can sit in several at once;
+  // 'move' replaces them, which is what the single-shelf behaviour always did.
+  if(target==='__none__')mode='clear';
+  var multi=0;
+  var meds=getMeds(CU.deptId).map(function(m){
+    if(!ids.includes(m.id))return m;
+    var current=fsMedShelfIds(m),next;
+    if(mode==='clear')next=[];
+    else if(mode==='add')next=current.concat([shelfId]);
+    else next=[shelfId];
+    var updated=fsWithShelfIds(m,next);
+    if(updated.shelfIds.length>1)multi++;
+    return updated;
+  });
+  await setMeds(CU.deptId,meds);
+  auditAction('department_bulk_shelf',{deptId:CU.deptId,ids:ids,shelfId:shelfId,mode:mode});
+  SHELF_MED_SELECTED={};renderShelves();
+  toast(ids.length+' medications updated ✓','succ');
+  // Surfaced deliberately: a medicine in several drawers is allowed but is worth
+  // knowing about, since stock counts and restocking then span more than one place.
+  if(multi)toast('⚠ '+multi+' medication(s) are now in more than one drawer. Counts and restocking span every drawer.\n'+multi+' دواء في أكثر من رف. تأكد من الجرد وإعادة التعبئة في كل رف.','info');
 }
 
 // Crash Cart

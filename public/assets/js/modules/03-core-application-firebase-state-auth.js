@@ -1283,7 +1283,19 @@ async function syncPublicExpiry(deptId,rows){
       highAlert:!!medicine.high_alert,
       lasa:!!medicine.lasa,
       hazard:!!medicine.hazard,
-      refrigerated:!!medicine.refrigerated
+      refrigerated:!!medicine.refrigerated,
+      outOfStock:!!medicine.outOfStock,
+      // Drawer ids and names travel too, so the public monitor can be opened for
+      // one drawer without needing to read the department's private shelf list.
+      shelfIds:(typeof window.fsMedShelfIds==='function'?window.fsMedShelfIds(medicine):(medicine.shelfId?[String(medicine.shelfId)]:[])),
+      shelfNames:(function(){
+        var ids=(typeof window.fsMedShelfIds==='function'?window.fsMedShelfIds(medicine):(medicine.shelfId?[String(medicine.shelfId)]:[]));
+        var all=(typeof getShelves==='function'?(getShelves(deptId)||[]):[]);
+        return ids.map(function(sid){
+          var sh=all.find(function(x){return String(x.id)===String(sid)});
+          return sh&&sh.name?String(sh.name):String(sid);
+        });
+      })()
     };
   });
 

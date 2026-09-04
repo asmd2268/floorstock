@@ -1108,5 +1108,15 @@ export default [
     "id": "b220",
     "event": "click",
     "source": "ccApplyExtraBatches()"
+  },
+  {
+    "id": "b222",
+    "event": "click",
+    "source": "setSelectedMedsOutOfStock(true)"
+  },
+  {
+    "id": "b223",
+    "event": "click",
+    "source": "setSelectedMedsOutOfStock(false)"
   }
 ];

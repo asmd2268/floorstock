@@ -18,7 +18,8 @@ function renderShelves(){
   var ms=getMeds(shelfDept);
   // Count meds per shelf
   var shelfCounts={};
-  ms.forEach(function(m){if(m.shelfId){shelfCounts[m.shelfId]=(shelfCounts[m.shelfId]||0)+1;}});
+  // A medicine may sit in several drawers, so it counts toward each of them.
+  ms.forEach(function(m){shelfIdsOf(m).forEach(function(sid){shelfCounts[sid]=(shelfCounts[sid]||0)+1});});
   // Render shelves table
   el('shelves-tbl').innerHTML=shelves.length
     ?shelves.map(function(s){
@@ -35,9 +36,17 @@ function renderShelves(){
   var pSel=el('print-shelf-sel');
   if(pSel){pSel.innerHTML='<option value="all">All Shelves / &#x643;&#x644; &#x627;&#x644;&#x623;&#x631;&#x641;&#x641;</option>'
     +shelves.map(function(s){return '<option value="'+esc(s.id)+'">'+esc(s.name)+'</option>'}).join('');}
-  var assigned=ms.filter(function(m){return !!m.shelfId}).length;
+  var assigned=ms.filter(function(m){return shelfIdsOf(m).length>0}).length;
   if(el('shelves-summary'))el('shelves-summary').innerHTML='<div class="sc" style="padding:12px"><div class="sl">Medications</div><div class="sv" style="font-size:22px">'+ms.length+'</div></div>'+'<div class="sc" style="padding:12px"><div class="sl">Assigned</div><div class="sv" style="font-size:22px">'+assigned+'</div></div>'+'<div class="sc" style="padding:12px"><div class="sl">Unassigned</div><div class="sv" style="font-size:22px">'+(ms.length-assigned)+'</div></div>';
   if(typeof renderShelfMedicationDatabase==='function')renderShelfMedicationDatabase();
+}
+/* Resolved at call time: the shared helper is published by module 07j, which
+   loads after this file. Falls back to the legacy single shelfId. */
+function shelfIdsOf(m){
+  if(typeof window.fsMedShelfIds==='function')return window.fsMedShelfIds(m);
+  if(!m)return [];
+  if(Array.isArray(m.shelfIds))return m.shelfIds.filter(Boolean).map(String);
+  return m.shelfId?[String(m.shelfId)]:[];
 }
 function getShelfName(shelfId){
   var profile=(window.fsEffectiveUser&&window.fsEffectiveUser())||CU||{},dept=String(profile.deptId||profile.departmentId||'');if(!dept)return '';
@@ -67,7 +76,7 @@ function printShelfList(){
   var deptName=profile.deptName||deptId;
   // Apply filters
   var filtered=ms.filter(function(m){
-    var shMatch=shelfId==='all'||m.shelfId===shelfId;
+    var shMatch=shelfId==='all'||shelfIdsOf(m).indexOf(shelfId)>=0;
     var clMatch=true;
     if(clsFilter==='high_alert')clMatch=!!m.high_alert;
     else if(clsFilter==='hazard')clMatch=!!m.hazard;
@@ -78,12 +87,24 @@ function printShelfList(){
   if(!filtered.length)return toast('No medications match the selected filters','err');
   // Group by shelf then category
   var byShelf={};
+  // Printed under every drawer it belongs to: the sheet is read at the shelf, so a
+  // medicine kept in two drawers has to appear on both lists.
   filtered.forEach(function(m){
-    var sid=m.shelfId||'__none__';
-    if(!byShelf[sid])byShelf[sid]=[];
-    byShelf[sid].push(m);
+    var sids=shelfIdsOf(m);
+    if(!sids.length)sids=['__none__'];
+    sids.forEach(function(sid){
+      if(!byShelf[sid])byShelf[sid]=[];
+      byShelf[sid].push(m);
+    });
   });
-  var qrUrl=window.makeReadableQR(getPublicExpiryUrl(deptId));
+  /* When one drawer is being printed the QR is scoped to it, so scanning the sheet
+     taped to that drawer checks exactly what is in it rather than the whole
+     department. Printing All Shelves keeps the department-wide link. */
+  var expiryUrl=getPublicExpiryUrl(deptId);
+  if(shelfId&&shelfId!=='all'){
+    expiryUrl+=(expiryUrl.indexOf('?')>=0?'&':'?')+'shelf='+encodeURIComponent(shelfId);
+  }
+  var qrUrl=window.makeReadableQR(expiryUrl);
   var qrSiteUrl=window.makeReadableQR(getAppUrl());
   
   var rows='';
@@ -109,6 +130,8 @@ function printShelfList(){
         if(m.lasa)classes.push(['LASA','#6639ba']);
         if(m.hazard)classes.push(['HAZARD','#b07d00']);
         if(m.refrigerated)classes.push(['REFRIGERATED','#6f42c1']);
+        // Marked by the department; shown on the sheet so whoever restocks sees it.
+        if(m.outOfStock)classes.push(['OUT OF STOCK / نفد','#6e7781']);
         var flag=classes.map(function(c){
           return '<span style="color:'+c[1]+';font-weight:700;font-size:6.5pt;white-space:nowrap">'+c[0]+'</span>';
         }).join('<span style="color:#bbb;font-size:6.5pt"> &middot; </span>');
@@ -142,7 +165,7 @@ function printShelfList(){
     +'</div>'
     +'<div style="position:absolute;top:0;right:0;display:flex;gap:8px">'
     +'<div style="text-align:center"><img src="'+qrSiteUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">System</div></div>'
-    +'<div style="text-align:center"><img src="'+qrUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">Expiry Monitor</div></div>'
+    +'<div style="text-align:center"><img src="'+qrUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">Expiry Monitor'+(shelfId&&shelfId!=='all'?' — '+shelfLabel:'')+'</div></div>'
     +'</div>'
     +'</div>'
     +'<table><thead><tr>'
