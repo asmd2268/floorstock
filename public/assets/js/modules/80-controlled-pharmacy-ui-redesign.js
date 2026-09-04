@@ -329,6 +329,56 @@ function patchCtlTabs(){
   window.ctlSetView=function(v){window.CTL_VIEW=v;return window.renderControlled();};
 }
 
+/* Print Drug List and Controlled custody are two department pages that sat side
+   by side in the nav. They are merged into one nav entry with a tab bar inside,
+   the same shape as the Requests/Schedule bar. Visibility is not re-implemented
+   here: each tab is filtered through plIsHiddenForCurrentRole, the same check
+   module 83 uses, and the nav entry points at the first tab that survives it, so
+   hiding one page still leaves the other reachable and hiding both removes the
+   entry entirely. showPg's own guard remains the actual enforcement. */
+var DEPT_DOC_TABS=[
+  ['pg-deptprint','\uD83D\uDDA8 Print Drug List / طباعة القائمة'],
+  ['pg-controlled','\uD83D\uDD12 Controlled custody / العهدة المخدرة']
+];
+/* The grouping is department-only. plIsHiddenForCurrentRole reports explicit
+   master overrides, not role eligibility, so without this gate a
+   controlled_pharmacy or warehouse session opening Controlled custody would be
+   offered a Print Drug List tab - a department page - and showPg's guard would
+   allow it, since that page is not "hidden" for them, merely not theirs. */
+function deptDocIsDepartment(){
+  var r=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');
+  return r==='department';
+}
+function deptDocTabsVisible(){
+  if(!deptDocIsDepartment())return [];
+  return DEPT_DOC_TABS.filter(function(t){
+    return !(typeof window.plIsHiddenForCurrentRole==='function'&&window.plIsHiddenForCurrentRole(t[0]));
+  });
+}
+function injectDeptDocTabBar(pageId){
+  var tabs=deptDocTabsVisible();
+  // With one tab left there is nothing to switch between, so no bar is shown.
+  if(tabs.length<2)return;
+  if(!tabs.some(function(t){return t[0]===pageId}))return;
+  var pg=document.getElementById(pageId);if(!pg)return;
+  var old=pg.querySelector('.dept-doc-tab-bar');if(old)old.remove();
+  var bar=document.createElement('div');
+  bar.className='dept-doc-tab-bar';
+  bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  tabs.forEach(function(t){
+    var on=t[0]===pageId;
+    var b=document.createElement('button');
+    b.type='button';
+    b.className='btn '+(on?'bp':'bg')+' bsm';
+    if(on){b.disabled=true;b.innerHTML='<b>'+t[1]+'</b>'}
+    else{b.innerHTML=t[1];b.onclick=function(){if(typeof window.showPg==='function')window.showPg(t[0])}}
+    bar.appendChild(b);
+  });
+  pg.insertBefore(bar,pg.firstChild);
+}
+window.__showPgAfterExtensions=window.__showPgAfterExtensions||[];
+window.__showPgAfterExtensions.push(function(id){injectDeptDocTabBar(id)});
+
 function syncHeroBtns(){
   var row=document.getElementById('ctl-hero-btn-row');if(!row)return;
   var view=window.CTL_VIEW||'overview';
@@ -753,7 +803,15 @@ window.ctlCmpPrint=function(){
     else if(rRole==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-inv','Inventory status / حالة الأدوية'],['pg-pharm-inv','🏥 Pharm Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
     else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines']];
     else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody']];
-    else items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات'],['pg-deptprint','🖨 Print Drug List'],['pg-controlled','🔒 Controlled custody'],['pg-med-accountability','🧾 Medication documentation']];
+    else{
+      items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات']];
+      var docTabs=deptDocTabsVisible();
+      // One entry for the pair; if only one survives the visibility check it keeps
+      // its own label so the grouping never hides what is actually reachable.
+      if(docTabs.length===1)items.push([docTabs[0][0],docTabs[0][1]]);
+      else if(docTabs.length>1)items.push([docTabs[0][0],'📋 Lists & Custody / القوائم والعهدة']);
+      items.push(['pg-med-accountability','🧾 Medication documentation']);
+    }
     // pg-classification-lists is a tab inside pg-inv — no nav button needed
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
