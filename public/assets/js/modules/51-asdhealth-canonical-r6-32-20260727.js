@@ -694,6 +694,20 @@ function fsR5PublicUrl(dept){
 }
 function fsR5Logo(){try{if(typeof window.ctlLogo==='function')return window.ctlLogo()||''}catch(e){}return ''}
 function fsR5PrintSettings(dept){try{if(typeof window.ctlPrintSettings==='function')return window.ctlPrintSettings(dept)||{}}catch(e){}return {}}
+/* Arabic department names for printed headings.
+ *
+ * Keyed by department id rather than by name: the id is stable while the display
+ * name can be renamed. A department with no entry simply prints its English name
+ * with no Arabic line, so adding a department can never break a printout - it
+ * just stays untranslated until an entry is added here. */
+var FS_DEPT_NAME_AR={
+  ed:'الطوارئ'
+};
+function fsDeptNameAr(deptId){
+  return FS_DEPT_NAME_AR[String(deptId||'').trim().toLowerCase()]||'';
+}
+window.fsDeptNameAr=fsDeptNameAr;
+
 function fsR5ControlledPrintHtml(dept,rows){
   var effective=window.MASTER_EFFECTIVE||window.CU||{};
   var name=window.floorstockDepartmentName({
@@ -777,7 +791,7 @@ body{position:fixed!important;inset:0!important}
 .titles{text-align:center}
 .titles h1{font-size:13pt;margin:0}
 .titles h2{font-size:10pt;margin:.6mm 0}
-.titles h3{font-size:8.2pt;margin:0}
+.titles h3{font-size:8.2pt;margin:0}.titles h3 .h3-ar{font-weight:600;margin-top:1pt;direction:rtl}
 .qr{width:var(--qr);height:var(--qr);justify-self:end;object-fit:contain}
 .print-legend{
   display:flex;
@@ -910,7 +924,7 @@ th{font-weight:900}
       '<div class="titles">'+
         '<h1>Controlled and Restricted Medicines List</h1>'+
         '<h2>قائمة الأدوية المخدرة والمقيدة</h2>'+
-        '<h3>'+fsR5Esc(name)+' Department Controlled List</h3>'+
+        '<h3>'+fsR5Esc(name)+' Department Controlled List'+(fsDeptNameAr(dept)?'<div class="h3-ar">عهدة قسم '+fsR5Esc(fsDeptNameAr(dept))+'</div>':'')+'</h3>'+
       '</div>'+
       '<img class="qr asd-qr-image" src="'+fsR5Esc(qr)+'" alt="Live controlled list QR">'+
     '</header>'+
