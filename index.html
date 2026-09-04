@@ -1355,6 +1355,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 </div>
 </div>
 <div class="pg" id="pg-classification-lists"></div>
+<div class="pg" id="pg-pharm-inv"></div>
 <div class="pg" id="pg-permissions-control"></div>
 <div class="pg" id="pg-class-colors"></div>
 <div class="pg" id="pg-zebra-labels">
@@ -1507,7 +1508,15 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div class="fg"><label>New seal number / رقم القفل الجديد</label><input id="ccc-new-seal" placeholder="New seal number / رقم القفل الجديد"/></div>
 <div class="fg"><label>Pharmacy note / ملاحظة الصيدلية</label><input id="ccc-note" placeholder="Optional note / ملاحظة اختيارية"/></div>
 </div>
+<div id="ccc-nc-banner" hidden></div>
 <div class="card"><div class="ch"><div><span class="ct">Exact dated replacement / الاستبدال المرتبط بتاريخ محدد</span><div class="fhint">For every medicine, choose the expiry date the replacement quantity has — an existing date from the cart or the original report, or a new date. The reported quantity is deducted from its reported expiry automatically. The final quantity cannot exceed the cart standard.</div></div></div><div class="tw"><table class="crash-response-table"><thead><tr><th>Medication</th><th>Reported qty</th><th>Current dated stock</th><th>Expiry date</th><th>Replacement qty</th></tr></thead><tbody id="ccc-items"></tbody></table></div><div class="crash-response-validation" id="ccc-validation"></div></div>
+<details id="ccc-extra-batches-panel" hidden style="margin-bottom:4px">
+<summary style="cursor:pointer;list-style:none;user-select:none"><div style="display:flex;align-items:center;gap:8px;background:rgba(230,126,34,.12);border:1.5px solid var(--or,#e67e22);border-radius:10px;padding:10px 14px"><span style="font-size:18px">📦</span><div style="flex:1"><div style="font-weight:700;font-size:13px;color:var(--or,#e67e22)">Update existing cart batches / تحديث دفعات العربة الموجودة</div><div class="fhint" style="margin-top:1px">Optional — add quantities with correct expiry dates to any cart item that was not part of this report. / اختياري — أضف كميات بتواريخ صلاحية صحيحة لأي دواء في العربة لم يُذكر في البلاغ.</div></div><span class="fhint" style="white-space:nowrap">انقر للعرض ▼</span></div></summary>
+<div style="border:1.5px solid var(--or,#e67e22);border-top:0;border-radius:0 0 10px 10px;padding:12px 10px;margin-top:0">
+<div class="tw"><table class="crash-response-table" id="ccc-extra-batches-tbl"><thead><tr><th>Medication / الدواء</th><th>Current batches / الدفعات الحالية</th><th>Expiry date / تاريخ الانتهاء</th><th>Qty to add / الكمية</th><th>Result / النتيجة</th></tr></thead><tbody id="ccc-extra-batches-body"></tbody></table></div>
+<div class="fl g8" style="margin-top:10px;justify-content:flex-end"><button class="btn" style="background:var(--or,#e67e22);color:#fff;border:0" onclick="ccApplyExtraBatches()">📦 Apply batch updates / تطبيق تحديثات الدفعات</button></div>
+</div>
+</details>
 <div class="fl g8" style="justify-content:flex-end"><button class="btn bg" data-asdh-binding="b195">Cancel / إلغاء</button><button class="btn bs" id="ccc-save-btn" data-asdh-binding="b196">Save and close / حفظ وإغلاق البلاغ</button></div>
 </div>
 </div>

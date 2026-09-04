@@ -1,0 +1,294 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>ASDHealth FloorStock — User Guide</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, "Segoe UI", Tahoma, Arial, sans-serif;
+    color: #1c2430;
+    line-height: 1.5;
+    margin: 0;
+  }
+  .cover {
+    height: 260mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    page-break-after: always;
+  }
+  .cover .logo { font-size: 40px; font-weight: 800; color: #2563eb; margin-bottom: 6px; }
+  .cover .logo span { color: #1c2430; }
+  .cover h1 { font-size: 30px; margin: 30px 0 4px; }
+  .cover h1.ar { direction: rtl; font-family: "Geeza Pro","Arial",sans-serif; }
+  .cover p.sub { color: #667; font-size: 15px; margin: 2px 0; }
+  .cover .roles { margin-top: 36px; display: flex; gap: 16px; }
+  .role-badge {
+    padding: 10px 22px; border-radius: 999px; font-weight: 700; font-size: 14px;
+    border: 1.5px solid #2563eb; color: #2563eb;
+  }
+  .section-divider {
+    page-break-before: always;
+    height: 260mm;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+  }
+  .section-divider .tag { font-size: 13px; letter-spacing: 2px; color: #2563eb; font-weight: 700; margin-bottom: 10px; }
+  .section-divider h2 { font-size: 26px; margin: 0 0 6px; }
+  .section-divider h2.ar { direction: rtl; }
+  .feature {
+    page-break-inside: avoid;
+    margin-bottom: 28px;
+    border: 1px solid #e3e7ee;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .feature .head {
+    background: #f4f6fb;
+    padding: 10px 16px;
+    border-bottom: 1px solid #e3e7ee;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .feature .head h3 { margin: 0; font-size: 16px; color: #16233d; }
+  .feature .head h3.ar { direction: rtl; font-size: 15px; color: #47536b; }
+  .feature .body { padding: 14px 16px; }
+  .feature .body .en, .feature .body .ar { font-size: 13px; }
+  .feature .body .ar { direction: rtl; text-align: right; color: #333; margin-top: 6px; }
+  .feature .body ul { margin: 6px 0; padding-inline-start: 20px; }
+  .feature img {
+    width: 100%;
+    display: block;
+    border-top: 1px solid #e3e7ee;
+  }
+  .note {
+    background: #fff8e6; border: 1px solid #f0d78c; border-radius: 8px;
+    padding: 10px 14px; font-size: 12.5px; margin: 10px 0 0;
+  }
+  .note .ar { direction: rtl; text-align: right; margin-top: 4px; }
+  h2.chapter {
+    font-size: 20px; color: #16233d; border-bottom: 2px solid #2563eb;
+    padding-bottom: 6px; margin: 0 0 20px;
+  }
+  h2.chapter .ar { direction: rtl; float: inline-end; font-size: 16px; color: #2563eb; }
+  .toc { page-break-after: always; }
+  .toc ol { font-size: 14px; line-height: 2.1; }
+  .foot { text-align:center; color:#98a2b3; font-size: 11px; margin-top: 40px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <div class="logo">ASD<span>Health</span> FloorStock</div>
+  <h1>User Guide</h1>
+  <h1 class="ar">دليل المستخدم</h1>
+  <p class="sub">Pharmacy Department Staff &amp; Department (Ward) Accounts</p>
+  <p class="sub" dir="rtl">لموظفي قسم الصيدلية وحسابات الأقسام</p>
+  <div class="roles">
+    <div class="role-badge">💊 Pharmacy Staff</div>
+    <div class="role-badge">🏥 Department / Ward</div>
+  </div>
+  <p class="foot">Generated 20/08/2026</p>
+</div>
+
+<div class="toc">
+  <h2 class="chapter">Contents / المحتويات</h2>
+  <ol>
+    <li>Department (Ward) Account — New Request</li>
+    <li>Department (Ward) Account — My Requests</li>
+    <li>Department (Ward) Account — Shelves &amp; Storage</li>
+    <li>Department (Ward) Account — Crash Cart</li>
+    <li>Department (Ward) Account — Notes &amp; Feedback</li>
+    <li>Department (Ward) Account — Print Drug List</li>
+    <li>Department (Ward) Account — Controlled Custody</li>
+    <li>Department (Ward) Account — Medication Documentation</li>
+    <li>Pharmacy Staff Account — Dashboard</li>
+    <li>Pharmacy Staff Account — Inventory Status</li>
+    <li>Pharmacy Staff Account — Requests</li>
+    <li>Pharmacy Staff Account — Notes</li>
+    <li>Pharmacy Staff Account — Print &amp; Analytics</li>
+    <li>Pharmacy Staff Account — Crash Carts</li>
+    <li>Pharmacy Staff Account — Crash Cart Operations</li>
+    <li>Pharmacy Staff Account — Medication Accountability</li>
+  </ol>
+</div>
+
+<div class="section-divider">
+  <div class="tag">SECTION 1 · القسم الأول</div>
+  <h2>Department (Ward) Accounts</h2>
+  <h2 class="ar">حسابات الأقسام</h2>
+  <p class="sub">What a nursing/ward account can see and do</p>
+  <p class="sub" dir="rtl">ما يمكن لحساب القسم (التمريض) رؤيته والقيام به</p>
+</div>
+
+<h2 class="chapter">Department Account <span class="ar">حساب القسم</span></h2>
+
+<div class="feature">
+  <div class="head"><h3>1. New Request</h3><h3 class="ar">طلب جديد</h3></div>
+  <div class="body">
+    <div class="en">Submit a medication request to Pharmacy. Quantities are individual units, not boxes. Requests can only be submitted during the weekly window configured for your department — outside that window the form shows the next available time.</div>
+    <div class="ar">إرسال طلب أدوية للصيدلية. الكميات المدخلة تكون بالوحدة الفردية وليس بالكرتون. لا يمكن إرسال الطلب إلا خلال الأوقات الأسبوعية المحددة لقسمك — خارج هذه الأوقات تظهر رسالة توضح أقرب وقت متاح.</div>
+  </div>
+  <img src="dept_01_new_request.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>2. My Requests</h3><h3 class="ar">طلباتي</h3></div>
+  <div class="body">
+    <div class="en">History of every request submitted by the department, its fulfillment status, dispensed quantities, and scheduled dispensing time. Fulfilled requests can be received with expiry dates recorded via "Receive &amp; add expiry".</div>
+    <div class="ar">سجل بجميع الطلبات المرسلة من القسم وحالتها والكميات المصروفة وموعد الصرف المجدول. يمكن استلام الطلبات المكتملة وتسجيل تواريخ الصلاحية عبر زر "استلام وإضافة تاريخ الصلاحية".</div>
+  </div>
+  <img src="dept_02_my_requests.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>3. Shelves &amp; Storage</h3><h3 class="ar">الأرفف والتخزين</h3></div>
+  <div class="body">
+    <div class="en">Organize medications into named shelves/locations (e.g. fridge, cabinet 1), and set the department's expiry alert thresholds (early/urgent, in days).</div>
+    <div class="ar">تنظيم الأدوية ضمن أرفف/مواقع مسماة (مثل الثلاجة، الخزانة 1)، وضبط حدود التنبيه لانتهاء الصلاحية (مبكر/عاجل، بالأيام) الخاصة بالقسم.</div>
+    <div class="note">Note: Save Settings applies the new thresholds directly to the expiry dates already recorded on this page.
+      <div class="ar">ملاحظة: زر حفظ الإعدادات يطبّق الحدود الجديدة مباشرة على تواريخ الصلاحية المسجّلة في هذه الصفحة.</div>
+    </div>
+  </div>
+  <img src="dept_03_shelves.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>4. Crash Cart</h3><h3 class="ar">عربة الطوارئ</h3></div>
+  <div class="body">
+    <div class="en">View the crash cart(s) assigned to your department: medicine list, standard vs. present quantity, and expiry status per item. Departments can report an opened cart to Pharmacy; only Pharmacy can edit cart contents or expiry dates.</div>
+    <div class="ar">عرض عربة/عربات الطوارئ المخصصة لقسمك: قائمة الأدوية، الكمية المعيارية مقابل الكمية الحالية، وحالة انتهاء الصلاحية لكل صنف. يمكن للقسم الإبلاغ عن فتح العربة للصيدلية؛ التعديل على محتويات العربة أو تواريخ الصلاحية يقتصر على الصيدلية.</div>
+  </div>
+  <img src="dept_04_crash_cart.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>5. Notes &amp; Feedback</h3><h3 class="ar">ملاحظات وملاحظات الأقسام</h3></div>
+  <div class="body">
+    <div class="en">Send classification issues, requests, or suggestions to Pharmacy, optionally linked to a specific medication. Track Pharmacy's replies and resolution status here.</div>
+    <div class="ar">إرسال مشاكل التصنيف أو الطلبات أو الاقتراحات للصيدلية، مع إمكانية ربطها بدواء محدد. متابعة ردود الصيدلية وحالة الحل من هذه الصفحة.</div>
+  </div>
+  <img src="dept_05_notes.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>6. Print Drug List</h3><h3 class="ar">طباعة قائمة الأدوية</h3></div>
+  <div class="body">
+    <div class="en">Print the department's full medication list with configurable layout, orientation, and expiry-printing options (existing dates, write-in line, or barcode).</div>
+    <div class="ar">طباعة قائمة أدوية القسم الكاملة مع خيارات قابلة للتخصيص للتخطيط والاتجاه وطريقة طباعة تاريخ الصلاحية (تواريخ موجودة، سطر للكتابة اليدوية، أو باركود).</div>
+  </div>
+  <img src="dept_06_print_drug_list.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>7. Controlled Custody</h3><h3 class="ar">عهدة الأدوية المخدرة والمقيدة</h3></div>
+  <div class="body">
+    <div class="en">Read-only view of controlled/psychotropic medicines assigned to the department, with a near-expiry rule and printable custody list. Departments cannot edit this custody — it is managed by Pharmacy/Controlled Pharmacy.</div>
+    <div class="ar">عرض للقراءة فقط للأدوية المخدرة والمؤثرات العقلية المخصصة للقسم، مع قاعدة لقرب انتهاء الصلاحية وقائمة عهدة قابلة للطباعة. لا يمكن للقسم تعديل هذه العهدة — تتم إدارتها من قبل الصيدلية/صيدلية الأدوية المخدرة.</div>
+  </div>
+  <img src="dept_07_controlled_custody.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>8. Medication Documentation (Accountability)</h3><h3 class="ar">عهدة واستهلاك الأدوية</h3></div>
+  <div class="body">
+    <div class="en">Independent department custody and consumption records: assigned medicines, approved custody quantities, current balance, and nursing receipt/handover against pharmacy-approved requests. Includes full consumption history (date, medicine, units, patient file, doctor, reason, status).</div>
+    <div class="ar">سجلات عهدة واستهلاك مستقلة للقسم: الأدوية المخصصة، كميات العهدة المعتمدة، الرصيد الحالي، واستلام/تسليم التمريض مقابل الطلبات المعتمدة من الصيدلية. تشمل سجل استهلاك كامل (التاريخ، الدواء، الوحدات، ملف المريض، الطبيب، السبب، الحالة).</div>
+  </div>
+  <img src="dept_08_medication_documentation.png">
+</div>
+
+<div class="section-divider">
+  <div class="tag">SECTION 2 · القسم الثاني</div>
+  <h2>Pharmacy Staff Accounts</h2>
+  <h2 class="ar">حسابات موظفي الصيدلية</h2>
+  <p class="sub">What a Pharmacy Staff account can see and do across all departments</p>
+  <p class="sub" dir="rtl">ما يمكن لحساب موظف الصيدلية رؤيته والقيام به عبر جميع الأقسام</p>
+</div>
+
+<h2 class="chapter">Pharmacy Staff Account <span class="ar">حساب موظف الصيدلية</span></h2>
+
+<div class="feature">
+  <div class="head"><h3>1. Dashboard</h3><h3 class="ar">لوحة المعلومات</h3></div>
+  <div class="body">
+    <div class="en">System-wide overview: expired and soon-to-expire medications across every department, open notes awaiting review, total medications, active departments, and pending/fulfilled request counts.</div>
+    <div class="ar">نظرة عامة على مستوى النظام: الأدوية منتهية الصلاحية والقريبة من الانتهاء في جميع الأقسام، الملاحظات المفتوحة بانتظار المراجعة، إجمالي الأدوية، الأقسام النشطة، وعدد الطلبات المعلقة/المكتملة.</div>
+  </div>
+  <img src="pharm_01_dashboard.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>2. Inventory Status</h3><h3 class="ar">حالة الأدوية</h3></div>
+  <div class="body">
+    <div class="en">Per-department drug lists with category, classification (High Alert / LASA), and configured min/max/monthly stock levels. Filterable and searchable by department, category, and classification.</div>
+    <div class="ar">قوائم الأدوية لكل قسم مع الفئة والتصنيف (عالي التنبيه / متشابه بالاسم أو الشكل) ومستويات المخزون الأدنى/الأقصى/الشهري المحددة. قابلة للتصفية والبحث حسب القسم والفئة والتصنيف.</div>
+  </div>
+  <img src="pharm_02_inventory_status.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>3. Requests</h3><h3 class="ar">الطلبات</h3></div>
+  <div class="body">
+    <div class="en">Review and fulfill requests from every department, filterable by All / Pending / Fulfilled. Shows item counts, dispensed quantities, and scheduled dispensing time per request.</div>
+    <div class="ar">مراجعة وتنفيذ الطلبات من جميع الأقسام، قابلة للتصفية حسب الكل / المعلق / المكتمل. تعرض عدد الأصناف والكميات المصروفة وموعد الصرف المجدول لكل طلب.</div>
+  </div>
+  <img src="pharm_03_requests.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>4. Notes</h3><h3 class="ar">الملاحظات</h3></div>
+  <div class="body">
+    <div class="en">Central inbox for all department notes — classification issues, medication add requests, and general feedback — with reply and resolve actions, filterable by department, type, and status.</div>
+    <div class="ar">صندوق مركزي لجميع ملاحظات الأقسام — مشاكل التصنيف، طلبات إضافة أدوية، والملاحظات العامة — مع إمكانية الرد والحل، وقابلة للتصفية حسب القسم والنوع والحالة.</div>
+  </div>
+  <img src="pharm_04_notes.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>5. Print &amp; Analytics</h3><h3 class="ar">الطباعة والإحصائيات</h3></div>
+  <div class="body">
+    <div class="en">Re-print any fulfilled order in full or selectively. The print shape key explains the visual markers used on printed labels: High Alert (inverse-color rectangle), Hazard (diagonal line), LASA (circle around quantity), and Refrigerated (dark box with snowflake).</div>
+    <div class="ar">إعادة طباعة أي طلب مكتمل بالكامل أو بشكل انتقائي. يوضح مفتاح أشكال الطباعة العلامات المرئية المستخدمة على الملصقات المطبوعة: عالي التنبيه (مستطيل بلون معكوس)، خطر (خط قطري)، متشابه بالاسم/الشكل (دائرة حول الكمية)، ومبرّد (مربع داكن مع علامة الثلج).</div>
+  </div>
+  <img src="pharm_05_print.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>6. Crash Carts</h3><h3 class="ar">عربات الطوارئ</h3></div>
+  <div class="body">
+    <div class="en">Full visibility across every crash cart in the facility, filterable by department, cart, and expiry level. Shows standard vs. present quantity and expiry-driven status for every medicine in every cart, plus an opening log.</div>
+    <div class="ar">رؤية كاملة لجميع عربات الطوارئ في المنشأة، قابلة للتصفية حسب القسم والعربة ومستوى انتهاء الصلاحية. تعرض الكمية المعيارية مقابل الحالية وحالة الصلاحية لكل دواء في كل عربة، بالإضافة إلى سجل فتح العربات.</div>
+  </div>
+  <img src="pharm_06_crash_carts.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>7. Crash Cart Operations</h3><h3 class="ar">عمليات عربات الطوارئ</h3></div>
+  <div class="body">
+    <div class="en">Rename or move carts between departments/locations, and complete multi-cart opening, replacement, and unique sealing from a single page. Note: for Pharmacy Staff specifically, cart detail fields are view-only — opening/replacement actions remain available.</div>
+    <div class="ar">إعادة تسمية أو نقل العربات بين الأقسام/المواقع، وإتمام عمليات فتح واستبدال وختم فريد لعدة عربات من صفحة واحدة. ملاحظة: بالنسبة لموظف الصيدلية تحديدًا، حقول بيانات العربة للعرض فقط — تبقى عمليات الفتح والاستبدال متاحة.</div>
+  </div>
+  <img src="pharm_07_crash_cart_operations.png">
+</div>
+
+<div class="feature">
+  <div class="head"><h3>8. Medication Accountability</h3><h3 class="ar">عهدة واستهلاك الأدوية</h3></div>
+  <div class="body">
+    <div class="en">Facility-wide custody management: set up new department custody lines, review pending pharmacy approvals, manage receipt &amp; handover, control active regimens, and audit the full handover activity log.</div>
+    <div class="ar">إدارة العهدة على مستوى المنشأة: إعداد عهد جديدة للأقسام، مراجعة الموافقات المعلقة من الصيدلية، إدارة الاستلام والتسليم، التحكم بالخطط العلاجية النشطة، ومراجعة سجل نشاط الاستلام والتسليم الكامل.</div>
+  </div>
+  <img src="pharm_08_medication_accountability.png">
+</div>
+
+<p class="foot">ASDHealth FloorStock — internal user guide, generated for Pharmacy Staff &amp; Department accounts only.</p>
+
+</body>
+</html>

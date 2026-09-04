@@ -206,10 +206,10 @@ function encodeValue(v){
     ['pg-system-health','pg-backup-restore','pg-zebra-labels'].forEach(function(id){var p=document.getElementById(id);if(p){p.classList.remove('on');p.style.display='none'}})
   }
   function ensureMasterHealth(){
-    var nav=document.getElementById('mnav');if(!nav)return;var old=nav.querySelector('#nb-system-health,[data-pg="pg-system-health"]');
-    if(!realMaster()){if(old)old.remove();return}
-    if(!old){old=document.createElement('button');old.id='nb-system-health';old.type='button';old.className='nb';old.textContent='🩺 System Health';nav.appendChild(old)}
-    old.dataset.pg='pg-system-health';old.onclick=function(){window.showPg('pg-system-health')}
+    // System Health is now a tab inside Subscriptions (module 80) — remove any standalone button
+    var nav=document.getElementById('mnav');if(!nav)return;
+    var old=nav.querySelector('#nb-system-health,[data-pg="pg-system-health"]');
+    if(old)old.remove();
   }
   function syncActiveNav(){var active=(document.querySelector('.pg.on')||{}).id||'';document.querySelectorAll('#mnav .nb').forEach(function(b){b.classList.toggle('on',!!(b.dataset&&b.dataset.pg===active))})}
   function activatePage(id,runRenderer){

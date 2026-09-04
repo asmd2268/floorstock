@@ -66,18 +66,20 @@ export function canAccessDepartment(profile, departmentId) {
   const role = normalizeRole(user.role);
   const target = String(departmentId || '').trim().toLowerCase();
   if (!target || user.master === true || role === 'pharmacy') return true;
-  // Per-user blocked departments stored in tenant state
-  // Blocked departments come from Firebase Auth custom claims (set server-side
-  // via setDeptRestrictions CF), cached in globalThis.__fsBlockedDepts at login.
-  // Falls back to state key for sessions that logged in before the CF rollout.
-  const blocked = Array.isArray(globalThis.__fsBlockedDepts)
-    ? globalThis.__fsBlockedDepts
-    : (function() {
-        const userId = user.id || user.uid;
-        if (!userId || !globalThis.S || typeof globalThis.S.g !== 'function') return [];
-        const map = globalThis.S.g('user_dept_restrictions_v1') || {};
-        return Array.isArray(map[userId]) ? map[userId] : [];
-      })();
+  // Per-user blocked departments. Primary source: live state key written by the
+  // setDeptRestrictions CF and synced in real-time — takes effect immediately
+  // without re-login. Falls back to __fsBlockedDepts (set at login from token
+  // claims or Firestore profile) for sessions where state is unavailable.
+  const blocked = (function() {
+    const userId = user.id || user.uid;
+    if (userId && globalThis.S && typeof globalThis.S.g === 'function') {
+      const map = globalThis.S.g('user_dept_restrictions_v1') || {};
+      if (typeof map === 'object' && !Array.isArray(map) && Array.isArray(map[userId])) {
+        return map[userId];
+      }
+    }
+    return Array.isArray(globalThis.__fsBlockedDepts) ? globalThis.__fsBlockedDepts : [];
+  })();
   if (blocked.some(function(d){ return String(d).trim().toLowerCase() === target; })) return false;
   if (role === 'pharmacy_staff') return true;
   const own = String(user.deptId || user.departmentId || '').trim().toLowerCase();

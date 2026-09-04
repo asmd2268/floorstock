@@ -2,6 +2,13 @@
 
 const crypto = require('node:crypto');
 
+function publicError(message, statusCode) {
+  const error = new Error(message);
+  error.publicMessage = message;
+  error.statusCode = statusCode || 409;
+  return error;
+}
+
 function normalizeRole(value) {
   const role = String(value || '').trim().toLowerCase();
   if (role === 'pharmacy_director') return 'pharmacy';
@@ -56,7 +63,7 @@ function medicineTotals(selected, assignments) {
 
 
 function applyPartyConfirmation(session, party, identity, nowIso) {
-  if (!['pharmacy', 'department'].includes(party)) throw new Error('Invalid handover party.');
+  if (!['pharmacy', 'department'].includes(party)) throw publicError('Invalid handover party.');
   const next = { ...(session || {}) };
   const field = party === 'pharmacy' ? 'pharmacyConfirmation' : 'departmentConfirmation';
   if (next[field]) {
@@ -78,12 +85,12 @@ function completeHandoverState({ assignments, usage, receipts, session, nowIso }
   const nextAssignments = (assignments || []).map((row) => ({ ...row }));
   const nextUsage = (usage || []).map((row) => ({ ...row }));
   const selected = nextUsage.filter((row) => usageIds.has(String(row.id)));
-  if (selected.length !== usageIds.size) throw new Error('One or more accountability records are missing.');
+  if (selected.length !== usageIds.size) throw publicError('One or more accountability records are missing.');
   if (selected.some((row) => row.status !== 'approved_waiting_receipt')) {
-    throw new Error('One or more accountability records are no longer waiting for receipt.');
+    throw publicError('One or more accountability records are no longer waiting for receipt.');
   }
   if (selected.some((row) => String(row.deptId) !== String(session.deptId))) {
-    throw new Error('The selected accountability records do not belong to one department.');
+    throw publicError('The selected accountability records do not belong to one department.');
   }
 
   const totals = medicineTotals(selected, nextAssignments);
@@ -110,10 +117,9 @@ function completeHandoverState({ assignments, usage, receipts, session, nowIso }
       };
       nextAssignments.push(assignment);
     }
-    const nextBalance = number(assignment.balance) + total.units;
     const quota = number(assignment.quota);
-    if (nextBalance > quota + 1e-9) throw new Error(`${assignment.medName || 'Medicine'} receipt would exceed the approved custody quantity.`);
-    assignment.balance = nextBalance;
+    // balance was decremented when usage was submitted; receipt restores it, capped at quota
+    assignment.balance = Math.min(quota, number(assignment.balance) + total.units);
     assignment.updatedAt = nowIso;
     assignment.updatedBy = session.departmentConfirmation.name;
   }

@@ -439,6 +439,20 @@ exports.setDeptRestrictions = onCall(CALLABLE_OPTIONS, async (request) => {
   }
   await ref.update(updateData);
 
+  // Also write to the tenant state doc so live sessions pick up the change
+  // without requiring a re-login (state store syncs this in real-time).
+  const restrictionsRef = stateRef('user_dept_restrictions_v1', caller.tenantId || '');
+  const restrictionsSnap = await restrictionsRef.get();
+  const restrictionsMap = (restrictionsSnap.exists && restrictionsSnap.data() && typeof restrictionsSnap.data().value === 'object' && !Array.isArray(restrictionsSnap.data().value))
+    ? { ...restrictionsSnap.data().value }
+    : {};
+  if (blockedDepts.length > 0) {
+    restrictionsMap[uid] = blockedDepts;
+  } else {
+    delete restrictionsMap[uid];
+  }
+  await restrictionsRef.set({ value: restrictionsMap, updatedAt: FieldValue.serverTimestamp() });
+
   await audit('user.dept_restrictions.set', caller, uid, {
     email: target.email || null,
     blockedDepts
@@ -568,8 +582,8 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       throw new HttpsError('invalid-argument', 'id and decision (approve/reject) are required.');
     }
     await db.runTransaction(async (tx) => {
-      const snap = await tx.get(usageRef);
-      const rows = stateArray(snap).map((x) => ({ ...x }));
+      const [usageSnap, assignSnap] = await Promise.all([tx.get(usageRef), tx.get(assignmentsRef)]);
+      const rows = stateArray(usageSnap).map((x) => ({ ...x }));
       const u = rows.find((x) => String(x.id) === String(id));
       if (!u || u.status !== 'pending_pharmacy') throw new HttpsError('failed-precondition', 'This request is no longer pending.');
       if (isDeptBlocked(u.deptId)) {
@@ -585,7 +599,16 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         u.approvedBy = actorName;
         u.approvedByUser = actorEmail;
         u.pharmacyNote = noteStr;
+        // Deduct balance atomically with status change
+        const assignments = stateArray(assignSnap).map((x) => ({ ...x }));
+        const a = assignments.find((x) => String(x.id) === String(u.assignmentId));
+        if (a) {
+          a.balance = Math.max(0, number(a.balance) - number(u.units));
+          a.updatedAt = now;
+          writeState(tx, assignmentsRef, assignments);
+        }
       } else {
+        // Reject: balance was never formally deducted (only pending effective balance shown)
         u.status = 'rejected';
         u.rejectedAt = now;
         u.rejectedBy = actorName;
@@ -594,6 +617,56 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         u.pharmacyNote = noteStr;
       }
       writeState(tx, usageRef, rows);
+    });
+    return { ok: true };
+  }
+
+  if (action === 'undo_approve') {
+    const { id } = data;
+    if (!id) throw new HttpsError('invalid-argument', 'id is required.');
+    await db.runTransaction(async (tx) => {
+      const [usageSnap, assignSnap] = await Promise.all([tx.get(usageRef), tx.get(assignmentsRef)]);
+      const rows = stateArray(usageSnap).map((x) => ({ ...x }));
+      const u = rows.find((x) => String(x.id) === String(id));
+      if (!u || u.status !== 'approved_waiting_receipt') {
+        throw new HttpsError('failed-precondition', 'This request is not in an approved state.');
+      }
+      const now = new Date().toISOString();
+      const actorName = caller.name || caller.email || '';
+      // Restore balance (approve had deducted it)
+      const assignments = stateArray(assignSnap).map((x) => ({ ...x }));
+      const a = assignments.find((x) => String(x.id) === String(u.assignmentId));
+      if (a) {
+        a.balance = Math.min(number(a.quota), number(a.balance) + number(u.units));
+        a.updatedAt = now;
+        writeState(tx, assignmentsRef, assignments);
+      }
+      // Revert status to pending
+      u.status = 'pending_pharmacy';
+      delete u.approvedAt;
+      delete u.approvedBy;
+      delete u.approvedByUser;
+      u.pharmacyNote = '';
+      u.undoneAt = now;
+      u.undoneBy = actorName;
+      writeState(tx, usageRef, rows);
+    });
+    return { ok: true };
+  }
+
+  if (action === 'resetBalance') {
+    const { id } = data;
+    if (!id) throw new HttpsError('invalid-argument', 'id is required.');
+    if (!isMaster(caller)) throw new HttpsError('permission-denied', 'Master only.');
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(assignmentsRef);
+      const list = stateArray(snap).map((x) => ({ ...x }));
+      const row = list.find((x) => String(x.id) === String(id));
+      if (!row) throw new HttpsError('not-found', 'Assignment not found.');
+      row.balance = row.quota;
+      row.updatedAt = new Date().toISOString();
+      row.updatedBy = caller.name || caller.email || '';
+      writeState(tx, assignmentsRef, list);
     });
     return { ok: true };
   }
@@ -837,6 +910,117 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
   return responsePayload;
 });
 
+// Voids any active session linked to the given usage IDs and creates a new one.
+exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  if (!canCreateHandover(caller)) {
+    throw new HttpsError('permission-denied', 'This role cannot create accountability handovers.');
+  }
+  const requestedIds = Array.isArray(request.data && request.data.usageIds) ? request.data.usageIds : [];
+  const usageIds = [...new Set(requestedIds.map((value) => String(value || '').trim()).filter(Boolean))];
+  if (!usageIds.length || usageIds.length > 100) {
+    throw new HttpsError('invalid-argument', 'Select between 1 and 100 approved accountability records.');
+  }
+  const requestedMinutes = Number(request.data && request.data.expiresInMinutes);
+  const minutes = Math.max(5, Math.min(60, Number.isFinite(requestedMinutes) ? requestedMinutes : HANDOVER_MINUTES_DEFAULT));
+  const pharmacyToken = createToken();
+  const departmentToken = createToken();
+  const newSessionRef = db.collection(HANDOVER_COLLECTION).doc();
+  const usageRef = stateRef('accountability_usage_v2', caller.tenantId);
+  const departmentsRef = stateRef('departments', caller.tenantId);
+  const expiresAt = Timestamp.fromMillis(Date.now() + minutes * 60 * 1000);
+
+  let responsePayload;
+  await db.runTransaction(async (transaction) => {
+    const [usageSnap, departmentsSnap] = await Promise.all([
+      transaction.get(usageRef),
+      transaction.get(departmentsRef)
+    ]);
+    const usage = stateArray(usageSnap).map((row) => ({ ...row }));
+    const selected = usage.filter((row) => usageIds.includes(String(row.id)));
+    if (selected.length !== usageIds.length) {
+      throw new HttpsError('failed-precondition', 'One or more selected records no longer exist.');
+    }
+    if (selected.some((row) => row.status !== 'approved_waiting_receipt')) {
+      throw new HttpsError('failed-precondition', 'Only approved records waiting for receipt can be handed over.');
+    }
+    const deptIds = [...new Set(selected.map((row) => String(row.deptId || '')))].filter(Boolean);
+    if (deptIds.length !== 1) throw new HttpsError('failed-precondition', 'All selected records must belong to the same department.');
+
+    // Void any still-active sessions
+    const existingSessionIds = [...new Set(selected.map((row) => row.handoverSessionId).filter(Boolean))];
+    for (const existingId of existingSessionIds) {
+      const existingSnap = await transaction.get(db.collection(HANDOVER_COLLECTION).doc(String(existingId)));
+      if (existingSnap.exists) {
+        const existing = existingSnap.data();
+        const active = existing.status !== 'completed' && existing.expiresAt && existing.expiresAt.toMillis() > Date.now();
+        if (active) {
+          transaction.update(db.collection(HANDOVER_COLLECTION).doc(String(existingId)), {
+            status: 'voided',
+            voidedAt: FieldValue.serverTimestamp(),
+            voidedBy: caller.email || caller.uid
+          });
+        }
+      }
+    }
+
+    const deptId = deptIds[0];
+    const departments = stateArray(departmentsSnap);
+    const department = departments.find((row) => String(row.id) === deptId) || {};
+    const medicineMap = new Map();
+    for (const row of selected) {
+      const key = String(row.assignmentId || row.medName || 'medicine');
+      const item = medicineMap.get(key) || { assignmentId: String(row.assignmentId || ''), medName: row.medName || 'Medicine', units: 0 };
+      item.units += Number(row.units) || 0;
+      medicineMap.set(key, item);
+      row.handoverSessionId = newSessionRef.id;
+      row.handoverStatus = 'waiting_both_confirmations';
+      row.handoverExpiresAt = expiresAt.toDate().toISOString();
+    }
+    const nowIso = new Date().toISOString();
+    const session = {
+      id: newSessionRef.id,
+      tenantId: caller.tenantId || null,
+      deptId,
+      departmentName: department.name || department.nameEn || department.nameAr || deptId,
+      usageIds,
+      medicineTotals: [...medicineMap.values()],
+      totalUnits: selected.reduce((sum, row) => sum + (Number(row.units) || 0), 0),
+      pharmacyTokenHash: hashToken(pharmacyToken),
+      departmentTokenHash: hashToken(departmentToken),
+      status: 'waiting_both_confirmations',
+      createdAt: FieldValue.serverTimestamp(),
+      createdAtIso: nowIso,
+      createdByUid: caller.uid,
+      createdByName: caller.displayName || caller.email || caller.uid,
+      createdByRole: caller.role || '',
+      expiresAt,
+      pharmacyConfirmation: null,
+      departmentConfirmation: null,
+      reissuedFrom: existingSessionIds[0] || null
+    };
+    writeState(transaction, usageRef, usage);
+    transaction.set(newSessionRef, session, { merge: false });
+    responsePayload = {
+      sessionId: newSessionRef.id,
+      pharmacyToken,
+      departmentToken,
+      deptId,
+      departmentName: session.departmentName,
+      medicineTotals: session.medicineTotals,
+      totalUnits: session.totalUnits,
+      expiresAt: expiresAt.toDate().toISOString()
+    };
+  });
+
+  await audit('accountability.handover.reissue', caller, null, {
+    sessionId: responsePayload.sessionId,
+    deptId: responsePayload.deptId,
+    usageIds
+  }).catch((error) => console.warn('Handover reissue audit warning', error));
+  return responsePayload;
+});
+
 exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (request, response) => {
   if (request.method === 'OPTIONS') return response.status(204).send('');
   if (request.method !== 'GET') return sendJson(response, 405, { ok: false, error: 'Method not allowed.' });
@@ -851,7 +1035,10 @@ exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (reques
     const session = snap.data();
     const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
     if (!tokenMatches(token, expected)) throw asPublicError('This handover link is invalid.', 403);
-    const expired = !session.expiresAt || session.expiresAt.toMillis() <= Date.now();
+    const expiresAtMs2 = session.expiresAt
+      ? (typeof session.expiresAt.toMillis === 'function' ? session.expiresAt.toMillis() : new Date(session.expiresAt).getTime())
+      : 0;
+    const expired = !session.expiresAt || expiresAtMs2 <= Date.now();
     const confirmation = party === 'pharmacy' ? session.pharmacyConfirmation : session.departmentConfirmation;
     sendJson(response, 200, {
       ok: true,
@@ -908,7 +1095,10 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
       const session = { id: sessionId, ...sessionSnap.data() };
       const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
       if (!tokenMatches(token, expected)) throw asPublicError('This handover link is invalid.', 403);
-      if (!session.expiresAt || session.expiresAt.toMillis() <= Date.now()) throw asPublicError('This handover link has expired.', 410);
+      const expiresAtMs = session.expiresAt
+        ? (typeof session.expiresAt.toMillis === 'function' ? session.expiresAt.toMillis() : new Date(session.expiresAt).getTime())
+        : 0;
+      if (!session.expiresAt || expiresAtMs <= Date.now()) throw asPublicError('This handover link has expired.', 410);
       const nowIso = new Date().toISOString();
       const confirmation = applyPartyConfirmation(session, party, { name, employeeId }, nowIso);
       Object.assign(session, confirmation.session);

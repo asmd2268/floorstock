@@ -379,6 +379,13 @@ service cloud.firestore {
         allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
       }
 
+      match /public_classification/{docId} {
+        allow get: if true;
+        allow list: if sameTenant(tenant) && masterUser();
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && masterUser();
+        allow delete: if sameTenant(tenant) && masterUser();
+      }
+
       match /public_controlled_expiry/{docId} {
         allow get: if true;
         allow list: if sameTenant(tenant) && masterUser();

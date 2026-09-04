@@ -1,6 +1,6 @@
 /* Pure calculation of the next applicable dispense slot. */
 function getNextDispSlot(deptId){
-  var now=new Date(), slots=(typeof globalThis.getDispSlots==='function'?globalThis.getDispSlots():[]).filter(function(s){return s.dept==='all'||s.dept===deptId});
+  var now=new Date(), slots=(typeof globalThis.getDispSlots==='function'?globalThis.getDispSlots():[]).filter(function(s){return s.dept==='all'||!s.dept||(Array.isArray(s.dept)?s.dept.indexOf(deptId)>-1:s.dept===deptId)});
   if(!slots.length)return null;
   var nowMins=now.getHours()*60+now.getMinutes(), dow=now.getDay(), best=null,bestDiff=Infinity, names=globalThis.DAY_NAMES||[];
   // d runs 0..7 (not 0..6) so a single-weekday schedule whose slot already

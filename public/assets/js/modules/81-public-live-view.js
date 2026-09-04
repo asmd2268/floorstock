@@ -21,6 +21,47 @@
   function renderExpiry(d,dept){var r=publicRoot(),b=d.batches||[],rows=b.map(function(x,i){var dt=x.date||x.expiry||'';return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(x.medication||x.name||'')+'</b></td><td>'+dateOnly(dt)+'</td><td>'+esc2(x.qty==null?'—':x.qty)+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Expiry Monitor</h1><h2>'+esc2(d.departmentName||dept||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Expiry date</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveExpiry(dept){var r=publicRoot(),collection=window.fsTenantCollection?fsTenantCollection('public_expiry'):FB_DB.collection('public_expiry');r.innerHTML='<h2>Loading latest expiry data…</h2>';return collection.doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public expiry list was not found.</h2>';return}renderExpiry(s.data()||{},dept)},function(e){r.innerHTML='<h2>Could not load the public expiry page.</h2><p>'+esc2(e.message||e)+'</p>'})}
 
+  // ── Classification list public view (no login) ──────────────────────────
+  function fromFsVal(v){if(!v)return null;if(v.stringValue!==undefined)return v.stringValue;if(v.booleanValue!==undefined)return v.booleanValue;if(v.integerValue!==undefined)return Number(v.integerValue);if(v.doubleValue!==undefined)return v.doubleValue;if(v.nullValue!==undefined)return null;if(v.timestampValue!==undefined)return String(v.timestampValue);if(v.arrayValue!==undefined)return(v.arrayValue.values||[]).map(fromFsVal);if(v.mapValue!==undefined){var o={};Object.keys(v.mapValue.fields||{}).forEach(function(k){o[k]=fromFsVal(v.mapValue.fields[k])});return o;}return null;}
+  function renderClassification(d){
+    var r=publicRoot();
+    var meds=d.medicines||[];
+    var cols=3,perCol=Math.ceil(meds.length/cols);
+    var tables=[];
+    for(var c=0;c<cols;c++){var slice=meds.slice(c*perCol,(c+1)*perCol);if(!slice.length)break;var trows=slice.map(function(m,i){var gi=c*perCol+i;var bg=gi%2===0?'#fff':'#ddd';return '<tr style="background:'+bg+';print-color-adjust:exact;-webkit-print-color-adjust:exact"><td style="text-align:center;padding:3px 5px;font-size:8pt">'+(gi+1)+'</td><td style="padding:3px 6px;font-size:9pt"><b>'+esc2(m.name||m.generic||'')+'</b></td></tr>';}).join('');tables.push('<table style="border-collapse:collapse;flex:1;width:100%" border="1"><thead><tr style="background:#bbb;print-color-adjust:exact;-webkit-print-color-adjust:exact"><th style="width:26px;text-align:center;padding:3px 4px;font-size:8pt">#</th><th style="padding:3px 6px;font-size:9pt">'+(d.labelsEn||'Medications')+'</th></tr></thead><tbody>'+trows+'</tbody></table>');}
+    r.style.cssText='font-family:Arial,sans-serif;padding:16px;max-width:960px;margin:0 auto';
+    r.innerHTML=
+      '<div style="text-align:center;margin-bottom:12px;border-bottom:2px solid #333;padding-bottom:10px">'+
+        '<h1 style="font-size:16pt;margin:0 0 2px;font-weight:700;direction:rtl">'+esc2(d.labelsAr||'')+'</h1>'+
+        '<h2 style="font-size:13pt;margin:0 0 8px;font-weight:700">'+esc2(d.labelsEn||'')+'</h2>'+
+        '<p style="font-size:8.5pt;color:#444;margin:0">'+
+          '<b>Approval / الاعتماد:</b> '+esc2((d.approvedAt||'').slice(0,10))+
+          ' &nbsp;·&nbsp; <b>Effective / الفعالية:</b> '+esc2((d.effectiveAt||'').slice(0,10))+
+          ' &nbsp;·&nbsp; <b>Valid until / صالح حتى:</b> '+esc2((d.expiresAt||'').slice(0,10))+
+        '</p>'+
+      '</div>'+
+      '<div style="display:flex;gap:6px;align-items:flex-start">'+tables.join('')+'</div>'+
+      '<div style="text-align:center;margin-top:14px;font-size:8pt;color:#555;border-top:1px solid #ddd;padding-top:6px">'+
+        '✔ هذه القائمة معتمدة إلكترونياً ولا تحتاج إلى ختم أو توقيع يدوي. | This list is electronically approved and does not require a stamp or manual signature.'+
+      '</div>'+
+      '<p style="text-align:center;font-size:7.5pt;color:#aaa">Reference: '+esc2(d.referenceName||'—')+'</p>'+
+      '<div style="text-align:center;margin-top:10px"><button onclick="window.print()" style="padding:8px 20px;font-size:13px;cursor:pointer">🖨 Print / طباعة</button></div>';
+  }
+  async function liveClassification(type,tenant){
+    var r=publicRoot();r.innerHTML='<p style="text-align:center;padding:40px">Loading… / جاري التحميل</p>';
+    var API_KEY='AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU',PROJECT='floorstock-6ac2d';
+    var path=tenant?'tenants/'+encodeURIComponent(tenant)+'/public_classification/'+encodeURIComponent(type):'public_classification/'+encodeURIComponent(type);
+    var url='https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/'+path+'?key='+API_KEY;
+    try{
+      var res=await fetch(url);
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      var json=await res.json();
+      if(!json.fields){r.innerHTML='<p style="text-align:center;padding:40px">List not published yet. Ask the pharmacy to save the list once from the system. / القائمة لم تُنشر بعد.</p>';return;}
+      var fields={};Object.keys(json.fields).forEach(function(k){fields[k]=fromFsVal(json.fields[k]);});
+      renderClassification(fields);
+    }catch(e){r.innerHTML='<p style="text-align:center;padding:40px;color:red">Could not load the list: '+esc2(e.message)+'</p>';}
+  }
+
   var _publicLiveUnsub=null;
   function clearPublicLiveSubscriptions(){
     if(typeof _publicLiveUnsub==='function'){
@@ -30,6 +71,7 @@
   }
   async function startPublicLive(){
     var p=new URLSearchParams(location.search),v=p.get('view'),unsub=null;
+    if(v==='classification'&&p.get('type')){liveClassification(p.get('type'),p.get('tenant')||'');return true;}
     if(v!=='crash-cart-public'&&v!=='controlled-expiry'&&v!=='expiry')return false;
     clearPublicLiveSubscriptions();
     if(v==='crash-cart-public'&&!p.get('id')&&p.get('data')){var legacyRoot=publicRoot();legacyRoot.innerHTML='<h2>This legacy embedded Crash Cart QR is disabled.</h2><p>Print a new live QR from the authenticated system.</p>';return true}

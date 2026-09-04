@@ -77,12 +77,23 @@ function rcard(r,isp){
   var d=gd().find(function(x){return x.id===r.deptId});
   var sm={pending:'byl',fulfilled:'bgn',partial:'bbl'};
   var mayEditFulfillment=typeof window.canEditFulfillmentRequest==='function'&&window.canEditFulfillmentRequest(r);
-  return '<div class="card" data-request-id="'+esc(r.id)+'"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+((d&&d.name)||r.deptId)+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
+  var dName=(d&&d.name)||r.deptId;
+  if(!isp){
+    var dispInfo=r.status==='pending'?((r.items||[]).length+' items · Pending'):((r.items||[]).length+' items · '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed');
+    return '<div class="card" style="padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-height:0">'
+      +'<span class="badge '+(sm[r.status]||'bgr')+'" style="flex-shrink:0">'+r.status+'</span>'
+      +'<span style="font-size:12px;color:var(--tx2);white-space:nowrap;flex-shrink:0">'+fmtDateTime(r.created)+'</span>'
+      +'<span style="font-size:12px;color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+dispInfo+'</span>'
+      +'<div style="display:flex;gap:5px;flex-shrink:0">'
+      +(r.status==='fulfilled'&&!r.receivedAt?'<button class="btn bs bsm" data-request-action="receive" data-id="'+r.id+'">Receive</button>':'')
+      +'<button class="btn bg bsm" data-request-action="view" data-id="'+r.id+'">View</button></div>'
+      +'</div>';
+  }
+  return '<div class="card" data-request-id="'+esc(r.id)+'"><div class="ch"><div class="fl ic g8"><span style="font-weight:600">'+dName+'</span><span class="badge '+(sm[r.status]||'bgr')+'">'+r.status+'</span></div>'
     +'<div class="fl g8 ic" data-request-actions><span style="font-size:12px;color:var(--tx2)">'+fmtDateTime(r.created)+'</span>'
-    +(isp&&r.status==='pending'?'<button class="btn bp bsm" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button>':'')
+    +(r.status==='pending'?'<button class="btn bp bsm" data-request-action="fulfill" data-id="'+r.id+'">Fulfill</button>':'')
     +(mayEditFulfillment?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">✏ Edit Fulfillment</button>':'')
-    +(isp&&window.CU&&CU.master===true?'<button class="btn bd2c bsm" data-request-action="master-delete" data-id="'+r.id+'">Delete</button>':'')
-    +(!isp&&r.status==='fulfilled'&&!r.receivedAt?'<button class="btn bs bsm" data-request-action="receive" data-id="'+r.id+'">Receive & add expiry</button>':'')
+    +(window.CU&&CU.master===true?'<button class="btn bd2c bsm" data-request-action="master-delete" data-id="'+r.id+'">Delete</button>':'')
     +'<button class="btn bg bsm" data-request-action="view" data-id="'+r.id+'">View</button></div></div>'
     +'<div style="padding:9px 18px;font-size:12px;color:var(--tx2)">'+(r.items||[]).length+' items'
     +(r.status!=='pending'?' &middot; '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed on '+fmtDateTime(r.fulfilledAt):' &middot; Awaiting fulfillment')
@@ -165,11 +176,23 @@ function cntItems(){
   var e=el('rcnt');if(e)e.textContent=n;
 }
 // ── MY REQUESTS ──────────────────────────────────────────
+globalThis.MR_PERIOD='month';globalThis.MR_SEARCH='';
+function mrPeriodCutoff(p){var n=new Date();if(p==='month')return new Date(n.getFullYear(),n.getMonth(),1).getTime();if(p==='quarter')return new Date(n.getFullYear(),Math.floor(n.getMonth()/3)*3,1).getTime();if(p==='year')return new Date(n.getFullYear(),0,1).getTime();return 0;}
+window.mrSetPeriod=function(p,btn){MR_PERIOD=p;document.querySelectorAll('.mr-fbtn').forEach(function(b){b.classList.remove('on')});if(btn)btn.classList.add('on');renderMyReqs();};
+window.mrSetSearch=function(v){MR_SEARCH=v;renderMyReqs();};
 function renderMyReqs(){
   var scoped=typeof globalThis.scopeRequestsToDepartment==='function'?globalThis.scopeRequestsToDepartment(gr(),CU.deptId):gr().filter(function(r){return r.deptId===CU.deptId});
   var rs=scoped.slice().reverse();
-  el('mrlst').innerHTML=rs.length?rs.map(function(r){return rcard(r,false)}).join('')
-    :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests yet</div></div>';
+  var cut=mrPeriodCutoff(MR_PERIOD);if(cut>0)rs=rs.filter(function(r){return new Date(r.created||0).getTime()>=cut;});
+  if(MR_SEARCH){var q=MR_SEARCH.toLowerCase();rs=rs.filter(function(r){return r.status.toLowerCase().includes(q)||(r.items||[]).some(function(it){return String(it.medId||'').toLowerCase().includes(q);})});}
+  var periods=[['month','📅 هذا الشهر / This Month'],['quarter','📊 هذا الربع / This Quarter'],['year','🗓 هذه السنة / This Year'],['all','📋 الكل / All']];
+  var filterBar='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px">'
+    +'<span style="font-size:12px;color:var(--tx2);white-space:nowrap">Show:</span>'
+    +periods.map(function(pv){return '<button class="tbtn mr-fbtn'+(MR_PERIOD===pv[0]?' on':'')+'" onclick="mrSetPeriod(\''+pv[0]+'\',this)">'+pv[1]+'</button>';}).join('')
+    +'</div>';
+  var listHtml=rs.length?rs.map(function(r){return rcard(r,false)}).join('')
+    :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests / لا توجد طلبات</div></div>';
+  el('mrlst').innerHTML=filterBar+listHtml;
 
   if(typeof window.schedulePagePostRender==='function')window.schedulePagePostRender();
   if(typeof window.enhanceRequests==='function')window.enhanceRequests();

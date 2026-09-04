@@ -309,7 +309,7 @@ async function doLogout(){
 }
 function renderPageById(id){
   var renderer={
-    'pg-dash':renderDash,'pg-inv':renderInv,'pg-reqs':renderReqs,
+    'pg-dash':renderDash,'pg-inv':renderInv,'pg-pharm-inv':function(){if(typeof window.renderPharmInv==='function')window.renderPharmInv()},'pg-reqs':renderReqs,
     'pg-analytics':renderAn,'pg-users':renderUsers,'pg-newreq':renderReqForm,
     'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
     'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,

@@ -55,7 +55,8 @@ var PL_PAGES={
   'pg-myreqs':{label:'My Requests / طلباتي',roles:['department']},
   'pg-shelves':{label:'Shelves & Storage / الأرفف والتخزين',roles:['department']},
   'pg-notes-dept':{label:'Notes (Department) / ملاحظات القسم',roles:['department']},
-  'pg-deptprint':{label:'Print Drug List / طباعة قائمة الأدوية',roles:['department']}
+  'pg-deptprint':{label:'Print Drug List / طباعة قائمة الأدوية',roles:['department']},
+  'pg-pharm-inv':{label:'Pharmacy Inventory / مخزون الصيدلية',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff']}
 };
 
 function plIsMasterActual(){return typeof window.isMasterActual==='function'&&window.isMasterActual()}
@@ -94,6 +95,105 @@ function plPageCard(pageId){
   return '<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">'+esc(page.label)+'</span></div><div class="cb"><div class="cl-roles-grid">'+rolesHtml+'</div></div></div>';
 }
 
+// ── Pharmacy Inventory sub-permissions ────────────────────────────────────
+var PI_FEAT_PERMS_KEY='pharm_inv_feat_perms_v1';
+var PI_ROOM_ASSIGN_KEY='pharm_inv_room_assign_v1';
+var PI_FEAT_DEFAULTS={
+  editMeds:['pharmacy'],
+  editRooms:['pharmacy'],
+  viewReorder:['pharmacy','inpatient_supervisor'],
+  canPrint:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'],
+  editIntCls:['pharmacy']   // who can edit internal classifications on medicines
+};
+var PI_FEAT_ELIGIBLE={
+  editMeds:['pharmacy','inpatient_supervisor'],
+  editRooms:['pharmacy','inpatient_supervisor'],
+  viewReorder:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor'],
+  canPrint:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'],
+  editIntCls:['pharmacy','inpatient_supervisor']
+};
+var PI_FEAT_LABELS={
+  editMeds:'Edit / Add / Delete Medicines / تعديل وإضافة وحذف الأدوية',
+  editRooms:'Edit / Add / Delete Rooms & Cabinets / تعديل الغرف والدواليب',
+  viewReorder:'View Reorder List / عرض قائمة الطلب',
+  canPrint:'Print Inventory / طباعة المخزون',
+  editIntCls:'Edit Internal Classification (Status / Urgency / Dosage) / تعديل التصنيفات الداخلية'
+};
+function piGetFeatPerms(){
+  try{var p=window.S&&window.S.g&&window.S.g(PI_FEAT_PERMS_KEY);return Object.assign({},PI_FEAT_DEFAULTS,p||{})}catch(e){return Object.assign({},PI_FEAT_DEFAULTS)}
+}
+function piGetRoomAssign(){
+  try{var r=window.S&&window.S.g&&window.S.g(PI_ROOM_ASSIGN_KEY);return (r&&typeof r==='object')?r:{}}catch(e){return {}}
+}
+window.piGetFeatPerms=piGetFeatPerms;
+window.piGetRoomAssign=piGetRoomAssign;
+
+function plPharmInvCard(){
+  var perms=piGetFeatPerms();
+  var esc2=esc;
+  var featHtml=Object.keys(PI_FEAT_LABELS).map(function(feat){
+    var eligible=PI_FEAT_ELIGIBLE[feat]||[];
+    var current=perms[feat]||[];
+    var roleChks=eligible.map(function(r){
+      var checked=current.indexOf(r)>=0;
+      return '<label class="cl-role-chk"><input type="checkbox" data-pi-feat="'+esc2(feat)+'" data-pi-role="'+esc2(r)+'" '+(checked?'checked':'')+' onchange="plPharmFeatToggle(this)"><span>'+esc2(PL_ROLE_LABELS[r]||r)+'</span></label>';
+    }).join('');
+    return '<div style="margin-bottom:12px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">'+esc2(PI_FEAT_LABELS[feat])+'</div><div class="cl-roles-grid">'+roleChks+'</div></div>';
+  }).join('<hr style="margin:10px 0;border:0;border-top:1px solid var(--br)">');
+
+  // Room assignments (pharmacy_staff only)
+  var assign=piGetRoomAssign();
+  var rooms=typeof window.piRooms==='function'?window.piRooms():[];
+  var staffList=[];
+  try{var users=typeof window.getUsers==='function'?window.getUsers():[];staffList=users.filter(function(u){return u.role==='pharmacy_staff'})}catch(e){}
+  var assignHtml='';
+  if(!rooms.length){assignHtml='<div style="color:var(--tx2);font-size:13px">No rooms defined yet in Pharmacy Inventory.</div>'}
+  else{
+    var roomHeader='<div style="display:grid;grid-template-columns:200px '+rooms.map(function(){return '1fr'}).join(' ')+';gap:6px;align-items:center;margin-bottom:6px;font-size:12px;font-weight:600"><div>Email (pharmacy staff)</div>'+rooms.map(function(r){return '<div style="text-align:center">'+esc2(r.name)+'</div>'}).join('')+'</div>';
+    var staffRows=staffList.length?staffList.map(function(u){
+      var email=String(u.email||u.uid||'');
+      var userAssign=assign[email]||[];
+      var roomChks=rooms.map(function(r){
+        var chk=userAssign.indexOf(r.id)>=0;
+        return '<div style="text-align:center"><input type="checkbox" data-pi-email="'+esc2(email)+'" data-pi-room="'+esc2(r.id)+'" '+(chk?'checked':'')+' onchange="plRoomAssignToggle(this)"></div>';
+      }).join('');
+      return '<div style="display:grid;grid-template-columns:200px '+rooms.map(function(){return '1fr'}).join(' ')+';gap:6px;align-items:center;margin-bottom:4px;font-size:12px"><div style="word-break:break-all">'+esc2(email)+'</div>'+roomChks+'</div>';
+    }).join(''):('<div style="color:var(--tx2);font-size:13px">No pharmacy staff users found. / لا يوجد موظفو صيدلية.</div>');
+    assignHtml=roomHeader+staffRows;
+    assignHtml+='<div class="fhint" style="margin-top:8px">If no rooms are checked for a user, they see all rooms. Check specific rooms to restrict them. / إذا لم تُحدد غرف فالمستخدم يرى الكل — التحديد يعني التقييد.</div>';
+  }
+
+  return '<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">🏥 Pharmacy Inventory — Detailed Permissions / صلاحيات مخزون الصيدلية التفصيلية</span></div><div class="cb">'+
+    '<div style="margin-bottom:16px">'+featHtml+'</div>'+
+    '<div><div style="font-weight:600;font-size:13px;margin-bottom:8px">🏠 Room Access by Staff Email / تخصيص الغرف حسب الموظف</div>'+assignHtml+'</div>'+
+    '</div></div>';
+}
+
+window.plPharmFeatToggle=async function(cb){
+  if(!window.isMaster())return;
+  var feat=cb.dataset.piFeat;var role=cb.dataset.piRole;
+  var perms=Object.assign({},piGetFeatPerms());
+  var arr=(perms[feat]||[]).slice();
+  var i=arr.indexOf(role);
+  if(cb.checked&&i<0)arr.push(role);
+  else if(!cb.checked&&i>=0)arr.splice(i,1);
+  perms[feat]=arr;
+  try{await window.S.s(PI_FEAT_PERMS_KEY,perms);if(typeof toast==='function')toast('Updated ✓','succ')}
+  catch(e){if(typeof toast==='function')toast(String(e&&e.message||e),'err');cb.checked=!cb.checked}
+};
+window.plRoomAssignToggle=async function(cb){
+  if(!window.isMaster())return;
+  var email=cb.dataset.piEmail;var roomId=cb.dataset.piRoom;
+  var assign=Object.assign({},piGetRoomAssign());
+  var arr=(assign[email]||[]).slice();
+  var i=arr.indexOf(roomId);
+  if(cb.checked&&i<0)arr.push(roomId);
+  else if(!cb.checked&&i>=0)arr.splice(i,1);
+  assign[email]=arr;
+  try{await window.S.s(PI_ROOM_ASSIGN_KEY,assign);if(typeof toast==='function')toast('Updated ✓','succ')}
+  catch(e){if(typeof toast==='function')toast(String(e&&e.message||e),'err');cb.checked=!cb.checked}
+};
+
 window.renderPermissionsControl=function(){
   var host=E('pg-permissions-control');if(!host)return;
   if(!(typeof window.isMaster==='function'&&window.isMaster())){
@@ -103,7 +203,7 @@ window.renderPermissionsControl=function(){
   }
   var title='<div class="stitle">🔐 Permissions Control / التحكم بالصلاحيات</div><div class="ssub" style="margin:0">Hide an existing page from a role that already has access to it. This never grants a role access it doesn\'t already have. / إخفاء صفحة موجودة عن دور يملك صلاحيتها أصلًا فقط — لا يمنح أي صلاحية جديدة.</div>';
   var body=Object.keys(PL_PAGES).map(plPageCard).join('');
-  host.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div>'+title+'</div></div>'+body;
+  host.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div>'+title+'</div></div>'+body+plPharmInvCard();
   if(typeof window.injectUsersTabBar==='function')window.injectUsersTabBar('pg-permissions-control');
 };
 

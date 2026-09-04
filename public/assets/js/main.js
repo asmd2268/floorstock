@@ -73,6 +73,7 @@ import './modules/80-controlled-pharmacy-ui-redesign.js?v=R6.76.133';
 import './modules/81-public-live-view.js?v=R6.76.117';
 import './modules/82-classification-lists.js?v=R6.76.8';
 import './modules/83-permissions-control.js?v=R6.76.3';
+import './modules/84-pharmacy-inventory.js?v=R6.76.1';
 import './modules/84-pwa-push-notifications.js?v=R6.76.2';
 import { installDomBindings } from './core/dom-bindings.js?v=R6.76.19';
 import { installDebugTracer } from './core/debug-tracer.js?v=R6.76.19';
@@ -82,6 +83,8 @@ document.documentElement.dataset.asdhMissingActions = missingActions.join(',');
 if (missingActions.length) throw new Error(`Missing application actions: ${missingActions.join(', ')}`);
 installDomBindings();
 installDebugTracer();
+// Force Western numerals and LTR direction on date inputs regardless of device locale
+(function(){function fixDateInputLang(el){if(el.type!=='date')return;el.setAttribute('lang','en');el.setAttribute('dir','ltr');el.style.direction='ltr';}function fixAll(root){(root||document).querySelectorAll('input[type="date"]').forEach(fixDateInputLang);}fixAll();new MutationObserver(function(ms){ms.forEach(function(m){m.addedNodes.forEach(function(n){if(n.nodeType!==1)return;if(n.tagName==='INPUT')fixDateInputLang(n);else fixAll(n);});});}).observe(document.body,{childList:true,subtree:true});})();
 document.documentElement.dataset.asdhModules = 'ready';
 window.__asdhRuntime?.state && (window.__asdhRuntime.state.readyAt = Date.now());
 window.__asdhRuntime?.mark('application');

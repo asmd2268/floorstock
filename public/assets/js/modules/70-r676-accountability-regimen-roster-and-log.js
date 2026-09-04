@@ -330,17 +330,21 @@ window.acc3SubmitPlanUsage=async function(planId){
   });
   if(!medicines.length)return toast('Enter at least one medicine quantity. / أدخل كمية علاج واحد على الأقل.','err');
   var record={id:id('acc3pu'),planId:plan.id,planName:plan.name,deptId:String((window.CU&&CU.deptId)||''),deptName:deptName(String((window.CU&&CU.deptId)||'')),medicines:medicines,consumptionDate:dateVal,patientFile:fileVal,doctor:doctorVal,note:noteVal,status:'pending_pharmacy',submittedAt:now(),submittedBy:actor()};
-  // validate against effective balance (stored balance minus pending plan submissions for this dept/medicine)
-  var pendingMedQty={};rows(PLAN_USAGE_KEY).filter(function(u){return sameDept(u.deptId,record.deptId)&&(u.status==='pending_pharmacy'||u.status==='approved_waiting_receipt')}).forEach(function(u){(u.medicines||[]).forEach(function(m){var k=norm(m.medName||'');pendingMedQty[k]=(pendingMedQty[k]||0)+m.actualQty})});
   var balanceErrors=[];
   medicines.forEach(function(m){
     var a=rows('accountability_assignments_v2').find(function(x){return sameDept(x.deptId,record.deptId)&&norm(x.medName||'')===norm(m.medName||'')&&x.active!==false});
     if(!a)balanceErrors.push(m.medName+' (no active custody / لا توجد عهدة)');
-    else{var eff=Math.max(0,(a.balance||0)-(pendingMedQty[norm(m.medName||'')]||0));if(m.actualQty>eff)balanceErrors.push(m.medName+' (available: '+eff+', requested: '+m.actualQty+')');}
+    else if(m.actualQty>(a.balance||0))balanceErrors.push(m.medName+' (available: '+(a.balance||0)+', requested: '+m.actualQty+')');
   });
   if(balanceErrors.length)return toast('Insufficient balance for: '+balanceErrors.join('; ')+' / رصيد غير كافٍ.','err');
   var all=rows(PLAN_USAGE_KEY).concat([record]);
   try{
+    var assignList=rows('accountability_assignments_v2').map(function(x){return Object.assign({},x)});
+    medicines.forEach(function(m){
+      var a=assignList.find(function(x){return sameDept(x.deptId,record.deptId)&&norm(x.medName||'')===norm(m.medName||'')&&x.active!==false});
+      if(a){a.balance=Math.max(0,(a.balance||0)-m.actualQty);a.updatedAt=record.submittedAt}
+    });
+    await save('accountability_assignments_v2',assignList);
     await save(PLAN_USAGE_KEY,all);
     toast('Submitted to pharmacy ✓ / تم الرفع للصيدلية ✓');
     window.renderMedicationAccountability();
@@ -356,6 +360,14 @@ window.acc3CancelPlanUsage=async function(usageId,redirectTab){
   if(!ok)return;
   var newList=all.filter(function(x){return String(x.id)!==String(usageId)});
   try{
+    if(u.status==='pending_pharmacy'){
+      var assignList=rows('accountability_assignments_v2').map(function(x){return Object.assign({},x)});
+      (u.medicines||[]).forEach(function(m){
+        var a=assignList.find(function(x){return sameDept(x.deptId,u.deptId)&&norm(x.medName||'')===norm(m.medName||'')&&x.active!==false});
+        if(a){a.balance=Math.min(a.quota||0,((a.balance||0)+(m.actualQty||0)));a.updatedAt=now()}
+      });
+      await save('accountability_assignments_v2',assignList);
+    }
     await save(PLAN_USAGE_KEY,newList);
     toast('Deleted ✓ / تم الحذف ✓','succ');
     if(redirectTab&&window.ACC2_UI)window.ACC2_UI.deptTab=redirectTab;
@@ -376,15 +388,30 @@ window.acc3RejectPlanUsage=async function(usageId){
   var rec=all.find(function(u){return String(u.id)===String(usageId)});
   if(!rec)return;
   rec.status='rejected';rec.rejectedAt=now();rec.rejectedBy=actor();
-  try{await save(PLAN_USAGE_KEY,all);toast('Plan usage rejected.');window.renderMedicationAccountability()}catch(e){toast(String(e&&e.message||e).replace(/^FirebaseError:\s*/,''),'err')}
+  try{
+    var assignList=rows('accountability_assignments_v2').map(function(x){return Object.assign({},x)});
+    (rec.medicines||[]).forEach(function(m){
+      var a=assignList.find(function(x){return sameDept(x.deptId,rec.deptId)&&norm(x.medName||'')===norm(m.medName||'')&&x.active!==false});
+      if(a){a.balance=Math.min(a.quota||0,((a.balance||0)+(m.actualQty||0)));a.updatedAt=rec.rejectedAt}
+    });
+    await save('accountability_assignments_v2',assignList);
+    await save(PLAN_USAGE_KEY,all);toast('Plan usage rejected.');window.renderMedicationAccountability()
+  }catch(e){toast(String(e&&e.message||e).replace(/^FirebaseError:\s*/,''),'err')}
 };
 window.acc3RecordPlanReceipt=async function(usageId){
   if(!window.S||typeof window.S.s!=='function')return toast('Data store not ready.','err');
   var allUsages=rows(PLAN_USAGE_KEY).map(function(u){return Object.assign({},u)});
   var rec=allUsages.find(function(u){return String(u.id)===String(usageId)});
   if(!rec||rec.status!=='approved_waiting_receipt')return toast('This record is no longer awaiting receipt. / السجل ليس بانتظار الاستلام.','err');
-  rec.status='received_locked';rec.receivedAt=now();rec.receivedBy=actor();rec.locked=true;
+  var recAt=now();
+  rec.status='received_locked';rec.receivedAt=recAt;rec.receivedBy=actor();rec.locked=true;
   try{
+    var assignList=rows('accountability_assignments_v2').map(function(x){return Object.assign({},x)});
+    (rec.medicines||[]).forEach(function(m){
+      var a=assignList.find(function(x){return sameDept(x.deptId,rec.deptId)&&norm(x.medName||'')===norm(m.medName||'')&&x.active!==false});
+      if(a){a.balance=Math.min(a.quota||0,((a.balance||0)+(m.actualQty||0)));a.updatedAt=recAt}
+    });
+    await save('accountability_assignments_v2',assignList);
     await save(PLAN_USAGE_KEY,allUsages);
     toast('Receipt confirmed ✓ / تم تأكيد الاستلام ✓');
     window.renderMedicationAccountability();
@@ -465,12 +492,13 @@ function installPermissionUi(){
   }
 }
 function closeModal(){var modal=document.getElementById('r671-handover-modal');if(modal)modal.remove()}
-function showModal(data){closeModal();var pharmacyUrl=handoverUrl(data,'pharmacy',data.pharmacyToken),departmentUrl=handoverUrl(data,'department',data.departmentToken),modal=document.createElement('div');modal.id='r671-handover-modal';modal.className='modal-bg on';modal.innerHTML='<div class="modal" style="max-width:980px"><div class="mh"><div><span class="mt">Temporary dual QR handover / الاستلام والتسليم برمزي QR مؤقتين</span><div class="fhint">'+esc(data.departmentName)+' · expires '+esc(new Date(data.expiresAt).toLocaleString())+'</div></div><button class="xbtn" type="button" data-r671-close>✕</button></div><div class="alert-banner-y">Keep the two QR codes separate. The pharmacy scans the delivery QR and the department scans the receipt QR. Balance replenishment occurs only after both confirmations.<br>احتفظ بالرمزين منفصلين. تمسح الصيدلية رمز التسليم ويمسح القسم رمز الاستلام، ولا يُعوض الرصيد إلا بعد التأكيدين.</div><div class="r671-qr-grid"><section><h3>1. Pharmacy delivery<br>تسليم الصيدلية</h3>'+qrPanel(pharmacyUrl,'Pharmacy delivery QR')+'<textarea readonly>'+esc(pharmacyUrl)+'</textarea><button class="btn bg" type="button" data-r671-copy="'+esc(pharmacyUrl)+'">Copy pharmacy link / نسخ رابط الصيدلية</button></section><section><h3>2. Department receipt<br>استلام القسم</h3>'+qrPanel(departmentUrl,'Department receipt QR')+'<textarea readonly>'+esc(departmentUrl)+'</textarea><button class="btn bg" type="button" data-r671-copy="'+esc(departmentUrl)+'">Copy department link / نسخ رابط القسم</button></section></div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bp" type="button" data-r671-close>Done / تم</button></div></div>';document.body.appendChild(modal)}
+function showModal(data){closeModal();var pharmacyUrl=handoverUrl(data,'pharmacy',data.pharmacyToken),departmentUrl=handoverUrl(data,'department',data.departmentToken),modal=document.createElement('div');modal.id='r671-handover-modal';modal.className='modal-bg on';modal.innerHTML='<div class="modal" style="max-width:980px"><div class="mh"><div><span class="mt">Temporary dual QR handover / الاستلام والتسليم برمزي QR مؤقتين</span><div class="fhint">'+esc(data.departmentName)+' · expires '+esc(new Date(data.expiresAt).toLocaleString())+'</div></div><button class="xbtn" type="button" data-r671-close>✕</button></div><div class="alert-banner-y">Keep the two QR codes separate. The pharmacy scans the delivery QR and the department scans the receipt QR. Balance replenishment occurs only after both confirmations.<br>احتفظ بالرمزين منفصلين. تمسح الصيدلية رمز التسليم ويمسح القسم رمز الاستلام، ولا يُعوض الرصيد إلا بعد التأكيدين.</div><div class="r671-qr-grid"><section><h3>1. Pharmacy delivery<br>تسليم الصيدلية</h3>'+qrPanel(pharmacyUrl,'Pharmacy delivery QR')+'<textarea readonly>'+esc(pharmacyUrl)+'</textarea><a class="btn bg" href="'+esc(pharmacyUrl)+'" target="_blank" rel="noopener">Open pharmacy link / فتح رابط الصيدلية</a></section><section><h3>2. Department receipt<br>استلام القسم</h3>'+qrPanel(departmentUrl,'Department receipt QR')+'<textarea readonly>'+esc(departmentUrl)+'</textarea><a class="btn bg" href="'+esc(departmentUrl)+'" target="_blank" rel="noopener">Open department link / فتح رابط القسم</a></section></div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bp" type="button" data-r671-close>Done / تم</button></div></div>';document.body.appendChild(modal)}
+async function reissueHandoverOne(usageId,deptId,button){if(button){button.disabled=true;button.textContent='…'}try{if(typeof window.fsCallFunction!=='function')throw new Error('Secure service is still loading. Please retry.');var data=await window.fsCallFunction('reissueAccountabilityHandover',{usageIds:[usageId],expiresInMinutes:30});if(!data||!data.sessionId)throw new Error('Incomplete response from service.');showModal(data);if(window.toast)toast('QR codes reissued ✓ / تم إعادة إصدار الرموز ✓','succ');if(typeof window.renderMedicationAccountability==='function')setTimeout(window.renderMedicationAccountability,700)}catch(error){var message=String(error&&error.message||error).replace(/^FirebaseError:\s*/,'');if(window.toast)toast(message,'err')}finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent='Reissue / إعادة إصدار'}}}
 async function createHandover(deptId,button){var ids=Array.from(document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(deptId))+'"]:checked:not(:disabled)')).map(function(x){return x.value});if(!ids.length)return window.toast&&toast('Select one or more approved records first. / اختر سجلًا معتمدًا واحدًا على الأقل.','err');if(button){button.disabled=true;button.textContent='Creating QR… / جاري إنشاء الرموز'}try{if(!(window.fsHasCapability&&window.fsHasCapability('accountability.handover.create')))throw new Error('This role cannot create accountability handovers.');if(typeof window.fsCallFunction!=='function')throw new Error('Secure service is still loading. Please retry.');var data=await window.fsCallFunction('createAccountabilityHandover',{usageIds:ids,expiresInMinutes:30});if(!data||!data.sessionId)throw new Error('The QR handover service returned an incomplete response.');showModal(data);if(window.toast)toast('Temporary pharmacy and department QR codes created ✓','succ');if(typeof window.renderMedicationAccountability==='function')setTimeout(window.renderMedicationAccountability,700)}catch(error){console.error('QR handover creation failed',error);var message=String(error&&error.message||error).replace(/^FirebaseError:\s*/,'');if(window.toast)toast(message,'err')}finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent='Create temporary dual QR / إنشاء رمزي QR مؤقتين'}}}
 setTimeout(installPermissionUi,0);
 window.__startAppExtensions=window.__startAppExtensions||[];
 window.__startAppExtensions.push(function(){setTimeout(installPermissionUi,500)});
-document.addEventListener('click',function(event){var action=event.target.closest('[data-acc2-qr-action]');if(action){var dept=action.getAttribute('data-dept'),kind=action.getAttribute('data-acc2-qr-action');if(kind==='select'){document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(dept))+'"]:not(:disabled)').forEach(function(x){x.checked=true})}else if(kind==='create')createHandover(dept,action);return}if(event.target.closest('[data-r671-close]')){closeModal();return}var copy=event.target.closest('[data-r671-copy]');if(copy){var value=copy.getAttribute('data-r671-copy')||'';navigator.clipboard&&navigator.clipboard.writeText(value).then(function(){window.toast&&toast('Link copied ✓','succ')}).catch(function(){window.prompt('Copy link',value)})}},true);
+document.addEventListener('click',function(event){var action=event.target.closest('[data-acc2-qr-action]');if(action){var dept=action.getAttribute('data-dept'),kind=action.getAttribute('data-acc2-qr-action');if(kind==='select'){document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(dept))+'"]:not(:disabled)').forEach(function(x){x.checked=true})}else if(kind==='create')createHandover(dept,action);else if(kind==='reissue-one'){var usageId=action.getAttribute('data-usage-id');if(usageId)reissueHandoverOne(usageId,dept,action)}return}if(event.target.closest('[data-r671-close]')){closeModal();return}},true);
 })();
 
 export {};
