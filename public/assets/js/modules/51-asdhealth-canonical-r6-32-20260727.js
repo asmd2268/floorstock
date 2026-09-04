@@ -910,7 +910,7 @@ th{font-weight:900}
       '<div class="titles">'+
         '<h1>Controlled and Restricted Medicines List</h1>'+
         '<h2>قائمة الأدوية المخدرة والمقيدة</h2>'+
-        '<h3>My controlled list / عهدتي — '+fsR5Esc(name)+'</h3>'+
+        '<h3>'+fsR5Esc(name)+' Department Controlled List</h3>'+
       '</div>'+
       '<img class="qr asd-qr-image" src="'+fsR5Esc(qr)+'" alt="Live controlled list QR">'+
     '</header>'+
@@ -1090,7 +1090,7 @@ window.addEventListener('load',start,{once:true});
 
   return '<!doctype html><html><head><meta charset="utf-8">'+
     '<meta name="viewport" content="width=device-width,initial-scale=1">'+
-    '<title>'+fsR5Esc(name)+' — My controlled list</title>'+
+    '<title>'+fsR5Esc(name)+' Department Controlled List</title>'+
     '<style>'+css+'</style></head><body>'+
     '<main class="sheet">'+layoutHtml('landscape')+layoutHtml('portrait')+'</main>'+
     '<script>'+runtime+'<\/script></body></html>';
