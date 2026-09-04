@@ -337,7 +337,7 @@ var ALLOWED=new Set((
   'piPrintRoomChange piPrintCabinet piPrintReorder piDoPrint piPrintRoomDoor '+
   'piDoImport piDownloadTemplate piCloseModal piAddTxnRow piSubmitTxnRows piDeleteTxn piPurgeTxns piSavePurgeDays piHistClear piPdfScan '+
   'ccTabCarts ccTabOps usrTabPerms ccOpsTab '+
-  'acc2AddExpiryRow acc2ShowExpirySection acc2RemoveExpiryRow acc2SaveExpiryBatches acc2MedSearch '+
+  'saveDeptPrintNames acc2AddExpiryRow acc2ShowExpirySection acc2RemoveExpiryRow acc2SaveExpiryBatches acc2MedSearch '+
   'acc2CancelUsage acc3CancelPlanUsage acc3SavePlanExpiry acc2SetCustFilter acc2ResetBalance dispSlotAllToggle '+
   'parseFloat isNaN'
 ).split(/\s+/).filter(Boolean));

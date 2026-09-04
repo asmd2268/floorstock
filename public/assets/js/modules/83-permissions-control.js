@@ -250,3 +250,97 @@ publishLegacy("83-permissions-control.js", {
 })();
 
 export {};
+
+/* Arabic department names used in printed headings.
+ *
+ * These were a hardcoded lookup, which meant a department added later printed
+ * untranslated until someone edited the source. The mapping is master-editable
+ * state instead, keyed by department id (stable across renames), and the built-in
+ * table below only seeds departments that have no saved entry yet - matched on the
+ * English name because the ids of an existing installation are not known here.
+ *
+ * Resolution order: saved state by id -> seed by English name -> no Arabic line.
+ */
+(function(){
+  'use strict';
+  var KEY='department_print_names_v1';
+  // esc is declared inside an earlier IIFE in this file and is not in scope here.
+  var esc=window.fsEsc||function(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  })};
+  var SEED_BY_NAME={
+    'emergency':'الطوارئ',
+    'icu':'العناية المركزة',
+    'nicu':'الحضانة',
+    'male medical':'باطنية الرجال',
+    'female surgical':'باطنية النساء'
+  };
+  function norm(v){return String(v==null?'':v).trim().toLowerCase().replace(/\s+/g,' ')}
+  function saved(){
+    var v=(typeof S!=='undefined'&&S.g&&S.g(KEY))||{};
+    return (v&&typeof v==='object'&&!Array.isArray(v))?v:{};
+  }
+  function depts(){return (typeof gd==='function'&&gd())||[]}
+
+  // Public resolver used by the print builders.
+  window.fsDeptPrintNameAr=function(deptId,englishName){
+    var id=String(deptId==null?'':deptId).trim();
+    var map=saved();
+    if(id&&typeof map[id]==='string'&&map[id].trim())return map[id].trim();
+    var name=englishName;
+    if(!name){
+      var d=depts().find(function(x){return String(x.id)===id});
+      name=d&&d.name;
+    }
+    return SEED_BY_NAME[norm(name)]||'';
+  };
+
+  function isMaster(){return typeof window.isMasterActual==='function'&&window.isMasterActual()}
+
+  window.renderDeptPrintNames=function(){
+    var host=document.getElementById('dept-print-names-body');
+    var card=document.getElementById('dept-print-names-card');
+    if(!host||!card)return;
+    if(!isMaster()){card.style.display='none';return}
+    card.style.display='';
+    var list=depts();
+    if(!list.length){host.innerHTML='<div class="fhint" style="padding:12px">No departments yet. / لا توجد أقسام.</div>';return}
+    var map=saved();
+    host.innerHTML=list.map(function(d){
+      var id=String(d.id);
+      var current=typeof map[id]==='string'?map[id]:'';
+      // Show the seeded value as a placeholder so it is clear what will print
+      // when the field is left empty.
+      var seed=SEED_BY_NAME[norm(d.name)]||'';
+      return '<div class="fl g8 ic" style="padding:7px 12px;border-bottom:1px solid var(--bd)">'
+        +'<span style="flex:1;min-width:120px"><b>'+esc(d.name||id)+'</b>'
+        +'<div class="fhint" style="font-family:var(--mono)">'+esc(id)+'</div></span>'
+        +'<input data-dept-ar="'+esc(id)+'" value="'+esc(current)+'" placeholder="'+esc(seed||'اسم عربي للطباعة')+'" dir="rtl" style="flex:1;min-width:150px;margin:0">'
+        +'</div>';
+    }).join('')
+      +'<div style="padding:10px 12px"><button class="btn bp bsm" type="button" onclick="saveDeptPrintNames()">💾 Save / حفظ</button></div>';
+  };
+
+  window.saveDeptPrintNames=async function(){
+    if(!isMaster())return;
+    var next={};
+    document.querySelectorAll('[data-dept-ar]').forEach(function(input){
+      var v=String(input.value||'').trim();
+      // Store only real values so an untouched field keeps falling back to the seed.
+      if(v)next[input.getAttribute('data-dept-ar')]=v;
+    });
+    try{
+      await S.s(KEY,next);
+      if(typeof toast==='function')toast('Arabic print names saved ✓ / تم حفظ الأسماء العربية ✓','succ');
+    }catch(error){
+      console.error('Saving Arabic print names failed',error);
+      if(typeof toast==='function')toast(String(error&&error.message||error),'err');
+    }
+  };
+
+  // The card lives on the Users page; render it whenever that page is shown.
+  window.__showPgAfterExtensions=window.__showPgAfterExtensions||[];
+  window.__showPgAfterExtensions.push(function(id){
+    if(id==='pg-users')window.renderDeptPrintNames();
+  });
+})();

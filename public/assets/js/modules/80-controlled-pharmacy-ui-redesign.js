@@ -336,39 +336,55 @@ function patchCtlTabs(){
    module 83 uses, and the nav entry points at the first tab that survives it, so
    hiding one page still leaves the other reachable and hiding both removes the
    entry entirely. showPg's own guard remains the actual enforcement. */
-var DEPT_DOC_TABS=[
-  ['pg-deptprint','\uD83D\uDDA8 Print Drug List / طباعة القائمة'],
-  ['pg-controlled','\uD83D\uDD12 Controlled custody / العهدة المخدرة']
+/* Department nav groups: pages that share one nav entry and switch via a tab bar
+   inside the page. Generalised from the single Print/Custody pair so a second
+   group did not need a parallel copy of the same visibility and injection logic. */
+var DEPT_NAV_GROUPS=[
+  {key:'requests',label:'\uD83D\uDCCB طلباتي / My Requests',tabs:[
+    ['pg-newreq','\u2795 New Request / طلب جديد'],
+    ['pg-myreqs','\uD83D\uDCCB My Requests / طلباتي']
+  ]},
+  {key:'lists',label:'\uD83D\uDCCB Lists & Custody / القوائم والعهدة',tabs:[
+    ['pg-deptprint','\uD83D\uDDA8 Print Drug List / طباعة القائمة'],
+    ['pg-controlled','\uD83D\uDD12 Controlled custody / العهدة المخدرة']
+  ]}
 ];
-/* The grouping is department-only. plIsHiddenForCurrentRole reports explicit
-   master overrides, not role eligibility, so without this gate a
-   controlled_pharmacy or warehouse session opening Controlled custody would be
-   offered a Print Drug List tab - a department page - and showPg's guard would
-   allow it, since that page is not "hidden" for them, merely not theirs. */
-function deptDocIsDepartment(){
+/* Grouping is department-only. plIsHiddenForCurrentRole reports explicit master
+   overrides, not role eligibility, so without this gate a controlled_pharmacy or
+   warehouse session opening Controlled custody would be offered a Print Drug List
+   tab - a department page - and showPg's guard would allow it, since that page is
+   not "hidden" for them, merely not theirs. */
+function deptNavIsDepartment(){
   var r=window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&window.CU.role)||'');
   return r==='department';
 }
-function deptDocTabsVisible(){
-  if(!deptDocIsDepartment())return [];
-  return DEPT_DOC_TABS.filter(function(t){
+function deptNavVisibleTabs(group){
+  if(!deptNavIsDepartment())return [];
+  return group.tabs.filter(function(t){
     return !(typeof window.plIsHiddenForCurrentRole==='function'&&window.plIsHiddenForCurrentRole(t[0]));
   });
 }
-/* buildNav is defined in a later IIFE in this same file and cannot see this
-   scope, so the helper is published rather than referenced directly. */
-window.fsDeptDocTabsVisible=deptDocTabsVisible;
-function injectDeptDocTabBar(pageId){
-  var tabs=deptDocTabsVisible();
-  // With one tab left there is nothing to switch between, so no bar is shown.
-  if(tabs.length<2)return;
-  if(!tabs.some(function(t){return t[0]===pageId}))return;
+/* Returns [{group, tabs}] for groups with at least one reachable page, in nav order.
+   buildNav lives in a later IIFE in this same file and cannot see this scope, so
+   this is published rather than referenced directly - the blank-page bug. */
+function deptNavGroups(){
+  return DEPT_NAV_GROUPS.map(function(g){return {group:g,tabs:deptNavVisibleTabs(g)}})
+    .filter(function(x){return x.tabs.length>0});
+}
+window.fsDeptNavGroups=deptNavGroups;
+function injectDeptNavTabBar(pageId){
+  var match=null;
+  deptNavGroups().forEach(function(x){
+    if(x.tabs.some(function(t){return t[0]===pageId}))match=x;
+  });
+  // Nothing to switch between when a group is down to one reachable page.
+  if(!match||match.tabs.length<2)return;
   var pg=document.getElementById(pageId);if(!pg)return;
   var old=pg.querySelector('.dept-doc-tab-bar');if(old)old.remove();
   var bar=document.createElement('div');
   bar.className='dept-doc-tab-bar';
   bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
-  tabs.forEach(function(t){
+  match.tabs.forEach(function(t){
     var on=t[0]===pageId;
     var b=document.createElement('button');
     b.type='button';
@@ -380,7 +396,7 @@ function injectDeptDocTabBar(pageId){
   pg.insertBefore(bar,pg.firstChild);
 }
 window.__showPgAfterExtensions=window.__showPgAfterExtensions||[];
-window.__showPgAfterExtensions.push(function(id){injectDeptDocTabBar(id)});
+window.__showPgAfterExtensions.push(function(id){injectDeptNavTabBar(id)});
 
 function syncHeroBtns(){
   var row=document.getElementById('ctl-hero-btn-row');if(!row)return;
@@ -807,20 +823,24 @@ window.ctlCmpPrint=function(){
     else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines']];
     else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody']];
     else{
-      items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات']];
-      // One entry for the pair; if only one survives the visibility check it keeps
-      // its own label so the grouping never hides what is actually reachable.
-      // An empty list is a real answer (both hidden), so a missing helper must not
-      // look the same as one - fall back to listing both pages separately rather
-      // than silently dropping the department's access to either.
-      if(typeof window.fsDeptDocTabsVisible!=='function'){
-        items.push(['pg-deptprint','🖨 Print Drug List / طباعة القائمة']);
-        items.push(['pg-controlled','🔒 Controlled custody / العهدة المخدرة']);
-      }else{
-        var docTabs=window.fsDeptDocTabsVisible();
-        if(docTabs.length===1)items.push([docTabs[0][0],docTabs[0][1]]);
-        else if(docTabs.length>1)items.push([docTabs[0][0],'📋 Lists & Custody / القوائم والعهدة']);
-      }
+      items=[];
+      var navGroups=typeof window.fsDeptNavGroups==='function'?window.fsDeptNavGroups():null;
+      // A group collapses to one nav entry pointing at its first reachable page.
+      // With a single reachable page it keeps that page's own label, so grouping
+      // never hides what is actually available. If the helper is missing the
+      // group's pages are listed separately rather than dropped - an empty result
+      // is a legitimate answer (all hidden) and must not look like a failure.
+      var pushGroup=function(key,fallback){
+        if(!navGroups){fallback.forEach(function(f){items.push(f)});return}
+        var g=null;navGroups.forEach(function(x){if(x.group.key===key)g=x});
+        if(!g)return;
+        items.push(g.tabs.length===1?[g.tabs[0][0],g.tabs[0][1]]:[g.tabs[0][0],g.group.label]);
+      };
+      pushGroup('requests',[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي']]);
+      items.push(['pg-shelves','📦 Shelves / أرفف']);
+      items.push(['pg-crashcart','🚑 Crash Cart']);
+      items.push(['pg-notes-dept','📝 Notes / ملاحظات']);
+      pushGroup('lists',[['pg-deptprint','🖨 Print Drug List / طباعة القائمة'],['pg-controlled','🔒 Controlled custody / العهدة المخدرة']]);
       items.push(['pg-med-accountability','🧾 Medication documentation']);
     }
     // pg-classification-lists is a tab inside pg-inv — no nav button needed
