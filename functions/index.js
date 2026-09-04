@@ -571,7 +571,9 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       };
       writeState(tx, usageRef, rows.concat([created]));
     });
-    return { ok: true, id: created && created.id };
+    // Returned so the caller can mirror the committed row into its local cache
+    // immediately instead of waiting for the listener round trip.
+    return { ok: true, id: created && created.id, row: created };
   }
 
   if (action === 'cancelUsage') {

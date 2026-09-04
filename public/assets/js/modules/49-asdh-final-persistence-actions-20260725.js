@@ -334,8 +334,14 @@ function indicator(){
   el.classList.toggle('on',dirty);return el
 }
 function markDirty(){if(!active()||saving)return;dirty=true;indicator()}
-document.addEventListener('input',function(e){if(e.target&&e.target.closest&&e.target.closest('#r17-accountability-root'))markDirty()},true);
-document.addEventListener('change',function(e){if(e.target&&e.target.closest&&e.target.closest('#r17-accountability-root'))markDirty()},true);
+/* Search boxes, filters and tab pickers live inside the same root as the entry
+   forms, but they hold no unsaved data - typing in the medicine search used to
+   raise the dirty flag and freeze every background refresh for the rest of the
+   session, so an approval elsewhere never reached the page. Controls marked as
+   view-only are ignored; anything unmarked is still treated as form input. */
+function isViewControl(node){return !!(node&&node.closest&&node.closest('[data-acc2-view-control]'))}
+document.addEventListener('input',function(e){if(e.target&&e.target.closest&&e.target.closest('#r17-accountability-root')&&!isViewControl(e.target))markDirty()},true);
+document.addEventListener('change',function(e){if(e.target&&e.target.closest&&e.target.closest('#r17-accountability-root')&&!isViewControl(e.target))markDirty()},true);
 var originalRefresh=window.refreshCurrentPage;
 if(typeof originalRefresh==='function')window.refreshCurrentPage=refreshCurrentPage=function(){
   if(active()&&dirty&&!saving){indicator();return false}
