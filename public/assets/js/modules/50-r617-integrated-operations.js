@@ -284,7 +284,16 @@ function acc2Regimens(){return acc2Array(ACC2_REGIMENS_KEY)}
 function acc2EffectiveMaster(){return master()&&!window.MASTER_EFFECTIVE}
 // Returns true for roles that must route accountability writes through the
 // accountabilityMutation CF so blockedDepts claims are enforced server-side.
-function acc2UsesCF(){var r=role();return r==='pharmacy_staff'||r==='inpatient_supervisor'||r==='inpatient_pharmacy_supervisor'}
+/* Every role that can mutate accountability goes through the callable. It used to
+   be only the roles Firestore rules restrict; pharmacy and master wrote directly,
+   which meant balance and status were two separate document writes with no
+   transaction between them, so simultaneous decisions could overwrite each other.
+   The callable applies both inside one transaction. */
+function acc2UsesCF(){
+  var r=role();
+  return r==='pharmacy_staff'||r==='inpatient_supervisor'||r==='inpatient_pharmacy_supervisor'
+    ||r==='pharmacy'||r==='pharmacy_director'||r==='master';
+}
 /* The callable commits the write server-side, so unlike the old S.s() path it
    leaves the local cache untouched until the onSnapshot listener echoes the
    change back. Two things depended on that cache moving immediately: the page

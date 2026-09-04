@@ -469,7 +469,17 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   const data = request.data || {};
   const action = String(data.action || '');
-  const restrictedRoles = new Set(['pharmacy_staff', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']);
+  /* Every accountability mutation runs through this callable, not only the roles
+     that Firestore rules restrict. The direct client path wrote balance and status
+     as two separate documents with no transaction, so two people deciding at once
+     could lose one another's update; the transactions here remove that for
+     pharmacy and master too. The per-action checks below are unchanged, so
+     widening who may call this does not widen what any of them may do. */
+  const restrictedRoles = new Set([
+    'pharmacy_staff', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor',
+    'pharmacy', 'pharmacy_director', 'master'
+  ]);
+  const callerIsMaster = caller.master === true;
   // submitUsage is the department's own consumption entry. It is the one action
   // departments may call: writing accountability_usage_v2 straight from the
   // browser replaces the whole document, so two departments submitting at the
@@ -477,8 +487,8 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
   // client JS — a crafted direct write could exceed the custody balance. Both
   // are enforced here inside a transaction instead.
   const isDepartmentAction = (action === 'submitUsage' || action === 'cancelUsage') && caller.role === 'department';
-  if (!isDepartmentAction && !restrictedRoles.has(caller.role)) {
-    throw new HttpsError('permission-denied', 'This function is only available to pharmacy_staff and inpatient_supervisor roles.');
+  if (!isDepartmentAction && !restrictedRoles.has(caller.role) && !callerIsMaster) {
+    throw new HttpsError('permission-denied', 'This role cannot perform accountability mutations.');
   }
   await requireWritableSubscription(caller);
 
@@ -758,7 +768,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
   if (action === 'resetBalance') {
     const { id } = data;
     if (!id) throw new HttpsError('invalid-argument', 'id is required.');
-    if (!isMaster(caller)) throw new HttpsError('permission-denied', 'Master only.');
+    requireMaster(caller);
     await db.runTransaction(async (tx) => {
       const snap = await tx.get(assignmentsRef);
       const list = stateArray(snap).map((x) => ({ ...x }));
