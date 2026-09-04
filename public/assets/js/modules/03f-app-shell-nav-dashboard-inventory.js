@@ -1,9 +1,9 @@
-import { publishLegacy } from '../core/legacy-registry.js';
-import { normalizeRole } from '../core/role-capabilities.js?v=1';
-import { isSupportedLoginRole } from '../core/auth-role-policy.js';
-import { withTimeout } from '../core/promise-timeout.js';
-import { fsStateRestBase } from '../core/firestore-rest-paths.js';
-import { FIREBASE_CONFIG } from '../core/firebase-config.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { normalizeRole } from '../core/role-capabilities.js?v=95e63d4c90';
+import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
+import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
+import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=7975fe045f';
+import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=c13c38051a';
 
 // ── APP SHELL: STATE URLS / THEME / AUTO-CATEGORY / AUTH / NAV / DASHBOARD / INVENTORY ──
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module

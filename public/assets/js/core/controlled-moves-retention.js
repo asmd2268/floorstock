@@ -1,4 +1,4 @@
-import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js';
+import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 
 /* Controlled/narcotic movement log retention: controlled_moves is a single
    ever-growing Firestore array — the exact same unbounded-document risk

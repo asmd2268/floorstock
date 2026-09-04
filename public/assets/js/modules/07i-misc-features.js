@@ -1,5 +1,5 @@
-import { publishLegacy } from '../core/legacy-registry.js';
-import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js?v=005b407b10';
 
 // ── EXPIRY-STUB / ORDER RETENTION / PRINT / PUBLIC VIEW / NOTES /
 // CATEGORIES / BULK ACTIONS / SCHEDULE-STUB HELPERS ────────────────────

@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 /* Early global aliases: prevent ReferenceError before Firebase initialization. */
 globalThis.FB_APP = window.FB_APP||null;

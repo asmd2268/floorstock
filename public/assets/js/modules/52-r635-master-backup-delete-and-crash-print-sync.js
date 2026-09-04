@@ -175,7 +175,7 @@ window.refreshCrashOpeningLogUi=ensureUI;
 
 
 // --- Merged from 66-r676-crash-report-ordering-notes-fixes.js (Phase 6 consolidation) ---
-import { formatOrderingUnavailable } from '../core/bilingual-ordering-message.js';
+import { formatOrderingUnavailable } from '../core/bilingual-ordering-message.js?v=e1cd75b258';
 
 (function(){
 'use strict';

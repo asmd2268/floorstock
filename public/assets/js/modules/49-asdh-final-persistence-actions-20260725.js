@@ -357,7 +357,7 @@ window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDef
 
 
 // --- Merged from 63-r668-request-lock-drafts-and-session-defaults.js (Phase 6 consolidation) ---
-import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js';
+import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=df8094448c';
 
 (function(){
 'use strict';

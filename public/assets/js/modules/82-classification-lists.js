@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 // ── CLASSIFICATION LISTS (High Alert / Hazard / LASA) ────────────────────
 // Master builds one authoritative, printable list per classification by

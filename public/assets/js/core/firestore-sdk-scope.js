@@ -1,4 +1,4 @@
-import { tenantIdFromProfile } from './firestore-scope.js';
+import { tenantIdFromProfile } from './firestore-scope.js?v=73cbf4aa5d';
 
 export function stateCollectionRef(db, profile) {
   const tenantId = tenantIdFromProfile(profile);

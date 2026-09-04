@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 // ── INVENTORY IMPORT (Excel / CSV / paste) ──────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module

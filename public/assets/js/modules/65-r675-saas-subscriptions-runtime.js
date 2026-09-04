@@ -1,4 +1,4 @@
-import { SUBSCRIPTION_PLANS, planFor, subscriptionIsWritable } from '../core/subscription-plans.js';
+import { SUBSCRIPTION_PLANS, planFor, subscriptionIsWritable } from '../core/subscription-plans.js?v=c2e8c1c94f';
 
 (function(){
 'use strict';

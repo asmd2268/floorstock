@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 // ── PERMISSIONS CONTROL (page visibility per role) ────────────────────────
 // Master-only page listing every existing page × every role that already

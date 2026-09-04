@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 /* ASDHealth FloorStock — R6.32 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
@@ -186,7 +186,7 @@ function fsR5OrdersPrintData(orders){
 function fsR5OrdersHtml(orders){
   var payload={rows:fsR5OrdersPrintData(orders)};
   var runtimeUrl='';
-  try{runtimeUrl=new URL('./assets/js/print-orders-runtime.js?v=R6.75.0',window.location.href).href;}catch(e){runtimeUrl='/assets/js/print-orders-runtime.js?v=R6.75.0';}
+  try{runtimeUrl=new URL('./assets/js/print-orders-runtime.js?v=22c77ac4dc',window.location.href).href;}catch(e){runtimeUrl='/assets/js/print-orders-runtime.js?v=22c77ac4dc';}
   return '<!doctype html><html><head><meta charset="utf-8">'+
     '<meta name="viewport" content="width=device-width,initial-scale=1">'+
     '<title>Print Orders — Preparing PDF</title>'+

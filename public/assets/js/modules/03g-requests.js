@@ -1,9 +1,9 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
   fulfillmentEditReason,
-} from '../core/fulfillment-edit-policy.js';
+} from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
 
 // ── REQUESTS / DEPT REQUEST FORM / MY REQUESTS ──────────────────────────
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module

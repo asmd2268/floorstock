@@ -1,21 +1,21 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=1';
-import { isSupportedLoginRole } from '../core/auth-role-policy.js';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=95e63d4c90';
+import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
   fulfillmentEditReason,
-} from '../core/fulfillment-edit-policy.js';
-import { loadScriptOnce } from '../core/script-loader.js';
-import { debounce } from '../core/timing.js';
-import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js';
-import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js';
-import { withTimeout } from '../core/promise-timeout.js';
-import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js';
-import { tenantIdFromProfile, stateCollectionPath, crashReportsCollectionPath } from '../core/firestore-scope.js?v=1';
-import { stateCollectionRef, crashReportsCollectionRef } from '../core/firestore-sdk-scope.js?v=1';
-import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js';
+} from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
+import { loadScriptOnce } from '../core/script-loader.js?v=f15babaf45';
+import { debounce } from '../core/timing.js?v=6b9368dd75';
+import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=f014fcad89';
+import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
+import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
+import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=7975fe045f';
+import { tenantIdFromProfile, stateCollectionPath, crashReportsCollectionPath } from '../core/firestore-scope.js?v=73cbf4aa5d';
+import { stateCollectionRef, crashReportsCollectionRef } from '../core/firestore-sdk-scope.js?v=460959c806';
+import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
 // Firebase configuration is provided by the early Core firebase-config module.

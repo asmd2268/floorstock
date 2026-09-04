@@ -1,4 +1,4 @@
-import { canEditRequestWhileWindowIsOpen, requestWindowDeadlineFromGrid } from '../core/request-edit-policy.js';
+import { canEditRequestWhileWindowIsOpen, requestWindowDeadlineFromGrid } from '../core/request-edit-policy.js?v=5da8fb0f2c';
 
 (function(){
 'use strict';

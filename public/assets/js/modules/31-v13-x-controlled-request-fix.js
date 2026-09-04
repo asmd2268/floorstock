@@ -229,7 +229,7 @@ window.ensureControlledBulkReplacementButton=addBulkReplacement;
 
 
 // --- Merged from 08-controlled-shared-list-filters.js (Phase 6 consolidation) ---
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 /* ── Controlled medicines organised shared lists + role-specific filters ── */
 function ctlWarehouseQtyForFilter(w){return ctlNum((w||{}).system)+ctlNum((w||{}).outside)}

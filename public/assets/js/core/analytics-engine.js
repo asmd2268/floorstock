@@ -3,7 +3,7 @@
  * Single source of truth for all analytics computation.
  * Pure functions — no DOM, no side effects.
  */
-import { buildAnalyticsMedicineIndex, resolveAnalyticsMedicine } from './analytics-medicine-resolver.js';
+import { buildAnalyticsMedicineIndex, resolveAnalyticsMedicine } from './analytics-medicine-resolver.js?v=28ce20a94d';
 
 export function allRows() {
   // request_analytics_archive: legacy full-detail archive (pre-existing data

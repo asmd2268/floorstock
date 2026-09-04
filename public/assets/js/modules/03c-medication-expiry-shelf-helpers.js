@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 // ── MEDICATION / EXPIRY / SHELF CRUD HELPERS ────────────────────────────
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module

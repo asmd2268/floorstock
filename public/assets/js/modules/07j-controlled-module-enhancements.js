@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, PDF receipt import,
 // batch editor v6, dispensing, analytics, print suite, department shelf

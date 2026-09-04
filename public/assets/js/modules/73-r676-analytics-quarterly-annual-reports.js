@@ -2,7 +2,7 @@ import {
   allRows, rowsForPeriod, computeStats, topMedicines,
   availableYears, priorPeriod, sameQuarterPriorYear, periodLabel,
   detectSpikes, zeroDispenseSummary, deptLabel
-} from '../core/analytics-engine.js';
+} from '../core/analytics-engine.js?v=8dd085dff7';
 
 (function () {
 'use strict';

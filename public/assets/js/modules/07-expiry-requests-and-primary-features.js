@@ -1,6 +1,6 @@
-import { publishLegacy } from '../core/legacy-registry.js';
+import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
 
-import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js';
+import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js?v=005b407b10';
 
 function startApp(){
   if(typeof window.preparePreviewStart==='function')window.preparePreviewStart();

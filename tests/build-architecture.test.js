@@ -16,6 +16,8 @@ test('module builder uses one cache version for generated imports', () => {
 });
 
 test('generated provider modules keep one canonical legacy registry import', () => {
-  const imports = firebaseModule.match(/import \{ publishLegacy \} from ['"]\.\.\/core\/legacy-registry\.js['"];?/g) || [];
+  // The specifier now carries a content-hash cache stamp (tools/stamp_module_hashes.mjs),
+  // which is orthogonal to what this guards: that there is exactly one such import.
+  const imports = firebaseModule.match(/import \{ publishLegacy \} from ['"]\.\.\/core\/legacy-registry\.js(?:\?v=[^'"]*)?['"];?/g) || [];
   assert.equal(imports.length, 1);
 });
