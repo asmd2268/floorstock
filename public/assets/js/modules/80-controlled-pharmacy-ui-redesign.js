@@ -355,6 +355,9 @@ function deptDocTabsVisible(){
     return !(typeof window.plIsHiddenForCurrentRole==='function'&&window.plIsHiddenForCurrentRole(t[0]));
   });
 }
+/* buildNav is defined in a later IIFE in this same file and cannot see this
+   scope, so the helper is published rather than referenced directly. */
+window.fsDeptDocTabsVisible=deptDocTabsVisible;
 function injectDeptDocTabBar(pageId){
   var tabs=deptDocTabsVisible();
   // With one tab left there is nothing to switch between, so no bar is shown.
@@ -805,11 +808,19 @@ window.ctlCmpPrint=function(){
     else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody']];
     else{
       items=[['pg-newreq','New Request / طلب جديد'],['pg-myreqs','My Requests / طلباتي'],['pg-shelves','📦 Shelves / أرفف'],['pg-crashcart','🚑 Crash Cart'],['pg-notes-dept','📝 Notes / ملاحظات']];
-      var docTabs=deptDocTabsVisible();
       // One entry for the pair; if only one survives the visibility check it keeps
       // its own label so the grouping never hides what is actually reachable.
-      if(docTabs.length===1)items.push([docTabs[0][0],docTabs[0][1]]);
-      else if(docTabs.length>1)items.push([docTabs[0][0],'📋 Lists & Custody / القوائم والعهدة']);
+      // An empty list is a real answer (both hidden), so a missing helper must not
+      // look the same as one - fall back to listing both pages separately rather
+      // than silently dropping the department's access to either.
+      if(typeof window.fsDeptDocTabsVisible!=='function'){
+        items.push(['pg-deptprint','🖨 Print Drug List / طباعة القائمة']);
+        items.push(['pg-controlled','🔒 Controlled custody / العهدة المخدرة']);
+      }else{
+        var docTabs=window.fsDeptDocTabsVisible();
+        if(docTabs.length===1)items.push([docTabs[0][0],docTabs[0][1]]);
+        else if(docTabs.length>1)items.push([docTabs[0][0],'📋 Lists & Custody / القوائم والعهدة']);
+      }
       items.push(['pg-med-accountability','🧾 Medication documentation']);
     }
     // pg-classification-lists is a tab inside pg-inv — no nav button needed
