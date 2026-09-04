@@ -836,9 +836,15 @@ globalThis.S = {
     if(hasCachedState){
       S.transport='rest';
       S.writeTransport=window.FB_DB?'sdk':'rest';
-      S.startRealtime();
+      var selfLoading=S.startRealtime();
       fsStateScheduleManagedUserLoad(profileHint);
-      setTimeout(function(){
+      // Scoped roles attach one listener per allowed document and each fires an
+      // initial snapshot, so the immediate poll that used to run here re-read
+      // every document a second time on each warm boot - roughly 35 redundant
+      // reads competing with the listeners for the same connection while the
+      // page was still painting. Only transports that do not deliver their own
+      // initial state still need it.
+      if(!selfLoading)setTimeout(function(){
         if(S.ready)S.pollRest();
       },0);
       if(statusCallback)statusCallback('Opening Floor Stock…');
@@ -962,9 +968,13 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       .catch(function(error){console.error('Forced sign-out after profile change failed',error)})
       .then(function(){setTimeout(function(){location.reload()},1200)});
   },
+  // Returns true when the transport it installed delivers the current state on
+  // its own (an onSnapshot fires an initial snapshot; the forced-REST branch
+  // polls immediately). init()'s warm-boot path uses that to avoid following a
+  // listener attach with a duplicate full read of every document.
   startRealtime:function(){
     S.stopRealtime();
-    if(!S.ready)return;
+    if(!S.ready)return false;
     S.startSelfProfileWatch();
 
     // Scoped roles may read their allowed documents but are intentionally not
@@ -979,10 +989,10 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
         S.transport='rest';
         S.pollRest();
         S.pollTimer=setInterval(function(){S.pollRest();},30000);
-        return;
+        return true;
       }
       S.startScopedListeners(scopedKeys);
-      return;
+      return true;
     }
 
     if(S.transport==='sdk'){
@@ -1048,7 +1058,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
             }).catch(function(error){console.warn('User-list refresh was unavailable.',error)});
           },30000);
         }
-        return;
+        return true;
       }catch(error){
         console.error('Firestore realtime setup failed; switching to REST polling.',error);
         S.transport='rest';
@@ -1056,6 +1066,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     }
 
     S.pollTimer=setInterval(function(){S.pollRest();},30000);
+    return false;
   },
   // Real-time replacement for scoped-role REST polling. One onSnapshot per
   // allowed document (same permission as a single get()), fanned out over

@@ -64,9 +64,43 @@ test('the production entrypoint cache version advances with authenticated-operat
   const index = fs.readFileSync('public/index.html', 'utf8');
   const authBootstrap = fs.readFileSync('public/assets/js/auth-bootstrap.js', 'utf8');
   assert.match(index, /assets\/js\/auth-bootstrap\.js/);
-  const mainVersion = authBootstrap.match(/import\('\.\/main\.js\?v=R6\.76\.(\d+)'\)/);
-  assert.ok(mainVersion, 'auth bootstrap must load the versioned main entrypoint');
-  assert.ok(Number(mainVersion[1]) >= 30, 'main entrypoint cache version must include authenticated-operation fixes');
+  // The ?v= stamps used to be hand-maintained numbers, which is why this once
+  // asserted a minimum release number. They are now derived from file content by
+  // tools/stamp_module_hashes.mjs, so "the version advances when the code changes"
+  // holds by construction — and assets can be served immutable. Verifying the
+  // recorded stamps still match the files is the stronger check, and it fails
+  // loudly if someone edits a module without re-running the stamper.
+  const stampOf = (file) =>
+    require('crypto').createHash('sha256').update(fs.readFileSync(file)).digest('hex').slice(0, 10);
+
+  const mainVersion = authBootstrap.match(/import\('\.\/main\.js\?v=([0-9a-f]{10})'\)/);
+  assert.ok(mainVersion, 'auth bootstrap must load the content-stamped main entrypoint');
+  assert.equal(mainVersion[1], stampOf('public/assets/js/main.js'),
+    'main.js stamp is stale — run `npm run stamp`');
+
+  const bootstrapVersion = index.match(/assets\/js\/auth-bootstrap\.js\?v=([0-9a-f]{10})/);
+  assert.ok(bootstrapVersion, 'index.html must load the content-stamped auth bootstrap');
+  assert.equal(bootstrapVersion[1], stampOf('public/assets/js/auth-bootstrap.js'),
+    'auth-bootstrap.js stamp is stale — run `npm run stamp`');
+
+  // The checks above only prove the chain is internally consistent. Editing a
+  // module without re-stamping leaves main.js byte-identical (it still holds the
+  // old hash), so the stale module has to be caught against its own file.
+  const mainSrc = fs.readFileSync('public/assets/js/main.js', 'utf8');
+  const imports = [...mainSrc.matchAll(/['"]\.\/((?:modules|core)\/[^'"?]+\.js)\?v=([0-9a-f]{10})['"]/g)];
+  assert.ok(imports.length > 50, 'main.js should import the full module set with content stamps');
+  const stale = imports
+    .filter(([, rel, stamp]) => stamp !== stampOf(`public/assets/js/${rel}`))
+    .map(([, rel]) => rel);
+  assert.deepEqual(stale, [], `these files changed without re-stamping — run \`npm run stamp\`:\n  ${stale.join('\n  ')}`);
+
+  // Every stamped asset must also be reachable under an immutable cache rule,
+  // otherwise the hashing buys nothing.
+  const vercel = JSON.parse(fs.readFileSync('vercel.json', 'utf8'));
+  const immutable = (vercel.headers || []).some((h) =>
+    /assets/.test(h.source) && (h.headers || []).some((k) =>
+      k.key === 'Cache-Control' && /immutable/.test(k.value)));
+  assert.ok(immutable, 'vercel.json must serve hashed assets as immutable');
   assert.match(core, /window\.__fsAuthenticatedUser=credential\.user/);
   assert.match(core, /rememberedMatchesCurrentProfile/);
   assert.match(core, /String\(remembered\.email\|\|''\)\.trim\(\)\.toLowerCase\(\)/);

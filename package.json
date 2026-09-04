@@ -14,7 +14,8 @@
     "test:rules:emulator": "node --test --test-concurrency=1 tests/firestore-rules/firestore.rules.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-floorstock-rules --config firebase.json \"npm run test:rules:emulator\"",
     "test": "npm run verify && npm run test:ui && npm run test:functions && npm run test:browser && npm run test:rules",
-    "test:functions": "npm --prefix functions test"
+    "test:functions": "npm --prefix functions test",
+    "stamp": "node tools/stamp_module_hashes.mjs"
   },
   "dependencies": {
     "@vercel/edge": "1.3.3"
