@@ -75,7 +75,7 @@ import './modules/82-classification-lists.js?v=b8af1a952d';
 import './modules/83-permissions-control.js?v=232ca67bcc';
 import './modules/84-pharmacy-inventory.js?v=c5b923308d';
 import './modules/84-pwa-push-notifications.js?v=c5ae6d91d8';
-import { installDomBindings } from './core/dom-bindings.js?v=ae8e783f85';
+import { installDomBindings } from './core/dom-bindings.js?v=6d007a4512';
 import { installDebugTracer } from './core/debug-tracer.js?v=7b531921a0';
 const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];
 const missingActions = requiredActions.filter((name) => typeof globalThis[name] !== 'function');

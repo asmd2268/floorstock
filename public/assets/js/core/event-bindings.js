@@ -1098,5 +1098,15 @@ export default [
     "id": "b218",
     "event": "change",
     "source": "ccToggleNoConsumption(this.checked)"
+  },
+  {
+    "id": "b219",
+    "event": "change",
+    "source": "dispSlotAllToggle(this)"
+  },
+  {
+    "id": "b220",
+    "event": "click",
+    "source": "ccApplyExtraBatches()"
   }
 ];

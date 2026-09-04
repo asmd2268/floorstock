@@ -1,4 +1,4 @@
-import bindings from './event-bindings.js?v=9b2de0e964';
+import bindings from './event-bindings.js?v=51b2d8f8da';
 import { invokeLegacy } from './legacy-registry.js?v=babf19f181';
 
 function parseArgument(token, element, event) {
