@@ -98,7 +98,7 @@ service cloud.firestore {
     }
 
     function canReadPharmacyState(docId) {
-      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'crash_cart_medication_names_v1', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'accountability_regimens_v2', 'accountability_regimens_v3', 'accountability_regimen_catalog_v1', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia', 'user_activity_daily_v1', 'crash_cart_min_seal_length', 'classification_lists_v1', 'page_visibility_overrides_v1', 'user_dept_restrictions_v1', 'classification_colors_v1']
+      return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports', 'crash_cart_medication_names_v1', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'accountability_regimens_v2', 'accountability_regimens_v3', 'accountability_regimen_catalog_v1', 'accountability_expiry_batches_v1', 'accountability_plan_usage_v1', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia', 'user_activity_daily_v1', 'crash_cart_min_seal_length', 'classification_lists_v1', 'page_visibility_overrides_v1', 'user_dept_restrictions_v1', 'classification_colors_v1']
         || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
     }
 
@@ -236,6 +236,7 @@ service cloud.firestore {
           'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_reports',
           'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2',
           'accountability_regimens_v2', 'accountability_regimens_v3', 'accountability_regimen_catalog_v1',
+          'accountability_expiry_batches_v1', 'accountability_plan_usage_v1',
           'fulfillment_edit_settings_v1',
           'theme', 'facility_logo',
           'pharmacy_category_config', 'pharmacy_department_announcements',
@@ -266,9 +267,18 @@ service cloud.firestore {
       // Keep this decision compact. Re-evaluating activeUser()/profile() across every
       // role branch can exceed Firestore's 1,000-expression limit for department
       // custodians, especially on their controlled-department keys.
+      //
+      // r/dept come from role()/departmentId() so that WRITE decisions use the same
+      // claims-first source as every READ decision in this file. Sourcing them from
+      // profile() here while role() preferred the token claim meant a role or
+      // department change that had reached one source but not the other was evaluated
+      // inconsistently between reads and writes. Each helper is invoked once and bound
+      // to a local, so the expression cost stays bounded; controlledCustodian has no
+      // claim and still comes from the profile document, evaluated lazily and only on
+      // the department branch that references it.
+      let r = role();
+      let dept = departmentId();
       let p = profile();
-      let r = p.get('role', '');
-      let dept = p.get('deptId', null) != null ? p.get('deptId', null) : p.get('departmentId', '');
       return (docId != 'fulfillment_edit_settings_v1' || masterUser()) && (
           r == 'department'
           && (
@@ -278,8 +288,14 @@ service cloud.firestore {
               // atomically). Direct browser writes to crash_cart_reports bypass
               // that atomic seal/cart-status update and are therefore disallowed.
               'requests', 'dept_notes', 'notes',
-              'accountability_usage_v2', 'accountability_receipts_v2', 'accountability_expiry_batches_v1',
-              'audit_log', 'theme', 'user_activity_daily_v1',
+              // accountability_usage_v2 intentionally omitted: departments submit and
+              // cancel through the accountabilityMutation callable, which appends
+              // inside a transaction (no lost updates when two departments submit at
+              // once) and re-checks the custody balance server-side. A direct write
+              // here replaces the whole document and would bypass both.
+              'accountability_receipts_v2', 'accountability_expiry_batches_v1',
+              'accountability_plan_usage_v1',
+              'theme', 'user_activity_daily_v1',
               'meds_' + dept, 'expiry_' + dept, 'shelves_' + dept,
               'alerts_' + dept,
               'inventory_integrity_' + dept,
@@ -302,23 +318,23 @@ service cloud.firestore {
             r in ['pharmacy', 'pharmacy_director']
             || (
               r in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']
-              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|audit_log|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'outpatient_pharmacy_supervisor'
-              && docId.matches('^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|audit_log|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'pharmacy_staff'
-              && docId.matches('^(crash_carts|crash_cart_reports|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|audit_log|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|crash_cart_reports|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'controlled_pharmacy'
-              && docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|audit_log|theme|user_activity_daily_v1)$')
+              && docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'warehouse'
-              && docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|audit_log|theme|user_activity_daily_v1)$')
+              && docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|theme|user_activity_daily_v1)$')
             )
           )
         );

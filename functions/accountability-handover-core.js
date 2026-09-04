@@ -173,6 +173,10 @@ module.exports = {
   hashToken,
   tokenMatches,
   cleanIdentity,
+  // Exported so the accountability balance arithmetic in index.js uses this same
+  // coercion (non-finite and negative inputs collapse to 0) rather than a
+  // second, divergent copy.
+  number,
   medicineTotals,
   applyPartyConfirmation,
   completeHandoverState

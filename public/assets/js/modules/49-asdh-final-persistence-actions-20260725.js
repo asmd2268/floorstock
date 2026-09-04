@@ -3,8 +3,19 @@
 
 /* Returnable setters. Local-only printer/UI preferences remain intentionally local. */
 /* Audit records are persistent too, but an audit failure never masks a completed primary action. */
+/* Audit entries go through the appendAuditLog callable, never a direct state write.
+   S.push replaces the whole audit_log document, so a direct client write let any
+   role holding audit_log permission erase or forge the entire trail. audit_log is
+   now write-denied in firestore.rules; the callable appends inside a transaction
+   (no lost updates between concurrent writers) and stamps actor/role server-side
+   from the verified session, so an entry cannot be attributed to someone else. */
 window.auditAction=function(action,meta){
-  try{var u=typeof actualUser==='function'?actualUser():(window.CU||{}),name=typeof actualActorName==='function'?actualActorName():(u.username||u.email||'Unknown');return S.push('audit_log',{action:action,meta:meta||{},at:typeof nowISO==='function'?nowISO():new Date().toISOString(),actorId:u.id||'',actor:name,effectiveRole:(window.CU&&CU.role)||'',masterActing:typeof isMasterActual==='function'?isMasterActual():!!u.master}).catch(function(err){console.error('Audit save failed',err);return false})}catch(err){console.error('Audit save failed',err);return Promise.resolve(false)}
+  try{
+    if(typeof window.fsCallFunction!=='function'){console.error('Audit save failed: secure service unavailable');return Promise.resolve(false)}
+    return window.fsCallFunction('appendAuditLog',{action:action,meta:meta||{}})
+      .then(function(){return true})
+      .catch(function(err){console.error('Audit save failed',err);return false});
+  }catch(err){console.error('Audit save failed',err);return Promise.resolve(false)}
 };
 window.ctlMove=function(v){
   var many=Array.isArray(v),input=many?v:[v],stamp=Date.now(),actor=(window.CU&&(CU.username||CU.email))||'Unknown';
@@ -338,7 +349,7 @@ function wrapSave(name){
     finally{saving=false}
   };wrapped.__r662=true;window[name]=wrapped
 }
-['acc2SaveAssignment','acc2SaveRegimenVersion','acc2SubmitUsage','acc2CreateReceipt','acc2Decision'].forEach(wrapSave);
+['acc2SaveAssignment','acc2SaveRegimenVersion','acc2SubmitUsage','acc2Decision'].forEach(wrapSave);
 window.__startAppExtensions=window.__startAppExtensions||[];
 window.__startAppExtensions.push(function(){setTimeout(indicator,700)});
 window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDefault();e.returnValue=''});

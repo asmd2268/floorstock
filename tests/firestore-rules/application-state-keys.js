@@ -69,21 +69,25 @@ export const APPLICATION_STATE_KEYS = [
 export function mayWriteState(role, key) {
   if (key === 'fulfillment_edit_settings_v1') return role === 'master';
   if (role === 'master' || role === 'pharmacy') return true;
-  if (key === 'theme' || key === 'audit_log') return true;
+  // audit_log is no longer writable from any client: firestore.rules denies it and
+  // entries are appended only through the appendAuditLog callable, which stamps the
+  // actor server-side. A client state write replaces the whole document.
+  if (key === 'audit_log') return false;
+  if (key === 'theme') return true;
   if (role === 'inpatient_supervisor') {
-    return /^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|audit_log|theme)$/.test(key);
+    return /^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
   }
   if (role === 'pharmacy_staff') {
-    return /^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
+    return /^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
   }
   if (role === 'outpatient_pharmacy_supervisor') {
-    return /^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|audit_log|theme)$/.test(key);
+    return /^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
   }
   if (role === 'controlled_pharmacy') {
-    return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|audit_log|theme)$/.test(key);
+    return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme)$/.test(key);
   }
   if (role === 'warehouse') {
-    return /^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|audit_log|theme)$/.test(key);
+    return /^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|theme)$/.test(key);
   }
   if (role === 'department' || role === 'custodian') {
     // crash_cart_reports intentionally excluded: departments submit via the
@@ -92,8 +96,12 @@ export function mayWriteState(role, key) {
     // that atomic seal/cart-status update and are correctly denied.
     const allowed = new Set([
       'requests', 'dept_notes', 'notes',
-      'accountability_usage_v2', 'accountability_receipts_v2',
-      'audit_log', 'theme', `meds_${DEPARTMENT_ID}`, `expiry_${DEPARTMENT_ID}`, `shelves_${DEPARTMENT_ID}`, `alerts_${DEPARTMENT_ID}`,
+      // accountability_usage_v2 excluded: departments submit and cancel through the
+      // accountabilityMutation callable, which appends transactionally and re-checks
+      // the custody balance server-side.
+      'accountability_receipts_v2', 'accountability_expiry_batches_v1',
+      'accountability_plan_usage_v1',
+      'theme', `meds_${DEPARTMENT_ID}`, `expiry_${DEPARTMENT_ID}`, `shelves_${DEPARTMENT_ID}`, `alerts_${DEPARTMENT_ID}`,
       `inventory_integrity_${DEPARTMENT_ID}`, `inventory_snapshot_index_${DEPARTMENT_ID}`,
       `inventory_snapshot_${DEPARTMENT_ID}_sample_meds`
     ]);

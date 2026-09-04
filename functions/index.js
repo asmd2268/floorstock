@@ -1,11 +1,12 @@
 'use strict';
 
+const crypto = require('crypto');
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getAppCheck } = require('firebase-admin/app-check');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
-const { canCreateHandover, createToken, hashToken, tokenMatches, cleanIdentity, applyPartyConfirmation, completeHandoverState } = require('./accountability-handover-core');
+const { canCreateHandover, createToken, hashToken, tokenMatches, cleanIdentity, number, applyPartyConfirmation, completeHandoverState } = require('./accountability-handover-core');
 
 initializeApp();
 const db = getFirestore();
@@ -466,14 +467,21 @@ exports.setDeptRestrictions = onCall(CALLABLE_OPTIONS, async (request) => {
 // reaches Firestore (Admin SDK bypasses Firestore rules, so the check lives here).
 exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
+  const data = request.data || {};
+  const action = String(data.action || '');
   const restrictedRoles = new Set(['pharmacy_staff', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']);
-  if (!restrictedRoles.has(caller.role)) {
+  // submitUsage is the department's own consumption entry. It is the one action
+  // departments may call: writing accountability_usage_v2 straight from the
+  // browser replaces the whole document, so two departments submitting at the
+  // same moment silently lost one entry, and the balance check existed only in
+  // client JS — a crafted direct write could exceed the custody balance. Both
+  // are enforced here inside a transaction instead.
+  const isDepartmentAction = (action === 'submitUsage' || action === 'cancelUsage') && caller.role === 'department';
+  if (!isDepartmentAction && !restrictedRoles.has(caller.role)) {
     throw new HttpsError('permission-denied', 'This function is only available to pharmacy_staff and inpatient_supervisor roles.');
   }
   await requireWritableSubscription(caller);
 
-  const data = request.data || {};
-  const action = String(data.action || '');
   const tenantId = caller.tenantId || '';
 
   // Read blockedDepts from token claims (fast path) or Firestore profile
@@ -494,6 +502,97 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
 
   const assignmentsRef = stateRef('accountability_assignments_v2', tenantId);
   const usageRef = stateRef('accountability_usage_v2', tenantId);
+
+  if (action === 'submitUsage') {
+    const callerDept = String(caller.deptId || caller.departmentId || '').trim();
+    if (!callerDept) throw new HttpsError('failed-precondition', 'Your account is not linked to a department.');
+    if (isDeptBlocked(callerDept)) {
+      throw new HttpsError('permission-denied', 'Access to this department is restricted for your account.');
+    }
+    const assignmentId = String(data.assignmentId || '');
+    const units = number(data.units);
+    if (!assignmentId || !(units > 0)) {
+      throw new HttpsError('invalid-argument', 'assignmentId and a positive units value are required.');
+    }
+    const consumptionDate = String(data.consumptionDate || '').trim();
+    const patientFile = String(data.patientFile || '').trim().slice(0, 60);
+    const doctor = String(data.doctor || '').trim().slice(0, 120);
+    const reasonLabel = String(data.reasonLabel || '').trim().slice(0, 200);
+    if (!consumptionDate || !patientFile || !doctor || !reasonLabel) {
+      throw new HttpsError('invalid-argument', 'Consumption date, patient file, doctor and reason are required.');
+    }
+    if (consumptionDate > new Date().toISOString().slice(0, 10)) {
+      throw new HttpsError('invalid-argument', 'Consumption date cannot be in the future.');
+    }
+    let created = null;
+    await db.runTransaction(async (tx) => {
+      const [assignSnap, usageSnap] = await Promise.all([tx.get(assignmentsRef), tx.get(usageRef)]);
+      const assignments = stateArray(assignSnap);
+      const a = assignments.find((x) => String(x.id) === String(assignmentId));
+      if (!a || a.active === false) throw new HttpsError('failed-precondition', 'Custody is not available.');
+      // The department may only spend against its own custody record.
+      if (String(a.deptId) !== callerDept) throw new HttpsError('permission-denied', 'This custody belongs to another department.');
+      const rows = stateArray(usageSnap);
+      // Effective balance mirrors the client: recorded balance minus everything
+      // already submitted and not yet decided, so concurrent submissions cannot
+      // each pass against the same untouched balance.
+      const pending = rows.reduce((sum, u) => (
+        String(u.assignmentId) === String(assignmentId) && u.status === 'pending_pharmacy'
+          ? sum + number(u.units)
+          : sum
+      ), 0);
+      const effective = number(a.balance) - pending;
+      if (units > effective) {
+        throw new HttpsError('failed-precondition', `Used units exceed the available balance. Available: ${effective}`);
+      }
+      const now = new Date().toISOString();
+      created = {
+        id: `acc2u_${Date.now()}_${crypto.randomBytes(5).toString('hex')}`,
+        assignmentId,
+        // deptId/medName come from the custody record and session, never the client.
+        deptId: a.deptId,
+        medName: a.medName || '',
+        units,
+        doseAmount: data.doseAmount == null ? null : number(data.doseAmount),
+        doseUnit: data.doseUnit == null ? null : String(data.doseUnit).slice(0, 40),
+        weightKg: data.weightKg == null ? null : number(data.weightKg),
+        pregnancyStatus: data.pregnancyStatus == null ? null : String(data.pregnancyStatus).slice(0, 40),
+        patientAge: data.patientAge == null ? null : number(data.patientAge),
+        consumptionDate,
+        patientFile,
+        doctor,
+        reasonLabel,
+        note: String(data.note || '').trim().slice(0, 500),
+        status: 'pending_pharmacy',
+        submittedAt: now,
+        submittedBy: caller.name || caller.email || '',
+        submittedByUser: caller.email || '',
+        locked: false
+      };
+      writeState(tx, usageRef, rows.concat([created]));
+    });
+    return { ok: true, id: created && created.id };
+  }
+
+  if (action === 'cancelUsage') {
+    const callerDept = String(caller.deptId || caller.departmentId || '').trim();
+    if (!callerDept) throw new HttpsError('failed-precondition', 'Your account is not linked to a department.');
+    const id = String(data.id || '');
+    if (!id) throw new HttpsError('invalid-argument', 'id is required.');
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(usageRef);
+      const rows = stateArray(snap);
+      const u = rows.find((x) => String(x.id) === String(id));
+      if (!u) throw new HttpsError('not-found', 'This submission no longer exists.');
+      // Only the owning department, and only before pharmacy has acted on it.
+      if (String(u.deptId) !== callerDept) throw new HttpsError('permission-denied', 'This submission belongs to another department.');
+      if (u.status !== 'pending_pharmacy' && u.status !== 'rejected') {
+        throw new HttpsError('failed-precondition', 'This submission can no longer be modified.');
+      }
+      writeState(tx, usageRef, rows.filter((x) => String(x.id) !== String(id)));
+    });
+    return { ok: true };
+  }
 
   if (action === 'saveAssignment') {
     const { id, deptId, medName, quota, reasons, active, expiryDate, itemDetails } = data;
@@ -777,6 +876,50 @@ function stateArray(snapshot) {
 function writeState(transaction, reference, value) {
   transaction.set(reference, { value, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
 }
+
+// Audit entries are appended here rather than written straight from the browser.
+// Client state writes replace a whole document, so any role holding audit_log
+// write permission could previously erase or forge the entire trail; the rules
+// can only validate {value, updatedAt} shape, never append-only semantics.
+// audit_log is now write-denied in firestore.rules and this is the only path in.
+const AUDIT_LOG_MAX_ENTRIES = 5000;
+
+exports.appendAuditLog = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  const data = request.data || {};
+  const action = String(data.action || '').trim().slice(0, 120);
+  if (!action) throw new HttpsError('invalid-argument', 'action is required.');
+  let meta = data.meta;
+  if (meta === undefined || meta === null) meta = {};
+  if (typeof meta !== 'object' || Array.isArray(meta)) {
+    throw new HttpsError('invalid-argument', 'meta must be an object.');
+  }
+  // Cap the serialized payload so a client cannot bloat the document.
+  const metaJson = JSON.stringify(meta);
+  if (metaJson.length > 8000) throw new HttpsError('invalid-argument', 'meta payload is too large.');
+
+  const ref = stateRef('audit_log', caller.tenantId || '');
+  const entry = {
+    id: `aud_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`,
+    action,
+    meta,
+    // Actor fields are stamped from the verified session, never from the client,
+    // so an entry cannot be attributed to someone else.
+    at: new Date().toISOString(),
+    actorId: request.auth.uid,
+    actor: caller.name || caller.email || '',
+    effectiveRole: caller.role || '',
+    masterActing: caller.master === true
+  };
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    const rows = stateArray(snap);
+    const next = rows.concat([entry]);
+    // Trim oldest first so the document cannot grow past Firestore's 1MB limit.
+    writeState(tx, ref, next.length > AUDIT_LOG_MAX_ENTRIES ? next.slice(next.length - AUDIT_LOG_MAX_ENTRIES) : next);
+  });
+  return { ok: true, id: entry.id };
+});
 
 function requestValue(request, name) {
   if (request.method === 'GET') return request.query[name];

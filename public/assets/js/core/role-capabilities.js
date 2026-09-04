@@ -105,28 +105,39 @@ export function canWriteStateKey(profile, key) {
   const master = user.master === true;
   if (value === 'fulfillment_edit_settings_v1') return master;
   if (master || role === 'pharmacy') return true;
-  if (value === 'theme' || value === 'audit_log' || value === 'user_activity_daily_v1') return true;
+  // audit_log is deliberately absent: it is write-denied in firestore.rules and
+  // appended only through the appendAuditLog callable, which stamps the actor
+  // server-side. A client state write would replace the whole document.
+  if (value === 'theme' || value === 'user_activity_daily_v1') return true;
 
   if (role === 'inpatient_supervisor') {
-    return /^(crash_.*|accountability_.*|requests$|notes$|dept_notes$|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive$|deleted_request_audit_v4$|department_request_notifications_v1$|pharmacy_.*|inventory_.*|inventory_name_merge_history$|manual_medicine_merge_history_v1$|similar_medicine_separations_v1$|custom_categories$|facility_logo$|hidden_request_categories_v1$|global_request_freeze_v2$|medication_(visibility|freeze)_rules_v3$|audit_log$|theme$)/.test(value);
+    return /^(crash_.*|accountability_.*|requests$|notes$|dept_notes$|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive$|deleted_request_audit_v4$|department_request_notifications_v1$|pharmacy_.*|inventory_.*|inventory_name_merge_history$|manual_medicine_merge_history_v1$|similar_medicine_separations_v1$|custom_categories$|facility_logo$|hidden_request_categories_v1$|global_request_freeze_v2$|medication_(visibility|freeze)_rules_v3$|theme$)/.test(value);
   }
   if (role === 'pharmacy_staff') {
-    return /^(crash_carts$|crash_cart_reports$|accountability_.*|requests$|notes$|dept_notes$|request_analytics_archive$|audit_log$|theme$)/.test(value);
+    return /^(crash_carts$|crash_cart_reports$|accountability_.*|requests$|notes$|dept_notes$|request_analytics_archive$|theme$)/.test(value);
   }
   if (role === 'outpatient_pharmacy_supervisor') {
-    return /^(crash_carts$|crash_cart_reports$|requests$|notes$|dept_notes$|request_analytics_archive$|audit_log$|theme$)/.test(value);
+    return /^(crash_carts$|crash_cart_reports$|requests$|notes$|dept_notes$|request_analytics_archive$|theme$)/.test(value);
   }
   if (role === 'controlled_pharmacy') {
-    return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|audit_log$|theme$)/.test(value);
+    return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme$)/.test(value);
   }
   if (role === 'warehouse') {
-    return /^(controlled_warehouse$|controlled_moves$|controlled_pdf_receipts$|audit_log$|theme$)/.test(value);
+    return /^(controlled_warehouse$|controlled_moves$|controlled_pdf_receipts$|theme$)/.test(value);
   }
   if (role === 'department') {
     const deptId = String(user.deptId || user.departmentId || '');
     const ownSnapshotPrefix = deptId ? `inventory_snapshot_${deptId}_` : '';
-    return value === 'requests' || value === 'dept_notes' || value === 'notes' || value === 'crash_cart_reports' ||
-      value === 'accountability_usage_v2' || value === 'accountability_receipts_v2' || value === 'accountability_expiry_batches_v1' ||
+    // crash_cart_reports is intentionally absent: departments submit via the
+    // submitCrashCartReport callable, which also updates crash_carts atomically.
+    // firestore.rules denies the direct write, so allowing it here only produced
+    // a permission error after the UI had already offered the action.
+    // accountability_usage_v2 is absent for the same reason: submit and cancel go
+    // through the accountabilityMutation callable so the balance check and the
+    // transactional append are enforced server-side.
+    return value === 'requests' || value === 'dept_notes' || value === 'notes' ||
+      value === 'accountability_receipts_v2' ||
+      value === 'accountability_expiry_batches_v1' || value === 'accountability_plan_usage_v1' ||
       (!!deptId && (value === `meds_${deptId}` || value === `expiry_${deptId}` || value === `shelves_${deptId}` ||
         value === `alerts_${deptId}` ||
         value === `inventory_integrity_${deptId}` || value === `inventory_snapshot_index_${deptId}` ||
