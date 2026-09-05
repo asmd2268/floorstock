@@ -1,8 +1,9 @@
 import {
   allRows, rowsForPeriod, computeStats, topMedicines,
   availableYears, priorPeriod, sameQuarterPriorYear, periodLabel,
-  detectSpikes, zeroDispenseSummary, deptLabel
-} from '../core/analytics-engine.js?v=8d4e7057eb';
+  detectSpikes, zeroDispenseSummary, deptLabel,
+  topShortfalls, departmentFillRates, detectQuantityOutliers
+} from '../core/analytics-engine.js?v=1d73f24e1d';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -293,6 +294,54 @@ function renderMedTable(meds, emptyMsg) {
   </table></div>`;
 }
 
+/* Ranked by units missing, not by percentage: a medicine short 900 of 1000 is a
+   supply problem, one short 3 of 3 is usually a single stray order. */
+function renderShortfalls(stats) {
+  const rows = topShortfalls(stats, 10);
+  if (!rows.length) return `<div class="anl-empty">Every requested medicine was dispensed in full. / صُرف كل ما طُلب بالكامل.</div>`;
+  return `<div style="overflow:auto"><table class="anl-med-table">
+    <thead><tr><th>#</th><th>Medicine / الدواء</th><th class="num">Requested</th><th class="num">Dispensed</th><th class="num">Short / الناقص</th><th class="num">Fill %</th><th>Most affected / الأكثر تأثرًا</th></tr></thead>
+    <tbody>${rows.map((m, i) => {
+      const worst = Object.entries(m.depts).sort((a, b) => b[1] - a[1]).slice(0, 3)
+        .map(([dept, qty]) => `${esc(dept)}: ${qty}`).join(' · ');
+      return `<tr><td>${i + 1}</td><td><b>${esc(m.name)}</b></td><td class="num">${m.requested}</td><td class="num">${m.served}</td>` +
+        `<td class="num" style="font-weight:700">${m.short}</td><td class="num">${m.fillRate == null ? '—' : m.fillRate + '%'}</td>` +
+        `<td class="anl-dept-cell">${worst || '—'}</td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+/* Volume says who is busy; this says who is actually being served. Worst first --
+   a list of well-supplied wards is not what anyone opens this report to find. */
+function renderDeptFillRates(stats) {
+  const rows = departmentFillRates(stats);
+  if (!rows.length) return `<div class="anl-empty">No requested quantities recorded in this period. / لا توجد كميات مطلوبة مسجلة.</div>`;
+  return `<div style="overflow:auto"><table class="anl-med-table">
+    <thead><tr><th>Department / القسم</th><th class="num">Requested</th><th class="num">Dispensed</th><th class="num">Short</th><th class="num">Fill rate / معدل التلبية</th></tr></thead>
+    <tbody>${rows.map(d => {
+      const pct = d.fillRate;
+      const colour = pct == null ? '' : pct >= 95 ? 'color:#15803d' : pct >= 85 ? 'color:#b45309' : 'color:#9f1239;font-weight:700';
+      return `<tr><td><b>${esc(d.dept)}</b></td><td class="num">${d.requested}</td><td class="num">${d.served}</td>` +
+        `<td class="num">${d.short}</td><td class="num" style="${colour}">${pct == null ? '—' : pct + '%'}</td></tr>`;
+    }).join('')}</tbody>
+  </table></div>`;
+}
+
+/* Data hygiene, not analysis: these are quantities to go and check, most often a
+   digit typed twice. Left unfound they quietly distort every average above. */
+function renderQuantityOutliers(rows) {
+  const found = detectQuantityOutliers(rows);
+  if (!found.length) return `<div class="anl-empty">No unusual quantities detected. / لا توجد كميات شاذة.</div>`;
+  return `<div style="overflow:auto"><table class="anl-med-table">
+    <thead><tr><th>Medicine / الدواء</th><th>Department / القسم</th><th class="num">Quantity</th><th class="num">Typical / المعتاد</th><th class="num">× normal</th><th>Date / التاريخ</th></tr></thead>
+    <tbody>${found.map(x =>
+      `<tr><td><b>${esc(x.medicine)}</b></td><td class="anl-dept-cell">${esc(x.dept)}</td>` +
+      `<td class="num" style="font-weight:700;color:#9f1239">${x.qty}</td><td class="num">${x.typical}</td>` +
+      `<td class="num">${x.factor}×</td><td class="anl-dept-cell">${esc(String(x.at || '').slice(0, 10) || '—')}</td></tr>`
+    ).join('')}</tbody>
+  </table></div>`;
+}
+
 function spikeBadgeClass(pct, threshold) {
   if (pct >= threshold * 2.5) return 'extreme';
   if (pct >= threshold * 1.5) return 'high';
@@ -444,9 +493,25 @@ window.renderAnalyticsReports = function () {
       ${renderSpikes(currentRows, sameLastYearRows, sameLastYearLbl, threshold)}
     </div>
 
+    <div class="anl-section" id="analytics-shortfall-section">
+      <div class="anl-section-title alert">📦 Most short-supplied medicines / الأكثر نقصًا</div>
+      ${renderShortfalls(stats)}
+    </div>
+
+    <div class="anl-section" id="analytics-deptfill-section">
+      <div class="anl-section-title">🎯 Fill rate by department / معدل التلبية حسب القسم</div>
+      ${renderDeptFillRates(stats)}
+    </div>
+
     <div class="anl-section" id="analytics-zero-section">
       <div class="anl-section-title danger">🔴 Zero-dispense fulfilled requests / طلبات مكتملة بصرف صفر</div>
       ${renderZeroDispense(currentRows)}
+    </div>
+
+    <div class="anl-section" id="analytics-outlier-section">
+      <div class="anl-section-title alert">🔎 Unusual quantities to review / كميات شاذة للمراجعة</div>
+      <div class="fhint" style="margin-bottom:6px">Quantities far outside what the same medicine normally moves — most often a mistyped digit. / كميات بعيدة جدًا عن معتاد الدواء نفسه — غالبًا خطأ إدخال.</div>
+      ${renderQuantityOutliers(currentRows)}
     </div>
   `;
 

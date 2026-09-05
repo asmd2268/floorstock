@@ -59,10 +59,49 @@ export function computeStats(rows) {
   const routine = {};
   const high = {};
 
+  // What a ward asked for versus what it actually received. Total units alone
+  // cannot show this: a department can be the busiest in the hospital and still
+  // be the worst served.
+  const shortfalls = {}; // medKey → { name, requested, served, short, depts }
+
   rows.forEach(r => {
     const dept = deptLabel(r.deptId);
-    if (!departments[dept]) departments[dept] = { orders: 0, units: 0, zeroDispenseReqs: 0 };
+    if (!departments[dept]) departments[dept] = { orders: 0, units: 0, zeroDispenseReqs: 0, requested: 0, served: 0 };
     departments[dept].orders++;
+
+    /* Matched per request and per medicine, never as two grand totals: dispensing
+       200 of one medicine does not make up for sending none of another, and
+       netting them off would hide exactly the shortage worth knowing about. */
+    const wantByMed = {}, gotByMed = {};
+    (r.items || []).forEach(line => {
+      const qty = Math.max(0, Number(line.qty) || 0);
+      if (qty <= 0) return;
+      const med = resolveAnalyticsMedicine(line, r.deptId, medicines, r);
+      const key = medKey(med.name);
+      if (!wantByMed[key]) wantByMed[key] = { name: med.name, qty: 0 };
+      wantByMed[key].qty += qty;
+    });
+    (r.dispensed || []).forEach(line => {
+      const qty = Math.max(0, Number(line.qty) || 0);
+      if (qty <= 0) return;
+      const med = resolveAnalyticsMedicine(line, r.deptId, medicines, r);
+      const key = medKey(med.name);
+      gotByMed[key] = (gotByMed[key] || 0) + qty;
+    });
+    Object.keys(wantByMed).forEach(key => {
+      const want = wantByMed[key].qty;
+      const got = Math.min(gotByMed[key] || 0, want); // surplus is not service
+      departments[dept].requested += want;
+      departments[dept].served += got;
+      if (!shortfalls[key]) shortfalls[key] = { name: wantByMed[key].name, requested: 0, served: 0, short: 0, depts: {} };
+      const bucket = shortfalls[key];
+      bucket.requested += want;
+      bucket.served += got;
+      if (want > got) {
+        bucket.short += want - got;
+        bucket.depts[dept] = (bucket.depts[dept] || 0) + (want - got);
+      }
+    });
 
     const lines = r.dispensed || [];
     const deptTotal = lines.reduce((s, l) => s + Math.max(0, Number(l.qty) || 0), 0);
@@ -82,7 +121,10 @@ export function computeStats(rows) {
   });
 
   const units = Object.values(departments).reduce((s, d) => s + d.units, 0);
-  return { orders: rows.length, units, departments, routine, high, service: serviceMetrics(rows, high, units) };
+  Object.values(departments).forEach(d => {
+    d.fillRate = d.requested > 0 ? Math.round(d.served / d.requested * 1000) / 10 : null;
+  });
+  return { orders: rows.length, units, departments, routine, high, shortfalls, service: serviceMetrics(rows, high, units) };
 }
 
 /* Service metrics.
@@ -275,4 +317,97 @@ export function zeroDispenseSummary(rows) {
     .filter(([, d]) => d.zeroDispenseReqs > 0)
     .map(([name, d]) => ({ dept: name, zeroReqs: d.zeroDispenseReqs, totalReqs: d.orders }))
     .sort((a, b) => b.zeroReqs - a.zeroReqs);
+}
+
+
+/* Medicines a ward asked for and did not get, ranked by the units missing.
+   Ordered by units short rather than by percentage so a medicine missing 900 of
+   1000 outranks one missing all 3 of 3 -- the first is a supply problem, the
+   second is usually a single stray order. */
+export function topShortfalls(stats, n = 10, minShort = 1) {
+  return Object.entries(stats.shortfalls || {})
+    .map(([key, m]) => ({
+      key,
+      name: m.name || key,
+      requested: m.requested,
+      served: m.served,
+      short: m.short,
+      fillRate: m.requested > 0 ? Math.round(m.served / m.requested * 1000) / 10 : null,
+      depts: m.depts
+    }))
+    .filter(m => m.short >= minShort)
+    .sort((a, b) => b.short - a.short)
+    .slice(0, n);
+}
+
+/* Departments ranked by how much of what they asked for actually arrived. */
+export function departmentFillRates(stats, minRequested = 1) {
+  return Object.entries(stats.departments || {})
+    .filter(([, d]) => d.requested >= minRequested)
+    .map(([dept, d]) => ({ dept, requested: d.requested, served: d.served, short: d.requested - d.served, fillRate: d.fillRate }))
+    .sort((a, b) => (a.fillRate ?? 101) - (b.fillRate ?? 101));
+}
+
+function median(sorted) {
+  if (!sorted.length) return null;
+  const mid = sorted.length / 2;
+  return sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/* A quantity typed with one digit too many is invisible in a total but wrecks
+   every average built on it. Flag values that stand far outside what the same
+   medicine normally moves.
+
+   Median and MAD rather than mean and standard deviation: an outlier drags a
+   mean toward itself and inflates the deviation, so the very value being hunted
+   raises the bar until it clears it. Both robust measures ignore it.
+
+   A medicine needs a real history before "normal" means anything, and the value
+   must be both statistically distant AND a large multiple of the usual -- on
+   quantities like 1 and 2 a robust score alone fires constantly. */
+export function detectQuantityOutliers(rows, { minSamples = 8, minScore = 6, minFactor = 8, limit = 25 } = {}) {
+  const medicines = buildAnalyticsMedicineIndex();
+  const samples = {}; // medKey → { name, values:[], events:[] }
+
+  rows.forEach(r => {
+    if (r.__aggregated) return; // a month rolled into one row has no per-entry quantity
+    (r.dispensed || []).forEach(line => {
+      const qty = Number(line.qty) || 0;
+      if (qty <= 0) return;
+      const med = resolveAnalyticsMedicine(line, r.deptId, medicines, r);
+      const key = medKey(med.name);
+      if (!samples[key]) samples[key] = { name: med.name, values: [], events: [] };
+      samples[key].values.push(qty);
+      samples[key].events.push({ qty, dept: deptLabel(r.deptId), at: r.fulfilledAt || r.created || '' });
+    });
+  });
+
+  const found = [];
+  Object.values(samples).forEach(m => {
+    if (m.values.length < minSamples) return;
+    const sorted = m.values.slice().sort((a, b) => a - b);
+    const med = median(sorted);
+    if (!med || med <= 0) return;
+    const mad = median(m.values.map(v => Math.abs(v - med)).sort((a, b) => a - b));
+    // A perfectly uniform history has MAD 0, which would make every score
+    // infinite; fall back to the multiple-of-normal test alone.
+    const scale = mad > 0 ? mad * 1.4826 : 0;
+    m.events.forEach(ev => {
+      const factor = ev.qty / med;
+      if (factor < minFactor) return;
+      const score = scale > 0 ? Math.abs(ev.qty - med) / scale : Infinity;
+      if (score < minScore) return;
+      found.push({
+        medicine: m.name,
+        dept: ev.dept,
+        qty: ev.qty,
+        typical: Math.round(med * 10) / 10,
+        factor: Math.round(factor * 10) / 10,
+        at: ev.at,
+        samples: m.values.length
+      });
+    });
+  });
+
+  return found.sort((a, b) => b.factor - a.factor).slice(0, limit);
 }
