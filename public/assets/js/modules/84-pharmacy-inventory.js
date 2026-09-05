@@ -295,12 +295,14 @@ function piShowCabModal(roomId,cabId){
     '<div class="fg"><label>Cabinet name</label><input id="pi-cab-name" class="inp" value="'+piEsc(cab?cab.name:'')+'" placeholder="e.g. Cabinet A, Fridge 1"></div>'+
     '<div class="fg"><label>Type</label><select id="pi-cab-type" class="psel"><option value="storage" '+((!cab||cab.type==='storage')?'selected':'')+'>🟤 Storage / مستودع</option><option value="dispensing" '+(cab&&cab.type==='dispensing'?'selected':'')+'>🔵 Dispensing / منطقة صرف</option></select></div>'+
     '<div class="fg"><label>Shelves (one per line) / الأرفف (واحد بكل سطر)</label>'+
-      '<textarea id="pi-cab-shelves" class="inp" rows="5" style="font-family:monospace;resize:vertical;direction:ltr;text-align:left">'+piEsc(JSON.parse(shelves).join('\n'))+'</textarea>'+
+      '<textarea id="pi-cab-shelves" class="inp" rows="8" style="font-family:monospace;resize:vertical;direction:ltr;text-align:left">'+piEsc(JSON.parse(shelves).join('\n'))+'</textarea>'+
       '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:400;cursor:pointer">'+
         '<input type="checkbox" id="pi-cab-autosort" '+((!cab||cab.autoSort!==false)?'checked':'')+'>'+
         '<span>Keep shelves in A→Z order / رتّب الأرفف أبجديًا تلقائيًا</span>'+
       '</label>'+
-      '<div class="fhint" style="margin-top:4px">Untick to keep the exact order you typed. / أزل العلامة لتبقى بالترتيب الذي كتبته.</div>'+
+      /* rows="5" is the visible height, not a cap -- with three default lines
+         showing, the box reads as though five shelves were the maximum. */
+      '<div class="fhint" style="margin-top:4px">Add as many shelves as you need — one per line, no limit; the box scrolls and can be dragged taller. Untick to keep the exact order you typed. / أضف ما تشاء من الأرفف — رفّ بكل سطر، بلا حد؛ المربع يُمرَّر ويُسحب ليكبر. أزل العلامة لتبقى بالترتيب الذي كتبته.</div>'+
     '</div>'+
     '<div style="margin-top:12px"><button class="btn bp" onclick="piSaveCabinet()">Save</button> <button class="btn bg bsm" onclick="piCloseModal()">Cancel</button></div>'
   );
