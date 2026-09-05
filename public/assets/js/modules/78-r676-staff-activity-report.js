@@ -126,9 +126,32 @@ function buildReport(deptFilter,from,to){
     Object.keys(r.iconCounts||{}).forEach(function(key){row.icons[key]=(row.icons[key]||0)+r.iconCounts[key]});
   });
 
-  var rows=Object.keys(byUser).map(function(uid){return byUser[uid]}).filter(function(row){
+  /* Why a filter returned nothing is not guessable from the empty result: an
+     empty audit log, a range that misses every row, and rows whose owner never
+     resolved to a department all render identically. Count each cause while the
+     information is still here so the panel can say which one happened. */
+  var allRows=Object.keys(byUser).map(function(uid){return byUser[uid]});
+  var diag={
+    auditTotal:auditRows().length,
+    auditInRange:0,
+    oldest:'',
+    newest:'',
+    people:allRows.length,
+    noDept:allRows.filter(function(r){return !r.deptId}).length,
+    deptFilter:deptFilter||''
+  };
+  auditRows().forEach(function(a){
+    if(!a||!a.at)return;
+    var d=String(a.at).slice(0,10);
+    if(!diag.oldest||d<diag.oldest)diag.oldest=d;
+    if(!diag.newest||d>diag.newest)diag.newest=d;
+    if(inRange(a.at,from,to))diag.auditInRange+=1;
+  });
+  var rows=allRows.filter(function(row){
     return !deptFilter||String(row.deptId)===String(deptFilter);
   });
+  diag.shown=rows.length;
+  rows.__diag=diag;
   rows.forEach(function(r){
     r.activeHours=r.activeMinutes/60;
     r.entriesPerActiveHour=r.activeHours>0.05?Math.round((r.entries/r.activeHours)*10)/10:null;
@@ -185,6 +208,7 @@ function createModal(){
         '</div>'+
         '<div class="fhint" style="margin-bottom:10px">Entries/edits come from the existing audit log (~35 tracked action types — not every possible click). Active time and top icons are tracked from this update onward — no historical data before today. Groups compare peers doing the same job, so a fair ranking needs everyone signed in with their own individual account. / عدد الإدخالات من سجل التدقيق الحالي. الوقت النشط وأكثر الأيقونات تُحسب من الآن فصاعدًا. المقارنة عادلة فقط إذا كان كل موظف يستخدم حسابه الخاص.</div>'+
         '<div id="sar-summary" class="ctl-stat-row" style="margin-bottom:14px"></div>'+
+        '<div id="sar-diag"></div>'+
         '<div id="sar-groups"></div>'+
       '</div>'+
     '</div>';
@@ -245,6 +269,31 @@ function renderReport(){
 
   var groups=groupRows(rows,groupBy);
   el('sar-groups').innerHTML=groups.length?groups.map(groupSectionHtml).join(''):'<div class="fhint" style="text-align:center;padding:20px">No activity in this range / لا يوجد نشاط بهذه الفترة</div>';
+  var diagHost=el('sar-diag');
+  if(diagHost)diagHost.innerHTML=diagLine(rows.__diag);
+}
+/* Reads out what the panel actually received, so an empty result names its own
+   cause instead of looking the same as every other empty result. */
+function diagLine(d){
+  if(!d)return '';
+  var parts=[];
+  parts.push('Audit rows loaded / سجلات محمّلة: <b>'+d.auditTotal+'</b>');
+  if(d.auditTotal)parts.push('spanning / المدى '+esc4(d.oldest)+' → '+esc4(d.newest));
+  parts.push('in this range / داخل الفترة: <b>'+d.auditInRange+'</b>');
+  parts.push('people found / أشخاص: <b>'+d.people+'</b>');
+  if(d.noDept)parts.push('without a department / بلا قسم: <b>'+d.noDept+'</b>');
+  var note='';
+  if(!d.auditTotal){
+    note='The audit log is empty for this account — nothing was recorded, so no filter can show anything. / سجل التدقيق فارغ.';
+  }else if(!d.auditInRange){
+    note='Rows exist but none fall inside the chosen dates — widen the range. / توجد سجلات لكن لا شيء داخل التواريخ المختارة — وسّع الفترة.';
+  }else if(d.deptFilter&&!d.shown){
+    note=d.noDept===d.people
+      ? 'Activity exists in this range, but no row could be traced to a department, so every department filter is empty. Choose All departments. / يوجد نشاط لكن لم يُربط بأي قسم — اختر كل الأقسام.'
+      : 'This department had no activity in this range; other departments did. / هذا القسم بلا نشاط في هذه الفترة، وغيره لديه نشاط.';
+  }
+  return '<div class="fhint" style="margin:10px 0;padding:8px 10px;border:1px solid var(--bd);border-radius:8px">'+
+    parts.join(' · ')+(note?'<div style="margin-top:6px;font-weight:700">'+note+'</div>':'')+'</div>';
 }
 function _statCard(label,val){
   return '<div class="ctl-stat-card"><div class="ctl-stat-card-label">'+label+'</div><div class="ctl-stat-card-value">'+val+'</div></div>';
