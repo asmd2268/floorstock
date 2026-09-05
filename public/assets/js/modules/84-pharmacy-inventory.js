@@ -954,14 +954,25 @@ function piMedSuggestions(){
 function piRenderTxnEntryTab(body,type){
   var isReceipt=type==='receipt';
   var canEdit=piCanEdit()||piIsMaster();
+  /* The transaction date is one value for the whole entry — a delivery arrives on a
+     day, not per line — so it sits once above the grid instead of repeating down
+     every row. Expiry stays per row, where it genuinely differs per medicine, and
+     is never pre-filled. */
   var cols=isReceipt
-    ?['Medicine / الدواء','Date / التاريخ','Qty / الكمية','Batch #','Expiry / الانتهاء','Supplier / المورد','Note / ملاحظة','']
-    :['Medicine / الدواء','Date / التاريخ','Qty / الكمية','Note / ملاحظة',''];
+    ?['Medicine / الدواء','Qty / الكمية','Batch #','Expiry / الانتهاء','Supplier / المورد','Note / ملاحظة','']
+    :['Medicine / الدواء','Qty / الكمية','Note / ملاحظة',''];
   var sugg=piMedSuggestions();
   var listId='pi-txn-sugg-'+type;
   var html='<datalist id="'+listId+'">'+sugg.map(function(s){return'<option value="'+piEsc(s)+'">'}).join('')+'</datalist>';
   html+='<div class="card" style="margin-bottom:14px"><div class="ch"><span class="ct">'+(isReceipt?'📥 Receive from Supplier / استلام من المورد':'📤 Dispense to Pharmacy / صرف للصيدلية')+'</span></div><div class="cb">';
   if(!canEdit){html+='<div class="fhint">Editing requires Pharmacy Director access.</div></div></div>';body.innerHTML=html;return}
+  html+='<div style="display:flex;align-items:end;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+    +'<div class="fg" style="margin:0">'
+    +'<label style="font-size:11px;opacity:.7">'+(isReceipt?'Receipt date / تاريخ الاستلام':'Dispense date / تاريخ الصرف')+'</label>'
+    +'<input id="pi-txn-date-'+type+'" type="date" lang="en" dir="ltr" value="'+piEsc(piTodayStr())+'" style="margin:0;width:150px">'
+    +'</div>'
+    +'<div class="fhint" style="padding-bottom:6px">Applies to every row below / يُطبَّق على كل الصفوف</div>'
+    +'</div>';
   html+='<table style="width:100%;border-collapse:collapse" id="pi-txn-rows-'+type+'">';
   html+='<thead><tr>'+cols.map(function(c){return'<th style="text-align:left;padding:4px 6px;font-size:11px;opacity:.6;white-space:nowrap">'+piEsc(c)+'</th>'}).join('')+'</tr></thead>';
   html+='<tbody id="pi-txn-body-'+type+'"></tbody></table>';
@@ -1031,7 +1042,6 @@ window.piAddTxnRow=function(type){
     var v=prev&&prev.value;
     return (v==null||v==='')?fallback:v;
   };
-  var carriedDate=carry('.pi-txn-date',piTodayStr());
   var carriedSupplier=isReceipt?carry('.pi-txn-supplier',''):'';
   var listId='pi-txn-sugg-'+type;
   var rowId='pirow_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
@@ -1039,7 +1049,6 @@ window.piAddTxnRow=function(type){
   var inp=function(cls,ph,type2,extra){return'<input class="'+cls+' pi-txn-field" data-row="'+rowId+'" type="'+(type2||'text')+'" placeholder="'+piEsc(ph)+'" style="width:100%;box-sizing:border-box" '+(extra||'')+'>';};
   var tr=document.createElement('tr');tr.id=rowId;tr.dataset.type=type;
   var cells=td('<input class="pi-txn-med" data-row="'+rowId+'" list="'+listId+'" placeholder="Medicine name..." style="min-width:160px;width:100%;box-sizing:border-box">');
-  cells+=td('<input class="pi-txn-date" data-row="'+rowId+'" type="date" value="'+piEsc(carriedDate)+'" style="width:120px">');
   cells+=td('<input class="pi-txn-qty" data-row="'+rowId+'" type="number" min="0" step="any" placeholder="0" style="width:70px">');
   if(isReceipt){
     cells+=td('<input class="pi-txn-batch" data-row="'+rowId+'" type="text" placeholder="Batch #" style="width:90px">');
@@ -1057,10 +1066,17 @@ window.piSubmitTxnRows=async function(type){
   var isReceipt=type==='receipt';
   var rows=Array.from(tbody.querySelectorAll('tr'));
   if(!rows.length)return piToast('No rows to save / لا توجد صفوف','err');
+  // One date for the whole entry, read once from the field above the grid.
+  var dateEl=document.getElementById('pi-txn-date-'+type);
+  var sharedDate=String((dateEl||{}).value||'').trim();
+  if(!sharedDate){
+    if(dateEl)dateEl.focus();
+    return piToast(isReceipt?'Enter the receipt date / أدخل تاريخ الاستلام':'Enter the dispense date / أدخل تاريخ الصرف','err');
+  }
   var records=[];var errs=[];
   rows.forEach(function(tr,i){
     var med=String((tr.querySelector('.pi-txn-med')||{}).value||'').trim();
-    var date=String((tr.querySelector('.pi-txn-date')||{}).value||'').trim();
+    var date=sharedDate;
     var qty=parseFloat((tr.querySelector('.pi-txn-qty')||{}).value)||0;
     if(!med)return errs.push('Row '+(i+1)+': medicine name required');
     if(!date)return errs.push('Row '+(i+1)+': date required');
