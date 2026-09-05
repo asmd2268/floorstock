@@ -1220,7 +1220,21 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     var write=fsStateSetSmart(k,v).catch(function(error){
       if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
       console.error('Persistent save failed for key:',k,error);
-      toast('Save failed — Firebase rejected the update.','err');
+      /* Each key is one Firestore document, capped at 1MiB, and an array-shaped key
+         such as requests grows with use until a write is simply refused. The raw
+         rejection says nothing a pharmacist can act on, so a payload at or near the
+         cap is reported as what it is, with the action that fixes it. The write is
+         never blocked pre-emptively — Firestore decides, this only explains it. */
+      var hint='';
+      try{
+        var bytes=new TextEncoder().encode(JSON.stringify(v)).length;
+        if(bytes>=0.9*1048576){
+          hint=' The '+k+' record is '+(bytes/1048576).toFixed(2)+' MB, at the 1 MB limit for a single record.'
+            +' Ask the Master to archive old orders from the Requests page.'
+            +'\nسجل '+k+' بلغ الحد الأقصى. اطلب من الماستر أرشفة الطلبات القديمة من صفحة الطلبات.';
+        }
+      }catch(sizeError){}
+      toast('Save failed — Firebase rejected the update.'+hint,'err');
       throw error;
     });
     return _trackSave(write,'floorstock_state/'+k);

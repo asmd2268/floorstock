@@ -119,8 +119,21 @@ async function cleanupOldOrders(autoMode){
     }
   });
 
+  /* Two documents, no transaction between them. The aggregate merge ADDS to any
+     existing row for the same month and department, so if the trim below failed
+     after the summary was written, re-running would aggregate the same orders a
+     second time and inflate the totals permanently. Restoring the previous
+     summary on failure keeps a retry correct; the trim itself is a filter and is
+     safe to repeat. */
+  var previousSummary=globalThis.S.g('request_analytics_summary_v1')||[];
   await globalThis.S.s('request_analytics_summary_v1',summary);
-  await globalThis.S.s('requests',all.filter(function(r){return old.indexOf(r)<0}));
+  try{
+    await globalThis.S.s('requests',all.filter(function(r){return old.indexOf(r)<0}));
+  }catch(trimError){
+    try{await globalThis.S.s('request_analytics_summary_v1',previousSummary)}
+    catch(rollbackError){console.error('Could not restore the previous analytics summary; re-running cleanup would double-count these months.',rollbackError)}
+    throw trimError;
+  }
   globalThis.toast(old.length+' old orders archived locally and removed from Firestore; monthly totals preserved for reports.','succ');
   if(document.querySelector('#pg-print.on'))globalThis.renderPrint();
 }
