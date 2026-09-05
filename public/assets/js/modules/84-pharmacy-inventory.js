@@ -846,17 +846,20 @@ function piRenderPrintTab(host){
     '<div class="card" style="margin-bottom:14px"><div class="ch"><span class="ct">🖨 Print Options</span></div><div class="cb">'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
     '<div class="fg"><label>Room</label><select id="pi-print-room" class="psel" onchange="piPrintRoomChange(this.value)">'+roomOpts+'</select></div>'+
-    '<div class="fg"><label>Cabinet</label><select id="pi-print-cab" class="psel" onchange="PI_UI.printCabId=this.value">'+cabOpts+'</select></div>'+
+    '<div class="fg"><label>Cabinet</label><select id="pi-print-cab" class="psel" onchange="piPrintCabChange(this.value)">'+cabOpts+'</select></div>'+
     '</div>'+
     '<div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:12px">'+
     ['showMoh:MOH Code','showNupco:Nupco Code','showExpiry:Expiry Date','showQr:QR Code (expiry)','showRoom:Show Room'].map(function(x){
       var k=x.split(':')[0],l=x.split(':')[1];
-      return '<label class="fl ic g8"><input type="checkbox" '+(opts[k]?'checked':'')+' onchange="PI_UI.printOpts.'+k+'=this.checked"> '+l+'</label>';
+      return '<label class="fl ic g8"><input type="checkbox" '+(opts[k]?'checked':'')+' onchange="piPrintOptChange(\''+k+'\',this.checked)"> '+l+'</label>';
     }).join('')+
     '</div>'+
     '<div class="fl g8 ic" style="flex-wrap:wrap">'+
     '<button class="btn bp" onclick="piDoPrint()">🖨 Print Cabinet List</button>'+
     '<button class="btn bg bsm" onclick="piPrintRoomDoor()">🚪 Print Room Door List</button>'+
+    /* The map needs one cabinet: it is a drawing of that cabinet, so "all
+       cabinets" has nothing to draw. The button says which one it will print. */
+    '<button class="btn bp bsm" onclick="piPrintSelectedCabinetMap()"'+(PI_UI.printCabId?'':' disabled title="Choose a cabinet first / اختر خزانة أولًا"')+'>🗺 Print Cabinet Map (A4 + QR) / خريطة الخزانة</button>'+
     '</div>'+
     '</div></div>';
 
@@ -922,7 +925,67 @@ window.piPrintCabinet=function(roomId,cabId){
    The page is locked to a fixed height with the grid taking the remaining space, so
    a cabinet with three shelves and one with twelve both fill exactly one sheet
    instead of spilling onto a second. */
-window.piPrintCabinetMap=function(roomId,cabId){
+/* Publishes a redacted snapshot of one cabinet so the QR on its printed map opens
+   without a sign-in. Deliberately partial: names, cell, expiry and the safety
+   flags a nurse needs at the shelf -- no batch numbers, suppliers, costs or notes.
+   Anyone holding the printed sheet can read it, which is the point, so nothing
+   goes in that we would not put on the wall beside the cabinet.
+
+   Written on print rather than on every edit: it is one deliberate moment, and the
+   page stamps the time so a stale snapshot announces itself instead of being
+   mistaken for live stock. */
+async function piSyncPublicCabinet(room,cab,shelves){
+  if(!window.FB_DB||!window.FB_AUTH||!FB_AUTH.currentUser)return false;
+  var meds=piMeds();
+  var items=[];
+  meds.forEach(function(m){
+    (m.locations||[]).forEach(function(l){
+      if(l.roomId!==room.id||l.cabId!==cab.id)return;
+      var sh=shelves.find(function(x){return x.id===l.shelfId});
+      if(!sh)return;
+      var c=parseInt(l.cell,10);
+      items.push({
+        shelfId:sh.id,
+        shelf:sh.name,
+        cell:(c>0&&c<=piShelfCells(sh))?c:null,
+        name:m.name||'',
+        expiry:l.expiry||m.expiry||'',
+        moh:m.moh||'',
+        nupco:m.nupco||'',
+        form:m.form||'',
+        highAlert:!!m.high_alert,
+        hazard:!!m.hazard,
+        lasa:!!m.lasa,
+        refrigerated:!!m.refrigerated,
+        outOfStock:!!m.outOfStock
+      });
+    });
+  });
+  var stamp=(window.firebase&&firebase.firestore&&firebase.firestore.FieldValue)
+    ?firebase.firestore.FieldValue.serverTimestamp():new Date().toISOString();
+  var col=window.fsTenantCollection?fsTenantCollection('public_pharm_inv'):FB_DB.collection('public_pharm_inv');
+  await col.doc(String(cab.id)).set({
+    cabinetId:String(cab.id),
+    cabinet:cab.name||'',
+    room:room.name||'',
+    type:cab.type||'storage',
+    shelves:shelves.map(function(sh){return {id:sh.id,name:sh.name,cells:piShelfCells(sh)}}),
+    items:items,
+    updatedAt:stamp,
+    updatedAtIso:new Date().toISOString()
+  });
+  return true;
+}
+function piPublicCabinetUrl(cabId,shelfId){
+  var base=new URL(location.href);
+  base.search='';base.hash='';
+  base.searchParams.set('view','pharm-cabinet');
+  base.searchParams.set('cab',String(cabId));
+  if(shelfId)base.searchParams.set('shelf',String(shelfId));
+  var t=window.fsTenantId&&fsTenantId();if(t)base.searchParams.set('tenant',t);
+  return base.toString();
+}
+window.piPrintCabinetMap=async function(roomId,cabId){
   var rooms=piRooms();
   var room=(rooms||[]).find(function(r){return r.id===roomId});
   if(!room)return piToast('Room not found / الغرفة غير موجودة','err');
@@ -934,6 +997,13 @@ window.piPrintCabinetMap=function(roomId,cabId){
 
   var meds=piMeds();
   var colors=piGetColors();
+
+  var published=false;
+  try{published=await piSyncPublicCabinet(room,cab,shelves)}
+  catch(err){console.warn('Public cabinet snapshot failed',err)}
+  // A QR that opens an empty or stale page is worse than no QR, so it is only
+  // printed when the snapshot it points at was actually written just now.
+  if(!published)piToast('Printed without QR — the public copy could not be saved. / طُبعت بلا رمز: تعذر حفظ النسخة العامة','err');
 
   // medicines that name a cell go in it; the rest are listed under the map so a
   // medicine is never drawn in a position nobody recorded.
@@ -978,8 +1048,13 @@ window.piPrintCabinetMap=function(roomId,cabId){
              (hidden>0?'<span class="mchip more">+'+hidden+' more</span>':'')+
              '</div></div>';
     }
+    /* One QR per shelf: staff scan the shelf they are standing at. Below about
+       18mm a printed code stops scanning reliably, so on a tall cabinet the row
+       QR is dropped and the header code -- which opens the whole cabinet --
+       carries it instead. Printing an unscannable square helps nobody. */
+    var shelfQr=(published&&rowMm>=18)?'<div class="sqr">'+piQrSvg(piPublicCabinetUrl(cab.id,sh.id),44)+'</div>':'';
     return '<div class="srow">'+
-      '<div class="shead">'+piEsc(sh.name)+'</div>'+
+      '<div class="shead">'+piEsc(sh.name)+shelfQr+'</div>'+
       '<div class="scells" style="grid-template-columns:repeat('+n+',1fr)">'+cells+'</div>'+
     '</div>';
   }).join('')+'</div>';
@@ -1001,9 +1076,11 @@ window.piPrintCabinetMap=function(roomId,cabId){
     '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}'+
     '.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:4px;flex:0 0 auto}'+
     '.head h1{font-size:15pt;margin:0}.head .sub{font-size:9pt;color:#333}'+
+    '.hqr{text-align:center}.hqr img{display:block;width:20mm;height:20mm;margin:0 auto;image-rendering:pixelated}.hqr b{display:block;font-size:6.5pt;margin-top:1px}'+
     '.map{flex:1 1 auto;display:flex;flex-direction:column;gap:3mm;margin-top:3mm;min-height:0}'+
     '.srow{flex:1 1 0;display:flex;min-height:0;border:1.5px solid #000;border-radius:3px;overflow:hidden}'+
-    '.shead{flex:0 0 16mm;background:#e8f0ff;border-right:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11pt}'+
+    '.shead{flex:0 0 18mm;background:#e8f0ff;border-right:1.5px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;font-weight:700;font-size:11pt}'+
+    '.sqr img{display:block;width:13mm;height:13mm;image-rendering:pixelated}'+
     '.scells{flex:1 1 auto;display:grid;min-width:0}'+
     '.cell{border-right:1px dashed #94a3b8;padding:1.5mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}'+
     '.cell:last-child{border-right:none}'+
@@ -1022,7 +1099,8 @@ window.piPrintCabinetMap=function(roomId,cabId){
   var head='<div class="head"><div><h1>'+piEsc(cab.name)+'</h1>'+
     '<div class="sub">'+bd(room.name)+' · '+bd(cab.type==='dispensing'?'Dispensing / منطقة صرف':'Storage / مستودع')+
     ' · '+bd(shelves.length+' shelves / أرفف')+'</div></div>'+
-    '<div class="sub">'+new Date().toLocaleDateString('en-GB')+'</div></div>';
+    '<div class="hqr">'+(published?piQrSvg(piPublicCabinetUrl(cab.id,''),80)+'<b>Scan for live list / امسح للقائمة</b>':'')+
+    '<div class="sub">'+new Date().toLocaleDateString('en-GB')+'</div></div></div>';
 
   var legend='<div class="legend">'+
     ['● high-alert / عالي الخطورة','▪ yellow = expiring soon / قرب الانتهاء','▪ red = expired / منتهٍ','▪ struck through = out of stock / غير متوفر','⌁ +N more = cell is fuller than the space shown / الخانة فيها أكثر']
@@ -1033,6 +1111,23 @@ window.piPrintCabinetMap=function(roomId,cabId){
   win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+piEsc(cab.name)+' — Map</title><style>'+css+'</style></head><body>'+head+grid+foot+legend+'</body></html>');
   win.document.close();
   setTimeout(function(){win.print()},400);
+};
+/* Inline handlers must be plain calls: the CSP bridge rejects bare assignments,
+   so `PI_UI.printCabId=this.value` silently failed and the print controls did
+   nothing. The cabinet change also re-renders, because the map button's enabled
+   state depends on it. */
+window.piPrintCabChange=function(v){
+  PI_UI.printCabId=String(v||'');
+  window.renderPharmInv();
+};
+window.piPrintOptChange=function(key,checked){
+  if(!PI_UI.printOpts)PI_UI.printOpts={};
+  PI_UI.printOpts[String(key)]=!!checked;
+  window.renderPharmInv();
+};
+window.piPrintSelectedCabinetMap=function(){
+  if(!PI_UI.printRoomId||!PI_UI.printCabId)return piToast('Choose a room and one cabinet / اختر غرفة وخزانة واحدة','err');
+  return window.piPrintCabinetMap(PI_UI.printRoomId,PI_UI.printCabId);
 };
 window.piPrintRoomDoor=function(){
   var rooms=piRooms();

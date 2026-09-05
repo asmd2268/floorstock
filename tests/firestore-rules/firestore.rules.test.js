@@ -123,6 +123,27 @@ describe('anonymous and inactive accounts', () => {
     await assertFails(getDoc(doc(db, 'public_crash_carts', 'cart-a')));
   });
 
+  test('a printed cabinet map is readable without signing in, but the collection cannot be walked', async () => {
+    const db = dbFor('anonymous');
+    // The QR on the sheet carries the cabinet id; that one document must open.
+    await assertSucceeds(getDoc(doc(db, 'public_pharm_inv', 'cab-a')));
+    // Listing would hand a passer-by every cabinet in the hospital.
+    await assertFails(getDocs(collection(db, 'public_pharm_inv')));
+    // Publishing is not something a reader may do.
+    await assertFails(setDoc(doc(db, 'public_pharm_inv', 'cab-a'), { cabinet: 'A' }));
+  });
+
+  test('only pharmacy leadership may publish a cabinet map', async () => {
+    await assertSucceeds(setDoc(doc(dbFor('master'), 'public_pharm_inv', 'cab-a'), { cabinet: 'A' }));
+    // pharmacyDirector() covers the plain pharmacy role, which is who actually
+    // maintains these cabinets and prints the maps.
+    await assertSucceeds(setDoc(doc(dbFor('pharmacy'), 'public_pharm_inv', 'cab-a'), { cabinet: 'A' }));
+    // Accounts that do not run the pharmacy store must not publish hospital-wide.
+    await assertFails(setDoc(doc(dbFor('department'), 'public_pharm_inv', 'cab-a'), { cabinet: 'A' }));
+    await assertFails(setDoc(doc(dbFor('warehouse'), 'public_pharm_inv', 'cab-a'), { cabinet: 'A' }));
+    await assertFails(setDoc(doc(dbFor('inactive'), 'public_pharm_inv', 'cab-a'), { cabinet: 'A' }));
+  });
+
   test('inactive user may load their own profile but no operational data', async () => {
     const db = dbFor('inactive');
     await assertSucceeds(getDoc(doc(db, 'users', 'inactive')));

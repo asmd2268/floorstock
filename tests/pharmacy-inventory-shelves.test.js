@@ -91,7 +91,7 @@ test('a shelf with no recorded cell count still has one cell', () => {
 });
 
 test('the map never silently drops a medicine that does not fit', () => {
-  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
   // Cells are overflow:hidden, so a crowded cell used to just stop showing
   // medicines. On a pharmacy map that is worse than an ugly page.
   assert.match(fn, /chipCap/);
@@ -100,14 +100,14 @@ test('the map never silently drops a medicine that does not fit', () => {
 });
 
 test('a medicine is only drawn in a cell someone actually recorded', () => {
-  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
   // Anything without a cell goes to the footer rather than being placed by guess.
   assert.match(fn, /unplaced\.push/);
   assert.match(fn, /c>0&&c<=piShelfCells\(sh\)/);
 });
 
 test('the map is one A4 page whatever the shelf count', () => {
-  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
   assert.match(fn, /@page\{size:A4 portrait/);
   assert.match(fn, /overflow:hidden/);
   // Rows share the remaining height, so three shelves and twelve both fill one sheet.
@@ -115,7 +115,7 @@ test('the map is one A4 page whatever the shelf count', () => {
 });
 
 test('bilingual labels are bidi-isolated', () => {
-  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
   // "4 shelves / أرفف" beside "Storage / مستودع" interleaves into nonsense otherwise.
   assert.match(fn, /<bdi>/);
 });

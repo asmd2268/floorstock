@@ -396,6 +396,21 @@ service cloud.firestore {
         allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
       }
 
+      // Pharmacy cabinet maps. A printed map carries a QR so staff at the
+      // shelf can read it without signing in, which is the whole point of the
+      // sheet. `get` only and never `list`: the document is reachable solely by
+      // the cabinet id printed in that QR, so the collection cannot be walked.
+      // The published copy is a redacted snapshot written by piSyncPublicCabinet
+      // -- names, expiry and safety flags, no batch, supplier or cost data.
+      match /public_pharm_inv/{docId} {
+        allow get: if true;
+        allow list: if sameTenant(tenant) && masterUser();
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && (
+          masterUser() || pharmacyDirector()
+        );
+        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (masterUser() || pharmacyDirector());
+      }
+
       match /public_classification/{docId} {
         allow get: if true;
         allow list: if sameTenant(tenant) && masterUser();
@@ -467,6 +482,13 @@ service cloud.firestore {
         || warehouseOfficer()
         || (departmentUser() && docId == departmentId())
       );
+      allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector());
+    }
+
+    match /public_pharm_inv/{docId} {
+      allow get: if true;
+      allow list: if tenantId() == '' && masterUser();
+      allow create, update: if activeUser() && tenantId() == '' && (masterUser() || pharmacyDirector());
       allow delete: if tenantId() == '' && (masterUser() || pharmacyDirector());
     }
 
