@@ -43,12 +43,38 @@ th{background:#dbeafe;color:#102a5c}
 @media print{button{display:none!important}.section{break-inside:avoid}}
 `;
 
+/* Shared by every IIFE below. These were defined once per IIFE and had to be
+   edited in lockstep; the spike helpers in particular decide how a consumption
+   rise is graded, and a threshold changed in one copy and not the other would
+   have graded the same rise two ways in one report. One definition now. */
+function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
+function spikeThresholdPct() {
+  const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
+  return Number.isFinite(v) && v > 0 ? v : 30;
+}
+function spikeBadgeClass(pct, threshold) {
+  if (pct >= threshold * 2.5) return 'extreme';
+  if (pct >= threshold * 1.5) return 'high';
+  return 'mid';
+}
+function spikeBadge(pct, threshold) {
+  return `<span class="anl-spike-badge ${spikeBadgeClass(pct, threshold)}">+${pct}%</span>`;
+}
+function renderSpikeLegend(threshold) {
+  return `<div class="anl-legend">
+    <b>Legend / الدليل:</b>
+    <span><span class="anl-spike-badge mid">+${threshold}%</span> ${threshold}–${Math.round(threshold * 1.5 - 1)}% increase</span>
+    <span><span class="anl-spike-badge high">+${Math.round(threshold * 1.5)}%</span> ${Math.round(threshold * 1.5)}–${Math.round(threshold * 2.5 - 1)}% increase</span>
+    <span><span class="anl-spike-badge extreme">+${Math.round(threshold * 2.5)}%</span> ${Math.round(threshold * 2.5)}%+ increase</span>
+  </div>`;
+}
+
 (function () {
 'use strict';
 
 /* ── helpers ─────────────────────────────────────────────────────────────── */
-function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-function permitted() {
+function canUseInpatientAnalytics() {
   const r = String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
   return ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor'].includes(r) || !!(window.CU && window.CU.master);
 }
@@ -70,11 +96,6 @@ function canEditSpikeThreshold() {
 function selectedYear()    { const el = document.getElementById('analytics-report-year');    return Number(el && el.value) || new Date().getFullYear(); }
 function selectedQuarter() { const el = document.getElementById('analytics-report-quarter'); return String(el && el.value || 'all'); }
 function selectedDept()    { const el = document.getElementById('analytics-report-dept');    return String(el && el.value || ''); }
-const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
-function spikeThresholdPct() {
-  const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
-  return Number.isFinite(v) && v > 0 ? v : 30;
-}
 window.saveAnalyticsSpikeThreshold = async function () {
   const input = document.getElementById('analytics-spike-threshold');
   if (!input || !canEditSpikeThreshold()) return;
@@ -101,7 +122,7 @@ function pctChange(a, b) { return b > 0 ? Math.round((a - b) / b * 1000) / 10 : 
 
 /* ── styles (injected once) ─────────────────────────────────────────────── */
 const STYLE_ID = 'asdh-analytics-style';
-function injectStyles() {
+function injectAnalyticsStyles() {
   if (document.getElementById(STYLE_ID)) return;
   const s = document.createElement('style');
   s.id = STYLE_ID;
@@ -342,23 +363,6 @@ function renderQuantityOutliers(rows) {
   </table></div>`;
 }
 
-function spikeBadgeClass(pct, threshold) {
-  if (pct >= threshold * 2.5) return 'extreme';
-  if (pct >= threshold * 1.5) return 'high';
-  return 'mid';
-}
-function spikeBadge(pct, threshold) {
-  return `<span class="anl-spike-badge ${spikeBadgeClass(pct, threshold)}">+${pct}%</span>`;
-}
-function renderSpikeLegend(threshold) {
-  return `<div class="anl-legend">
-    <b>Legend / الدليل:</b>
-    <span><span class="anl-spike-badge mid">+${threshold}%</span> ${threshold}–${Math.round(threshold * 1.5 - 1)}% increase</span>
-    <span><span class="anl-spike-badge high">+${Math.round(threshold * 1.5)}%</span> ${Math.round(threshold * 1.5)}–${Math.round(threshold * 2.5 - 1)}% increase</span>
-    <span><span class="anl-spike-badge extreme">+${Math.round(threshold * 2.5)}%</span> ${Math.round(threshold * 2.5)}%+ increase</span>
-  </div>`;
-}
-
 function renderSpikes(currentRows, priorRows, priorLabel, threshold) {
   const spikes = detectSpikes(currentRows, priorRows, threshold);
   if (!spikes.overall.length && !spikes.perDept.length) {
@@ -399,13 +403,13 @@ window.renderAnalyticsReports = function () {
   const page = document.getElementById('pg-analytics');
   if (!page) return;
 
-  if (!permitted()) {
+  if (!canUseInpatientAnalytics()) {
     const old = document.getElementById('analytics-reports-card');
     if (old) old.remove();
     return;
   }
 
-  injectStyles();
+  injectAnalyticsStyles();
 
   const years = availableYears();
   const year = selectedYear();
@@ -545,8 +549,6 @@ window.renderAnalyticsReports = function () {
 (function () {
 'use strict';
 
-function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-
 const DEPT_PRINT_CSS = FS_REPORT_CSS;
 
 window._r676DeptStats = {};
@@ -614,8 +616,6 @@ window.addEventListener('floorstock:analytics-rendered', function (e) {
 // --- Merged from 77-r676-unified-analytics-print.js (Phase 6 consolidation) ---
 (function () {
 'use strict';
-
-function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function buildPrintHtml(detail) {
   /* Shared house style plus the few rules only the quarterly report uses. It used
@@ -707,7 +707,6 @@ const MONTHS_EN = ['January','February','March','April','May','June','July','Aug
 const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
 /* ── utilities ──────────────────────────────────────────────────────────── */
-function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function pct(a, total) { return total > 0 ? Math.round(a / total * 1000) / 10 : 0; }
 function avg(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
 function round1(n) { return Math.round(n * 10) / 10; }
@@ -725,10 +724,6 @@ function currentRole() {
   return String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
 }
 function isMaster() { return !!(window.CU && window.CU.master); }
-function permitted() {
-  // analytics (narcotics) panel - kept for backwards compatibility usage at line 592/637
-  return isMaster() || ['controlled_pharmacy'].includes(currentRole());
-}
 function tabAllowed(tab) {
   const r = currentRole(), master = isMaster();
   if (tab === 'orders') return true;
@@ -743,7 +738,7 @@ function reportYearTo() { const el = document.getElementById('car-year-to'); ret
 
 /* ── styles ─────────────────────────────────────────────────────────────── */
 const STYLE_ID = 'car-style-r78';
-function injectStyles() {
+function injectNarcoticStyles() {
   if (document.getElementById(STYLE_ID)) return;
   const s = document.createElement('style');
   s.id = STYLE_ID;
@@ -819,28 +814,6 @@ function crashCartList() {
 // over time), so render()/renderCrash() here need their own copies of the
 // spike-badge + threshold helpers rather than reaching across into the
 // other IIFE's private functions.
-const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
-function spikeThresholdPct() {
-  const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
-  return Number.isFinite(v) && v > 0 ? v : 30;
-}
-function spikeBadgeClass(pct, threshold) {
-  if (pct >= threshold * 2.5) return 'extreme';
-  if (pct >= threshold * 1.5) return 'high';
-  return 'mid';
-}
-function spikeBadge(pct, threshold) {
-  return `<span class="anl-spike-badge ${spikeBadgeClass(pct, threshold)}">+${pct}%</span>`;
-}
-function renderSpikeLegend(threshold) {
-  return `<div class="anl-legend">
-    <b>Legend / الدليل:</b>
-    <span><span class="anl-spike-badge mid">+${threshold}%</span> ${threshold}–${Math.round(threshold * 1.5 - 1)}% increase</span>
-    <span><span class="anl-spike-badge high">+${Math.round(threshold * 1.5)}%</span> ${Math.round(threshold * 1.5)}–${Math.round(threshold * 2.5 - 1)}% increase</span>
-    <span><span class="anl-spike-badge extreme">+${Math.round(threshold * 2.5)}%</span> ${Math.round(threshold * 2.5)}%+ increase</span>
-  </div>`;
-}
-
 // Editable spike-threshold control, reused by every report in this IIFE
 // that shows spike-tiered badges (narcotic, crash-cart, drug analytics) —
 // previously the only place to change the threshold was buried inside the
@@ -1073,7 +1046,7 @@ function printFulfillmentReport() {
 function renderFulfillment() {
   const host = document.getElementById('car-fulfillment-host');
   if (!host || !tabAllowed('fulfillment')) return;
-  injectStyles();
+  injectNarcoticStyles();
 
   const y = currentYear();
   const years = [];
@@ -1258,7 +1231,7 @@ function printDrugComparisonReport() {
 function renderDrugComparison() {
   const host = document.getElementById('car-drug-cmp-host');
   if (!host || !tabAllowed('drugcompare')) return;
-  injectStyles();
+  injectNarcoticStyles();
 
   const meds = drugComparisonMedicineNames();
   const y = currentYear();
@@ -1411,7 +1384,7 @@ function printDeptTrendReport() {
 function renderDeptTrend() {
   const host = document.getElementById('car-dept-trend-host');
   if (!host || !tabAllowed('depttrend')) return;
-  injectStyles();
+  injectNarcoticStyles();
 
   const depts = (typeof window.gd === 'function' ? window.gd() : []) || [];
   const meds = drugComparisonMedicineNames();
@@ -2009,7 +1982,7 @@ function printNarcoticReport() {
 function render() {
   const host = document.getElementById('comprehensive-annual-report-host');
   if (!host || !tabAllowed('analytics')) return;
-  injectStyles();
+  injectNarcoticStyles();
 
   const y = currentYear();
   const years = [];
@@ -2056,7 +2029,7 @@ function render() {
 function renderCrash() {
   const host = document.getElementById('car-crash-host');
   if (!host || !tabAllowed('crashcart')) return;
-  injectStyles();
+  injectNarcoticStyles();
 
   const y = currentYear();
   const years = [];

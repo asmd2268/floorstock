@@ -134,3 +134,48 @@ test('requested-vs-dispensed is matched per medicine, never as two grand totals'
   assert.match(engine, /const wantByMed = \{\}, gotByMed = \{\}/);
   assert.match(engine, /Math\.min\(gotByMed\[key\] \|\| 0, want\)/);
 });
+
+// ── One definition per helper ──────────────────────────────────────────────
+// The file is four IIFEs. Helpers defined once inside each had to be edited in
+// lockstep, and the spike helpers grade how a consumption rise is reported --
+// a threshold changed in one copy and not the other would have graded the same
+// rise two ways in one report.
+
+const reportLines = report.split('\n');
+const firstIife = reportLines.findIndex(l => /^\(function/.test(l)) + 1;
+
+test('no function in the analytics report module is defined more than once', () => {
+  const counts = {};
+  for (const line of reportLines) {
+    const m = /^function ([A-Za-z0-9_]+)\(/.exec(line);
+    if (m) counts[m[1]] = (counts[m[1]] || 0) + 1;
+  }
+  const dupes = Object.entries(counts).filter(([, c]) => c > 1);
+  assert.deepEqual(dupes, [], `defined more than once: ${dupes.map(([n, c]) => `${n} x${c}`).join(', ')}`);
+});
+
+test('shared helpers sit at module scope, above every IIFE', () => {
+  for (const name of ['esc', 'spikeThresholdPct', 'spikeBadgeClass', 'spikeBadge', 'renderSpikeLegend']) {
+    const at = reportLines.findIndex(l => l.startsWith(`function ${name}(`));
+    assert.ok(at >= 0, `${name} is missing`);
+    assert.ok(at < firstIife, `${name} is inside an IIFE and invisible to the others`);
+  }
+});
+
+test('SPIKE_THRESHOLD_KEY is reachable from the hoisted helper that reads it', () => {
+  // spikeThresholdPct moved to module scope; a key left inside an IIFE would
+  // make it throw ReferenceError at call time -- which node --check cannot see.
+  const at = reportLines.findIndex(l => /^const SPIKE_THRESHOLD_KEY/.test(l));
+  assert.ok(at >= 0 && at < firstIife, 'SPIKE_THRESHOLD_KEY must be declared at module scope');
+});
+
+test('same-named checks that were never the same function stay apart', () => {
+  // Two different access checks once shared the name permitted(), and two
+  // different stylesheets shared injectStyles(). Merging them would have been
+  // wrong; the names had to say what they gate instead.
+  assert.doesNotMatch(report, /^function permitted\(/m);
+  assert.doesNotMatch(report, /^function injectStyles\(/m);
+  assert.match(report, /^function canUseInpatientAnalytics\(/m);
+  assert.match(report, /^function injectAnalyticsStyles\(/m);
+  assert.match(report, /^function injectNarcoticStyles\(/m);
+});
