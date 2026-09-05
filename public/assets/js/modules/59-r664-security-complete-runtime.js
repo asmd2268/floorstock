@@ -336,6 +336,7 @@ var ALLOWED=new Set((
   'piShowMedDetail '+
   'piPrintRoomChange piPrintCabinet piPrintReorder piDoPrint piPrintRoomDoor '+
   'piDoImport piDownloadTemplate piCloseModal piAddTxnRow piSubmitTxnRows piDeleteTxn piPurgeTxns piSavePurgeDays piHistClear piPdfScan '+
+  'piPrintCabinetMap piLocShelfChanged '+
   'ccTabCarts ccTabOps usrTabPerms ccOpsTab '+
   'saveDeptPrintNames setSelectedMedsOutOfStock piTxnMedChanged renderPharmInv acc2AddExpiryRow acc2ShowExpirySection acc2RemoveExpiryRow acc2SaveExpiryBatches acc2MedSearch '+
   'acc2CancelUsage acc3CancelPlanUsage acc3SavePlanExpiry acc2SetCustFilter acc2ResetBalance dispSlotAllToggle '+

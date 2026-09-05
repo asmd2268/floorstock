@@ -18,6 +18,46 @@ function piClone(x){try{return JSON.parse(JSON.stringify(x))}catch(e){return x}}
 /* Shelves read as a row of labels, so their order is the whole point. localeCompare
    with numeric:true puts A before B and "Shelf 2" before "Shelf 10" -- plain string
    order puts "Shelf 10" first, which looks like a bug to anyone reading the row. */
+/* The cabinet is a grid: each shelf is one row of it, divided into cells, and
+   cabinets are not uniform -- one shelf may hold four cells and the next six.
+   Mirrors the controlled-pharmacy storage model (rows[] of cells[]). The editor stays a plain textarea, with an
+   optional "x N" suffix per line, so adding a shelf is still one line of typing.
+     A x 4
+     B x 6
+     C          -> one row */
+function piParseShelfLine(line){
+  var m=/^(.*?)\s*[x*\u00d7]\s*(\d{1,2})\s*$/i.exec(String(line||''));
+  if(m&&m[1].trim())return {name:m[1].trim(),cells:Math.max(1,Math.min(40,parseInt(m[2],10)||1))};
+  return {name:String(line||'').trim(),cells:1};
+}
+function piShelfLine(sh){
+  var n=piShelfCells(sh);
+  return n>1?(sh.name+' x '+n):sh.name;
+}
+function piShelfCells(sh){var n=parseInt(sh&&sh.cells,10);return n>0?n:1}
+/* Row labels are what staff read off the printed map, so they follow the shelf's
+   own name: shelf A row 2 is "A2". */
+function piCellLabel(sh,idx){return String(sh&&sh.name||'')+(idx+1)}
+function piFindShelf(rooms,triple){
+  var parts=String(triple||'').split('|');if(parts.length<3)return null;
+  var room=(rooms||[]).find(function(r){return r.id===parts[0]});if(!room)return null;
+  var cab=(room.cabinets||[]).find(function(c){return c.id===parts[1]});if(!cab)return null;
+  var sh=(cab.shelves||[]).find(function(x){return x.id===parts[2]});
+  return sh?{room:room,cab:cab,shelf:sh}:null;
+}
+/* Row options belong to the chosen shelf, so they are rebuilt whenever it changes.
+   "—" stays available: a medicine may sit on a shelf without a recorded row, and
+   forcing a guess would print it in a place nobody verified. */
+function piCellOptionsHtml(rooms,triple,cellVal){
+  var found=piFindShelf(rooms,triple);
+  var n=found?piShelfCells(found.shelf):0;
+  var out='<option value="">—</option>';
+  for(var i=0;i<n;i++){
+    var v=String(i+1);
+    out+='<option value="'+v+'"'+(String(cellVal||'')===v?' selected':'')+'>'+piEsc(piCellLabel(found.shelf,i))+'</option>';
+  }
+  return out;
+}
 function piShelfCmp(a,b){return String(a==null?'':a).localeCompare(String(b==null?'':b),undefined,{numeric:true,sensitivity:'base'})}
 /* Saved order wins where it exists so a hand-arranged cabinet stays arranged;
    name order is the fallback for cabinets saved before order was recorded. */
@@ -180,7 +220,8 @@ function piRenderRoomsTab(host){
       if(canEdit){
         html+='<div class="fl g8 ic">';
         html+='<button class="btn bg bxs" onclick="piOpenEditCabinet(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')">✏️</button>';
-        html+='<button class="btn bg bxs" onclick="piPrintCabinet(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')">🖨</button>';
+        html+='<button class="btn bg bxs" onclick="piPrintCabinet(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')" title="Print list / طباعة قائمة">🖨</button>';
+        html+='<button class="btn bg bxs" onclick="piPrintCabinetMap(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')" title="Print cabinet map on one A4 / خريطة الخزانة بورقة A4">🗺</button>';
         html+='<button class="btn bd2c bxs" onclick="piDeleteCabinet(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')">🗑</button>';
         html+='</div>';
       }
@@ -284,7 +325,7 @@ function piShowCabModal(roomId,cabId){
   var rooms=piRooms();
   var room=rooms.find(function(r){return r.id===roomId});if(!room)return;
   var cab=cabId?(room.cabinets||[]).find(function(c){return c.id===cabId}):null;
-  var shelves=cab?JSON.stringify((cab.shelves||[]).map(function(s){return s.name})):JSON.stringify(['Shelf 1','Shelf 2','Shelf 3']);
+  var shelves=cab?JSON.stringify(piShelvesOf(cab).map(piShelfLine)):JSON.stringify(['A x 4','B x 4','C x 4']);
   piShowModal('pi-cab-modal',
     '<h3>'+(cab?'Edit Cabinet':'Add Cabinet')+'</h3>'+
     /* The dialog carries the room it belongs to. Reading it back from module-level
@@ -302,7 +343,7 @@ function piShowCabModal(roomId,cabId){
       '</label>'+
       /* rows="5" is the visible height, not a cap -- with three default lines
          showing, the box reads as though five shelves were the maximum. */
-      '<div class="fhint" style="margin-top:4px">Add as many shelves as you need — one per line, no limit; the box scrolls and can be dragged taller. Untick to keep the exact order you typed. / أضف ما تشاء من الأرفف — رفّ بكل سطر، بلا حد؛ المربع يُمرَّر ويُسحب ليكبر. أزل العلامة لتبقى بالترتيب الذي كتبته.</div>'+
+      '<div class="fhint" style="margin-top:4px">One shelf per line, no limit. Add <b>x N</b> to split a shelf into N cells — shelves need not match: <code>A x 4</code>, <code>B x 6</code>, <code>C</code>. Untick above to keep the exact order you typed.<br>رفّ بكل سطر، بلا حد. أضف <b>x N</b> لتقسيم الرف إلى N خانات — ولا يلزم تساوي الأرفف. أزل العلامة أعلاه ليبقى ترتيبك اليدوي.</div>'+
     '</div>'+
     '<div style="margin-top:12px"><button class="btn bp" onclick="piSaveCabinet()">Save</button> <button class="btn bg bsm" onclick="piCloseModal()">Cancel</button></div>'
   );
@@ -314,13 +355,15 @@ window.piSaveCabinet=async function(){
   var shelfLines=String((piE('pi-cab-shelves')||{}).value||'').split('\n').map(function(s){return s.trim()}).filter(Boolean);
   if(!name)return piToast('Enter a cabinet name','err');
   if(!shelfLines.length)return piToast('Add at least one shelf','err');
+  var parsed=shelfLines.map(piParseShelfLine).filter(function(x){return !!x.name});
+  if(!parsed.length)return piToast('Add at least one shelf','err');
   // Duplicate shelf names collide when medicine locations are matched by name.
   var seenShelf={},dupShelf='';
-  shelfLines.forEach(function(x){var k=x.toLowerCase();if(seenShelf[k]&&!dupShelf)dupShelf=x;seenShelf[k]=1});
+  parsed.forEach(function(x){var k=x.name.toLowerCase();if(seenShelf[k]&&!dupShelf)dupShelf=x.name;seenShelf[k]=1});
   if(dupShelf)return piToast('Two shelves are both named "'+dupShelf+'" / رفّان بنفس الاسم','err');
 
   var autoSort=!!((piE('pi-cab-autosort')||{}).checked);
-  if(autoSort)shelfLines=shelfLines.slice().sort(piShelfCmp);
+  if(autoSort)parsed=parsed.slice().sort(function(a,b){return piShelfCmp(a.name,b.name)});
 
   // Prefer the ids the open dialog carries; module-level UI state can drift.
   var roomId=String((piE('pi-cab-room')||{}).value||'')||PI_UI.editRoomId;
@@ -329,13 +372,13 @@ window.piSaveCabinet=async function(){
   var room=rooms.find(function(r){return r.id===roomId});
   // Never return silently: a Save that neither saves nor explains reads as a dead button.
   if(!room)return piToast('That room is no longer available — reopen the page and try again. / الغرفة لم تعد متاحة، أعد فتح الصفحة','err');
-  var shelves=shelfLines.map(function(s,i){return {id:piUid('sh'),name:s,order:i}});
+  var shelves=parsed.map(function(x,i){return {id:piUid('sh'),name:x.name,cells:x.cells,order:i}});
   if(cabId){
     var cab=(room.cabinets||[]).find(function(c){return c.id===cabId});
     if(!cab)return piToast('That cabinet is no longer available — reopen the page and try again. / الخزانة لم تعد متاحة، أعد فتح الصفحة','err');
     // Map existing shelf IDs by name to preserve medicine locations
     var oldByName={};(cab.shelves||[]).forEach(function(sh){oldByName[sh.name]=sh.id});
-    shelves=shelfLines.map(function(s,i){return {id:oldByName[s]||piUid('sh'),name:s,order:i}});
+    shelves=parsed.map(function(x,i){return {id:oldByName[x.name]||piUid('sh'),name:x.name,cells:x.cells,order:i}});
     cab.name=name;cab.type=type;cab.shelves=shelves;cab.autoSort=autoSort;
   }else{
     if(!room.cabinets)room.cabinets=[];
@@ -544,7 +587,7 @@ function piLocationsHtml(locations){
   var locs=locations&&locations.length?locations:[{roomId:'',cabId:'',shelfId:'',expiry:''}];
   return locs.map(function(l){
     var val=l.roomId?l.roomId+'|'+l.cabId+'|'+l.shelfId:'';
-    return piLocRowHtml(rooms,val,l.expiry||'');
+    return piLocRowHtml(rooms,val,l.expiry||'',l.cell||'');
   }).join('');
 }
 
@@ -683,11 +726,12 @@ window.piTxnMedChanged = function (input) {
   wrapper.innerHTML = piTxnLocSelectHtml(type, input.value, current);
 };
 
-function piLocRowHtml(rooms,locVal,expiryVal){
+function piLocRowHtml(rooms,locVal,expiryVal,cellVal){
   return '<div class="fl g8 ic pi-loc-row" style="margin-bottom:6px;flex-wrap:wrap">'+
-    '<select class="psel pi-loc-sel" style="flex:2;min-width:160px"><option value="">Select shelf...</option>'+
+    '<select class="psel pi-loc-sel" style="flex:2;min-width:160px" onchange="piLocShelfChanged(this)"><option value="">Select shelf...</option>'+
     rooms.map(function(room){return (room.cabinets||[]).map(function(cab){return piShelvesOf(cab).map(function(sh){var v=room.id+'|'+cab.id+'|'+sh.id;return '<option value="'+piEsc(v)+'" '+(v===locVal?'selected':'')+'>'+piEsc(room.name+' › '+cab.name+' › '+sh.name)+'</option>'}).join('')}).join('')}).join('')+
     '</select>'+
+    '<select class="psel pi-loc-cell-sel" style="flex:0 0 92px;min-width:92px" title="Cell on this shelf / الخانة داخل الرف">'+piCellOptionsHtml(rooms,locVal,cellVal)+'</select>'+
     '<input type="date" class="inp pi-loc-expiry" style="flex:1;min-width:130px" placeholder="Expiry for this batch" value="'+piEsc(expiryVal||'')+'">'+
     '<button class="btn bd2c bxs" onclick="this.closest(\'.pi-loc-row\').remove()">✕</button>'+
     '</div>';
@@ -696,8 +740,13 @@ window.piAddLocRow=function(){
   var c=piE('pi-med-locs');if(!c)return;
   var rooms=piRooms();
   var div=document.createElement('div');
-  div.innerHTML=piLocRowHtml(rooms,'','');
+  div.innerHTML=piLocRowHtml(rooms,'','','');
   c.appendChild(div.firstChild);
+};
+window.piLocShelfChanged=function(sel){
+  var row=sel&&sel.closest('.pi-loc-row');if(!row)return;
+  var cellSel=row.querySelector('.pi-loc-cell-sel');if(!cellSel)return;
+  cellSel.innerHTML=piCellOptionsHtml(piRooms(),sel.value,'');
 };
 window.piSaveMed=async function(){
   var name=String((piE('pi-med-name')||{}).value||'').trim();
@@ -707,7 +756,9 @@ window.piSaveMed=async function(){
     var sel=row.querySelector('.pi-loc-sel');var expInput=row.querySelector('.pi-loc-expiry');
     var v=sel?sel.value:'';if(!v)return;
     var parts=v.split('|');if(parts.length<3)return;
-    locations.push({roomId:parts[0],cabId:parts[1],shelfId:parts[2],expiry:expInput?expInput.value.trim():''});
+    var cellSel=row.querySelector('.pi-loc-cell-sel');
+    var cell=parseInt(cellSel&&cellSel.value,10);
+    locations.push({roomId:parts[0],cabId:parts[1],shelfId:parts[2],cell:cell>0?cell:null,expiry:expInput?expInput.value.trim():''});
   });
   // Compute soonest non-expired location expiry as the medicine-level expiry for filtering/display
   var allLocExpiries=locations.map(function(l){return l.expiry}).filter(Boolean).sort();
@@ -862,6 +913,126 @@ window.piPrintRoomChange=function(v){
 };
 window.piPrintCabinet=function(roomId,cabId){
   PI_UI.tab='print';PI_UI.printRoomId=roomId;PI_UI.printCabId=cabId;window.renderPharmInv();
+};
+/* One cabinet, one A4 page. The cabinet is drawn as it stands: each shelf is a row
+   of the grid, split into however many cells that shelf has -- shelves do not have
+   to match, so the rows are sized independently. Same model as the controlled
+   pharmacy storage map (rows of cells).
+
+   The page is locked to a fixed height with the grid taking the remaining space, so
+   a cabinet with three shelves and one with twelve both fill exactly one sheet
+   instead of spilling onto a second. */
+window.piPrintCabinetMap=function(roomId,cabId){
+  var rooms=piRooms();
+  var room=(rooms||[]).find(function(r){return r.id===roomId});
+  if(!room)return piToast('Room not found / الغرفة غير موجودة','err');
+  var cab=(room.cabinets||[]).find(function(c){return c.id===cabId});
+  if(!cab)return piToast('Cabinet not found / الخزانة غير موجودة','err');
+
+  var shelves=piShelvesOf(cab);
+  if(!shelves.length)return piToast('This cabinet has no shelves yet / لا توجد أرفف بعد','err');
+
+  var meds=piMeds();
+  var colors=piGetColors();
+
+  // medicines that name a cell go in it; the rest are listed under the map so a
+  // medicine is never drawn in a position nobody recorded.
+  var byCell={},unplaced=[];
+  meds.forEach(function(m){
+    (m.locations||[]).forEach(function(l){
+      if(l.roomId!==room.id||l.cabId!==cab.id)return;
+      var sh=shelves.find(function(x){return x.id===l.shelfId});
+      if(!sh)return;
+      var c=parseInt(l.cell,10);
+      if(c>0&&c<=piShelfCells(sh)){
+        var k=sh.id+':'+c;
+        (byCell[k]=byCell[k]||[]).push(m);
+      }else{
+        unplaced.push({shelf:sh,med:m});
+      }
+    });
+  });
+
+  /* Rows share the page equally, so the more shelves a cabinet has the shorter each
+     one is. Overflow was hidden, which on a pharmacy map means a medicine that is
+     really there simply is not shown. Estimate how many chips a row can hold and
+     say "+N more" for the rest, so the sheet never under-reports. */
+  var rowMm=Math.max(8,(258-shelves.length*3)/shelves.length);
+  var chipCap=Math.max(1,Math.floor((rowMm-5)/3.6));
+
+  function medChip(m){
+    var cls=m.outOfStock?' oos':'';
+    var st=piExpiryStatus(m.expiry);
+    if(st==='expired')cls+=' exp';else if(st==='soon')cls+=' soon';
+    return '<span class="mchip'+cls+'">'+(m.high_alert?'<i class="ha"></i>':'')+piEsc(m.name)+'</span>';
+  }
+
+  var grid='<div class="map">'+shelves.map(function(sh){
+    var n=piShelfCells(sh);
+    var cells='';
+    for(var i=1;i<=n;i++){
+      var list=byCell[sh.id+':'+i]||[];
+      var shown=list.slice(0,chipCap),hidden=list.length-shown.length;
+      cells+='<div class="cell"><b class="clab">'+piEsc(piCellLabel(sh,i-1))+'</b>'+
+             '<div class="cbody">'+shown.map(medChip).join('')+
+             (hidden>0?'<span class="mchip more">+'+hidden+' more</span>':'')+
+             '</div></div>';
+    }
+    return '<div class="srow">'+
+      '<div class="shead">'+piEsc(sh.name)+'</div>'+
+      '<div class="scells" style="grid-template-columns:repeat('+n+',1fr)">'+cells+'</div>'+
+    '</div>';
+  }).join('')+'</div>';
+
+  var foot='';
+  if(unplaced.length){
+    var byShelf={};
+    unplaced.forEach(function(u){(byShelf[u.shelf.name]=byShelf[u.shelf.name]||[]).push(u.med)});
+    foot='<div class="foot"><b><bdi>On a shelf without a recorded cell / على الرف بلا خانة محددة</bdi>:</b> '+
+      Object.keys(byShelf).map(function(k){
+        return '<bdi>'+piEsc(k)+' — '+byShelf[k].map(function(m){return piEsc(m.name)}).join(', ')+'</bdi>';
+      }).join(' · ')+'</div>';
+  }
+
+  var css=
+    '@page{size:A4 portrait;margin:8mm}'+
+    'html,body{margin:0;width:100%}'+
+    'body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;height:281mm;display:flex;flex-direction:column;overflow:hidden}'+
+    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}'+
+    '.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:4px;flex:0 0 auto}'+
+    '.head h1{font-size:15pt;margin:0}.head .sub{font-size:9pt;color:#333}'+
+    '.map{flex:1 1 auto;display:flex;flex-direction:column;gap:3mm;margin-top:3mm;min-height:0}'+
+    '.srow{flex:1 1 0;display:flex;min-height:0;border:1.5px solid #000;border-radius:3px;overflow:hidden}'+
+    '.shead{flex:0 0 16mm;background:#e8f0ff;border-right:1.5px solid #000;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:11pt}'+
+    '.scells{flex:1 1 auto;display:grid;min-width:0}'+
+    '.cell{border-right:1px dashed #94a3b8;padding:1.5mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}'+
+    '.cell:last-child{border-right:none}'+
+    '.clab{font-size:7pt;color:#475569;flex:0 0 auto}'+
+    '.cbody{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:1mm;align-content:flex-start;overflow:hidden;margin-top:1mm}'+
+    '.mchip{font-size:7.5pt;line-height:1.15;border:1px solid #64748b;border-radius:2px;padding:0 1mm;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
+    '.mchip .ha{display:inline-block;width:5px;height:5px;border-radius:50%;background:'+colors.ha+';margin-right:2px}'+
+    '.mchip.more{border-style:dashed;font-weight:700}'+
+    '.mchip.soon{background:#fef9c3}.mchip.exp{background:#fee2e2}.mchip.oos{text-decoration:line-through;opacity:.6}'+
+    '.foot{flex:0 0 auto;border-top:1px solid #000;margin-top:2mm;padding-top:1.5mm;font-size:7.5pt}'+
+    '.legend{flex:0 0 auto;font-size:7pt;color:#334155;margin-top:1.5mm}';
+
+  /* "4 shelves / أرفف" next to "Storage / مستودع" on one line lets the bidi
+     algorithm interleave the two pairs into nonsense. <bdi> isolates each. */
+  function bd(t){return '<bdi>'+piEsc(t)+'</bdi>'}
+  var head='<div class="head"><div><h1>'+piEsc(cab.name)+'</h1>'+
+    '<div class="sub">'+bd(room.name)+' · '+bd(cab.type==='dispensing'?'Dispensing / منطقة صرف':'Storage / مستودع')+
+    ' · '+bd(shelves.length+' shelves / أرفف')+'</div></div>'+
+    '<div class="sub">'+new Date().toLocaleDateString('en-GB')+'</div></div>';
+
+  var legend='<div class="legend">'+
+    ['● high-alert / عالي الخطورة','▪ yellow = expiring soon / قرب الانتهاء','▪ red = expired / منتهٍ','▪ struck through = out of stock / غير متوفر','⌁ +N more = cell is fuller than the space shown / الخانة فيها أكثر']
+      .map(bd).join(' &nbsp; ')+'</div>';
+
+  var win=window.open('','_blank');
+  if(!win)return piToast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة','err');
+  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+piEsc(cab.name)+' — Map</title><style>'+css+'</style></head><body>'+head+grid+foot+legend+'</body></html>');
+  win.document.close();
+  setTimeout(function(){win.print()},400);
 };
 window.piPrintRoomDoor=function(){
   var rooms=piRooms();

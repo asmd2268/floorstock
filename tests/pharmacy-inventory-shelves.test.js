@@ -62,3 +62,72 @@ test('duplicate shelf names are rejected', () => {
   const fn = /window\.piSaveCabinet=async function\(\)\{[\s\S]*?\n\};/.exec(src)[0];
   assert.match(fn, /dupShelf/);
 });
+
+// ── Cabinet grid and the one-page A4 map ───────────────────────────────────
+// The cabinet is a grid: each shelf is one row of it, split into cells, and the
+// shelves need not match. Same shape as the controlled-pharmacy storage map.
+
+const piParseShelfLine = loadFn('piParseShelfLine', /^function piParseShelfLine\([\s\S]*?\n\}/m);
+const piShelfCells = loadFn('piShelfCells', /^function piShelfCells\(.*$/m);
+
+test('the "x N" suffix splits a shelf into cells and tolerates junk', () => {
+  assert.deepEqual(piParseShelfLine('A x 4'), { name: 'A', cells: 4 });
+  assert.deepEqual(piParseShelfLine('B×6'), { name: 'B', cells: 6 });
+  assert.deepEqual(piParseShelfLine('Shelf 2 * 3'), { name: 'Shelf 2', cells: 3 });
+  // No suffix is a single-cell shelf, so old cabinets keep working.
+  assert.deepEqual(piParseShelfLine('C'), { name: 'C', cells: 1 });
+  // A count of zero would render a shelf with nothing in it.
+  assert.deepEqual(piParseShelfLine('Fridge x0'), { name: 'Fridge', cells: 1 });
+  // Clamped, so one typo cannot produce a thousand-column row.
+  assert.equal(piParseShelfLine('D x 99').cells, 40);
+  // A line that is only a suffix is a name, not a broken count.
+  assert.deepEqual(piParseShelfLine('x 5'), { name: 'x 5', cells: 1 });
+});
+
+test('a shelf with no recorded cell count still has one cell', () => {
+  assert.equal(piShelfCells({}), 1);
+  assert.equal(piShelfCells({ cells: 0 }), 1);
+  assert.equal(piShelfCells({ cells: 6 }), 6);
+});
+
+test('the map never silently drops a medicine that does not fit', () => {
+  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  // Cells are overflow:hidden, so a crowded cell used to just stop showing
+  // medicines. On a pharmacy map that is worse than an ugly page.
+  assert.match(fn, /chipCap/);
+  assert.match(fn, /hidden>0\?'<span class="mchip more">/);
+  assert.match(fn, /list\.slice\(0,chipCap\)/);
+});
+
+test('a medicine is only drawn in a cell someone actually recorded', () => {
+  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  // Anything without a cell goes to the footer rather than being placed by guess.
+  assert.match(fn, /unplaced\.push/);
+  assert.match(fn, /c>0&&c<=piShelfCells\(sh\)/);
+});
+
+test('the map is one A4 page whatever the shelf count', () => {
+  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  assert.match(fn, /@page\{size:A4 portrait/);
+  assert.match(fn, /overflow:hidden/);
+  // Rows share the remaining height, so three shelves and twelve both fill one sheet.
+  assert.match(fn, /\.srow\{flex:1 1 0/);
+});
+
+test('bilingual labels are bidi-isolated', () => {
+  const fn = /window\.piPrintCabinetMap=function[\s\S]*?\n\};/m.exec(src)[0];
+  // "4 shelves / أرفف" beside "Storage / مستودع" interleaves into nonsense otherwise.
+  assert.match(fn, /<bdi>/);
+});
+
+test('the map button and the shelf-cell picker are allowlisted for the CSP bridge', () => {
+  const bridge = fs.readFileSync(new URL('../public/assets/js/modules/59-r664-security-complete-runtime.js', import.meta.url), 'utf8');
+  // An inline handler the bridge does not know is a dead button.
+  assert.match(bridge, /piPrintCabinetMap/);
+  assert.match(bridge, /piLocShelfChanged/);
+});
+
+test('a location remembers which cell it sits in', () => {
+  assert.match(src, /cell:cell>0\?cell:null/);
+  assert.match(src, /piLocRowHtml\(rooms,val,l\.expiry\|\|'',l\.cell\|\|''\)/);
+});
