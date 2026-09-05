@@ -15,6 +15,17 @@ function piEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function piUid(p){return (p||'pi')+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
 function piNow(){return new Date().toISOString()}
 function piClone(x){try{return JSON.parse(JSON.stringify(x))}catch(e){return x}}
+/* Shelves read as a row of labels, so their order is the whole point. localeCompare
+   with numeric:true puts A before B and "Shelf 2" before "Shelf 10" -- plain string
+   order puts "Shelf 10" first, which looks like a bug to anyone reading the row. */
+function piShelfCmp(a,b){return String(a==null?'':a).localeCompare(String(b==null?'':b),undefined,{numeric:true,sensitivity:'base'})}
+/* Saved order wins where it exists so a hand-arranged cabinet stays arranged;
+   name order is the fallback for cabinets saved before order was recorded. */
+function piShelvesOf(cab){
+  var list=(cab&&cab.shelves||[]).slice();
+  var ordered=list.every(function(sh){return typeof sh.order==='number'});
+  return ordered?list.sort(function(a,b){return a.order-b.order}):list.sort(function(a,b){return piShelfCmp(a.name,b.name)});
+}
 function piToast(msg,kind){if(typeof toast==='function')toast(msg,kind||'info')}
 
 function piRooms(){
@@ -175,9 +186,10 @@ function piRenderRoomsTab(host){
       }
       html+='</div>';
       // Shelf map preview
-      var shelves=cab.shelves||[];
+      var shelves=piShelvesOf(cab);
       if(shelves.length){
-        html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">';
+        // direction:ltr so A B C reads left-to-right regardless of page direction.
+        html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;direction:ltr">';
         shelves.forEach(function(sh){
           var meds=piMedsInShelf(room.id,cab.id,sh.id);
           html+='<div style="background:var(--s2);border:1px solid var(--br);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer" onclick="piFilterByShelf(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\',\''+piEsc(sh.id)+'\')" title="'+meds.length+' medicine(s)">'+piEsc(sh.name)+' <b>'+meds.length+'</b></div>';
@@ -275,9 +287,21 @@ function piShowCabModal(roomId,cabId){
   var shelves=cab?JSON.stringify((cab.shelves||[]).map(function(s){return s.name})):JSON.stringify(['Shelf 1','Shelf 2','Shelf 3']);
   piShowModal('pi-cab-modal',
     '<h3>'+(cab?'Edit Cabinet':'Add Cabinet')+'</h3>'+
+    /* The dialog carries the room it belongs to. Reading it back from module-level
+       UI state at save time meant a Save could silently target a room that was no
+       longer there, and return without saving or explaining. */
+    '<input type="hidden" id="pi-cab-room" value="'+piEsc(roomId)+'">'+
+    '<input type="hidden" id="pi-cab-id" value="'+piEsc(cabId||'')+'">'+
     '<div class="fg"><label>Cabinet name</label><input id="pi-cab-name" class="inp" value="'+piEsc(cab?cab.name:'')+'" placeholder="e.g. Cabinet A, Fridge 1"></div>'+
     '<div class="fg"><label>Type</label><select id="pi-cab-type" class="psel"><option value="storage" '+((!cab||cab.type==='storage')?'selected':'')+'>🟤 Storage / مستودع</option><option value="dispensing" '+(cab&&cab.type==='dispensing'?'selected':'')+'>🔵 Dispensing / منطقة صرف</option></select></div>'+
-    '<div class="fg"><label>Shelves (one per line)</label><textarea id="pi-cab-shelves" class="inp" rows="5" style="font-family:monospace;resize:vertical">'+piEsc(JSON.parse(shelves).join('\n'))+'</textarea></div>'+
+    '<div class="fg"><label>Shelves (one per line) / الأرفف (واحد بكل سطر)</label>'+
+      '<textarea id="pi-cab-shelves" class="inp" rows="5" style="font-family:monospace;resize:vertical;direction:ltr;text-align:left">'+piEsc(JSON.parse(shelves).join('\n'))+'</textarea>'+
+      '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-weight:400;cursor:pointer">'+
+        '<input type="checkbox" id="pi-cab-autosort" '+((!cab||cab.autoSort!==false)?'checked':'')+'>'+
+        '<span>Keep shelves in A→Z order / رتّب الأرفف أبجديًا تلقائيًا</span>'+
+      '</label>'+
+      '<div class="fhint" style="margin-top:4px">Untick to keep the exact order you typed. / أزل العلامة لتبقى بالترتيب الذي كتبته.</div>'+
+    '</div>'+
     '<div style="margin-top:12px"><button class="btn bp" onclick="piSaveCabinet()">Save</button> <button class="btn bg bsm" onclick="piCloseModal()">Cancel</button></div>'
   );
   setTimeout(function(){var x=piE('pi-cab-name');if(x)x.focus()},40);
@@ -288,20 +312,32 @@ window.piSaveCabinet=async function(){
   var shelfLines=String((piE('pi-cab-shelves')||{}).value||'').split('\n').map(function(s){return s.trim()}).filter(Boolean);
   if(!name)return piToast('Enter a cabinet name','err');
   if(!shelfLines.length)return piToast('Add at least one shelf','err');
+  // Duplicate shelf names collide when medicine locations are matched by name.
+  var seenShelf={},dupShelf='';
+  shelfLines.forEach(function(x){var k=x.toLowerCase();if(seenShelf[k]&&!dupShelf)dupShelf=x;seenShelf[k]=1});
+  if(dupShelf)return piToast('Two shelves are both named "'+dupShelf+'" / رفّان بنفس الاسم','err');
+
+  var autoSort=!!((piE('pi-cab-autosort')||{}).checked);
+  if(autoSort)shelfLines=shelfLines.slice().sort(piShelfCmp);
+
+  // Prefer the ids the open dialog carries; module-level UI state can drift.
+  var roomId=String((piE('pi-cab-room')||{}).value||'')||PI_UI.editRoomId;
+  var cabId=String((piE('pi-cab-id')||{}).value||'')||PI_UI.editCabId;
   var rooms=piClone(piRooms());
-  var room=rooms.find(function(r){return r.id===PI_UI.editRoomId});if(!room)return;
+  var room=rooms.find(function(r){return r.id===roomId});
+  // Never return silently: a Save that neither saves nor explains reads as a dead button.
+  if(!room)return piToast('That room is no longer available — reopen the page and try again. / الغرفة لم تعد متاحة، أعد فتح الصفحة','err');
   var shelves=shelfLines.map(function(s,i){return {id:piUid('sh'),name:s,order:i}});
-  if(PI_UI.editCabId){
-    var cab=( room.cabinets||[]).find(function(c){return c.id===PI_UI.editCabId});
-    if(cab){
-      // Map existing shelf IDs by name to preserve medicine locations
-      var oldByName={};(cab.shelves||[]).forEach(function(sh){oldByName[sh.name]=sh.id});
-      shelves=shelfLines.map(function(s,i){return {id:oldByName[s]||piUid('sh'),name:s,order:i}});
-      cab.name=name;cab.type=type;cab.shelves=shelves;
-    }
+  if(cabId){
+    var cab=(room.cabinets||[]).find(function(c){return c.id===cabId});
+    if(!cab)return piToast('That cabinet is no longer available — reopen the page and try again. / الخزانة لم تعد متاحة، أعد فتح الصفحة','err');
+    // Map existing shelf IDs by name to preserve medicine locations
+    var oldByName={};(cab.shelves||[]).forEach(function(sh){oldByName[sh.name]=sh.id});
+    shelves=shelfLines.map(function(s,i){return {id:oldByName[s]||piUid('sh'),name:s,order:i}});
+    cab.name=name;cab.type=type;cab.shelves=shelves;cab.autoSort=autoSort;
   }else{
     if(!room.cabinets)room.cabinets=[];
-    room.cabinets.push({id:piUid('cab'),name:name,type:type,shelves:shelves});
+    room.cabinets.push({id:piUid('cab'),name:name,type:type,shelves:shelves,autoSort:autoSort});
   }
   try{await piSaveRooms(rooms);piCloseModal();window.renderPharmInv();piToast('Saved ✓','succ')}
   catch(e){piToast(String(e&&e.message||e),'err')}
@@ -339,7 +375,7 @@ function piRenderMedsTab(host){
   var locOpts='<option value="">All locations</option>';
   rooms.forEach(function(room){
     (room.cabinets||[]).forEach(function(cab){
-      (cab.shelves||[]).forEach(function(sh){
+      piShelvesOf(cab).forEach(function(sh){
         var key=room.id+':'+cab.id+':'+sh.id;
         locOpts+='<option value="'+piEsc(key)+'" '+(PI_UI.medFilterLoc===key?'selected':'')+'>'+piEsc(room.name)+' › '+piEsc(cab.name)+' › '+piEsc(sh.name)+'</option>';
       });
@@ -608,7 +644,7 @@ function piTxnLocOptions(type, medName) {
     (room.cabinets || []).forEach(function (cab) {
       var isStorage = (cab.type || 'storage') === 'storage';
       if (isStorage !== wantStorage) return;
-      (cab.shelves || []).forEach(function (sh) {
+      piShelvesOf(cab).forEach(function (sh) {
         var v = room.id + '|' + cab.id + '|' + sh.id;
         var label = room.name + ' › ' + cab.name + ' › ' + sh.name;
         (known[v] ? mine : others).push({ v: v, label: label });
@@ -648,7 +684,7 @@ window.piTxnMedChanged = function (input) {
 function piLocRowHtml(rooms,locVal,expiryVal){
   return '<div class="fl g8 ic pi-loc-row" style="margin-bottom:6px;flex-wrap:wrap">'+
     '<select class="psel pi-loc-sel" style="flex:2;min-width:160px"><option value="">Select shelf...</option>'+
-    rooms.map(function(room){return (room.cabinets||[]).map(function(cab){return (cab.shelves||[]).map(function(sh){var v=room.id+'|'+cab.id+'|'+sh.id;return '<option value="'+piEsc(v)+'" '+(v===locVal?'selected':'')+'>'+piEsc(room.name+' › '+cab.name+' › '+sh.name)+'</option>'}).join('')}).join('')}).join('')+
+    rooms.map(function(room){return (room.cabinets||[]).map(function(cab){return piShelvesOf(cab).map(function(sh){var v=room.id+'|'+cab.id+'|'+sh.id;return '<option value="'+piEsc(v)+'" '+(v===locVal?'selected':'')+'>'+piEsc(room.name+' › '+cab.name+' › '+sh.name)+'</option>'}).join('')}).join('')}).join('')+
     '</select>'+
     '<input type="date" class="inp pi-loc-expiry" style="flex:1;min-width:130px" placeholder="Expiry for this batch" value="'+piEsc(expiryVal||'')+'">'+
     '<button class="btn bd2c bxs" onclick="this.closest(\'.pi-loc-row\').remove()">✕</button>'+
@@ -788,7 +824,7 @@ function piRenderPrintTab(host){
             if(!shelfMap[l.shelfId])shelfMap[l.shelfId]=[];shelfMap[l.shelfId].push(m);
           });
         });
-        (cab.shelves||[]).forEach(function(sh){
+        piShelvesOf(cab).forEach(function(sh){
           var shMeds=shelfMap[sh.id]||[];if(!shMeds.length)return;
           html+='<div style="margin-left:16px;margin-top:4px;font-size:12px"><span style="opacity:.6">'+piEsc(sh.name)+':</span> '+shMeds.map(function(m){return piEsc(m.name)+(m.outOfStock?' <span style="color:var(--rd)">[OOS]</span>':'')}).join(', ')+'</div>';
         });
@@ -877,7 +913,7 @@ window.piDoPrint=function(){
       body+='<div class="pi-cab-header">'+(opts.showRoom?piEsc(room.name)+' — ':'')+piEsc(cab.name)+'<span class="pi-cab-type">'+(cab.type==='dispensing'?'Dispensing':'Storage')+'</span></div>';
       var shelfMap={};
       cabMeds.forEach(function(m){(m.locations||[]).filter(function(l){return l.roomId===room.id&&l.cabId===cab.id}).forEach(function(l){if(!shelfMap[l.shelfId])shelfMap[l.shelfId]=[];shelfMap[l.shelfId].push(m)})});
-      (cab.shelves||[]).forEach(function(sh){
+      piShelvesOf(cab).forEach(function(sh){
         var shMeds=shelfMap[sh.id]||[];if(!shMeds.length)return;
         body+='<div class="pi-shelf-label">'+piEsc(sh.name)+'</div>';
         var intColorsP=piIntColors();
