@@ -2,7 +2,7 @@ import {
   allRows, rowsForPeriod, computeStats, topMedicines,
   availableYears, priorPeriod, sameQuarterPriorYear, periodLabel,
   detectSpikes, zeroDispenseSummary, deptLabel
-} from '../core/analytics-engine.js?v=8dd085dff7';
+} from '../core/analytics-engine.js?v=ce89f4cd54';
 
 (function () {
 'use strict';
@@ -71,13 +71,17 @@ function injectStyles() {
 .anl-header{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 18px 10px}
 .anl-header h2{margin:0;font-size:18px;font-weight:700;color:var(--cl-text,#f1f5f9)}
 .anl-controls{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
-.anl-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:10px;padding:0 18px 14px}
-.anl-kpi{border:1px solid var(--cl-border,#334155);border-top:3px solid #2563eb;border-radius:10px;padding:12px 14px;background:var(--cl-card2,#111827)}
+.anl-kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(158px,1fr));gap:10px;padding:0 18px 14px}
+/* The accent bar carries the reading: green is within target, amber is slipping,
+   red needs attention. Cards with no threshold keep the neutral blue so a colour
+   always means something rather than decorating every tile. */
+.anl-kpi{position:relative;border:1px solid var(--cl-border,#334155);border-top:3px solid #2563eb;border-radius:10px;padding:12px 14px;background:var(--cl-card2,#111827);transition:border-color .15s,transform .15s}
+.anl-kpi:hover{transform:translateY(-1px);border-color:var(--cl-sub,#94a3b8)}
 .anl-kpi.spike{border-top-color:#f59e0b}
 .anl-kpi.zero{border-top-color:#ef4444}
 .anl-kpi.good{border-top-color:#10b981}
-.anl-kpi-label{font-size:11px;color:var(--cl-sub,#94a3b8);margin-bottom:4px}
-.anl-kpi-val{font-size:26px;font-weight:800;color:var(--cl-text,#f1f5f9);line-height:1}
+.anl-kpi-label{font-size:11px;color:var(--cl-sub,#94a3b8);margin-bottom:4px;min-height:2.4em;display:flex;align-items:flex-start;line-height:1.2}
+.anl-kpi-val{font-size:26px;font-weight:800;color:var(--cl-text,#f1f5f9);line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .anl-kpi-delta{font-size:12px;margin-top:4px;color:var(--cl-sub,#94a3b8)}
 .arw{font-size:12px;font-weight:700;padding:2px 6px;border-radius:4px}
 .arw.up{background:#fef3c7;color:#92400e}
@@ -122,6 +126,20 @@ function injectStyles() {
 }
 
 /* ── section renderers ─────────────────────────────────────────────────── */
+/* Formats a service measure with the sample it was computed over. A period whose
+   history is partly archived can only measure some of these, and showing the
+   denominator makes a small sample visibly small instead of quietly wrong. */
+function svcSub(sample, noun) {
+  if (!sample) return 'not recorded / غير مسجل';
+  return `over ${sample} ${noun}`;
+}
+function hoursLabel(h) {
+  if (h == null) return '—';
+  if (h < 1) return Math.round(h * 60) + ' min';
+  if (h < 48) return (Math.round(h * 10) / 10) + ' h';
+  return (Math.round(h / 24 * 10) / 10) + ' d';
+}
+
 function renderKpis(stats, priorStats) {
   const avg = stats.orders ? Math.round(stats.units / stats.orders * 10) / 10 : 0;
   const priorAvg = priorStats && priorStats.orders ? Math.round(priorStats.units / priorStats.orders * 10) / 10 : 0;
@@ -138,7 +156,26 @@ function renderKpis(stats, priorStats) {
   const avgDelta   = priorStats && priorAvg ? pctArrow(pctChange(avg, priorAvg)) : '';
   const deptDelta  = priorDepts !== null ? (depts !== priorDepts ? `<span style="color:#f59e0b">${depts > priorDepts ? '+' : ''}${depts - priorDepts} vs prior</span>` : '') : '';
 
+  const svc = stats.service || {};
+  const pv = priorStats && priorStats.service || {};
+  const pct = v => v == null ? '—' : (Math.round(v * 1000) / 10) + '%';
+  const fillDelta = (svc.fillRate != null && pv.fillRate != null)
+    ? pctArrow(pctChange(svc.fillRate, pv.fillRate)) : '';
+  // Below 95% of requested units reaching the ward is worth flagging, not celebrating.
+  const fillCls = svc.fillRate == null ? '' : (svc.fillRate >= 0.95 ? 'good' : svc.fillRate >= 0.85 ? 'spike' : 'zero');
+  const onTimeCls = svc.onTimeRate == null ? '' : (svc.onTimeRate >= 0.9 ? 'good' : svc.onTimeRate >= 0.75 ? 'spike' : 'zero');
+
   return `<div class="anl-kpi-row">
+    ${kpi('Fill rate / نسبة التلبية', pct(svc.fillRate),
+        fillDelta || svcSub(svc.ordersWithItems, 'orders'), fillCls)}
+    ${kpi('Median turnaround / زمن التنفيذ', hoursLabel(svc.medianTurnaroundHours),
+        svcSub(svc.turnaroundSample, 'orders'))}
+    ${kpi('On-time / في الموعد', pct(svc.onTimeRate),
+        svcSub(svc.scheduledOrders, 'scheduled'), onTimeCls)}
+    ${kpi('Partly filled / تلبية جزئية', svc.partiallyFilled || 0,
+        svc.unfilled ? `${svc.unfilled} not filled at all` : 'none unfilled')}
+    ${kpi('High-alert share / حصة عالية التنبيه', pct(svc.highAlertShare),
+        `${(svc.highAlertUnits || 0).toLocaleString()} units`)}
     ${kpi('Fulfilled orders / الطلبات', stats.orders, orderDelta || 'vs prior period')}
     ${kpi('Dispensed units / الوحدات', stats.units.toLocaleString(), unitDelta || 'vs prior period', stats.units > (priorStats && priorStats.units || 0) ? 'spike' : 'good')}
     ${kpi('Average units / order / متوسط', avg, avgDelta || 'per fulfilled request')}

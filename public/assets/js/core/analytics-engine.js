@@ -81,7 +81,83 @@ export function computeStats(rows) {
   });
 
   const units = Object.values(departments).reduce((s, d) => s + d.units, 0);
-  return { orders: rows.length, units, departments, routine, high };
+  return { orders: rows.length, units, departments, routine, high, service: serviceMetrics(rows, high, units) };
+}
+
+/* Service metrics.
+ *
+ * The report has always counted what was dispensed, never what was asked for, so a
+ * department receiving a fraction of its requests looked identical to one being
+ * served in full. These read fields the engine already had available on every row
+ * — items, created, fulfilledAt, scheduledFor — and were simply never used.
+ *
+ * Every measure is computed only over the rows that carry the field it needs, and
+ * reports that denominator alongside the value, so a period with partial history
+ * shows a smaller sample rather than a wrong number.
+ */
+function serviceMetrics(rows, high, totalUnits) {
+  let requested = 0, dispensed = 0, withItems = 0;
+  let full = 0, partial = 0, unfilled = 0;
+  const turnaroundHours = [];
+  let scheduled = 0, onTime = 0;
+  let highUnits = 0;
+
+  Object.values(high || {}).forEach(m => { highUnits += m.qty; });
+
+  rows.forEach(r => {
+    const want = (r.items || []).reduce((s, i) => s + Math.max(0, Number(i.qty) || 0), 0);
+    const got = (r.dispensed || []).reduce((s, l) => s + Math.max(0, Number(l.qty) || 0), 0);
+    if (want > 0) {
+      withItems++;
+      requested += want;
+      dispensed += Math.min(got, want); // over-dispensing must not read as >100% served
+      if (got <= 0) unfilled++;
+      else if (got < want) partial++;
+      else full++;
+    }
+    /* An archived month is one synthetic row standing for many orders, with created
+       and fulfilledAt both set to the month start. Timing it would add a 0-hour
+       entry per archived month and pull the median toward zero, so rows marked as
+       aggregated are excluded from the timing measures — they still count toward
+       volume, where their totals are real. */
+    if (!r.__aggregated) {
+      const created = r.created ? Date.parse(r.created) : NaN;
+      const done = r.fulfilledAt ? Date.parse(r.fulfilledAt) : NaN;
+      if (isFinite(created) && isFinite(done) && done >= created) {
+        turnaroundHours.push((done - created) / 3600000);
+      }
+      const due = r.scheduledFor ? Date.parse(r.scheduledFor) : NaN;
+      if (isFinite(due) && isFinite(done)) {
+        scheduled++;
+        if (done <= due) onTime++;
+      }
+    }
+  });
+
+  // Median, not mean: one order left open over a weekend should not move the figure.
+  turnaroundHours.sort((a, b) => a - b);
+  const mid = turnaroundHours.length
+    ? (turnaroundHours.length % 2
+        ? turnaroundHours[(turnaroundHours.length - 1) / 2]
+        : (turnaroundHours[turnaroundHours.length / 2 - 1] + turnaroundHours[turnaroundHours.length / 2]) / 2)
+    : null;
+
+  return {
+    requestedUnits: requested,
+    dispensedUnits: dispensed,
+    fillRate: requested ? dispensed / requested : null,
+    ordersWithItems: withItems,
+    fullyFilled: full,
+    partiallyFilled: partial,
+    unfilled,
+    medianTurnaroundHours: mid,
+    turnaroundSample: turnaroundHours.length,
+    scheduledOrders: scheduled,
+    onTimeOrders: onTime,
+    onTimeRate: scheduled ? onTime / scheduled : null,
+    highAlertUnits: highUnits,
+    highAlertShare: totalUnits ? highUnits / totalUnits : null
+  };
 }
 
 export function topMedicines(group, n = 10) {
