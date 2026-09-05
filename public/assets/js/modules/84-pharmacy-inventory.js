@@ -588,6 +588,63 @@ function piShowMedModal(m){
   piShowModal('pi-med-modal',html);
   setTimeout(function(){var x=piE('pi-med-name');if(x)x.focus()},40);
 }
+/* Shelf options for a transaction row, restricted to the side of the cabinet the
+   entry belongs to: a receipt lands in storage (مستودع), a dispense leaves from a
+   dispensing cabinet. Offering the whole building on both sides is how stock ends
+   up recorded in the wrong half of the pharmacy.
+   Shelves the medicine is already assigned to are listed first and marked, so the
+   normal case is one keystroke and adding a new place is still possible below. */
+function piTxnLocOptions(type, medName) {
+  var wantStorage = type === 'receipt';
+  var med = medName
+    ? piMeds().find(function (m) { return String(m.name || '').trim().toLowerCase() === String(medName).trim().toLowerCase(); })
+    : null;
+  var known = {};
+  (med && med.locations || []).forEach(function (l) { known[l.roomId + '|' + l.cabId + '|' + l.shelfId] = true; });
+
+  var mine = [], others = [];
+  (piRooms() || []).forEach(function (room) {
+    if (typeof piRoomAllowed === 'function' && !piRoomAllowed(room.id)) return;
+    (room.cabinets || []).forEach(function (cab) {
+      var isStorage = (cab.type || 'storage') === 'storage';
+      if (isStorage !== wantStorage) return;
+      (cab.shelves || []).forEach(function (sh) {
+        var v = room.id + '|' + cab.id + '|' + sh.id;
+        var label = room.name + ' › ' + cab.name + ' › ' + sh.name;
+        (known[v] ? mine : others).push({ v: v, label: label });
+      });
+    });
+  });
+  return { mine: mine, others: others, hasMed: !!med };
+}
+
+function piTxnLocSelectHtml(type, medName, current) {
+  var o = piTxnLocOptions(type, medName);
+  var opt = function (x) {
+    return '<option value="' + piEsc(x.v) + '"' + (x.v === current ? ' selected' : '') + '>' + piEsc(x.label) + '</option>';
+  };
+  var html = '<select class="pi-txn-loc" style="min-width:180px;width:100%;box-sizing:border-box">';
+  html += '<option value="">' + (type === 'receipt' ? 'Storage location…' : 'Dispense from…') + '</option>';
+  if (o.mine.length) html += '<optgroup label="Assigned to this medicine / مواقع هذا الدواء">' + o.mine.map(opt).join('') + '</optgroup>';
+  if (o.others.length) html += '<optgroup label="' + (o.mine.length ? 'Add a new location / موقع جديد' : (type === 'receipt' ? 'Storage / مستودع' : 'Dispensing / صرف')) + '">' + o.others.map(opt).join('') + '</optgroup>';
+  if (!o.mine.length && !o.others.length) html += '<option value="" disabled>' + (type === 'receipt' ? 'No storage shelves defined' : 'No dispensing shelves defined') + '</option>';
+  html += '</select>';
+  return html;
+}
+
+/* Re-render a row's options once its medicine is known, keeping any choice that
+   is still valid for the new medicine. */
+window.piTxnMedChanged = function (input) {
+  var tr = input && input.closest ? input.closest('tr') : null;
+  if (!tr) return;
+  var cell = tr.querySelector('.pi-txn-loc');
+  if (!cell) return;
+  var current = cell.value;
+  var type = tr.dataset.type || '';
+  var wrapper = cell.parentNode;
+  wrapper.innerHTML = piTxnLocSelectHtml(type, input.value, current);
+};
+
 function piLocRowHtml(rooms,locVal,expiryVal){
   return '<div class="fl g8 ic pi-loc-row" style="margin-bottom:6px;flex-wrap:wrap">'+
     '<select class="psel pi-loc-sel" style="flex:2;min-width:160px"><option value="">Select shelf...</option>'+
@@ -959,8 +1016,8 @@ function piRenderTxnEntryTab(body,type){
      every row. Expiry stays per row, where it genuinely differs per medicine, and
      is never pre-filled. */
   var cols=isReceipt
-    ?['Medicine / الدواء','Qty / الكمية','Batch #','Expiry / الانتهاء','Supplier / المورد','Note / ملاحظة','']
-    :['Medicine / الدواء','Qty / الكمية','Note / ملاحظة',''];
+    ?['Medicine / الدواء','Location / الموقع','Qty / الكمية','Batch #','Expiry / الانتهاء','Supplier / المورد','Note / ملاحظة','']
+    :['Medicine / الدواء','Location / الموقع','Qty / الكمية','Note / ملاحظة',''];
   var sugg=piMedSuggestions();
   var listId='pi-txn-sugg-'+type;
   var html='<datalist id="'+listId+'">'+sugg.map(function(s){return'<option value="'+piEsc(s)+'">'}).join('')+'</datalist>';
@@ -1048,7 +1105,8 @@ window.piAddTxnRow=function(type){
   var td=function(content){return'<td style="padding:3px 4px">'+content+'</td>'};
   var inp=function(cls,ph,type2,extra){return'<input class="'+cls+' pi-txn-field" data-row="'+rowId+'" type="'+(type2||'text')+'" placeholder="'+piEsc(ph)+'" style="width:100%;box-sizing:border-box" '+(extra||'')+'>';};
   var tr=document.createElement('tr');tr.id=rowId;tr.dataset.type=type;
-  var cells=td('<input class="pi-txn-med" data-row="'+rowId+'" list="'+listId+'" placeholder="Medicine name..." style="min-width:160px;width:100%;box-sizing:border-box">');
+  var cells=td('<input class="pi-txn-med" data-row="'+rowId+'" list="'+listId+'" placeholder="Medicine name..." style="min-width:160px;width:100%;box-sizing:border-box" oninput="piTxnMedChanged(this)" onchange="piTxnMedChanged(this)">');
+  cells+=td(piTxnLocSelectHtml(type,'',''));
   cells+=td('<input class="pi-txn-qty" data-row="'+rowId+'" type="number" min="0" step="any" placeholder="0" style="width:70px">');
   if(isReceipt){
     cells+=td('<input class="pi-txn-batch" data-row="'+rowId+'" type="text" placeholder="Batch #" style="width:90px">');
@@ -1087,6 +1145,11 @@ window.piSubmitTxnRows=async function(type){
       rec.expiry=String((tr.querySelector('.pi-txn-expiry')||{}).value||'').trim();
       rec.supplier=String((tr.querySelector('.pi-txn-supplier')||{}).value||'').trim();
     }
+    var locVal=String((tr.querySelector('.pi-txn-loc')||{}).value||'').trim();
+    if(locVal){
+      var lp=locVal.split('|');
+      rec.roomId=lp[0]||'';rec.cabId=lp[1]||'';rec.shelfId=lp[2]||'';
+    }
     rec.note=String((tr.querySelector('.pi-txn-note')||{}).value||'').trim();
     records.push(rec);
   });
@@ -1094,6 +1157,29 @@ window.piSubmitTxnRows=async function(type){
   try{
     var all=piTxns().concat(records);
     await piSaveTxns(all);
+    /* Choosing a shelf the medicine was not assigned to is how a new location gets
+       created — the point of offering them. Recording it on the medicine as well
+       means the next entry lists it under "assigned" instead of asking again.
+       Saved after the transactions so a failure here cannot lose the entry itself;
+       the assignment is a convenience and is reported separately if it fails. */
+    try{
+      var addedLoc=0;
+      var meds=piClone(piMeds());
+      records.forEach(function(rec){
+        if(!rec.shelfId)return;
+        var med=meds.find(function(m){return String(m.name||'').trim().toLowerCase()===String(rec.medName||'').trim().toLowerCase()});
+        if(!med)return;
+        med.locations=med.locations||[];
+        var exists=med.locations.some(function(l){
+          return l.roomId===rec.roomId&&l.cabId===rec.cabId&&l.shelfId===rec.shelfId;
+        });
+        if(!exists){med.locations.push({roomId:rec.roomId,cabId:rec.cabId,shelfId:rec.shelfId,expiry:''});addedLoc++}
+      });
+      if(addedLoc)await piSaveMeds(meds);
+    }catch(locError){
+      console.error('Could not record the new location on the medicine.',locError);
+      piToast('Entry saved, but the new location was not added to the medicine. / حُفظ الإدخال دون إضافة الموقع للدواء.','err');
+    }
     piToast('Saved '+records.length+' record(s) ✓ / تم الحفظ ✓','succ');
     window.renderPharmInv();
   }catch(e){piToast(String(e&&e.message||e),'err')}
