@@ -1,4 +1,4 @@
-import { allRows, rowDate, deptLabel } from '../core/analytics-engine.js?v=ce89f4cd54';
+import { allRows, rowDate, deptLabel } from '../core/analytics-engine.js?v=8d4e7057eb';
 
 (function () {
 'use strict';

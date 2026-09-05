@@ -2,7 +2,7 @@ import {
   allRows, rowsForPeriod, computeStats, topMedicines,
   availableYears, priorPeriod, sameQuarterPriorYear, periodLabel,
   detectSpikes, zeroDispenseSummary, deptLabel
-} from '../core/analytics-engine.js?v=ce89f4cd54';
+} from '../core/analytics-engine.js?v=8d4e7057eb';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -17,7 +17,7 @@ h1{font-size:16pt;color:#102a5c;margin:0 0 4px;border-bottom:3px solid #2563eb;p
 h2{font-size:13pt;color:#102a5c;background:#e8f0ff;border-left:4px solid #2563eb;padding:5px 8px;margin:12px 0 6px}
 h2.warn{border-color:#f59e0b;background:#fffbeb;color:#92400e}
 table{width:100%;border-collapse:collapse;margin-top:6px;font-size:9pt}
-th,td{border:1px solid #9aa8bd;padding:6px;text-align:left;vertical-align:top}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tbody tr:not([class]):nth-child(even){background:#f1f5fb}
+th,td{border:1px solid #9aa8bd;padding:6px;text-align:left;vertical-align:top}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tbody tr:not([class]):nth-child(even){background:#f1f5fb}thead{display:table-header-group}tr{break-inside:avoid;page-break-inside:avoid}td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
 th{background:#dbeafe;color:#102a5c}
 .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
 .kpi{border:1px solid #b9cae8;border-top:3px solid #2563eb;padding:8px;background:#f5f9ff}
@@ -146,6 +146,7 @@ function injectStyles() {
 .anl-med-table tr:last-child td{border-bottom:none}
 .anl-med-table tbody tr:not([class]):nth-child(even),.anl-quarter-table tbody tr:not([class]):nth-child(even){background:var(--cl-card2,#1e293b)}
 .anl-dept-cell{color:var(--cl-text,#e2e8f0);opacity:.85}
+.anl-med-table td.num,.anl-quarter-table td.num,.anl-med-table th.num,.anl-quarter-table th.num{text-align:right;font-variant-numeric:tabular-nums;font-feature-settings:'tnum' 1}
 .anl-spike-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:#fef3c7;color:#92400e;margin-left:6px}
 .anl-spike-badge.low{background:#dcfce7;color:#166534}
 .anl-spike-badge.good{background:#dcfce7;color:#166534}
@@ -225,22 +226,40 @@ function renderKpis(stats, priorStats) {
 }
 
 function renderQuarterTable(year) {
-  const palette = ['#94a3b8','#3b82f6','#10b981','#f59e0b','#ef4444'];
+  /* A quarter that has not happened holds no rows, so comparing it to the one
+     before produced "-100%" for a period nobody has lived through yet -- and
+     painted it green, as though dispensing having stopped were good news. The
+     quarter in progress is only partly filled for the same reason. Report the
+     calendar honestly: future quarters are omitted, the running one is labelled
+     partial and left out of the trend, and a drop is never coloured as success. */
+  const now = new Date();
+  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+  const isCurrentYear = String(year) === String(now.getFullYear());
+  const lastQuarter = isCurrentYear ? currentQuarter : 4;
   let prev = null;
-  const rows = [1,2,3,4].map(q => {
-    const rows = rowsForPeriod(year, String(q));
-    const st = computeStats(rows);
+  const rows = [];
+  for (let q = 1; q <= lastQuarter; q += 1) {
+    const st = computeStats(rowsForPeriod(year, String(q)));
+    const partial = isCurrentYear && q === currentQuarter;
     const diff = prev !== null ? st.units - prev : null;
     const pct  = prev !== null && prev > 0 ? Math.round((st.units - prev) / prev * 1000) / 10 : null;
-    const change = diff === null ? '—' : (diff >= 0 ? `+${diff}` : `${diff}`) + (pct !== null ? ` (${pct >= 0 ? '+' : ''}${pct}%)` : '');
-    const cls = diff === null ? '' : diff > 0 ? 'color:#f59e0b' : diff < 0 ? 'color:#10b981' : '';
-    prev = st.units;
-    return `<tr><td><b>${qLabel(q)}</b></td><td>${st.orders}</td><td>${st.units}</td><td>${st.orders ? Math.round(st.units/st.orders*10)/10 : 0}</td><td style="${cls}">${change}</td></tr>`;
-  });
+    let change = diff === null ? '—' : (diff >= 0 ? `+${diff}` : `${diff}`) + (pct !== null ? ` (${pct >= 0 ? '+' : ''}${pct}%)` : '');
+    // An incomplete quarter is guaranteed to look like a fall; saying so is
+    // more useful than printing a decline that only means "not finished yet".
+    if (partial) change = 'In progress / جارٍ';
+    const cls = (partial || diff === null || diff === 0) ? 'color:#475569'
+      : diff > 0 ? 'color:#b45309' : 'color:#9f1239';
+    // The running quarter must not become the baseline for a later comparison.
+    if (!partial) prev = st.units;
+    rows.push(`<tr><td><b>${qLabel(q)}</b>${partial ? ' <span style="font-weight:400;font-size:8pt">(partial / جزئي)</span>' : ''}</td><td class="num">${st.orders}</td><td class="num">${st.units}</td><td class="num">${st.orders ? Math.round(st.units/st.orders*10)/10 : 0}</td><td class="num" style="${cls}">${change}</td></tr>`);
+  }
+  if (isCurrentYear && lastQuarter < 4) {
+    rows.push(`<tr><td colspan="5" style="color:#64748b;font-style:italic">Q${lastQuarter + 1}${lastQuarter + 1 < 4 ? '–Q4' : ''} not started yet / لم تبدأ بعد</td></tr>`);
+  }
   return `<div class="anl-section">
     <div class="anl-section-title">Quarterly comparison ${year} / المقارنة الربعية</div>
     <div style="overflow:auto"><table class="anl-quarter-table">
-      <thead><tr><th>Quarter</th><th>Orders</th><th>Units</th><th>Avg/order</th><th>Δ vs prior quarter</th></tr></thead>
+      <thead><tr><th>Quarter</th><th class="num">Orders</th><th class="num">Units</th><th class="num">Avg/order</th><th class="num">Δ vs prior quarter</th></tr></thead>
       <tbody>${rows.join('')}</tbody>
     </table></div>
   </div>`;
@@ -265,11 +284,11 @@ function renderDeptBars(stats) {
 function renderMedTable(meds, emptyMsg) {
   if (!meds.length) return `<div class="anl-empty">${emptyMsg}</div>`;
   return `<div style="overflow:auto"><table class="anl-med-table">
-    <thead><tr><th>#</th><th>Medicine / الدواء</th><th>Total units</th><th>Top departments</th></tr></thead>
+    <thead><tr><th>#</th><th>Medicine / الدواء</th><th class="num">Total units</th><th>Top departments</th></tr></thead>
     <tbody>${meds.map((m, i) => {
       const topDepts = Object.entries(m.depts).sort((a, b) => b[1] - a[1]).slice(0, 3)
         .map(([dept, qty]) => `${esc(dept)}: ${qty}`).join(' · ');
-      return `<tr><td>${i + 1}</td><td><b>${esc(m.name)}</b></td><td>${m.qty}</td><td class="anl-dept-cell">${topDepts || '—'}</td></tr>`;
+      return `<tr><td>${i + 1}</td><td><b>${esc(m.name)}</b></td><td class="num">${m.qty}</td><td class="anl-dept-cell">${topDepts || '—'}</td></tr>`;
     }).join('')}</tbody>
   </table></div>`;
 }
@@ -561,6 +580,8 @@ function buildPrintHtml(detail) {
     .anl-quarter-table th,.anl-med-table th{background:#dbeafe;color:#102a5c;padding:5px 8px;text-align:left;border:1px solid #9aa8bd}
     .anl-quarter-table td,.anl-med-table td{padding:5px 8px;border:1px solid #9aa8bd;color:#172033;vertical-align:top}
     .anl-quarter-table tbody tr:not([class]):nth-child(even),.anl-med-table tbody tr:not([class]):nth-child(even){background:#f1f5fb}
+    .anl-quarter-table thead,.anl-med-table thead{display:table-header-group}
+    .anl-quarter-table tr,.anl-med-table tr{break-inside:avoid;page-break-inside:avoid}
     .anl-dept-cell{color:#334155}
     .anl-spike-badge{background:#fef3c7;color:#92400e;font-weight:bold;padding:1px 5px;border-radius:4px;font-size:8pt;margin-left:4px}
     .anl-spike-badge.mid{background:#fef3c7;color:#92400e}
@@ -1046,7 +1067,8 @@ function renderShareLegend() {
    carries a per-department qty breakdown for whatever row set it's given. */
 function drugComparisonMedicineNames() {
   const stats = computeStats(allRows());
-  return [...new Set([...Object.keys(stats.routine), ...Object.keys(stats.high)])].sort((a, b) => a.localeCompare(b));
+  const names = [...Object.values(stats.routine), ...Object.values(stats.high)].map(b => b.name).filter(Boolean);
+  return [...new Set(names)].sort((a, b) => a.localeCompare(b));
 }
 function drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth) {
   const fromMs = new Date(fromYear, fromMonth - 1, 1).getTime();
@@ -1059,7 +1081,12 @@ function drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth) {
 }
 function drugComparisonMedicineQty(rows, medicineName) {
   const stats = computeStats(rows);
-  const bucket = stats.routine[medicineName] || stats.high[medicineName];
+  // The picker hands back a display name; buckets are keyed by normalised
+  // identity, so normalise before looking one up.
+  const key = typeof globalThis.fsR17MedNorm === 'function'
+    ? (globalThis.fsR17MedNorm(medicineName) || medicineName)
+    : medicineName;
+  const bucket = stats.routine[key] || stats.high[key] || stats.routine[medicineName] || stats.high[medicineName];
   return bucket ? { qty: bucket.qty, depts: bucket.depts } : { qty: 0, depts: {} };
 }
 function drugComparisonStats(medicineName, fromYear, fromMonth, toYear, toMonth) {

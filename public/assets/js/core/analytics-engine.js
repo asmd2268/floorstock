@@ -73,9 +73,10 @@ export function computeStats(rows) {
       if (qty <= 0) return;
       const med = resolveAnalyticsMedicine(line, r.deptId, medicines, r);
       const bucket = med.high ? high : routine;
-      if (!bucket[med.name]) bucket[med.name] = { qty: 0, depts: {} };
-      bucket[med.name].qty += qty;
-      bucket[med.name].depts[dept] = (bucket[med.name].depts[dept] || 0) + qty;
+      const key = medKey(med.name);
+      if (!bucket[key]) bucket[key] = { name: med.name, qty: 0, depts: {} };
+      bucket[key].qty += qty;
+      bucket[key].depts[dept] = (bucket[key].depts[dept] || 0) + qty;
       departments[dept].units += qty;
     });
   });
@@ -160,9 +161,24 @@ function serviceMetrics(rows, high, totalUnits) {
   };
 }
 
+/* Medicines were bucketed by their raw typed name, so "Paracetamol 500 mg Tablet"
+   and "Paracetamol 500mg Tablet" were two different medicines: each carried half
+   the units, both lost their true rank in the top-10, and a name corrected partway
+   through a year read as one medicine appearing from nothing while another
+   collapsed to zero -- a spike and a crash that never happened. Bucket on the
+   normalised identity the rest of the app already uses (fsR17MedNorm, owned by
+   03c-medication-expiry-shelf-helpers) and keep the first spelling seen for
+   display. Falling back to the raw name preserves today's behaviour if the
+   helper has not loaded yet. */
+function medKey(name) {
+  const raw = String(name == null ? '' : name);
+  const norm = typeof globalThis.fsR17MedNorm === 'function' ? globalThis.fsR17MedNorm(raw) : '';
+  return norm || raw;
+}
+
 export function topMedicines(group, n = 10) {
   return Object.entries(group)
-    .map(([name, m]) => ({ name, qty: m.qty, depts: m.depts }))
+    .map(([key, m]) => ({ name: m.name || key, key, qty: m.qty, depts: m.depts }))
     .sort((a, b) => b.qty - a.qty)
     .slice(0, n);
 }
@@ -188,20 +204,26 @@ export function periodLabel(year, quarter) {
 export function detectSpikes(currentRows, priorRows, threshold = 30) {
   const medicines = buildAnalyticsMedicineIndex();
 
+  // Shared across both periods so a medicine renamed between them keeps one
+  // label, instead of the prior period's spelling shadowing the current one.
+  const medNames = {};
   function aggregate(rows) {
-    const byMed = {}; // medName → deptName → qty
+    const byMed = {}; // medKey → deptName → qty
     rows.forEach(r => {
       const dept = deptLabel(r.deptId);
       (r.dispensed || []).forEach(line => {
         const qty = Number(line.qty) || 0;
         if (qty <= 0) return;
         const med = resolveAnalyticsMedicine(line, r.deptId, medicines, r);
-        if (!byMed[med.name]) byMed[med.name] = {};
-        byMed[med.name][dept] = (byMed[med.name][dept] || 0) + qty;
+        const key = medKey(med.name);
+        if (!medNames[key]) medNames[key] = med.name;
+        if (!byMed[key]) byMed[key] = {};
+        byMed[key][dept] = (byMed[key][dept] || 0) + qty;
       });
     });
     return byMed;
   }
+  const medLabel = (key) => medNames[key] || key;
 
   const curr = aggregate(currentRows);
   const prev = aggregate(priorRows);
@@ -225,7 +247,7 @@ export function detectSpikes(currentRows, priorRows, threshold = 30) {
       const p = (prev[med] || {})[dept] || 0;
       if (p > 0) {
         const pct = Math.round((c - p) / p * 1000) / 10;
-        if (pct >= threshold) perDept.push({ medicine: med, dept, current: c, prior: p, pctChange: pct });
+        if (pct >= threshold) perDept.push({ medicine: medLabel(med), dept, current: c, prior: p, pctChange: pct });
       }
     });
   });
@@ -234,7 +256,7 @@ export function detectSpikes(currentRows, priorRows, threshold = 30) {
     .filter(med => (overallPrev[med] || 0) > 0)
     .map(med => {
       const c = overallCurr[med], p = overallPrev[med];
-      return { medicine: med, current: c, prior: p, pctChange: Math.round((c - p) / p * 1000) / 10 };
+      return { medicine: medLabel(med), current: c, prior: p, pctChange: Math.round((c - p) / p * 1000) / 10 };
     })
     .filter(x => x.pctChange >= threshold);
 
