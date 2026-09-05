@@ -17,7 +17,7 @@ h1{font-size:16pt;color:#102a5c;margin:0 0 4px;border-bottom:3px solid #2563eb;p
 h2{font-size:13pt;color:#102a5c;background:#e8f0ff;border-left:4px solid #2563eb;padding:5px 8px;margin:12px 0 6px}
 h2.warn{border-color:#f59e0b;background:#fffbeb;color:#92400e}
 table{width:100%;border-collapse:collapse;margin-top:6px;font-size:9pt}
-th,td{border:1px solid #9aa8bd;padding:6px;text-align:left;vertical-align:top}
+th,td{border:1px solid #9aa8bd;padding:6px;text-align:left;vertical-align:top}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}tbody tr:not([class]):nth-child(even){background:#f1f5fb}
 th{background:#dbeafe;color:#102a5c}
 .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
 .kpi{border:1px solid #b9cae8;border-top:3px solid #2563eb;padding:8px;background:#f5f9ff}
@@ -144,6 +144,8 @@ function injectStyles() {
 .anl-med-table th{background:var(--cl-card2,#1e293b);color:var(--cl-sub,#94a3b8);padding:8px 10px;text-align:left;border-bottom:1px solid var(--cl-border,#334155)}
 .anl-med-table td{padding:8px 10px;border-bottom:1px solid var(--cl-border,#334155);color:var(--cl-text,#e2e8f0);vertical-align:top}
 .anl-med-table tr:last-child td{border-bottom:none}
+.anl-med-table tbody tr:not([class]):nth-child(even),.anl-quarter-table tbody tr:not([class]):nth-child(even){background:var(--cl-card2,#1e293b)}
+.anl-dept-cell{color:var(--cl-text,#e2e8f0);opacity:.85}
 .anl-spike-badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 7px;border-radius:99px;background:#fef3c7;color:#92400e;margin-left:6px}
 .anl-spike-badge.low{background:#dcfce7;color:#166534}
 .anl-spike-badge.good{background:#dcfce7;color:#166534}
@@ -267,7 +269,7 @@ function renderMedTable(meds, emptyMsg) {
     <tbody>${meds.map((m, i) => {
       const topDepts = Object.entries(m.depts).sort((a, b) => b[1] - a[1]).slice(0, 3)
         .map(([dept, qty]) => `${esc(dept)}: ${qty}`).join(' · ');
-      return `<tr><td>${i + 1}</td><td><b>${esc(m.name)}</b></td><td>${m.qty}</td><td style="font-size:12px;color:var(--cl-sub,#94a3b8)">${topDepts || '—'}</td></tr>`;
+      return `<tr><td>${i + 1}</td><td><b>${esc(m.name)}</b></td><td>${m.qty}</td><td class="anl-dept-cell">${topDepts || '—'}</td></tr>`;
     }).join('')}</tbody>
   </table></div>`;
 }
@@ -409,7 +411,7 @@ window.renderAnalyticsReports = function () {
     </div>
 
     <div class="anl-section">
-      <div class="anl-section-title alert">⚠ Top High-Alert medicines / الأدوية عالية الخطورة</div>
+      <div class="anl-section-title danger">⚠ Top High-Alert medicines / الأدوية عالية الخطورة</div>
       ${renderMedTable(topHigh, 'No high-alert medicines dispensed in this period.')}
     </div>
 
@@ -558,6 +560,8 @@ function buildPrintHtml(detail) {
     .anl-quarter-table,.anl-med-table{width:100%;border-collapse:collapse;font-size:9pt;margin-top:4px}
     .anl-quarter-table th,.anl-med-table th{background:#dbeafe;color:#102a5c;padding:5px 8px;text-align:left;border:1px solid #9aa8bd}
     .anl-quarter-table td,.anl-med-table td{padding:5px 8px;border:1px solid #9aa8bd;color:#172033;vertical-align:top}
+    .anl-quarter-table tbody tr:not([class]):nth-child(even),.anl-med-table tbody tr:not([class]):nth-child(even){background:#f1f5fb}
+    .anl-dept-cell{color:#334155}
     .anl-spike-badge{background:#fef3c7;color:#92400e;font-weight:bold;padding:1px 5px;border-radius:4px;font-size:8pt;margin-left:4px}
     .anl-spike-badge.mid{background:#fef3c7;color:#92400e}
     .anl-spike-badge.high{background:#fee2e2;color:#991b1b}
