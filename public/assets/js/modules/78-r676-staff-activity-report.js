@@ -53,6 +53,27 @@ function iconLabel(key){
 function buildReport(deptFilter,from,to){
   var users=usersDirectory();
   var usersById={};users.forEach(function(u){usersById[String(u.id||u.uid||'')]=u});
+  /* An audit row identifies its actor by whatever the writer had at the time: the
+     current callable stores the Firebase uid, older client-written rows stored
+     whatever profile id was to hand and sometimes nothing, leaving only the actor
+     name. Matching on id alone left those rows with no department, and a row with
+     no department is dropped by any department filter — so picking a ward could
+     show nothing while All departments showed the same activity. Name and email
+     are indexed as fallbacks so a row still finds its owner. */
+  var usersByName={};
+  users.forEach(function(u){
+    [u.username,u.email,u.displayName].forEach(function(v){
+      var k=String(v||'').trim().toLowerCase();
+      if(k&&!usersByName[k])usersByName[k]=u;
+    });
+  });
+  function resolveUser(uid,actorName){
+    var u=usersById[uid];
+    if(u)return u;
+    var byName=usersByName[String(actorName||'').trim().toLowerCase()];
+    if(byName)return byName;
+    return usersByName[String(uid||'').replace(/^name:/,'').trim().toLowerCase()]||{};
+  }
 
   var byUser={};
   // The directory join is best-effort, not required: an audit_log row
@@ -64,8 +85,13 @@ function buildReport(deptFilter,from,to){
   // from the report instead of just missing its nicer directory details.
   function ensure(uid,fallback){
     fallback=fallback||{};
+    var u=resolveUser(uid,fallback.actor);
+    /* Bucket by the resolved person, not by whatever identifier the row happened to
+       carry. The same nurse can appear as a uid in one row, a username in another
+       and an email in a third; keyed separately she counted as three staff and each
+       fragment ranked on its own. */
+    if(u&&(u.id||u.uid))uid=String(u.id||u.uid);
     if(!byUser[uid]){
-      var u=usersById[uid]||{};
       byUser[uid]={
         userId:uid,
         userName:u.username||u.displayName||u.email||fallback.actor||uid||'Unknown',
