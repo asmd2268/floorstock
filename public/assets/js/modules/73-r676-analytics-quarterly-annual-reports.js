@@ -837,7 +837,39 @@ function fulfillmentStatsForYear(y) {
     .map(([dept, pcts]) => ({ dept, avg: round1(avg(pcts)), count: pcts.length }))
     .sort((a, b) => a.avg - b.avg);
   const worst10 = rows.slice().sort((a, b) => a.pct - b.pct).slice(0, 10);
-  return { total: rows.length, avgPct, deptStats, worst10 };
+
+  /* How long a request took, and whether it met its slot. Archived months are one
+     synthetic row whose created and fulfilledAt are both the month start, so
+     timing them would add a 0-hour entry per month and drag the median down. */
+  const hours = [];
+  let scheduled = 0, onTime = 0;
+  rows.forEach(({ r }) => {
+    if (r.__aggregated) return;
+    const start = Date.parse(r.created || '');
+    const done = Date.parse(r.fulfilledAt || '');
+    if (isFinite(start) && isFinite(done) && done >= start) hours.push((done - start) / 3600000);
+    const due = Date.parse(r.scheduledFor || '');
+    if (isFinite(due) && isFinite(done)) { scheduled++; if (done <= due) onTime++; }
+  });
+  hours.sort((a, b) => a - b);
+  const medianHours = hours.length
+    ? (hours.length % 2 ? hours[(hours.length - 1) / 2]
+        : (hours[hours.length / 2 - 1] + hours[hours.length / 2]) / 2)
+    : null;
+
+  return {
+    total: rows.length, avgPct, deptStats, worst10,
+    medianHours, timedCount: hours.length,
+    scheduled, onTime, onTimePct: scheduled ? round1(onTime / scheduled * 100) : null
+  };
+}
+
+/* Median turnaround rendered in whichever unit reads naturally at that scale. */
+function fulfillHoursLabel(h) {
+  if (h == null) return '—';
+  if (h < 1) return Math.round(h * 60) + ' min';
+  if (h < 48) return (Math.round(h * 10) / 10) + ' h';
+  return (Math.round(h / 24 * 10) / 10) + ' d';
 }
 
 function renderFulfillmentSection() {
@@ -904,6 +936,8 @@ function printFulfillmentReport() {
       <div class="kpi"><div class="kpi-label">Fulfilled/partial requests</div><div class="kpi-val">${st.total}</div></div>
       <div class="kpi"><div class="kpi-label">Average fulfillment rate</div><div class="kpi-val">${st.avgPct === null ? '—' : st.avgPct + '%'}</div></div>
       <div class="kpi"><div class="kpi-label">Departments</div><div class="kpi-val">${st.deptStats.length}</div></div>
+      <div class="kpi"><div class="kpi-label">Median turnaround / زمن التنفيذ<br><span style="font-size:7pt">${st.timedCount} timed</span></div><div class="kpi-val">${fulfillHoursLabel(st.medianHours)}</div></div>
+      <div class="kpi"><div class="kpi-label">On-time / في الموعد<br><span style="font-size:7pt">${st.scheduled} scheduled</span></div><div class="kpi-val">${st.onTimePct === null ? '—' : st.onTimePct + '%'}</div></div>
     </div>`;
 
   if (!st.total) {

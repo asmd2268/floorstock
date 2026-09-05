@@ -974,21 +974,77 @@ function piRenderTxnEntryTab(body,type){
   piAddTxnRow(type);
 }
 
+/* Keyboard grid navigation.
+ *
+ * Entering a delivery means many rows that differ only in medicine and quantity,
+ * so reaching for the mouse between every field is most of the work. Down/Up move
+ * within a column and Enter does the same, adding a row when it runs off the end
+ * so a whole delivery can be typed without leaving the keyboard. Tab already
+ * crosses columns natively; Left/Right are deliberately untouched because they
+ * move the caret inside the field being typed in.
+ *
+ * Down and Up are prevented from reaching number and date inputs, where the
+ * browser would otherwise step the value instead of moving.
+ */
+function piGridKeydown(e){
+  if(e.key!=='ArrowDown'&&e.key!=='ArrowUp'&&e.key!=='Enter')return;
+  if(e.altKey||e.ctrlKey||e.metaKey)return;
+  var el=e.target;
+  if(!el||!el.className||typeof el.className!=='string'||el.className.indexOf('pi-txn-')<0)return;
+  var cell=el.closest('td'),tr=el.closest('tr');
+  if(!cell||!tr||!tr.parentNode)return;
+  var tbody=tr.parentNode;
+  var col=Array.prototype.indexOf.call(tr.children,cell);
+  var rows=Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+  var i=rows.indexOf(tr);
+  var down=e.key==='ArrowDown'||e.key==='Enter';
+  e.preventDefault();
+  var target=down?rows[i+1]:rows[i-1];
+  if(!target){
+    if(!down)return;
+    var gridType=tr.dataset.type||String(tbody.id||'').replace('pi-txn-body-','');
+    if(!gridType)return;
+    window.piAddTxnRow(gridType);
+    rows=Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+    target=rows[rows.length-1];
+    if(!target||target===tr)return;
+  }
+  var next=target.children[col]&&target.children[col].querySelector('input');
+  if(!next)return;
+  next.focus();
+  try{next.select()}catch(selectError){}
+}
+if(typeof document!=='undefined'&&!window.__piGridKeysBound){
+  window.__piGridKeysBound=true;
+  document.addEventListener('keydown',piGridKeydown,true);
+}
+
 window.piAddTxnRow=function(type){
   var isReceipt=type==='receipt';
   var tbody=document.getElementById('pi-txn-body-'+type);if(!tbody)return;
+  /* A delivery is entered in one sitting, so the date and supplier repeat down the
+     whole grid. Carrying them from the row above means they are typed once rather
+     than on every line; today's date remains the default for the first row. */
+  var lastRow=tbody.querySelector('tr:last-child');
+  var carry=function(sel,fallback){
+    var prev=lastRow&&lastRow.querySelector(sel);
+    var v=prev&&prev.value;
+    return (v==null||v==='')?fallback:v;
+  };
+  var carriedDate=carry('.pi-txn-date',piTodayStr());
+  var carriedSupplier=isReceipt?carry('.pi-txn-supplier',''):'';
   var listId='pi-txn-sugg-'+type;
   var rowId='pirow_'+Date.now()+'_'+Math.random().toString(36).slice(2,5);
   var td=function(content){return'<td style="padding:3px 4px">'+content+'</td>'};
   var inp=function(cls,ph,type2,extra){return'<input class="'+cls+' pi-txn-field" data-row="'+rowId+'" type="'+(type2||'text')+'" placeholder="'+piEsc(ph)+'" style="width:100%;box-sizing:border-box" '+(extra||'')+'>';};
   var tr=document.createElement('tr');tr.id=rowId;tr.dataset.type=type;
   var cells=td('<input class="pi-txn-med" data-row="'+rowId+'" list="'+listId+'" placeholder="Medicine name..." style="min-width:160px;width:100%;box-sizing:border-box">');
-  cells+=td('<input class="pi-txn-date" data-row="'+rowId+'" type="date" value="'+piTodayStr()+'" style="width:120px">');
+  cells+=td('<input class="pi-txn-date" data-row="'+rowId+'" type="date" value="'+piEsc(carriedDate)+'" style="width:120px">');
   cells+=td('<input class="pi-txn-qty" data-row="'+rowId+'" type="number" min="0" step="any" placeholder="0" style="width:70px">');
   if(isReceipt){
     cells+=td('<input class="pi-txn-batch" data-row="'+rowId+'" type="text" placeholder="Batch #" style="width:90px">');
     cells+=td('<input class="pi-txn-expiry" data-row="'+rowId+'" type="date" style="width:120px">');
-    cells+=td('<input class="pi-txn-supplier" data-row="'+rowId+'" type="text" placeholder="Supplier / المورد" style="min-width:120px">');
+    cells+=td('<input class="pi-txn-supplier" data-row="'+rowId+'" type="text" value="'+piEsc(carriedSupplier)+'" placeholder="Supplier / المورد" style="min-width:120px">');
   }
   cells+=td('<input class="pi-txn-note" data-row="'+rowId+'" type="text" placeholder="Note..." style="min-width:80px">');
   cells+=td('<button type="button" class="btn bd2c bxs" style="padding:2px 7px" onclick="document.getElementById(\''+rowId+'\').remove()">✕</button>');
