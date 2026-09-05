@@ -1016,8 +1016,8 @@ function piRenderTxnEntryTab(body,type){
      every row. Expiry stays per row, where it genuinely differs per medicine, and
      is never pre-filled. */
   var cols=isReceipt
-    ?['Medicine / الدواء','Location / الموقع','Qty / الكمية','Batch #','Expiry / الانتهاء','Supplier / المورد','Note / ملاحظة','']
-    :['Medicine / الدواء','Location / الموقع','Qty / الكمية','Note / ملاحظة',''];
+    ?['Medicine / الدواء','Qty / الكمية','Batch #','Expiry / الانتهاء','Supplier / المورد','Note / ملاحظة','Location / الموقع','']
+    :['Medicine / الدواء','Qty / الكمية','Expiry / الانتهاء','Note / ملاحظة','Location / الموقع',''];
   var sugg=piMedSuggestions();
   var listId='pi-txn-sugg-'+type;
   var html='<datalist id="'+listId+'">'+sugg.map(function(s){return'<option value="'+piEsc(s)+'">'}).join('')+'</datalist>';
@@ -1029,6 +1029,16 @@ function piRenderTxnEntryTab(body,type){
     +'<input id="pi-txn-date-'+type+'" type="date" lang="en" dir="ltr" value="'+piEsc(piTodayStr())+'" style="margin:0;width:150px">'
     +'</div>'
     +'<div class="fhint" style="padding-bottom:6px">Applies to every row below / يُطبَّق على كل الصفوف</div>'
+    +'</div>';
+  /* Stated plainly rather than left to be discovered: the keys are what make this
+     grid quick, and only the two fields that cannot be inferred are required. */
+  html+='<div class="fhint" style="margin-bottom:10px;padding:8px 11px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);line-height:1.6">'
+    +'<b>Faster entry / إدخال أسرع:</b> '
+    +'<kbd>Tab</kbd> next field / الحقل التالي &nbsp;·&nbsp; '
+    +'<kbd>↑</kbd> <kbd>↓</kbd> same column / نفس العمود &nbsp;·&nbsp; '
+    +'<kbd>Enter</kbd> next row, adds one at the end / صف تالٍ ويضيف صفاً عند النهاية'
+    +'<br>Only <b>medicine</b> and <b>location</b> are required; quantity, batch, expiry and supplier are optional. '
+    +'<span dir="rtl">المطلوب فقط <b>اسم الدواء</b> و<b>الموقع</b>؛ الكمية والتشغيلة والانتهاء والمورد اختيارية.</span>'
     +'</div>';
   html+='<table style="width:100%;border-collapse:collapse" id="pi-txn-rows-'+type+'">';
   html+='<thead><tr>'+cols.map(function(c){return'<th style="text-align:left;padding:4px 6px;font-size:11px;opacity:.6;white-space:nowrap">'+piEsc(c)+'</th>'}).join('')+'</tr></thead>';
@@ -1106,14 +1116,18 @@ window.piAddTxnRow=function(type){
   var inp=function(cls,ph,type2,extra){return'<input class="'+cls+' pi-txn-field" data-row="'+rowId+'" type="'+(type2||'text')+'" placeholder="'+piEsc(ph)+'" style="width:100%;box-sizing:border-box" '+(extra||'')+'>';};
   var tr=document.createElement('tr');tr.id=rowId;tr.dataset.type=type;
   var cells=td('<input class="pi-txn-med" data-row="'+rowId+'" list="'+listId+'" placeholder="Medicine name..." style="min-width:160px;width:100%;box-sizing:border-box" oninput="piTxnMedChanged(this)" onchange="piTxnMedChanged(this)">');
-  cells+=td(piTxnLocSelectHtml(type,'',''));
   cells+=td('<input class="pi-txn-qty" data-row="'+rowId+'" type="number" min="0" step="any" placeholder="0" style="width:70px">');
   if(isReceipt){
     cells+=td('<input class="pi-txn-batch" data-row="'+rowId+'" type="text" placeholder="Batch #" style="width:90px">');
-    cells+=td('<input class="pi-txn-expiry" data-row="'+rowId+'" type="date" style="width:120px">');
+  }
+  // Expiry is offered on both sides and stays optional: it is often unknown at the
+  // counter, and refusing the entry over it would cost more than the missing date.
+  cells+=td('<input class="pi-txn-expiry" data-row="'+rowId+'" type="date" lang="en" dir="ltr" style="width:120px">');
+  if(isReceipt){
     cells+=td('<input class="pi-txn-supplier" data-row="'+rowId+'" type="text" value="'+piEsc(carriedSupplier)+'" placeholder="Supplier / المورد" style="min-width:120px">');
   }
   cells+=td('<input class="pi-txn-note" data-row="'+rowId+'" type="text" placeholder="Note..." style="min-width:80px">');
+  cells+=td(piTxnLocSelectHtml(type,'',''));
   cells+=td('<button type="button" class="btn bd2c bxs" style="padding:2px 7px" onclick="document.getElementById(\''+rowId+'\').remove()">✕</button>');
   tr.innerHTML=cells;tbody.appendChild(tr);
   tr.querySelector('.pi-txn-med').focus();
@@ -1136,18 +1150,22 @@ window.piSubmitTxnRows=async function(type){
     var med=String((tr.querySelector('.pi-txn-med')||{}).value||'').trim();
     var date=sharedDate;
     var qty=parseFloat((tr.querySelector('.pi-txn-qty')||{}).value)||0;
-    if(!med)return errs.push('Row '+(i+1)+': medicine name required');
-    if(!date)return errs.push('Row '+(i+1)+': date required');
-    if(qty<=0)return errs.push('Row '+(i+1)+': quantity must be > 0');
+    var locRaw=String((tr.querySelector('.pi-txn-loc')||{}).value||'').trim();
+    /* Only the medicine and where it sits are required. Quantity, batch, expiry,
+       supplier and note are all recorded when known and left blank when not —
+       refusing an entry over a batch number nobody has to hand just means the
+       movement goes unrecorded, which is worse than an incomplete record. */
+    if(!med)return errs.push('Row '+(i+1)+': medicine name required / اسم الدواء مطلوب');
+    if(!locRaw)return errs.push('Row '+(i+1)+': location required / الموقع مطلوب');
+    if(qty<0)return errs.push('Row '+(i+1)+': quantity cannot be negative / الكمية لا تكون سالبة');
     var rec={id:piTxnId(),type:type,medName:med,qty:qty,date:date,createdAt:piNow(),createdBy:window.CU&&(CU.name||CU.email)||'',purgeAfter:new Date(Date.now()+piTxnSettings().purgeDays*864e5).toISOString()};
+    rec.expiry=String((tr.querySelector('.pi-txn-expiry')||{}).value||'').trim();
     if(isReceipt){
       rec.batchNo=String((tr.querySelector('.pi-txn-batch')||{}).value||'').trim();
-      rec.expiry=String((tr.querySelector('.pi-txn-expiry')||{}).value||'').trim();
       rec.supplier=String((tr.querySelector('.pi-txn-supplier')||{}).value||'').trim();
     }
-    var locVal=String((tr.querySelector('.pi-txn-loc')||{}).value||'').trim();
-    if(locVal){
-      var lp=locVal.split('|');
+    if(locRaw){
+      var lp=locRaw.split('|');
       rec.roomId=lp[0]||'';rec.cabId=lp[1]||'';rec.shelfId=lp[2]||'';
     }
     rec.note=String((tr.querySelector('.pi-txn-note')||{}).value||'').trim();

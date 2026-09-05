@@ -25,6 +25,9 @@
 .acc2-expiry-lbl{font-size:11px;color:var(--tx2);white-space:nowrap}
 .acc2-expiry-row-inner input[type=date]{flex:1;min-width:130px}
 .acc2-expiry-save-row{padding:8px 12px;border-top:1px solid var(--bd);background:var(--s2)}
+/* Keycap styling for the entry hints; the app had no kbd rule so the keys read as
+   plain text and the hint lost its point at a glance. */
+kbd{display:inline-block;padding:1px 6px;border:1px solid var(--bd2);border-bottom-width:2px;border-radius:5px;background:var(--s);font:600 11px var(--mono,monospace);color:var(--tx);line-height:1.5}
 /* force LTR layout on date inputs; lang="en" on the element switches WebKit labels to English */
 input[type="date"]{direction:ltr!important;text-align:left}.acc2-receipt-summary{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:10px}.acc2-receipt-summary span{padding:6px 9px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:12px}
 @media(max-width:900px){.acc2-stats{grid-template-columns:1fr 1fr}.acc2-form-grid,.acc2-filter-grid{grid-template-columns:1fr 1fr}.acc2-med-grid{grid-template-columns:1fr}.acc2-regimen-head{flex-direction:column}.cc-report-item-grid{grid-template-columns:1fr}}
