@@ -59,6 +59,41 @@ function unreadable(keys, allowed) {
   });
 }
 
+/* warehouse and controlled_pharmacy get their read permission from an inline
+   branch of canReadScopedState rather than a named function, so their key lists
+   went unguarded — which is how WAREHOUSE_STATE_KEYS came to fetch
+   deleted_departments that the rule refused. */
+function scopedBranchReadable(roleName) {
+  // Scoped to canReadScopedState: the role name also appears in the small
+  // predicates above it (warehouseOfficer, controlledOfficer), and matching one of
+  // those instead would find no key literals and report every key as refused.
+  const fnStart = rules.indexOf('function canReadScopedState');
+  assert.ok(fnStart > -1, 'canReadScopedState not found in rules');
+  const fnBody = rules.slice(fnStart, rules.indexOf('\n    function ', fnStart + 1));
+  const line = fnBody.split('\n').find((l) => l.includes(`role() == '${roleName}'`));
+  assert.ok(line, `no canReadScopedState branch found for ${roleName}`);
+  const literals = new Set([...line.matchAll(/'([a-z0-9_]+)'/g)].map((m) => m[1]));
+  const prefixes = [...line.matchAll(/\^\(([a-z0-9_|.*]+)\)/g)]
+    .flatMap((m) => m[1].split('|'))
+    .map((p) => p.replace(/\.\*$/, ''))
+    .filter(Boolean);
+  return { literals, prefixes };
+}
+
+test('every state key a warehouse session fetches is readable by warehouse', () => {
+  const keys = clientKeys('WAREHOUSE_STATE_KEYS');
+  const missing = unreadable(keys, scopedBranchReadable('warehouse'));
+  assert.deepEqual(missing, [],
+    `WAREHOUSE_STATE_KEYS asks for documents the warehouse rule refuses:\n  ${missing.join('\n  ')}`);
+});
+
+test('every state key a controlled-pharmacy session fetches is readable by that role', () => {
+  const keys = clientKeys('CONTROLLED_PHARMACY_BASE_KEYS');
+  const missing = unreadable(keys, scopedBranchReadable('controlled_pharmacy'));
+  assert.deepEqual(missing, [],
+    `CONTROLLED_PHARMACY_BASE_KEYS asks for documents the controlled_pharmacy rule refuses:\n  ${missing.join('\n  ')}`);
+});
+
 test('every state key a department session fetches is readable by departments', () => {
   const keys = clientKeys('DEPARTMENT_SHARED_STATE_KEYS');
   const allowed = rulesReadable('canReadDepartmentState');

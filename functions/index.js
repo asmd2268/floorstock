@@ -1068,6 +1068,14 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
 // Voids any active session linked to the given usage IDs and creates a new one.
 exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
+  /* Reissuing writes handover sessions and usage rows exactly as creating one
+     does, so it takes the same subscription and feature gate. Without it a tenant
+     whose subscription had lapsed could not create a handover but could still
+     reissue one, which is the same write through a different door. */
+  const tenant = await requireWritableSubscription(caller);
+  if (tenant && (!Array.isArray(tenant.features) || !tenant.features.includes('controlled'))) {
+    throw new HttpsError('permission-denied', 'Controlled accountability is not included in this subscription.');
+  }
   if (!canCreateHandover(caller)) {
     throw new HttpsError('permission-denied', 'This role cannot create accountability handovers.');
   }

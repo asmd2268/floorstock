@@ -112,8 +112,20 @@ window.archiveOldControlledMoves=async function(){
     }
   });
 
+  /* Same shape as order-retention: the aggregate merge ADDS to an existing row for
+     the same month, so a trim that failed after the summary was written would make
+     a retry count these movements twice and permanently inflate the narcotic
+     totals. Restoring the previous summary keeps a retry correct; the trim is a
+     filter and is safe to repeat. */
+  var previousSummary=globalThis.S.g('controlled_moves_summary_v1')||[];
   await globalThis.S.s('controlled_moves_summary_v1',summary);
-  await globalThis.S.s('controlled_moves',all.filter(function(m){return old.indexOf(m)<0}));
+  try{
+    await globalThis.S.s('controlled_moves',all.filter(function(m){return old.indexOf(m)<0}));
+  }catch(trimError){
+    try{await globalThis.S.s('controlled_moves_summary_v1',previousSummary)}
+    catch(rollbackError){console.error('Could not restore the previous controlled-movement summary; re-running cleanup would double-count these months.',rollbackError)}
+    throw trimError;
+  }
   globalThis.toast(old.length+' old controlled/narcotic movement record(s) archived locally and removed from Firestore; monthly totals preserved for reports.','succ');
   if(typeof window.renderCtlLog==='function'&&document.getElementById('mcustody-log')&&document.getElementById('mcustody-log').classList.contains('on')){
     window.renderCtlLog(typeof window.ctlCustodyLogFilters==='function'?window.ctlCustodyLogFilters():{});
