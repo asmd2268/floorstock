@@ -4,6 +4,44 @@ import {
   detectSpikes, zeroDispenseSummary, deptLabel
 } from '../core/analytics-engine.js?v=ce89f4cd54';
 
+/* One stylesheet for every printed report.
+ * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
+ * 3px rules, 6px vs 7px cell padding — because each lived in a different IIFE and
+ * none could reach the others. Defined at module scope so all three can, and so a
+ * change to the house style lands in one place instead of three.
+ */
+const FS_REPORT_CSS = `
+@page{size:A4 portrait;margin:14mm 12mm 18mm}
+body{font:10pt Arial,sans-serif;color:#172033;background:#fff}
+h1{font-size:16pt;color:#102a5c;margin:0 0 4px;border-bottom:3px solid #2563eb;padding-bottom:6px}
+h2{font-size:13pt;color:#102a5c;background:#e8f0ff;border-left:4px solid #2563eb;padding:5px 8px;margin:12px 0 6px}
+h2.warn{border-color:#f59e0b;background:#fffbeb;color:#92400e}
+table{width:100%;border-collapse:collapse;margin-top:6px;font-size:9pt}
+th,td{border:1px solid #9aa8bd;padding:6px;text-align:left;vertical-align:top}
+th{background:#dbeafe;color:#102a5c}
+.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
+.kpi{border:1px solid #b9cae8;border-top:3px solid #2563eb;padding:8px;background:#f5f9ff}
+.kpi-label{font-size:8pt;color:#52627b}
+.kpi-val{font-size:16pt;font-weight:bold;color:#102a5c;margin-top:2px}
+.brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}
+.meter{height:8px;background:#e3eaf4;border-radius:5px;overflow:hidden;margin-top:2px}
+.meter i{display:block;height:100%;border-radius:5px}
+.month-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
+.month-cell{border:1px solid #e2e8f0;border-radius:4px;padding:5px}
+.month-name{font-size:7pt;color:#64748b}
+.month-val{font-size:14pt;font-weight:bold;color:#102a5c}
+.section{break-inside:avoid;margin-bottom:14px}
+.anl-spike-badge{display:inline-block;font-size:8pt;font-weight:bold;padding:1px 6px;border-radius:99px;background:#fef3c7;color:#92400e}
+.anl-spike-badge.low{background:#dcfce7;color:#166534}
+.anl-spike-badge.good{background:#dcfce7;color:#166534}
+.anl-spike-badge.mid{background:#fef3c7;color:#92400e}
+.anl-spike-badge.high{background:#fee2e2;color:#991b1b}
+.anl-spike-badge.extreme{background:#7f1d1d;color:#fecaca}
+.anl-legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:8pt;color:#52627b;margin:6px 0 10px;padding:6px 8px;background:#f5f9ff;border:1px solid #c8d4e8;border-radius:6px}
+.anl-legend b{color:#102a5c}
+@media print{button{display:none!important}.section{break-inside:avoid}}
+`;
+
 (function () {
 'use strict';
 
@@ -423,16 +461,7 @@ window.renderAnalyticsReports = function () {
 
 function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-const DEPT_PRINT_CSS = `
-  @page{size:A4 portrait;margin:14mm 12mm 18mm}
-  body{font:10pt Arial,sans-serif;color:#172033;background:#fff}
-  h1{font-size:16pt;color:#102a5c;border-bottom:2px solid #2563eb;padding-bottom:6px;margin:0 0 10px}
-  table{width:100%;border-collapse:collapse}
-  th,td{border:1px solid #9aa8bd;padding:7px;text-align:left}
-  th{background:#dbeafe;color:#102a5c}
-  @media print{button{display:none!important}}
-  .brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}
-`;
+const DEPT_PRINT_CSS = FS_REPORT_CSS;
 
 window._r676DeptStats = {};
 
@@ -503,18 +532,11 @@ window.addEventListener('floorstock:analytics-rendered', function (e) {
 function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function buildPrintHtml(detail) {
-  const css = `
-    @page{size:A4 portrait;margin:14mm 12mm 18mm}
-    body{font:10pt Arial,sans-serif;color:#172033;background:#fff}
-    h1{font-size:17pt;color:#102a5c;margin:0 0 4px}
-    h2{font-size:13pt;color:#102a5c;background:#e8f0ff;border-left:4px solid #2563eb;padding:5px 8px;margin:14px 0 6px}
-    .kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
-    .kpi{border:1px solid #b9cae8;border-top:3px solid #2563eb;padding:8px;background:#f5f9ff}
-    .kpi-label{font-size:8pt;color:#52627b}
+  /* Shared house style plus the few rules only the quarterly report uses. It used
+     to restate the whole sheet, which is how the headings and cell padding drifted
+     away from the other reports. */
+  const css = FS_REPORT_CSS + `
     .kpi-val{font-size:18pt;font-weight:bold;color:#102a5c;margin-top:2px}
-    table{width:100%;border-collapse:collapse;margin-top:6px}
-    th,td{border:1px solid #9aa8bd;padding:6px;text-align:left;font-size:9pt;vertical-align:top}
-    th{background:#dbeafe;color:#102a5c}
     .spike-badge{background:#fef3c7;color:#92400e;font-weight:bold;padding:1px 5px;border-radius:4px;font-size:8pt}
     .section-alert h2{border-color:#f59e0b;background:#fffbeb;color:#92400e}
     .section-danger h2{border-color:#ef4444;background:#fff1f2;color:#991b1b}
@@ -549,8 +571,6 @@ function buildPrintHtml(detail) {
     .arw.up{background:#fef3c7;color:#92400e}.arw.dn{background:#dcfce7;color:#166534}.arw.eq{background:#e2e8f0;color:#475569}
     .anl-controls{display:none!important}
     .r676-dept-print-only{display:none!important}
-    @media print{button{display:none!important}}
-    .brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}
   `;
   const root = document.getElementById('analytics-reports-card');
   const html = (root ? root.innerHTML : '') + '<div class="brand">By Ali Abudahash</div>';
@@ -1786,37 +1806,7 @@ function renderNarcoticSection() {
 }
 
 /* ── PRINT ──────────────────────────────────────────────────────────────── */
-const PRINT_CSS = `
-@page{size:A4 portrait;margin:14mm 12mm 18mm}
-body{font:10pt Arial,sans-serif;color:#172033;background:#fff}
-h1{font-size:16pt;color:#102a5c;margin:0 0 4px;border-bottom:3px solid #2563eb;padding-bottom:6px}
-h2{font-size:13pt;color:#102a5c;background:#e8f0ff;border-left:4px solid #2563eb;padding:5px 8px;margin:12px 0 6px}
-h2.warn{border-color:#f59e0b;background:#fffbeb;color:#92400e}
-table{width:100%;border-collapse:collapse;margin-top:6px;font-size:9pt}
-th,td{border:1px solid #9aa8bd;padding:6px;text-align:left;vertical-align:top}
-th{background:#dbeafe;color:#102a5c}
-.kpi-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0}
-.kpi{border:1px solid #b9cae8;border-top:3px solid #2563eb;padding:8px;background:#f5f9ff}
-.kpi-label{font-size:8pt;color:#52627b}
-.kpi-val{font-size:16pt;font-weight:bold;color:#102a5c;margin-top:2px}
-.brand{text-align:right;font-size:8pt;color:#94a3b8;margin-top:8px}
-.meter{height:8px;background:#e3eaf4;border-radius:5px;overflow:hidden;margin-top:2px}
-.meter i{display:block;height:100%;border-radius:5px}
-.month-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:4px}
-.month-cell{border:1px solid #e2e8f0;border-radius:4px;padding:5px}
-.month-name{font-size:7pt;color:#64748b}
-.month-val{font-size:14pt;font-weight:bold;color:#102a5c}
-.section{break-inside:avoid;margin-bottom:14px}
-.anl-spike-badge{display:inline-block;font-size:8pt;font-weight:bold;padding:1px 6px;border-radius:99px;background:#fef3c7;color:#92400e}
-.anl-spike-badge.low{background:#dcfce7;color:#166534}
-.anl-spike-badge.good{background:#dcfce7;color:#166534}
-.anl-spike-badge.mid{background:#fef3c7;color:#92400e}
-.anl-spike-badge.high{background:#fee2e2;color:#991b1b}
-.anl-spike-badge.extreme{background:#7f1d1d;color:#fecaca}
-.anl-legend{display:flex;flex-wrap:wrap;gap:10px;align-items:center;font-size:8pt;color:#52627b;margin:6px 0 10px;padding:6px 8px;background:#f5f9ff;border:1px solid #c8d4e8;border-radius:6px}
-.anl-legend b{color:#102a5c}
-@media print{button{display:none!important}.section{break-inside:avoid}}
-`;
+const PRINT_CSS = FS_REPORT_CSS;
 
 function openPrintWindow(title, bodyHtml) {
   if (typeof window.fsOfficialPrint === 'function') {
