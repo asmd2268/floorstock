@@ -645,13 +645,16 @@ function applyRequestLock(){
  var pg=E('pg-newreq'),dept=CU.deptId||CU.deptName;
  if(!pg)return;
  var check=window.isRequestAllowed(dept),txt=allowedText(dept,check),body=E('rfbody');
+ var _wasLocked=pg.classList.contains('schedule-locked');
  pg.classList.toggle('schedule-locked',!check.allowed);
- if(body){body.style.removeProperty('display');body.style.removeProperty('visibility');body.style.removeProperty('opacity')}
- var card=body&&body.closest('.card');if(card){card.style.removeProperty('display');card.style.removeProperty('visibility');card.style.removeProperty('opacity')}
+ if(_wasLocked===!!check.allowed){
+   if(body){body.style.removeProperty('display');body.style.removeProperty('visibility');body.style.removeProperty('opacity')}
+   var card=body&&body.closest('.card');if(card){card.style.removeProperty('display');card.style.removeProperty('visibility');card.style.removeProperty('opacity')}
+ }
  var info=E('req-sched-info');if(!info&&body){info=document.createElement('div');info.id='req-sched-info';body.parentNode.insertBefore(info,body)}
  if(info){
-  if(!check.allowed)info.innerHTML='<div class="schedule-lock-banner"><div class="title">🚫 الطلب غير متاح الآن / Ordering is currently unavailable</div><div class="times"><b>أقرب وقت متاح / Next available time:</b> '+escH(txt.next)+'</div><div class="schedule-week-list"><div class="schedule-week-title">أوقات الطلب المسموحة خلال الأسبوع / Weekly allowed request times</div>'+weeklyRowsHtml(txt.week)+'</div><div class="fhint" style="margin-top:7px">يمكنك مراجعة قائمة الأدوية الآن، لكن إدخال الكميات وإرسال الطلب سيتاحان فقط خلال الأيام والساعات الموضحة أعلاه.<br>You may review the medicine list now; quantities and submission are enabled only during the days and hours listed above.</div></div>';
-  else info.innerHTML='<div class="schedule-open-banner">🟢 <b>الطلب متاح الآن / Ordering is available now.</b> &nbsp; حتى / Until <b>'+escH(check.window&&check.window.to||'')+'</b></div>'
+  var _newHtml=!check.allowed?'<div class="schedule-lock-banner"><div class="title">🚫 الطلب غير متاح الآن / Ordering is currently unavailable</div><div class="times"><b>أقرب وقت متاح / Next available time:</b> '+escH(txt.next)+'</div><div class="schedule-week-list"><div class="schedule-week-title">أوقات الطلب المسموحة خلال الأسبوع / Weekly allowed request times</div>'+weeklyRowsHtml(txt.week)+'</div><div class="fhint" style="margin-top:7px">يمكنك مراجعة قائمة الأدوية الآن، لكن إدخال الكميات وإرسال الطلب سيتاحان فقط خلال الأيام والساعات الموضحة أعلاه.<br>You may review the medicine list now; quantities and submission are enabled only during the days and hours listed above.</div></div>':'<div class="schedule-open-banner">🟢 <b>الطلب متاح الآن / Ordering is available now.</b> &nbsp; حتى / Until <b>'+escH(check.window&&check.window.to||'')+'</b></div>';
+  if(info.innerHTML!==_newHtml)info.innerHTML=_newHtml;
  }
  pg.querySelectorAll('.rqi').forEach(function(i){if(!check.allowed){if(!i.disabled)i.dataset.scheduleLocked='1';i.disabled=true}else if(i.dataset.scheduleLocked==='1'){delete i.dataset.scheduleLocked;if((+i.dataset.max||0)>0)i.disabled=false}});
  var submit=pg.querySelector('button[data-asdh-binding="b047"]');if(submit){submit.disabled=!check.allowed;submit.setAttribute('aria-disabled',check.allowed?'false':'true');submit.title=check.allowed?'':('Next allowed: '+txt.next)}
