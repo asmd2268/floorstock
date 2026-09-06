@@ -197,8 +197,8 @@ function acc3ExpiryAlertBanner(deptId){
     dates.forEach(function(d){if(d.date<=today)expired.push(d);else if(d.date<=soonStr)expiringSoon.push(d)});
   });
   var html='';
-  if(expired.length)html+='<div class="alert-banner" style="margin-bottom:8px">🔴 Expired batches / دفعات منتهية الصلاحية: '+expired.map(function(d){return '<b>'+esc(d.med)+'</b> ('+esc(d.date)+')'}).join(' · ')+'</div>';
-  if(expiringSoon.length)html+='<div class="alert-banner-y" style="margin-bottom:8px">⚠ Expiring within 30 days / تنتهي خلال 30 يوم: '+expiringSoon.map(function(d){return '<b>'+esc(d.med)+'</b> ('+esc(d.date)+')'}).join(' · ')+'</div>';
+  if(expired.length)html+='<div class="alert-banner" style="margin-bottom:8px">🔴 Expired batches / دفعات منتهية الصلاحية: '+expired.map(function(d){return '<b>'+esc(d.med)+'</b> ('+acc2FmtDate(d.date)+')'}).join(' · ')+'</div>';
+  if(expiringSoon.length)html+='<div class="alert-banner-y" style="margin-bottom:8px">⚠ Expiring within 30 days / تنتهي خلال 30 يوم: '+expiringSoon.map(function(d){return '<b>'+esc(d.med)+'</b> ('+acc2FmtDate(d.date)+')'}).join(' · ')+'</div>';
   return html;
 }
 function acc3PlanExpiryBanner(planList){var today=todayStr(),soon=new Date(today);soon.setDate(soon.getDate()+30);var soonStr=soon.toISOString().slice(0,10),expired=[],expiringSoon=[];planList.forEach(function(r){var d=getPlanExpiry(r.id);if(!d)return;if(d<today)expired.push(r.name+' ('+d+')');else if(d<=soonStr)expiringSoon.push(r.name+' ('+d+')')});var html='';if(expired.length)html+='<div class="alert-banner" style="margin-bottom:8px">🔴 Expired treatment plans / خطط علاجية منتهية: '+expired.map(function(n){return '<b>'+esc(n)+'</b>'}).join(' · ')+'</div>';if(expiringSoon.length)html+='<div class="alert-banner-y" style="margin-bottom:8px">⚠ Plans expiring within 30 days / خطط تنتهي خلال 30 يوم: '+expiringSoon.map(function(n){return '<b>'+esc(n)+'</b>'}).join(' · ')+'</div>';return html}
@@ -216,7 +216,7 @@ function acc3DeptPlanView(deptId){
         return '<div style="border:1px solid var(--br);border-radius:6px;padding:10px;margin-bottom:8px">'+
           '<div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:4px">'+
             '<b>'+esc(u.planName||'—')+'</b>'+
-            '<span class="fhint">'+esc(u.consumptionDate||'—')+'</span>'+
+            '<span class="fhint">'+acc2FmtDate(u.consumptionDate)+'</span>'+
             '<span class="fhint">File: '+esc(u.patientFile||'—')+'</span>'+
             '<span class="fhint">Dr: '+esc(u.doctor||'—')+'</span>'+
           '</div>'+
@@ -245,7 +245,7 @@ function acc3DeptPlanView(deptId){
         if(asgn&&allBatches.length){
           var today=todayStr();
           var hasExpired=allBatches.some(function(b){return b.date&&b.date<=today});
-          expiryHtml='<div style="font-size:11px;margin-top:2px;opacity:.75">'+(hasExpired?'🔴':'📅')+' Exp: '+allBatches.map(function(b){return esc(b.date||'—')+(b.qty?'('+b.qty+')':'')}).join(', ')+'</div>';
+          expiryHtml='<div style="font-size:11px;margin-top:2px;opacity:.75">'+(hasExpired?'🔴':'📅')+' Exp: '+allBatches.map(function(b){return acc2FmtDate(b.date||'—')+(b.qty?'('+b.qty+')':'')}).join(', ')+'</div>';
         }
         return '<div style="border:1px solid var(--br);border-radius:4px;padding:7px 10px;margin-bottom:5px">'+
           '<div class="fl g6 ic"><b style="flex:1">'+esc(item.medName)+'</b>'+
@@ -257,7 +257,7 @@ function acc3DeptPlanView(deptId){
       }).join('');
       var histHtml=deptUsages.length?
         '<div style="margin-top:12px"><div class="fhint" style="margin-bottom:5px">Submission history / سجل الاستخدام</div><div class="tw"><table class="acc2-table" style="font-size:12px"><thead><tr><th>Date / التاريخ</th><th>Patient file / رقم الملف</th><th>Doctor / الطبيب</th><th>Medicines / الأدوية</th><th>Status / الحالة</th><th></th></tr></thead><tbody>'+
-        deptUsages.map(function(u){return '<tr><td>'+esc(u.consumptionDate||'—')+'</td><td>'+esc(u.patientFile||'—')+'</td><td>'+esc(u.doctor||'—')+'</td><td style="font-size:11px">'+esc((u.medicines||[]).map(function(m){return m.medName+'×'+m.actualQty}).join(', ')||'—')+'</td><td><span class="badge '+puStatusClass(u.status)+'">'+puStatusLabel(u.status)+'</span></td><td>'+(u.status==='pending_pharmacy'?'<button class="btn bd2c bxs" type="button" onclick="acc3CancelPlanUsage(\''+esc(u.id)+'\')">✕ Cancel / إلغاء</button>':'')+'</td></tr>'}).join('')+
+        deptUsages.map(function(u){return '<tr><td>'+acc2FmtDate(u.consumptionDate)+'</td><td>'+esc(u.patientFile||'—')+'</td><td>'+esc(u.doctor||'—')+'</td><td style="font-size:11px">'+esc((u.medicines||[]).map(function(m){return m.medName+'×'+m.actualQty}).join(', ')||'—')+'</td><td><span class="badge '+puStatusClass(u.status)+'">'+puStatusLabel(u.status)+'</span></td><td>'+(u.status==='pending_pharmacy'?'<button class="btn bd2c bxs" type="button" onclick="acc3CancelPlanUsage(\''+esc(u.id)+'\')">✕ Cancel / إلغاء</button>':'')+'</td></tr>'}).join('')+
         '</tbody></table></div></div>':'';
       var ageNote=plan.minAge||plan.maxAge?'<div class="fhint" style="margin-top:2px">Age / العمر: '+(plan.minAge||'0')+'–'+(plan.maxAge||'∞')+' yrs</div>':'';var _planExp=getPlanExpiry(plan.id);var expiryNote=_planExp?'<div class="fhint" style="margin-top:2px">'+(_planExp<todayStr()?'🔴':'📅')+' Exp: '+esc(_planExp)+'</div>':'';
       return '<div style="border:1px solid var(--br);border-radius:8px;padding:14px;margin-bottom:14px">'+
@@ -288,7 +288,7 @@ function acc3DeptPlanView(deptId){
 function planUsageReview(){
   var pending=rows(PLAN_USAGE_KEY).filter(function(u){return u.status==='pending_pharmacy'}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))});
   var waitingReceipt=rows(PLAN_USAGE_KEY).filter(function(u){return u.status==='approved_waiting_receipt'}).sort(function(a,b){return String(b.submittedAt||'').localeCompare(String(a.submittedAt||''))});
-  var waitHtml=waitingReceipt.length?'<div class="card" style="margin-top:10px;border-left:4px solid var(--blue,#2196f3)"><div class="ch"><span class="ct">⏳ Awaiting dept receipt / بانتظار استلام الأقسام</span></div><div class="cb">'+waitingReceipt.map(function(u){var meds=(u.medicines||[]).map(function(m){return '<span class="chip">'+esc(m.medName)+' × '+esc(m.actualQty)+'</span>'}).join(' ');return '<div style="border:1px solid var(--br);border-radius:6px;padding:8px;margin-bottom:8px"><div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:4px"><b>'+esc(u.planName||'—')+'</b><span class="fhint">'+esc(deptName(u.deptId))+'</span><span class="fhint">'+esc(u.consumptionDate||'—')+'</span></div><div style="margin:4px 0">'+meds+'</div></div>'}).join('')+'</div></div>':'';
+  var waitHtml=waitingReceipt.length?'<div class="card" style="margin-top:10px;border-left:4px solid var(--blue,#2196f3)"><div class="ch"><span class="ct">⏳ Awaiting dept receipt / بانتظار استلام الأقسام</span></div><div class="cb">'+waitingReceipt.map(function(u){var meds=(u.medicines||[]).map(function(m){return '<span class="chip">'+esc(m.medName)+' × '+esc(m.actualQty)+'</span>'}).join(' ');return '<div style="border:1px solid var(--br);border-radius:6px;padding:8px;margin-bottom:8px"><div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:4px"><b>'+esc(u.planName||'—')+'</b><span class="fhint">'+esc(deptName(u.deptId))+'</span><span class="fhint">'+acc2FmtDate(u.consumptionDate)+'</span></div><div style="margin:4px 0">'+meds+'</div></div>'}).join('')+'</div></div>':'';
   if(!pending.length)return waitHtml+'<div class="alert-banner-y" style="margin-top:14px">No pending plan usage submissions. / لا توجد طلبات استهلاك معلقة.</div>';
   return waitHtml+'<div class="card" style="margin-top:16px"><div class="ch"><span class="ct">Plan usage review / مراجعة استهلاك الخطط</span><div class="fhint">Submitted by nursing staff — approve to deduct balances and send for receipt.</div></div><div class="cb">'+
     pending.map(function(u){
@@ -297,7 +297,7 @@ function planUsageReview(){
         '<div class="fl g8 ic" style="margin-bottom:6px;flex-wrap:wrap">'+
           '<b>'+esc(u.planName||'—')+'</b>'+
           '<span class="fhint">'+esc(deptName(u.deptId))+'</span>'+
-          '<span class="fhint">'+esc(u.consumptionDate||'—')+'</span>'+
+          '<span class="fhint">'+acc2FmtDate(u.consumptionDate)+'</span>'+
           '<span class="badge bgr">Pending / معلق</span>'+
         '</div>'+
         '<div style="margin-bottom:4px"><span class="fhint">Patient: </span>'+esc(u.patientFile||'—')+' &nbsp;·&nbsp; <span class="fhint">Doctor: </span>'+esc(u.doctor||'—')+'</div>'+
