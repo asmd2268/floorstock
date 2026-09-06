@@ -323,6 +323,7 @@ function acc2SubmissionBlocked(deptId,assignmentId){return acc2RegimenForAssignm
 function acc2MedicationNames(deptId){var map={};try{(getMeds(deptId)||[]).forEach(function(m){var name=String(m.name||'').trim();if(name)map[name]=1})}catch(e){}acc2DeptAssignments(deptId,true).forEach(function(a){if(a.medName)map[a.medName]=1});acc2Array('accountability_regimen_catalog_v1').filter(function(row){return row&&row.active!==false&&String(row.deptId)===String(deptId)}).forEach(function(row){if(row.name)map[String(row.name).trim()]=1});return Object.keys(map).sort(function(a,b){return a.localeCompare(b)})}
 function acc2Date(v){return String(v||'').slice(0,10)}
 function acc2FmtDate(s){if(!s||s==='—')return'—';var p=String(s).split('-');return p.length===3&&p[0].length===4?p[2]+'/'+p[1]+'/'+p[0]:s}
+window.acc2FmtDate=acc2FmtDate;
 function acc2Today(){return new Date().toISOString().slice(0,10)}
 function acc2Number(v){return Math.max(0,n(v))}
 function acc2UniqueLines(value){var seen={};return String(value||'').split(/\r?\n/).map(function(x){return x.trim()}).filter(function(x){var k=norm(x);if(!k||seen[k])return false;seen[k]=1;return true})}
