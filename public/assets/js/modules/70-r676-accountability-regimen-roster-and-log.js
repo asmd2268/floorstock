@@ -303,7 +303,7 @@ function planUsageReview(){
         '<div style="margin-bottom:4px"><span class="fhint">Patient: </span>'+esc(u.patientFile||'—')+' &nbsp;·&nbsp; <span class="fhint">Doctor: </span>'+esc(u.doctor||'—')+'</div>'+
         (u.note?'<div class="fhint" style="margin-bottom:4px">Note: '+esc(u.note)+'</div>':'')+
         '<div style="margin:6px 0">'+medsHtml+'</div>'+
-        '<div class="fl g6"><button class="btn bs bsm" type="button" onclick="acc3ApprovePlanUsage(\''+esc(u.id)+'\')">✓ Approve / اعتماد</button><button class="btn bd2c bsm" type="button" onclick="acc3RejectPlanUsage(\''+esc(u.id)+'\')">✕ Reject / رفض</button></div>'+
+        '<div class="fl g6" data-acc3-pu-decision="'+esc(u.id)+'"><button class="btn bs bsm" type="button" onclick="acc3ApprovePlanUsage(\''+esc(u.id)+'\')">✓ Approve / اعتماد</button><button class="btn bd2c bsm" type="button" onclick="acc3RejectPlanUsage(\''+esc(u.id)+'\')">✕ Reject / رفض</button></div>'+
       '</div>';
     }).join('')+
   '</div></div>';
@@ -379,14 +379,18 @@ window.acc3ApprovePlanUsage=async function(usageId){
   var all=rows(PLAN_USAGE_KEY).map(function(u){return Object.assign({},u)});
   var rec=all.find(function(u){return String(u.id)===String(usageId)});
   if(!rec)return;
+  var _grp=document.querySelector('[data-acc3-pu-decision="'+CSS.escape(String(usageId))+'"]');
+  if(_grp){_grp.innerHTML='<span style="opacity:.6;font-size:12px">⏳ Approving… / جاري الاعتماد</span>'}
   rec.status='approved_waiting_receipt';rec.approvedAt=now();rec.approvedBy=actor();
-  try{await save(PLAN_USAGE_KEY,all);toast('Plan usage approved ✓');window.renderMedicationAccountability()}catch(e){toast(String(e&&e.message||e).replace(/^FirebaseError:\s*/,''),'err')}
+  try{await save(PLAN_USAGE_KEY,all);toast('Plan usage approved ✓');window.renderMedicationAccountability();if(typeof window.ccUpdateBadges==='function')window.ccUpdateBadges()}catch(e){if(_grp){_grp.innerHTML='<button class="btn bs bsm" type="button" onclick="acc3ApprovePlanUsage(\''+esc(usageId)+'\')">✓ Approve / اعتماد</button><button class="btn bd2c bsm" type="button" onclick="acc3RejectPlanUsage(\''+esc(usageId)+'\')">✕ Reject / رفض</button>';}toast(String(e&&e.message||e).replace(/^FirebaseError:\s*/,''),'err')}
 };
 window.acc3RejectPlanUsage=async function(usageId){
   if(!canManage())return toast('Not authorized.','err');
   var all=rows(PLAN_USAGE_KEY).map(function(u){return Object.assign({},u)});
   var rec=all.find(function(u){return String(u.id)===String(usageId)});
   if(!rec)return;
+  var _grp=document.querySelector('[data-acc3-pu-decision="'+CSS.escape(String(usageId))+'"]');
+  if(_grp){_grp.innerHTML='<span style="opacity:.6;font-size:12px">⏳ Rejecting… / جاري الرفض</span>'}
   rec.status='rejected';rec.rejectedAt=now();rec.rejectedBy=actor();
   try{
     var assignList=rows('accountability_assignments_v2').map(function(x){return Object.assign({},x)});
@@ -395,8 +399,8 @@ window.acc3RejectPlanUsage=async function(usageId){
       if(a){a.balance=Math.min(a.quota||0,((a.balance||0)+(m.actualQty||0)));a.updatedAt=rec.rejectedAt}
     });
     await save('accountability_assignments_v2',assignList);
-    await save(PLAN_USAGE_KEY,all);toast('Plan usage rejected.');window.renderMedicationAccountability()
-  }catch(e){toast(String(e&&e.message||e).replace(/^FirebaseError:\s*/,''),'err')}
+    await save(PLAN_USAGE_KEY,all);toast('Plan usage rejected.');window.renderMedicationAccountability();if(typeof window.ccUpdateBadges==='function')window.ccUpdateBadges()
+  }catch(e){if(_grp){_grp.innerHTML='<button class="btn bs bsm" type="button" onclick="acc3ApprovePlanUsage(\''+esc(usageId)+'\')">✓ Approve / اعتماد</button><button class="btn bd2c bsm" type="button" onclick="acc3RejectPlanUsage(\''+esc(usageId)+'\')">✕ Reject / رفض</button>';}toast(String(e&&e.message||e).replace(/^FirebaseError:\s*/,''),'err')}
 };
 window.acc3RecordPlanReceipt=async function(usageId){
   if(!window.S||typeof window.S.s!=='function')return toast('Data store not ready.','err');
