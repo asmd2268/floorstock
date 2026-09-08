@@ -607,8 +607,13 @@ async function assignSelectedMedsToShelf(){
 // Crash Cart
 function crashCarts(){return S.g('crash_carts')||[]}
 function crashReports(){return S.g('crash_cart_reports')||[]}
+function _sanitizeReport(r){
+  if(!r||typeof r!=='object')return r;
+  var out={};Object.keys(r).forEach(function(k){var val=r[k];out[k]=val===undefined?null:val});
+  return out;
+}
 function setCrashReports(v){
-  var p=S.s('crash_cart_reports',v);
+  var p=S.s('crash_cart_reports',(v||[]).map(_sanitizeReport));
   // Every legacy direct-write path (close/respond, bulk open+replace, seal
   // correction) still only touches this state-doc array. Mirror the affected
   // reports into crash_cart_reports_v2 afterward, best-effort, so scoped
