@@ -206,7 +206,7 @@ function applyCrashCartReport({
     lastReportedBy: actorName,
     inventoryDeductedAtReport: false,
     noConsumption: noConsumption === true,
-    noConsumptionNote: noConsumption ? String(noConsumptionNote || '') : undefined,
+    noConsumptionNote: noConsumption ? String(noConsumptionNote || '') : '',
   };
   if (!report.reason) throw new Error('Select a reason for opening the Crash Cart.');
   if (report.reason.length > 500) throw new Error('Crash Cart report reason is too long.');

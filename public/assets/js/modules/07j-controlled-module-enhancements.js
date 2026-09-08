@@ -629,9 +629,16 @@ function _writeCrashReportDocs(newReports){
   return Promise.all(promises);
 }
 function setCrashReports(v){
-  // Primary: write individual docs to v2 collection so reads never see the full array.
-  // Secondary: keep legacy state-doc array for Cloud Functions that still transact on it.
-  var p=_writeCrashReportDocs(v||[]).then(function(){return S.s('crash_cart_reports',v)});
+  var reports=v||[];
+  // Optimistic cache update so renders after this call see current data immediately.
+  if(S&&S.cache){
+    S.cache.crash_cart_reports=reports;
+    S.__crashReportsById=S.__crashReportsById||{};
+    reports.forEach(function(r){if(r&&r.id)S.__crashReportsById[String(r.id)]=r});
+  }
+  // Write each report as an individual document to v2 collection (sole source of truth).
+  var p=_writeCrashReportDocs(reports);
+  Promise.resolve(p).then(function(){if(S&&S.scheduleRefresh)S.scheduleRefresh()}).catch(function(){});
   return p;
 }
 function crashCart(id){return crashCarts().find(function(c){return c.id===id})}

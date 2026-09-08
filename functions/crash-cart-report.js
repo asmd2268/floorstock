@@ -74,14 +74,11 @@ function stateRefs(db, tenantId) {
   const publicCollection = tenantId
     ? db.collection('tenants').doc(tenantId).collection('public_controlled_expiry')
     : db.collection('public_controlled_expiry');
-  // Individual report documents — no 1 MB limit, no last-writer-wins race.
-  // The legacy path uses a top-level collection to stay outside floorstock_state.
   const reportsCollection = tenantId
     ? db.collection('tenants').doc(tenantId).collection('crash_cart_reports')
     : db.collection('crash_cart_reports_v2');
   return {
     carts: state.doc('crash_carts'),
-    reports: state.doc('crash_cart_reports'),
     reportsCollection,
     publicCollection,
   };
@@ -131,16 +128,19 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
 
   try {
     await db.runTransaction(async (transaction) => {
-      const [cartSnapshot, reportSnapshot] = await Promise.all([
+      // Read carts (still a state-doc array) and this cart's reports (individual docs).
+      const cartReportsQuery = refs.reportsCollection.where('cartId', '==', cartId);
+      const [cartSnapshot, cartReportsSnapshot] = await Promise.all([
         transaction.get(refs.carts),
-        transaction.get(refs.reports),
+        transaction.get(cartReportsQuery),
       ]);
       const carts = cartSnapshot.exists && Array.isArray(cartSnapshot.data().value)
-        ? cartSnapshot.data().value
-        : [];
-      const reports = reportSnapshot.exists && Array.isArray(reportSnapshot.data().value)
-        ? reportSnapshot.data().value
-        : [];
+        ? cartSnapshot.data().value : [];
+      const reports = cartReportsSnapshot.docs.map((d) => {
+        const data = d.data() || {};
+        delete data.updatedAt; delete data._migratedAt;
+        return { id: d.id, ...data };
+      });
       // Enforce no-consumption monthly limit
       if (noConsumption) {
         let defaultLimit = 2;
@@ -158,9 +158,7 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
         const ncLimit = perCartLimit != null ? Math.max(1, Number(perCartLimit)) : defaultLimit;
         const ym = stamp.slice(0, 7);
         const ncCountThisMonth = reports.filter(r =>
-          String(r.cartId) === String(cartId) &&
-          r.noConsumption === true &&
-          String(r.openedAt || '').slice(0, 7) === ym
+          r.noConsumption === true && String(r.openedAt || '').slice(0, 7) === ym
         ).length;
         if (ncCountThisMonth >= ncLimit) {
           throw new Error(`Monthly no-consumption report limit reached for this cart (${ncLimit}x/month).`);
@@ -181,12 +179,13 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
       });
       const updatedAt = FieldValue.serverTimestamp();
       transaction.set(refs.carts, { value: result.carts, updatedAt }, { merge: false });
-      transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
-      // Dual-write: also persist the report as an individual collection document.
-      // This eliminates the 1 MB state-doc limit and enables per-document reads.
-      transaction.set(refs.reportsCollection.doc(result.report.id), {
-        ...result.report,
-        updatedAt,
+      // Write each report as an individual document; delete any that were removed.
+      const newIds = new Set(result.reports.map((r) => r.id));
+      cartReportsSnapshot.docs.forEach((d) => {
+        if (!newIds.has(d.id)) transaction.delete(refs.reportsCollection.doc(d.id));
+      });
+      result.reports.forEach((r) => {
+        transaction.set(refs.reportsCollection.doc(r.id), { ...r, updatedAt }, { merge: false });
       });
     });
   } catch (error) {
@@ -216,38 +215,6 @@ exports.submitCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
   };
 });
 
-// Mirrors specific reports from the legacy floorstock_state/crash_cart_reports
-// array into the crash_cart_reports_v2 collection. Every crash-cart write path
-// that still updates the legacy array directly from the client (pharmacy
-// closing an open report, bulk opening/replacement, seal correction) calls
-// this right after, so inpatient_supervisor/pharmacy_staff — who only ever
-// read the v2 collection — don't end up looking at a report frozen in a
-// stale status forever.
-exports.syncCrashCartReportsToV2 = onCall(CALLABLE_OPTIONS, async (request) => {
-  const db = getFirestore();
-  const profile = await callerPharmacyProfile(db, request);
-  const tenantId = await assertWritableTenant(db, profile);
-  const data = request.data || {};
-  const reportIds = Array.isArray(data.reportIds) ? data.reportIds.map((x) => String(x || '').trim()).filter(Boolean) : [];
-  if (!reportIds.length) return { ok: true, synced: 0 };
-
-  const refs = stateRefs(db, tenantId);
-  const doc = await refs.reports.get();
-  const reports = doc.exists && Array.isArray(doc.data().value) ? doc.data().value : [];
-  const byId = new Map(reports.map((r) => [String(r && r.id || ''), r]));
-  const updatedAt = FieldValue.serverTimestamp();
-  const batch = db.batch();
-  let synced = 0;
-  reportIds.forEach((id) => {
-    const report = byId.get(id);
-    if (!report) return;
-    batch.set(refs.reportsCollection.doc(id), { ...report, updatedAt }, { merge: false });
-    synced++;
-  });
-  if (synced) await batch.commit();
-  return { ok: true, synced };
-});
-
 // Pharmacy accepts a pending report — executes inventory deduction.
 exports.acceptCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
   const db = getFirestore();
@@ -264,24 +231,21 @@ exports.acceptCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
 
   try {
     await db.runTransaction(async (transaction) => {
+      const reportDoc = refs.reportsCollection.doc(reportId);
       const [cartSnapshot, reportSnapshot] = await Promise.all([
         transaction.get(refs.carts),
-        transaction.get(refs.reports),
+        transaction.get(reportDoc),
       ]);
       const carts = cartSnapshot.exists && Array.isArray(cartSnapshot.data().value)
-        ? cartSnapshot.data().value
-        : [];
-      const reports = reportSnapshot.exists && Array.isArray(reportSnapshot.data().value)
-        ? reportSnapshot.data().value
-        : [];
+        ? cartSnapshot.data().value : [];
+      if (!reportSnapshot.exists) throw new HttpsError('not-found', 'Report not found.');
+      const reportData = reportSnapshot.data() || {};
+      delete reportData.updatedAt; delete reportData._migratedAt;
+      const reports = [{ id: reportSnapshot.id, ...reportData }];
       result = acceptCrashCartReport({ carts, reports, reportId, actorName, stamp });
       const updatedAt = FieldValue.serverTimestamp();
       transaction.set(refs.carts, { value: result.carts, updatedAt }, { merge: false });
-      transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
-      transaction.set(refs.reportsCollection.doc(result.report.id), {
-        ...result.report,
-        updatedAt,
-      });
+      transaction.set(refs.reportsCollection.doc(result.report.id), { ...result.report, updatedAt }, { merge: false });
       transaction.set(
         refs.publicCollection.doc(`crash_${result.cart.id}`),
         { ...publicCrashCartPayload(result.cart), updatedAt },
@@ -329,17 +293,15 @@ exports.rejectCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
 
   try {
     await db.runTransaction(async (transaction) => {
-      const reportSnapshot = await transaction.get(refs.reports);
-      const reports = reportSnapshot.exists && Array.isArray(reportSnapshot.data().value)
-        ? reportSnapshot.data().value
-        : [];
+      const reportDoc = refs.reportsCollection.doc(reportId);
+      const reportSnapshot = await transaction.get(reportDoc);
+      if (!reportSnapshot.exists) throw new HttpsError('not-found', 'Report not found.');
+      const reportData = reportSnapshot.data() || {};
+      delete reportData.updatedAt; delete reportData._migratedAt;
+      const reports = [{ id: reportSnapshot.id, ...reportData }];
       result = rejectCrashCartReport({ reports, reportId, rejectionNote, actorName, stamp });
       const updatedAt = FieldValue.serverTimestamp();
-      transaction.set(refs.reports, { value: result.reports, updatedAt }, { merge: false });
-      transaction.set(refs.reportsCollection.doc(result.report.id), {
-        ...result.report,
-        updatedAt,
-      });
+      transaction.set(refs.reportsCollection.doc(result.report.id), { ...result.report, updatedAt }, { merge: false });
     });
   } catch (error) {
     wrapError(error);

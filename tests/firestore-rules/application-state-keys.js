@@ -24,7 +24,6 @@ export const APPLICATION_STATE_KEYS = [
   `controlled_settings_${DEPARTMENT_ID}`,
   'controlled_warehouse',
   'crash_cart_medication_names_v1',
-  'crash_cart_reports',
   'crash_carts',
   'deleted_request_audit_v4',
   'department_request_notifications_v1',
@@ -78,10 +77,10 @@ export function mayWriteState(role, key) {
     return /^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
   }
   if (role === 'pharmacy_staff') {
-    return /^(crash_carts|crash_cart_reports|accountability_.*|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
+    return /^(crash_carts|accountability_.*|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
   }
   if (role === 'outpatient_pharmacy_supervisor') {
-    return /^(crash_carts|crash_cart_reports|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
+    return /^(crash_carts|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
   }
   if (role === 'controlled_pharmacy') {
     return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme)$/.test(key);

@@ -235,7 +235,7 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'controlled_catalog')));
       await assertFails(getDoc(doc(db, 'floorstock_state', `controlled_dept_list_${OTHER_DEPARTMENT_ID}`)));
       await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_carts')));
-      await assertSucceeds(getDoc(doc(db, 'floorstock_state', 'crash_cart_reports')));
+      await assertFails(getDoc(doc(db, 'floorstock_state', 'crash_cart_reports')));
     }
     await assertSucceeds(getDoc(doc(dbFor('department'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
     await assertSucceeds(getDoc(doc(dbFor('custodian'), 'floorstock_state', `controlled_dept_list_${DEPARTMENT_ID}`)));
@@ -505,7 +505,6 @@ describe('crash cart and Medication Accountability regression coverage', () => {
     const db = dbFor('pharmacy_staff');
     for (const key of [
       'crash_carts',
-      'crash_cart_reports',
       'accountability_assignments_v2',
       'accountability_usage_v2',
       'accountability_receipts_v2',
