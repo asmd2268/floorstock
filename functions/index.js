@@ -7,7 +7,7 @@ const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getAppCheck } = require('firebase-admin/app-check');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
-const { canCreateHandover, createToken, hashToken, tokenMatches, cleanIdentity, number, applyPartyConfirmation, completeHandoverState } = require('./accountability-handover-core');
+const { canCreateHandover, createToken, hashToken, tokenMatches, cleanIdentity, number, applyPartyConfirmation, pharmacyConfirmationFromAccount, completeHandoverState } = require('./accountability-handover-core');
 
 initializeApp();
 const db = getFirestore();
@@ -1100,7 +1100,6 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
   }
   const requestedMinutes = Number(request.data && request.data.expiresInMinutes);
   const minutes = Math.max(5, Math.min(60, Number.isFinite(requestedMinutes) ? requestedMinutes : HANDOVER_MINUTES_DEFAULT));
-  const pharmacyToken = createToken();
   const departmentToken = createToken();
   const sessionRef = db.collection(HANDOVER_COLLECTION).doc();
   const departmentsRef = stateRef('departments', caller.tenantId);
@@ -1145,7 +1144,7 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
       item.units += Number(row.units) || 0;
       medicineMap.set(key, item);
       row.handoverSessionId = sessionRef.id;
-      row.handoverStatus = 'waiting_both_confirmations';
+      row.handoverStatus = 'waiting_department';
       row.handoverExpiresAt = expiresAt.toDate().toISOString();
     }
     const nowIso = new Date().toISOString();
@@ -1157,26 +1156,29 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
       usageIds,
       medicineTotals: [...medicineMap.values()],
       totalUnits: selected.reduce((sum, row) => sum + (Number(row.units) || 0), 0),
-      pharmacyTokenHash: hashToken(pharmacyToken),
+      // No pharmacy token: the pharmacist is the signed-in account that created
+      // this handover, stamped below, so there is nothing for them to scan.
       departmentTokenHash: hashToken(departmentToken),
-      status: 'waiting_both_confirmations',
+      status: 'pharmacy_confirmed',
       createdAt: FieldValue.serverTimestamp(),
       createdAtIso: nowIso,
       createdByUid: caller.uid,
       createdByName: caller.displayName || caller.email || caller.uid,
       createdByRole: caller.role || '',
       expiresAt,
-      pharmacyConfirmation: null,
+      pharmacyConfirmation: pharmacyConfirmationFromAccount(caller, nowIso),
       departmentConfirmation: null
     };
     writeUsagePartitions(transaction, caller.tenantId, loaded, usage);
     transaction.set(sessionRef, session, { merge: false });
     responsePayload = {
       sessionId: sessionRef.id,
-      pharmacyToken,
       departmentToken,
       deptId,
       departmentName: session.departmentName,
+      // Returned so the modal can name who the delivery was recorded under
+      // without a second round trip.
+      pharmacyConfirmation: session.pharmacyConfirmation,
       medicineTotals: session.medicineTotals,
       totalUnits: session.totalUnits,
       expiresAt: expiresAt.toDate().toISOString()
@@ -1213,7 +1215,6 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
   }
   const requestedMinutes = Number(request.data && request.data.expiresInMinutes);
   const minutes = Math.max(5, Math.min(60, Number.isFinite(requestedMinutes) ? requestedMinutes : HANDOVER_MINUTES_DEFAULT));
-  const pharmacyToken = createToken();
   const departmentToken = createToken();
   const newSessionRef = db.collection(HANDOVER_COLLECTION).doc();
   const departmentsRef = stateRef('departments', caller.tenantId);
@@ -1263,7 +1264,7 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
       item.units += Number(row.units) || 0;
       medicineMap.set(key, item);
       row.handoverSessionId = newSessionRef.id;
-      row.handoverStatus = 'waiting_both_confirmations';
+      row.handoverStatus = 'waiting_department';
       row.handoverExpiresAt = expiresAt.toDate().toISOString();
     }
     const nowIso = new Date().toISOString();
@@ -1275,16 +1276,17 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
       usageIds,
       medicineTotals: [...medicineMap.values()],
       totalUnits: selected.reduce((sum, row) => sum + (Number(row.units) || 0), 0),
-      pharmacyTokenHash: hashToken(pharmacyToken),
+      // No pharmacy token: the pharmacist is the signed-in account that created
+      // this handover, stamped below, so there is nothing for them to scan.
       departmentTokenHash: hashToken(departmentToken),
-      status: 'waiting_both_confirmations',
+      status: 'pharmacy_confirmed',
       createdAt: FieldValue.serverTimestamp(),
       createdAtIso: nowIso,
       createdByUid: caller.uid,
       createdByName: caller.displayName || caller.email || caller.uid,
       createdByRole: caller.role || '',
       expiresAt,
-      pharmacyConfirmation: null,
+      pharmacyConfirmation: pharmacyConfirmationFromAccount(caller, nowIso),
       departmentConfirmation: null,
       reissuedFrom: existingSessionIds[0] || null
     };
@@ -1292,10 +1294,12 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
     transaction.set(newSessionRef, session, { merge: false });
     responsePayload = {
       sessionId: newSessionRef.id,
-      pharmacyToken,
       departmentToken,
       deptId,
       departmentName: session.departmentName,
+      // Returned so the modal can name who the delivery was recorded under
+      // without a second round trip.
+      pharmacyConfirmation: session.pharmacyConfirmation,
       medicineTotals: session.medicineTotals,
       totalUnits: session.totalUnits,
       expiresAt: expiresAt.toDate().toISOString()
@@ -1322,6 +1326,10 @@ exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (reques
     const snap = await db.collection(HANDOVER_COLLECTION).doc(sessionId).get();
     if (!snap.exists) throw asPublicError('This handover link does not exist.', 404);
     const session = snap.data();
+    /* Only the receiving department confirms now; the pharmacist is taken from the
+       account that created the handover. A session created since that change has
+       no pharmacy token, so a pharmacy link cannot match — older sessions that
+       still carry one keep working until they expire. */
     const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
     if (!tokenMatches(token, expected)) throw asPublicError('This handover link is invalid.', 403);
     const expiresAtMs2 = session.expiresAt
@@ -1340,7 +1348,11 @@ exports.getAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (reques
         totalUnits: session.totalUnits || 0,
         expiresAt: session.expiresAt ? session.expiresAt.toDate().toISOString() : null,
         expired,
-        status: session.status || 'waiting_both_confirmations',
+        status: session.status || 'pharmacy_confirmed',
+        /* Who handed the medicines over, so the nurse confirming receipt can see
+           whose delivery they are signing for. Taken from the pharmacist's own
+           account when the handover was created. */
+        deliveredBy: (session.pharmacyConfirmation && session.pharmacyConfirmation.name) || '',
         alreadyConfirmed: !!confirmation,
         confirmation: confirmation ? { name: confirmation.name, employeeId: confirmation.employeeId, confirmedAt: confirmation.confirmedAt } : null,
         pharmacyConfirmed: !!session.pharmacyConfirmation,
@@ -1388,7 +1400,11 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
         tenantId,
         usageMonthsForIds(Array.isArray(session.usageIds) ? session.usageIds : []),
       );
-      const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
+      /* Only the receiving department confirms now; the pharmacist is taken from the
+       account that created the handover. A session created since that change has
+       no pharmacy token, so a pharmacy link cannot match — older sessions that
+       still carry one keep working until they expire. */
+    const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
       if (!tokenMatches(token, expected)) throw asPublicError('This handover link is invalid.', 403);
       const expiresAtMs = session.expiresAt
         ? (typeof session.expiresAt.toMillis === 'function' ? session.expiresAt.toMillis() : new Date(session.expiresAt).getTime())

@@ -62,8 +62,39 @@ function medicineTotals(selected, assignments) {
 }
 
 
+/* Stamps the pharmacist from the account that created the handover.
+
+   The pharmacist used to scan a second QR and retype their own name and employee
+   number — but they are the signed-in user who just pressed Create, so the system
+   already knows who they are. Asking again added a step, a second code to
+   distribute, and a way for the handover to stall with nobody having received
+   anything. The receipt still names both parties; this side is simply taken from
+   the session rather than typed.
+
+   `employeeId` carries the account's email, which is the identifier this
+   deployment has for a pharmacist — user profiles have no employee-number field. */
+function pharmacyConfirmationFromAccount(caller, nowIso) {
+  const email = String((caller && caller.email) || '').trim();
+  const name = cleanIdentity((caller && (caller.displayName || caller.name)) || email || (caller && caller.uid), 120);
+  return {
+    name: name || 'Pharmacy',
+    employeeId: cleanIdentity(email || (caller && caller.uid), 60),
+    confirmedAt: nowIso,
+    party: 'pharmacy',
+    // Distinguishes an account-stamped confirmation from a typed one, so a
+    // receipt can say how the pharmacist was identified.
+    fromAccount: true
+  };
+}
+
 function applyPartyConfirmation(session, party, identity, nowIso) {
   if (!['pharmacy', 'department'].includes(party)) throw publicError('Invalid handover party.');
+  /* A session created without a pharmacy token takes its pharmacist from the
+     account, so there is no pharmacy link to confirm through. Older sessions that
+     still carry one keep working until they expire. */
+  if (party === 'pharmacy' && !session.pharmacyTokenHash) {
+    throw publicError('This handover only needs the receiving department to confirm.', 400);
+  }
   const next = { ...(session || {}) };
   const field = party === 'pharmacy' ? 'pharmacyConfirmation' : 'departmentConfirmation';
   if (next[field]) {
@@ -154,10 +185,13 @@ function completeHandoverState({ assignments, usage, receipts, session, nowIso }
     totalUnits: selected.reduce((sum, row) => sum + number(row.units), 0),
     medicineTotals: totals,
     createdAt: nowIso,
-    createdBy: 'Temporary dual QR confirmation',
+    createdBy: 'Temporary QR confirmation',
     createdByUser: 'public-qr',
     locked: true,
-    confirmationMethod: 'temporary_dual_qr'
+    /* 'temporary_dual_qr' on receipts issued while both parties scanned a code.
+       Only the department scans now — the pharmacist is stamped from their
+       account — so new receipts say so, and the log labels both. */
+    confirmationMethod: 'temporary_qr'
   };
   const nextReceipts = (receipts || []).some((row) => String(row.id) === receiptId)
     ? (receipts || []).map((row) => String(row.id) === receiptId ? receipt : row)
@@ -179,5 +213,6 @@ module.exports = {
   number,
   medicineTotals,
   applyPartyConfirmation,
+  pharmacyConfirmationFromAccount,
   completeHandoverState
 };

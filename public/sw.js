@@ -90,8 +90,16 @@ self.addEventListener('fetch', function (event) {
         }
         return resp;
       }).catch(function () {
+        /* The network is gone, so the last good document is served instead. That
+           is the point of caching it — but a cached copy is indistinguishable
+           from a live one on screen, and a pharmacist reading stock numbers has
+           no way to know they may be stale. The header marks it, and the page
+           turns that into a visible banner. */
         return caches.match(OFFLINE_DOC).then(function (cached) {
-          return cached || Response.error();
+          if (!cached) return Response.error();
+          const headers = new Headers(cached.headers);
+          headers.set('X-Floorstock-Offline', '1');
+          return new Response(cached.body, { status: cached.status, statusText: cached.statusText, headers: headers });
         });
       })
     );
