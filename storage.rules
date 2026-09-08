@@ -1,0 +1,49 @@
+rules_version = '2';
+
+/* Archive storage.
+
+   Every archive and migration writes a file that is the only full-detail copy of
+   what it then removes from Firestore. Downloading it to a computer made that
+   copy depend on one device that could be wiped or handed on, so the file is
+   uploaded here as well — inside the same project, behind the same sign-in, with
+   rules rather than a share link deciding who can read it.
+
+   The contents include patient-identifiable detail (file numbers, doctors,
+   reasons for dispensing), which is precisely why this lives here and not in a
+   spreadsheet or an inbox. Only an active master may read or write it. */
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function profile() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function activeMaster() {
+      return signedIn()
+        && profile().get('active', false) == true
+        && profile().get('master', false) == true;
+    }
+
+    match /archives/{kind}/{fileName} {
+      allow read: if activeMaster();
+      // Archives are written once and never edited: a new export is a new file.
+      // Overwriting one would destroy the only copy of what it holds.
+      allow create: if activeMaster()
+        && request.resource.size < 50 * 1024 * 1024
+        && request.resource.contentType.matches('application/json|text/.*|application/vnd.*');
+      allow update: if false;
+      // A master can remove an archive they no longer need to keep; nothing else can.
+      allow delete: if activeMaster();
+    }
+
+    // Nothing else is served from this bucket.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

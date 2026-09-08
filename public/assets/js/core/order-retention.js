@@ -1,6 +1,7 @@
 import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { registerStorageCleanup } from './storage-cleanup.js?v=be15854e17';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=813f523ca6';
+import { uploadArchive } from './archive-storage.js?v=a4e3b69c50';
 
 /* Order retention: keep Firestore from growing without bound as fulfilled
    requests age past 6 months, without silently breaking historical
@@ -170,11 +171,14 @@ async function cleanupOldOrders(autoMode){
 
   downloadJsonFile(exportPayload,fileName);
   await localArchiveDbSave('orders',localArchiveEntry(manifest,exportPayload));
+  var upload=await uploadArchive(manifest,exportPayload);
 
   var confirmed=await globalThis.uiConfirm(
     'A file with the full detail of '+old.length+' order(s) older than 6 months has been downloaded.\n\n'+
     describeArchive(manifest,fileName)+'\n\n'+
-    'Save this file somewhere safe outside the browser (external drive, cloud storage) — it is the ONLY full-detail copy once you continue; only a compact monthly summary stays in the system afterward.\n\n'+
+    (upload.ok
+      ? 'A copy is also kept in this project, readable only by Master — you can download it again later from System Health.\nونسخة محفوظة في المشروع نفسه، يقرأها الماستر فقط، ويمكن تنزيلها لاحقًا من صحة النظام.\n\n'
+      : 'The project copy could NOT be saved ('+upload.reason+'), so the downloaded file is the only copy. Save it somewhere safe before continuing.\nتعذّر حفظ النسخة في المشروع، فالملف المنزَّل هو النسخة الوحيدة.\n\n')+
     'Confirm you saved the file and want to permanently remove these orders from Firestore now?',
     {danger:true,okText:'I saved the file — delete now'}
   );
@@ -237,10 +241,12 @@ async function migrateLegacyRequestArchive(){
     source:'request_analytics_archive',count:legacy.length,orders:legacy};
   downloadJsonFile(payload,fileName);
   await localArchiveDbSave('orders',localArchiveEntry(manifest,payload));
+  var legacyUpload=await uploadArchive(manifest,payload);
 
   var confirmed=await globalThis.uiConfirm(
     'A file with the full detail of '+legacy.length+' legacy archived order(s) has been downloaded.\n\n'+
     describeArchive(manifest,fileName)+'\n\n'+
+    (legacyUpload.ok?'A copy is also kept in this project.\nونسخة محفوظة في المشروع.\n\n':'The project copy could NOT be saved ('+legacyUpload.reason+').\n\n')+
     'These records will be folded into the monthly analytics summary — every report keeps the same order counts and quantities, at monthly rather than per-order resolution — and the old record will then be deleted.\n\n'+
     'Save the file somewhere safe outside the browser, then confirm to continue.',
     {danger:true,okText:'I saved the file — migrate now'}

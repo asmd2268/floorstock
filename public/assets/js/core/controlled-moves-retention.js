@@ -1,6 +1,7 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { registerStorageCleanup } from './storage-cleanup.js?v=be15854e17';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=813f523ca6';
+import { uploadArchive } from './archive-storage.js?v=a4e3b69c50';
 
 /* Controlled/narcotic movement log retention.
 
@@ -102,10 +103,14 @@ window.archiveOldControlledMoves=async function(){
   var manifest=buildArchiveManifest({kind:'Controlled-Movements',rows:old,dateFields:['at'],note:'Controlled/narcotic movements past the '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+'-year retention floor.'});
   await exportControlledMovesArchive(old,manifest);
   await localArchiveDbSave('controlled_moves',localArchiveEntry(manifest,old));
+  var upload=await uploadArchive(manifest,{format:'ASDHealth-Controlled-Moves-Archive',version:2,manifest:manifest,count:old.length,moves:old});
 
   var confirmed=await globalThis.uiConfirm(
     'Files with the full detail of '+old.length+' controlled/narcotic movement record(s) older than '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+' years have been downloaded (JSON + Excel).\n\n'+
     describeArchive(manifest,archiveFileName(manifest,'json'))+'\n\n'+
+    (upload.ok
+      ? 'A copy is also kept in this project, readable only by Master.\nونسخة محفوظة في المشروع نفسه، يقرأها الماستر فقط.\n\n'
+      : 'The project copy could NOT be saved ('+upload.reason+'), so the downloaded files are the only copies.\n\n')+
     'The ledger is no longer size-limited, so this is optional housekeeping, not maintenance — movements can be left in place indefinitely.\n\n'+
     'Save these files somewhere safe outside the browser — they are the ONLY full-detail copy once you continue; only a compact monthly summary stays in the system afterward.\n\n'+
     'Confirm you saved the files and want to permanently remove these records from Firestore now?',

@@ -446,3 +446,32 @@ body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
 @media (max-width: 620px) {
   .grant-row { grid-template-columns: 1fr; gap: 4px; }
 }
+
+/* Archive library — the copies kept in the project, listed so they can be
+   downloaded again without depending on the computer that made them. */
+.archive-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  margin-bottom: 7px;
+}
+.archive-main { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.archive-kind { font-weight: 600; font-size: 13px; }
+.archive-covers { font-size: 12.5px; opacity: .85; font-variant-numeric: tabular-nums; }
+.archive-meta {
+  grid-column: 1 / 2;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  font-size: 11.5px;
+  opacity: .7;
+}
+.archive-row > button { grid-row: 1 / 3; grid-column: 2; }
+@media (max-width: 560px) {
+  .archive-row { grid-template-columns: 1fr; }
+  .archive-row > button { grid-row: auto; grid-column: 1; justify-self: start; }
+}

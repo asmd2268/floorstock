@@ -218,6 +218,8 @@ window.__showPgAfterExtensions.push(function(id){
   if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
   if(typeof window.installLedgerExportPanel==='function')window.installLedgerExportPanel();
   if(typeof window.renderLedgerExport==='function')window.renderLedgerExport();
+  if(typeof window.installArchiveLibrary==='function')window.installArchiveLibrary();
+  if(typeof window.renderArchiveLibrary==='function')window.renderArchiveLibrary();
 });
 
 function initial(){setStatus('health-network',navigator.onLine?'Online':'Offline',navigator.onLine?'health-ok':'health-bad')}
