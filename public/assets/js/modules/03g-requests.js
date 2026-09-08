@@ -80,12 +80,13 @@ function rcard(r,isp){
   var dName=(d&&d.name)||r.deptId;
   if(!isp){
     var dispInfo=r.status==='pending'?((r.items||[]).length+' items · Pending'):((r.items||[]).length+' items · '+(r.dispensed||[]).filter(function(i){return i.qty>0}).length+' dispensed');
-    return '<div class="card" style="padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-height:0">'
+    return '<div class="card" data-request-id="'+esc(r.id)+'" style="padding:8px 14px;display:flex;align-items:center;gap:8px;flex-wrap:nowrap;min-height:0">'
       +'<span class="badge '+(sm[r.status]||'bgr')+'" style="flex-shrink:0">'+r.status+'</span>'
       +'<span style="font-size:12px;color:var(--tx2);white-space:nowrap;flex-shrink:0">'+fmtDateTime(r.created)+'</span>'
       +'<span style="font-size:12px;color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+dispInfo+'</span>'
-      +'<div style="display:flex;gap:5px;flex-shrink:0">'
+      +'<div style="display:flex;gap:5px;flex-shrink:0" data-request-actions>'
       +(r.status==='fulfilled'&&!r.receivedAt?'<button class="btn bs bsm" data-request-action="receive" data-id="'+r.id+'">Receive</button>':'')
+      +(mayEditFulfillment?'<button class="btn bg bsm" data-request-action="edit-fulfillment" data-id="'+r.id+'">✏ Edit Fulfillment</button>':'')
       +'<button class="btn bg bsm" data-request-action="view" data-id="'+r.id+'">View</button></div>'
       +'</div>';
   }

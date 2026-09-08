@@ -15,4 +15,4 @@ const bind = () => {
   }, { capture: true });
 };
 if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bind, { once: true }); else bind();
-import('./main.js?v=52a076eaf1').catch(console.error);
+import('./main.js?v=c81d46ffcb').catch(console.error);
