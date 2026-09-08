@@ -1,5 +1,6 @@
 import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { registerStorageCleanup } from './storage-cleanup.js?v=be15854e17';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=813f523ca6';
 
 /* Order retention: keep Firestore from growing without bound as fulfilled
    requests age past 6 months, without silently breaking historical
@@ -160,15 +161,19 @@ async function cleanupOldOrders(autoMode){
   if(!old.length){globalThis.toast('No orders older than 6 months.','info');return}
 
   var fullDetail=old.map(requestArchiveRecord);
-  var stamp=new Date().toISOString().replace(/[:.]/g,'-');
-  var fileName='ASDHealth_Orders_Archive_'+stamp+'.json';
-  var exportPayload={format:'ASDHealth-Orders-Archive',version:1,exportedAt:new Date().toISOString(),count:fullDetail.length,orders:fullDetail};
+  /* The name and the manifest state what this holds, the period it really covers
+     and the day it was saved, so the file can be identified months later on a
+     shared computer without opening it. */
+  var manifest=buildArchiveManifest({kind:'Orders',rows:fullDetail,dateFields:['fulfilledAt','created'],note:'Orders older than 6 months, removed from Firestore after this export.'});
+  var fileName=archiveFileName(manifest,'json');
+  var exportPayload={format:'ASDHealth-Orders-Archive',version:2,manifest:manifest,exportedAt:manifest.savedAt,count:fullDetail.length,orders:fullDetail};
 
   downloadJsonFile(exportPayload,fileName);
-  await localArchiveDbSave('orders',{id:stamp,createdAt:exportPayload.exportedAt,count:fullDetail.length,payload:exportPayload});
+  await localArchiveDbSave('orders',localArchiveEntry(manifest,exportPayload));
 
   var confirmed=await globalThis.uiConfirm(
-    'A file with the full detail of '+old.length+' order(s) older than 6 months has been downloaded ('+fileName+').\n\n'+
+    'A file with the full detail of '+old.length+' order(s) older than 6 months has been downloaded.\n\n'+
+    describeArchive(manifest,fileName)+'\n\n'+
     'Save this file somewhere safe outside the browser (external drive, cloud storage) — it is the ONLY full-detail copy once you continue; only a compact monthly summary stays in the system afterward.\n\n'+
     'Confirm you saved the file and want to permanently remove these orders from Firestore now?',
     {danger:true,okText:'I saved the file — delete now'}
@@ -226,14 +231,16 @@ async function migrateLegacyRequestArchive(){
     return;
   }
 
-  var stamp=new Date().toISOString().replace(/[:.]/g,'-');
-  var fileName='ASDHealth_Legacy_Orders_Archive_'+stamp+'.json';
-  downloadJsonFile({format:'ASDHealth-Orders-Archive',version:1,exportedAt:new Date().toISOString(),
-    source:'request_analytics_archive',count:legacy.length,orders:legacy},fileName);
-  await localArchiveDbSave('orders',{id:'legacy_'+stamp,createdAt:new Date().toISOString(),count:legacy.length,payload:legacy});
+  var manifest=buildArchiveManifest({kind:'Orders-Legacy-Archive',rows:legacy,dateFields:['fulfilledAt','created'],note:'The retired request_analytics_archive, folded into the monthly summary after this export.'});
+  var fileName=archiveFileName(manifest,'json');
+  var payload={format:'ASDHealth-Orders-Archive',version:2,manifest:manifest,exportedAt:manifest.savedAt,
+    source:'request_analytics_archive',count:legacy.length,orders:legacy};
+  downloadJsonFile(payload,fileName);
+  await localArchiveDbSave('orders',localArchiveEntry(manifest,payload));
 
   var confirmed=await globalThis.uiConfirm(
-    'A file with the full detail of '+legacy.length+' legacy archived order(s) has been downloaded ('+fileName+').\n\n'+
+    'A file with the full detail of '+legacy.length+' legacy archived order(s) has been downloaded.\n\n'+
+    describeArchive(manifest,fileName)+'\n\n'+
     'These records will be folded into the monthly analytics summary — every report keeps the same order counts and quantities, at monthly rather than per-order resolution — and the old record will then be deleted.\n\n'+
     'Save the file somewhere safe outside the browser, then confirm to continue.',
     {danger:true,okText:'I saved the file — migrate now'}

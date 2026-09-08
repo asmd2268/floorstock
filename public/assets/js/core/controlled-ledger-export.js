@@ -2,6 +2,7 @@ import { hijriDateLabel, hijriMonthKey, hijriMonthLabelBilingual, hijriMonthsBet
 import { partitionKey } from './month-partitioned-store.js?v=a9eafb6973';
 import { CONTROLLED_MOVES_KEY, controlledMoveRows } from './controlled-moves-store.js?v=eec99dede1';
 import { mayExportMonths, exportPermissionReason } from './export-grants.js?v=2e4e001f71';
+import { buildArchiveManifest, archiveFileName } from './archive-manifest.js?v=813f523ca6';
 
 /* Exporting the controlled ledger to Excel, one Hijri month or a range of them.
 
@@ -93,8 +94,17 @@ export async function exportControlledLedger(fromMonth, toMonth) {
     return null;
   }
 
-  const label = months.length === 1 ? from : `${from}_to_${to}`;
-  const fileName = `Controlled_Ledger_Hijri_${label}.xlsx`;
+  /* Named like every other archive: what it holds, the period it covers, and the
+     day it was saved — an auditor's copy has to be identifiable months later. The
+     Hijri months are in the name too, because that is how the register is kept. */
+  const hijriLabel = months.length === 1 ? from : `${from}_to_${to}`;
+  const manifest = buildArchiveManifest({
+    kind: `Controlled-Ledger_Hijri-${hijriLabel}`,
+    rows,
+    dateFields: ['at'],
+    note: `Hijri ${hijriLabel}. Exported from the controlled movement ledger.`,
+  });
+  const fileName = archiveFileName(manifest, 'xlsx');
   await globalThis.downloadExcelFile(rows, EXPORT_COLUMNS, fileName);
 
   if (typeof globalThis.auditAction === 'function') {
@@ -105,7 +115,8 @@ export async function exportControlledLedger(fromMonth, toMonth) {
     })).catch(() => {});
   }
   globalThis.toast(
-    `${rows.length} movement(s) across ${months.length} Hijri month(s) exported. / تم تصدير ${rows.length} حركة عبر ${months.length} شهر.`,
+    `${rows.length} movement(s) across ${months.length} Hijri month(s) exported as ${fileName}`
+    + ` / تم تصدير ${rows.length} حركة عبر ${months.length} شهر.`,
     'succ',
   );
   return { months, rows: rows.length, fileName };

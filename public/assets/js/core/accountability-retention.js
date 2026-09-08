@@ -1,5 +1,6 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { registerStorageCleanup } from './storage-cleanup.js?v=be15854e17';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=813f523ca6';
 import { hijriMonthKey, hijriMonthLabelBilingual } from './hijri-calendar.js?v=9e42fa0bb9';
 import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=a9eafb6973';
 
@@ -177,12 +178,18 @@ export async function archiveAccountabilityHistory() {
     return;
   }
 
-  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const fileName = `ASDHealth_Accountability_History_Archive_${stamp}.json`;
+  const manifest = buildArchiveManifest({
+    kind: 'Custody-History',
+    rows: removedUsage.concat(removedReceipts),
+    dateFields: ['submittedAt', 'consumptionDate', 'receivedAt', 'createdAt'],
+    note: `Custody usage and receipts past the ${ACCOUNTABILITY_RETENTION_MONTHS / 12}-year retention floor.`,
+  });
+  const fileName = archiveFileName(manifest, 'json');
   const exportPayload = {
     format: 'ASDHealth-Accountability-History-Archive',
-    version: 2,
-    exportedAt: new Date().toISOString(),
+    version: 3,
+    manifest,
+    exportedAt: manifest.savedAt,
     usageCount: removedUsage.length,
     receiptCount: removedReceipts.length,
     usage: removedUsage,
@@ -204,21 +211,15 @@ export async function archiveAccountabilityHistory() {
         { label: 'Status', value: (r) => r.status || '' },
         { label: 'By', value: (r) => r.by || r.submittedBy || r.receivedBy || '' },
       ],
-      `ASDHealth_Accountability_History_Archive_${stamp}.xlsx`,
+      archiveFileName(manifest, 'xlsx'),
     );
   } catch (excelError) {
     console.warn('Accountability Excel export failed; the JSON file (already downloaded) remains the full-detail copy.', excelError);
   }
-  await localArchiveDbSave('accountability', {
-    id: stamp,
-    createdAt: exportPayload.exportedAt,
-    usageCount: removedUsage.length,
-    receiptCount: removedReceipts.length,
-    payload: exportPayload,
-  });
+  await localArchiveDbSave('accountability', localArchiveEntry(manifest, exportPayload));
 
   const confirmed = await globalThis.uiConfirm(
-    `Files with the full detail of ${removedUsage.length} usage record(s) and ${removedReceipts.length} receipt/handover record(s) older than ${ACCOUNTABILITY_RETENTION_MONTHS} months have been downloaded (${fileName} + Excel).\n\n`
+    `Files with the full detail of ${removedUsage.length} usage record(s) and ${removedReceipts.length} receipt/handover record(s) older than ${ACCOUNTABILITY_RETENTION_MONTHS} months have been downloaded.\n\n${describeArchive(manifest, fileName)}\n\n`
     + 'Monthly totals per department and medicine stay in the system, so consumption reports keep the same figures at monthly resolution. The per-patient detail and the per-entry handover timeline for those months live only in these files afterwards.\n\n'
     + 'Active custody lines and regimens are never touched. Confirm you saved the files and want to continue?\n\n'
     + 'تم تنزيل ملفات بالتفاصيل الكاملة. تبقى المجاميع الشهرية في النظام فتظل التقارير بنفس الأرقام. أكّد أنك حفظت الملفات.',
