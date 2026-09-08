@@ -10,7 +10,20 @@ function acc2Num(v){return Number(v)||0}
 function accBar(pct,color){return '<div style="height:10px;background:var(--br,#334155);border-radius:10px;overflow:hidden;margin-top:4px"><div style="height:100%;width:'+Math.max(2,Math.round(pct))+'%;background:'+color+';border-radius:10px;transition:width .4s"></div></div>'}
 function renderAccAnalytics(){
   var host=el('anl-panel-accountability');if(!host)return;
-  var usage=(window.S&&typeof S.g==='function'?S.g('accountability_usage_v2'):[])||[];
+  /* Archived months keep counting. accountability_usage_summary_v1 holds one row
+     per month x department x medicine with the units already summed, shaped like
+     a usage row (consumptionDate, deptId, medName, units) so every total below
+     reads it without a special case. Its rows carry status 'archived' so they
+     never inflate the pending / awaiting-receipt counts, which are live work;
+     the real outcomes they were built from are added back from statusCounts. */
+  var liveUsage=(window.S&&typeof S.g==='function'?S.g('accountability_usage_v2'):[])||[];
+  var archivedUsage=(window.S&&typeof S.g==='function'?S.g('accountability_usage_summary_v1'):[])||[];
+  var usage=liveUsage.concat(archivedUsage);
+  function archivedStatusCount(status){
+    return archivedUsage.reduce(function(total,row){
+      return total+Number((row&&row.statusCounts&&row.statusCounts[status])||0);
+    },0);
+  }
   var assign=(window.S&&typeof S.g==='function'?S.g('accountability_assignments_v2'):[])||[];
   var regimens=(window.S&&typeof S.g==='function'?S.g('accountability_regimens_v3'):[])||[];
   var activeAssign=assign.filter(function(a){return a.active!==false});
@@ -19,9 +32,12 @@ function renderAccAnalytics(){
   var totalUsed=totalQuota-totalBalance;
   var ym=new Date().toISOString().slice(0,7);
   var monthUnits=usage.filter(function(u){return(u.consumptionDate||'').slice(0,7)===ym}).reduce(function(s,u){return s+acc2Num(u.units)},0);
-  var pending=usage.filter(function(u){return u.status==='pending_pharmacy'}).length;
-  var waitReceipt=usage.filter(function(u){return u.status==='approved_waiting_receipt'}).length;
-  var rejected=usage.filter(function(u){return u.status==='rejected'}).length;
+  // Pending and awaiting-receipt are live work: an archived month contains none
+  // by construction, so they count live rows only. Rejections are historical and
+  // do carry forward.
+  var pending=liveUsage.filter(function(u){return u.status==='pending_pharmacy'}).length;
+  var waitReceipt=liveUsage.filter(function(u){return u.status==='approved_waiting_receipt'}).length;
+  var rejected=liveUsage.filter(function(u){return u.status==='rejected'}).length+archivedStatusCount('rejected');
   var activeRegimens=regimens.filter(function(r){return!r.paused});
   var palette=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#ec4899'];
   function kpi(label,val,sub,color){return '<div style="background:var(--cl-card,var(--card,#1e293b));border:1px solid var(--cl-border,var(--br,#334155));border-top:4px solid '+color+';border-radius:8px;padding:14px 16px"><div style="font-size:11px;opacity:.6;margin-bottom:6px">'+label+'</div><div style="font-size:28px;font-weight:800;line-height:1;color:var(--cl-text,var(--tx,#f1f5f9))">'+val+'</div><div style="font-size:12px;opacity:.55;margin-top:4px">'+sub+'</div></div>'}

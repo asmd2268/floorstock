@@ -108,6 +108,12 @@ export function canWriteStateKey(profile, key) {
   // audit_log is deliberately absent: it is write-denied in firestore.rules and
   // appended only through the appendAuditLog callable, which stamps the actor
   // server-side. A client state write would replace the whole document.
+  /* accountability_usage_summary_v1 holds the archived monthly totals behind every
+     consumption report. firestore.rules lists what each scoped role may write and
+     does not include it, so the roles modelled below with a broad accountability_.*
+     pattern must not claim it. controlled_pharmacy's rule really is that broad
+     pattern, so it keeps the key. */
+  if (value === 'accountability_usage_summary_v1') return role === 'controlled_pharmacy';
   if (value === 'theme' || value === 'user_activity_daily_v1') return true;
 
   if (role === 'inpatient_supervisor') {

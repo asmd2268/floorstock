@@ -29,7 +29,7 @@
      controlled_moves) is one document per row, so it has no ceiling to approach;
      it is still listed, reported as uncapped, so the master can see the ledger is
      safe rather than wonder why it vanished from the panel. */
-  var SIZE_WATCHED_KEYS = ['requests','accountability_usage_v2','controlled_moves','crash_cart_reports','request_analytics_summary_v1','request_analytics_archive','accountability_plan_usage_v1'];
+  var SIZE_WATCHED_KEYS = ['requests','accountability_usage_v2','accountability_usage_summary_v1','controlled_moves','crash_cart_reports','request_analytics_summary_v1','request_analytics_archive','accountability_plan_usage_v1'];
   /* audit_log is measured as a family rather than a fixed key: it is one document
      per calendar month, so the key names follow the calendar and only the current
      month can be growing. Whichever part is largest is what the gauge reports. */

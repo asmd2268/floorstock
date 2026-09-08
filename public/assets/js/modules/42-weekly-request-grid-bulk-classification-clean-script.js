@@ -356,6 +356,19 @@ async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
     function(){return S.s('accountability_usage_v2',accountabilityUsage);}
   );
 
+  /* The archived monthly totals for this department go too. Leaving them behind
+     would keep the deleted department in every consumption report, which is the
+     mirror image of the archive's purpose: archiving must not lose a department's
+     history, and deleting a department must not keep it. */
+  var accountabilitySummary=(S.g('accountability_usage_summary_v1')||[]).filter(function(item){
+    return !item||!matches(item.deptId);
+  });
+  await floorstockDeletionStep(
+    report,
+    'Remove archived medication-accountability totals',
+    function(){return S.s('accountability_usage_summary_v1',accountabilitySummary);}
+  );
+
   var accountabilityReceipts=(S.g('accountability_receipts_v2')||[]).filter(function(item){
     return !item||!matches(item.deptId);
   });

@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-import { normalizeRole } from '../core/role-capabilities.js?v=7eaec50bbd';
+import { normalizeRole } from '../core/role-capabilities.js?v=482bf44052';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
 import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=7975fe045f';

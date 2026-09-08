@@ -8,6 +8,7 @@ export const APPLICATION_STATE_KEYS = [
   'accountability_receipts_v2',
   'accountability_regimens_v2',
   'accountability_usage_v2',
+  'accountability_usage_summary_v1',
   `alerts_${DEPARTMENT_ID}`,
   'audit_log',
   'audit_log_2026-09',
@@ -77,6 +78,14 @@ export function mayWriteState(role, key) {
   // role: entries come only from the appendAuditLog callable, which stamps the actor
   // server-side. A client state write replaces the whole document.
   if (/^audit_log(_\d{4}-\d{2}(_p\d+)?)?$/.test(key)) return false;
+  /* The archived monthly totals behind every accountability consumption report.
+     Written only by the master retention action: firestore.rules lists the keys
+     each scoped role may write explicitly and does not include this one, so the
+     roles whose model uses a broad accountability_.* pattern must exclude it.
+     controlled_pharmacy is not excluded — its rule really is the broad pattern. */
+  if (key === 'accountability_usage_summary_v1') {
+    return role === 'master' || role === 'pharmacy' || role === 'controlled_pharmacy';
+  }
   if (key === 'theme') return true;
   if (role === 'inpatient_supervisor') {
     return /^(crash_.*|accountability_.*|requests|request_analytics_summary_v1|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
