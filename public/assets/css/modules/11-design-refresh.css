@@ -475,3 +475,12 @@ body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
   .archive-row { grid-template-columns: 1fr; }
   .archive-row > button { grid-row: auto; grid-column: 1; justify-self: start; }
 }
+
+/* The tail of small configuration records, counted rather than listed — nothing
+   is hidden, but nothing under pressure is buried either. */
+.storage-rest {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--bd);
+  line-height: 1.6;
+}

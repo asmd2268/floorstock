@@ -72,7 +72,19 @@ export function renderStorageCleanup() {
   if (!docs.length) { host.innerHTML = '<div class="fhint">No measurable records yet / لا توجد سجلات للقياس بعد</div>'; return; }
 
   const escape = globalThis.fsEsc || ((value) => String(value));
-  host.innerHTML = docs.map((doc) => {
+
+  /* Every state document is measured, which is dozens of them, and most are
+     configuration a few hundred bytes long. Listing all of them would bury the
+     handful under pressure. Anything worth acting on is shown in full — over 1%
+     of the cap, or carrying an action, or a family whose size is worth watching —
+     and the rest are counted in one line with their largest, so nothing is hidden
+     and nothing has to be scrolled past. */
+  const notable = (doc) => doc.pct >= 1 || doc.uncapped || doc.months != null || !!storageCleanupFor(doc.key);
+  const shown = docs.filter(notable);
+  const rest = docs.filter((doc) => !notable(doc));
+  const restLargest = rest.reduce((max, doc) => (doc.pct > (max ? max.pct : -1) ? doc : max), null);
+
+  host.innerHTML = shown.map((doc) => {
     const cleaner = storageCleanupFor(doc.key);
     const pct = Math.min(100, doc.pct);
     const action = cleaner && (typeof cleaner.canRun === 'function' ? cleaner.canRun() : true)
@@ -88,7 +100,7 @@ export function renderStorageCleanup() {
     const scale = doc.uncapped
       ? `${escape(sizeLabel(doc.bytes))}${doc.rows == null ? '' : ` · ${doc.rows} records`} · no size limit`
       : doc.months
-        ? `${escape(sizeLabel(doc.bytes))} across ${doc.months} Hijri month${doc.months === 1 ? '' : 's'}`
+        ? `${escape(sizeLabel(doc.bytes))} across ${doc.months} ${doc.calendar === 'gregorian' ? '' : 'Hijri '}month${doc.months === 1 ? '' : 's'}`
           + `${doc.rows == null ? '' : ` · ${doc.rows} records`} · fullest month ${doc.pct.toFixed(1)}% of 1 MiB`
         : `${escape(sizeLabel(doc.bytes))} · ${doc.pct.toFixed(1)}% of 1 MiB`;
     const bar = doc.uncapped
@@ -96,7 +108,7 @@ export function renderStorageCleanup() {
       : `<div class="storage-bar"><span style="width:${pct.toFixed(1)}%"></span></div>`;
     return `<div class="storage-row" data-sev="${doc.uncapped ? 'uncapped' : severity(doc.pct)}">
       <div class="storage-row-head">
-        <span class="storage-key">${escape(doc.months ? doc.key.replace(/_ledger$/, '') + ' (by Hijri month)' : doc.key)}</span>
+        <span class="storage-key">${escape(doc.months ? doc.key.replace(/_ledger$/, '') + (doc.calendar === 'gregorian' ? ' (by month)' : ' (by Hijri month)') : doc.key)}</span>
         <span class="storage-size">${scale}</span>
       </div>
       ${bar}
@@ -105,7 +117,11 @@ export function renderStorageCleanup() {
         ${action}
       </div>
     </div>`;
-  }).join('');
+  }).join('') + (rest.length
+    ? `<div class="storage-rest fhint">${rest.length} smaller record(s) — largest is `
+      + `${escape(restLargest ? restLargest.key : '')} at ${restLargest ? restLargest.pct.toFixed(1) : '0'}% of 1 MiB`
+      + `<br/>${rest.length} سجلات أصغر، أكبرها ${escape(restLargest ? restLargest.key : '')}</div>`
+    : '');
 }
 
 /* One delegated listener on the panel, installed once. Individual buttons are

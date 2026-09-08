@@ -57,3 +57,26 @@ test('a failed cleanup says why', () => {
   assert.match(panel, /failed — nothing was deleted/);
   assert.match(panel, /\$\{reason\}/);
 });
+
+test('the size gauge measures every state document, not a hand-kept list', async () => {
+  /* It watched eight named keys while the application has more than fifty, so a
+     record nobody thought to add — notes, dept_notes, the deleted-request audit —
+     could grow to the cap unseen. A list written today also goes stale the first
+     time a feature adds a key. */
+  const health = files.find(f => f.name === 'modules/12-local-daily-backups-system-health.js').text;
+  assert.ok(!/SIZE_WATCHED_KEYS/.test(health), 'the fixed watch list must be gone');
+  assert.match(health, /Object\.keys\(window\.S\.cache\)/);
+  assert.match(health, /NEVER_MEASURED/);
+  // Partitioned families are folded into one row rather than listed month by month.
+  assert.match(health, /function foldedKeys\(\)/);
+  assert.match(health, /function auditLogFamilyRow\(/);
+});
+
+test('the gauge orders by closeness to the cap, not by size', () => {
+  /* The login-time warning reads the first row. A ledger's bytes are a total
+     across months while a plain document's are one document, so a byte sort could
+     put a 30%-full ledger above a record at 90% and miss it entirely. */
+  const health = files.find(f => f.name === 'modules/12-local-daily-backups-system-health.js').text;
+  assert.match(health, /\(b\.pct-a\.pct\)\|\|\(b\.bytes-a\.bytes\)/);
+  assert.match(health, /biggest\.pct<70/, 'the warning still fires from the first row');
+});

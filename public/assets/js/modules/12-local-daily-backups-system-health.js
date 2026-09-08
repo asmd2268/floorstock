@@ -24,19 +24,35 @@
      so it only helps if someone knows it is time. Surface the largest document
      against the cap and warn well before it becomes urgent. */
   var FIRESTORE_DOC_LIMIT = 1048576;
-  /* Keys measured against the 1 MiB per-document cap. crash_cart_reports is one
-     document per report, so it has no ceiling to approach and is reported as
-     uncapped rather than vanishing from the panel. The Hijri-month ledgers are
-     added separately by ledgerRows() as one synthetic row each. */
-  var SIZE_WATCHED_KEYS = ['requests','accountability_usage_v2','accountability_usage_summary_v1','controlled_moves','crash_cart_reports','request_analytics_summary_v1','request_analytics_archive','accountability_plan_usage_v1'];
-  /* audit_log is measured as a family rather than a fixed key: it is one document
-     per calendar month, so the key names follow the calendar and only the current
-     month can be growing. Whichever part is largest is what the gauge reports. */
+  /* Every state document is measured, not a hand-kept list.
+
+     The gauge used to watch eight named keys while the application has more than
+     fifty, so a record nobody had thought to add could grow to the cap unseen —
+     and a list written today goes stale the first time a feature adds a key. It
+     now walks whatever the session actually holds, which cannot fall behind.
+
+     Two things are folded rather than listed row by row: a month-partitioned
+     ledger, whose individual months would bury the number that matters, and the
+     audit trail, which is the same shape. `users` is skipped — it is the account
+     directory the session loaded, not a state document. */
+  var NEVER_MEASURED = { users: true };
   function auditLogKeys(){
     if(!window.S||!window.S.cache)return [];
     return Object.keys(window.S.cache).filter(function(key){
       return /^audit_log(_\d{4}-\d{2}(_p\d+)?)?$/.test(key);
     });
+  }
+  /* Document ids already accounted for by a folded family row, so they are not
+     also listed individually. */
+  function foldedKeys(){
+    var folded={};
+    auditLogKeys().forEach(function(name){folded[name]=true});
+    if(typeof window.monthPartitionedKeyNames==='function'&&typeof window.partitionKeysInCache==='function'){
+      window.monthPartitionedKeyNames().forEach(function(key){
+        window.partitionKeysInCache(key).forEach(function(name){folded[name]=true});
+      });
+    }
+    return folded;
   }
   /* A Hijri-month ledger is many documents, each capped separately, so measuring
      them individually would fill the panel with one row per month and bury the
@@ -57,12 +73,16 @@
         total+=bytes;
         if(bytes>largest)largest=bytes;
       });
+      var spec=typeof window.monthPartitionSpec==='function'?window.monthPartitionSpec(key):null;
       return {
         key:key+'_ledger',
         bytes:total,
         // The cap applies per month, so the warning tracks the fullest month.
         pct:(largest/FIRESTORE_DOC_LIMIT)*100,
         months:names.length,
+        // Orders follow the Gregorian calendar, the regulated registers Hijri —
+        // the row must not claim the wrong one.
+        calendar:(spec&&spec.calendar)||'hijri',
         rows:records
       };
     }).filter(Boolean);
@@ -72,11 +92,14 @@
       && window.collectionBackedKeyNames().indexOf(key)>=0;
   }
   function measureStateDocuments(){
-    if(!window.S||typeof S.g!=='function')return [];
+    if(!window.S||typeof S.g!=='function'||!window.S.cache)return [];
     var encoder = typeof TextEncoder==='function' ? new TextEncoder() : null;
-    var measured=SIZE_WATCHED_KEYS.concat(auditLogKeys()).map(function(key){
+    var folded=foldedKeys();
+    var measured=Object.keys(window.S.cache).filter(function(key){
+      return !NEVER_MEASURED[key] && !folded[key];
+    }).map(function(key){
       var value;
-      try{ value = S.g(key); }catch(e){ return null; }
+      try{ value = S.cache[key]; }catch(e){ return null; }
       if(value==null)return null;
       var json;
       try{ json = JSON.stringify(value); }catch(e){ return null; }
@@ -93,7 +116,32 @@
         rows: Array.isArray(value) ? value.length : null
       };
     }).filter(Boolean);
-    return measured.concat(ledgerRows(encoder)).sort(function(a,b){return b.bytes-a.bytes});
+    var audit=auditLogFamilyRow(encoder);
+    /* Ordered by how close each is to the cap, not by size. A ledger's bytes are
+       a total across months while a plain document's are one document, so sorting
+       on bytes compares different things — and the login-time warning reads the
+       first row, so a byte sort could put a 30%-full ledger above the record
+       actually at 90% and miss it. Ties fall back to size. */
+    return measured.concat(ledgerRows(encoder),audit?[audit]:[])
+      .sort(function(a,b){return (b.pct-a.pct)||(b.bytes-a.bytes)});
+  }
+  /* The audit trail, folded like a ledger: one row per calendar month, so only
+     the fullest month can reach the cap. */
+  function auditLogFamilyRow(encoder){
+    var names=auditLogKeys();
+    if(!names.length)return null;
+    var total=0,largest=0,records=0;
+    names.forEach(function(name){
+      var value=window.S.cache[name];
+      if(!Array.isArray(value))return;
+      records+=value.length;
+      var bytes=0;
+      try{ bytes=encoder?encoder.encode(JSON.stringify(value)).length:JSON.stringify(value).length; }catch(e){ return; }
+      total+=bytes;
+      if(bytes>largest)largest=bytes;
+    });
+    // The audit trail is operational rather than regulatory, so it is Gregorian.
+    return {key:'audit_log_ledger',bytes:total,pct:(largest/FIRESTORE_DOC_LIMIT)*100,months:names.length,calendar:'gregorian',rows:records};
   }
   window.fsMeasureStateDocuments = measureStateDocuments;
 
