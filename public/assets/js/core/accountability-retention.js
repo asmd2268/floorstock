@@ -1,9 +1,9 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=be15854e17';
+import { registerStorageCleanup } from './storage-cleanup.js?v=15650a41cb';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=813f523ca6';
 import { uploadArchive } from './archive-storage.js?v=a4e3b69c50';
 import { hijriMonthKey, hijriMonthLabelBilingual } from './hijri-calendar.js?v=9e42fa0bb9';
-import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=a9eafb6973';
+import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=cefa62be33';
 
 /* Accountability history retention.
 

@@ -118,6 +118,17 @@ function byteLength(value) {
   catch (error) { return Number.MAX_SAFE_INTEGER; }
 }
 
+/* firestore.rules requires `updatedAt is timestamp` on every state document, so
+   an ISO string here is refused outright — which is exactly how the Hijri
+   migrations failed with "nothing was deleted". Every other writer in the app
+   uses the server timestamp; this one now does too. */
+function stateStamp() {
+  const firestore = globalThis.firebase && globalThis.firebase.firestore;
+  return firestore && firestore.FieldValue
+    ? firestore.FieldValue.serverTimestamp()
+    : new Date();
+}
+
 function stateDocRef(docId) {
   if (!globalThis.FB_DB || typeof globalThis.stateCollectionRef !== 'function') return null;
   return globalThis.stateCollectionRef(globalThis.FB_DB, globalThis.S && globalThis.S.scopeProfile).doc(docId);
@@ -153,7 +164,7 @@ export async function appendMonthPartitionedRows(key, rows) {
         const existing = snapshot.exists && Array.isArray(snapshot.data().value) ? snapshot.data().value : [];
         const next = existing.concat(monthRows);
         if (existing.length && byteLength(next) > spec.maxBytes) return true;
-        tx.set(ref, { value: next, updatedAt: new Date().toISOString() }, { merge: false });
+        tx.set(ref, { value: next, updatedAt: stateStamp() }, { merge: false });
         return false;
       });
       if (!full) {
@@ -183,7 +194,7 @@ async function mutateExistingRow(key, rowId, transform) {
   await globalThis.FB_DB.runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
     const existing = snapshot.exists && Array.isArray(snapshot.data().value) ? snapshot.data().value : [];
-    tx.set(ref, { value: transform(existing, id), updatedAt: new Date().toISOString() }, { merge: false });
+    tx.set(ref, { value: transform(existing, id), updatedAt: stateStamp() }, { merge: false });
   });
   applyLocally(key, holder, (current) => transform(current, id));
   scheduleRefresh();

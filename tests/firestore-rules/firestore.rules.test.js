@@ -199,6 +199,20 @@ describe('users and system/master', () => {
 });
 
 describe('floorstock_state reads, shapes, keys, and deletes', () => {
+  /* The Hijri-month partitions the ledgers are stored in are ordinary state
+     documents and must obey the same shape rule. The client wrote updatedAt as an
+     ISO string, so every partition write was refused and both migrations failed
+     with "nothing was deleted" — while these tests stayed green, because the
+     helper here always builds a real Timestamp. The string case is now asserted
+     explicitly, in the same harness the client has to satisfy. */
+  test('a Hijri-month partition accepts a timestamp and refuses a string', async () => {
+    const db = dbFor('master');
+    for (const key of ['controlled_moves_h1448-03', 'accountability_usage_v2_h1448-03', 'controlled_moves_h1448-03_p2']) {
+      await assertSucceeds(setDoc(doc(db, 'floorstock_state', key), statePayload([{ id: 'a' }])));
+      await assertFails(setDoc(doc(db, 'floorstock_state', key), { value: [{ id: 'a' }], updatedAt: new Date().toISOString() }));
+    }
+  });
+
   test('legacy accounts with tenantId null can still save to legacy state', async () => {
     const db = dbFor('legacy_null_master');
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'requests'), statePayload([])));

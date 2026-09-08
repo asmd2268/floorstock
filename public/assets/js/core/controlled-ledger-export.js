@@ -1,6 +1,6 @@
 import { hijriDateLabel, hijriMonthKey, hijriMonthLabelBilingual, hijriMonthsBetween } from './hijri-calendar.js?v=9e42fa0bb9';
-import { partitionKey } from './month-partitioned-store.js?v=a9eafb6973';
-import { CONTROLLED_MOVES_KEY, controlledMoveRows } from './controlled-moves-store.js?v=eec99dede1';
+import { partitionKey } from './month-partitioned-store.js?v=cefa62be33';
+import { CONTROLLED_MOVES_KEY, controlledMoveRows } from './controlled-moves-store.js?v=fdff0b43f1';
 import { mayExportMonths, exportPermissionReason } from './export-grants.js?v=2e4e001f71';
 import { buildArchiveManifest, archiveFileName } from './archive-manifest.js?v=813f523ca6';
 

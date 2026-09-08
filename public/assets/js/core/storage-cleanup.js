@@ -126,7 +126,14 @@ export function installStorageCleanupPanel() {
       await cleaner.run();
     } catch (error) {
       console.error('Storage cleanup failed for', cleaner.key, error);
-      if (typeof globalThis.toast === 'function') globalThis.toast('Cleanup failed — nothing was deleted.', 'err');
+      /* "Cleanup failed" on its own is unactionable: it sent a master back to the
+         browser console to find out why, or to us. The reason Firestore gave is
+         the whole diagnosis — a rejected write says permission-denied, a shape
+         mismatch says so — so it is shown. */
+      const reason = String((error && (error.message || error.code)) || error || 'unknown error');
+      if (typeof globalThis.toast === 'function') {
+        globalThis.toast(`${cleaner.label.split(' / ')[0]} failed — nothing was deleted.\n${reason}\nفشلت العملية ولم يُحذف شيء: ${reason}`, 'err');
+      }
     } finally {
       button.disabled = false;
       renderStorageCleanup();
