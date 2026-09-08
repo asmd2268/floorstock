@@ -1,4 +1,4 @@
-import { tenantIdFromProfile } from './firestore-scope.js?v=85dd92440a';
+import { tenantIdFromProfile } from './firestore-scope.js?v=eec5742551';
 import { collectionSpecFor } from './collection-backed-keys.js?v=9ed94061f1';
 
 export function stateCollectionRef(db, profile) {

@@ -1,5 +1,5 @@
 import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=a48006791d';
+import { registerStorageCleanup } from './storage-cleanup.js?v=be15854e17';
 
 /* Order retention: keep Firestore from growing without bound as fulfilled
    requests age past 6 months, without silently breaking historical

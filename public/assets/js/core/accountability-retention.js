@@ -1,5 +1,5 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=a48006791d';
+import { registerStorageCleanup } from './storage-cleanup.js?v=be15854e17';
 import { hijriMonthKey, hijriMonthLabelBilingual } from './hijri-calendar.js?v=9e42fa0bb9';
 import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=a9eafb6973';
 

@@ -81,15 +81,22 @@ export function renderStorageCleanup() {
     /* A collection-backed key has one document per row, so the 1 MiB cap does not
        apply to it and a progress bar against that cap would be meaningless. Show
        what it actually holds instead. */
+    /* Three different things can appear on this line, and conflating them misleads:
+       a plain document is measured against the cap; a collection has no cap; and a
+       Hijri-month ledger is many documents, where the total says how much is held
+       but only the fullest single month can actually hit the cap. */
     const scale = doc.uncapped
       ? `${escape(sizeLabel(doc.bytes))}${doc.rows == null ? '' : ` · ${doc.rows} records`} · no size limit`
-      : `${escape(sizeLabel(doc.bytes))} · ${doc.pct.toFixed(1)}% of 1 MiB`;
+      : doc.months
+        ? `${escape(sizeLabel(doc.bytes))} across ${doc.months} Hijri month${doc.months === 1 ? '' : 's'}`
+          + `${doc.rows == null ? '' : ` · ${doc.rows} records`} · fullest month ${doc.pct.toFixed(1)}% of 1 MiB`
+        : `${escape(sizeLabel(doc.bytes))} · ${doc.pct.toFixed(1)}% of 1 MiB`;
     const bar = doc.uncapped
       ? '<div class="storage-bar storage-bar-uncapped"><span style="width:100%"></span></div>'
       : `<div class="storage-bar"><span style="width:${pct.toFixed(1)}%"></span></div>`;
     return `<div class="storage-row" data-sev="${doc.uncapped ? 'uncapped' : severity(doc.pct)}">
       <div class="storage-row-head">
-        <span class="storage-key">${escape(doc.key)}</span>
+        <span class="storage-key">${escape(doc.months ? doc.key.replace(/_ledger$/, '') + ' (by Hijri month)' : doc.key)}</span>
         <span class="storage-size">${scale}</span>
       </div>
       ${bar}

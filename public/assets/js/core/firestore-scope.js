@@ -1,4 +1,4 @@
-import { collectionPathForSpec, collectionSpecFor } from './collection-backed-keys.js?v=9ed94061f1';
+import { collectionPathForSpec } from './collection-backed-keys.js?v=9ed94061f1';
 
 export function tenantIdFromProfile(profile) {
   return String(profile && profile.tenantId || '').trim();
@@ -16,10 +16,4 @@ export function collectionBackedPath(spec, profile) {
   return collectionPathForSpec(spec, tenantIdFromProfile(profile));
 }
 
-// Retained for the Crash Cart callable adapter and its tests, which name this
-// one collection directly. New collection-backed keys go through the registry.
-export function crashReportsCollectionPath(profile) {
-  return collectionBackedPath(collectionSpecFor('crash_cart_reports'), profile);
-}
-
-Object.assign(globalThis, { tenantIdFromProfile, stateCollectionPath, collectionBackedPath, crashReportsCollectionPath });
+Object.assign(globalThis, { tenantIdFromProfile, stateCollectionPath, collectionBackedPath });
