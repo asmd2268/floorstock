@@ -247,6 +247,9 @@ export async function archiveAccountabilityHistory() {
       await globalThis.deleteMonthPartitionedRow(USAGE_KEY, row.id);
     }
     try {
+      /* Receipts are Hijri-month documents too now, so this save is a diff: S.s
+         removes each archived row from the month that holds it and leaves every
+         other month untouched. */
       await globalThis.S.s(RECEIPTS_KEY, receipts.filter((row) => !isOldReceipt(row)));
     } catch (receiptsError) {
       await globalThis.appendMonthPartitionedRows(USAGE_KEY, removedUsage);

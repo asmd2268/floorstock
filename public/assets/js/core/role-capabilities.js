@@ -1,3 +1,4 @@
+import { baseStateKey } from './partitioned-key-names.js?v=194dc59450';
 const ROLE_ALIASES = Object.freeze({
   pharmacy_director: 'pharmacy',
   'pharmacy director': 'pharmacy',
@@ -101,7 +102,11 @@ export function hasCapability(profile, capability) {
 export function canWriteStateKey(profile, key) {
   const user = profile || {};
   const role = normalizeRole(user.role);
-  const value = String(key || '');
+  /* A month partition is the same record as its base key — `dept_notes_g2026-09`
+     holds what `dept_notes` held — so the id is normalised once here and every
+     rule below is written about the key itself. Spelling the suffix out again in
+     each pattern is how one of them ends up wrong. */
+  const value = baseStateKey(key);
   const master = user.master === true;
   if (value === 'fulfillment_edit_settings_v1') return master;
   if (master || role === 'pharmacy') return true;
@@ -117,13 +122,13 @@ export function canWriteStateKey(profile, key) {
   if (value === 'theme' || value === 'user_activity_daily_v1') return true;
 
   if (role === 'inpatient_supervisor') {
-    return /^(crash_.*|accountability_.*|requests(_g\d{4}-\d{2}(_p\d+)?)?$|notes$|dept_notes$|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1$|deleted_request_audit_v4$|department_request_notifications_v1$|pharmacy_.*|inventory_.*|inventory_name_merge_history$|manual_medicine_merge_history_v1$|similar_medicine_separations_v1$|custom_categories$|facility_logo$|hidden_request_categories_v1$|global_request_freeze_v2$|medication_(visibility|freeze)_rules_v3$|theme$)/.test(value);
+    return /^(crash_.*|accountability_.*|requests$|notes$|dept_notes$|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1$|deleted_request_audit_v4$|department_request_notifications_v1$|pharmacy_.*|inventory_.*|inventory_name_merge_history$|manual_medicine_merge_history_v1$|similar_medicine_separations_v1$|custom_categories$|facility_logo$|hidden_request_categories_v1$|global_request_freeze_v2$|medication_(visibility|freeze)_rules_v3$|theme$)/.test(value);
   }
   if (role === 'pharmacy_staff') {
-    return /^(crash_carts$|crash_cart_reports$|accountability_.*|requests(_g\d{4}-\d{2}(_p\d+)?)?$|notes$|dept_notes$|request_analytics_summary_v1$|theme$)/.test(value);
+    return /^(crash_carts$|crash_cart_reports$|accountability_.*|requests$|notes$|dept_notes$|request_analytics_summary_v1$|theme$)/.test(value);
   }
   if (role === 'outpatient_pharmacy_supervisor') {
-    return /^(crash_carts$|crash_cart_reports$|requests(_g\d{4}-\d{2}(_p\d+)?)?$|notes$|dept_notes$|request_analytics_summary_v1$|theme$)/.test(value);
+    return /^(crash_carts$|crash_cart_reports$|requests$|notes$|dept_notes$|request_analytics_summary_v1$|theme$)/.test(value);
   }
   if (role === 'controlled_pharmacy') {
     // The export-grant record is master-only: a role that could write it could
@@ -134,7 +139,7 @@ export function canWriteStateKey(profile, key) {
   if (role === 'warehouse') {
     // The ledger is one document per Hijri month; the warehouse records transfers
     // into it, so the month partitions are writable as the single document was.
-    return /^(controlled_warehouse$|controlled_moves(_h\d{4}-\d{2}(_p\d+)?)?$|controlled_pdf_receipts$|theme$)/.test(value);
+    return /^(controlled_warehouse$|controlled_moves$|controlled_pdf_receipts$|theme$)/.test(value);
   }
   if (role === 'department') {
     const deptId = String(user.deptId || user.departmentId || '');
@@ -160,7 +165,7 @@ export function canWriteStateKey(profile, key) {
 export function canDeleteStateKey(profile, key) {
   const user = profile || {};
   const role = normalizeRole(user.role);
-  const value = String(key || '');
+  const value = baseStateKey(key);
   const master = user.master === true;
   if (master || role === 'pharmacy') return true;
   if (role === 'inpatient_supervisor' && /^inventory_snapshot_.*$/.test(value)) return true;

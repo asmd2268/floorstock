@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=e398890785';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=792128cbfc';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
@@ -490,15 +490,15 @@ globalThis.fsRecentAuditLogKeys=fsRecentAuditLogKeys;
    custody officer's working view and the year-to-date report without loading five
    years into every session. Anything older is read on demand. */
 var LEDGER_MONTHS_IN_SESSION=12;
-/* Orders are read far more often and by far more roles than the ledgers, and a
-   department's working view is the last few weeks — so a shorter window keeps the
-   read cost down. Older months are still reachable by a master, who lists the
-   whole collection rather than naming documents. */
-var ORDER_MONTHS_IN_SESSION=3;
+/* How far back each partitioned key is loaded is a property of the key, not of
+   this function: orders are read constantly and a department's working view is a
+   few weeks, while the custody officer's is a year. Each key states its own
+   window in its registration, so adding one never means editing this. */
 function fsRecentLedgerKeys(monthsBack){
   var keys=[];
   monthPartitionedKeyNames().forEach(function(key){
-    keys=keys.concat(recentPartitionKeys(key,key==='requests'?ORDER_MONTHS_IN_SESSION:monthsBack));
+    var spec=monthPartitionSpec(key),months=spec&&spec.sessionMonths!=null?spec.sessionMonths:monthsBack;
+    keys=keys.concat(recentPartitionKeys(key,months));
   });
   return keys;
 }

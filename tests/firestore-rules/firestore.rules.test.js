@@ -213,6 +213,35 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     }
   });
 
+  /* A month partition is the same record as its base key, and stateKey() in
+     firestore.rules is what says so — it maps `dept_notes_g2026-09` back to
+     `dept_notes` before any permission pattern sees it. That mapping is a regex
+     split inside the rules language, so it is proved against the emulator here
+     rather than trusted: each role writes the partitions of the keys it owns and
+     is refused the partitions of the keys it does not. */
+  test('a month partition is written exactly where its base key is', async () => {
+    const department = dbFor('department');
+    for (const key of ['requests_g2026-09', 'requests_g2026-09_p2', 'dept_notes_g2026-09', 'user_activity_daily_v1_g2026-09']) {
+      await assertSucceeds(setDoc(doc(department, 'floorstock_state', key), statePayload([])));
+    }
+    // Usage submissions go through the callable, so no client role writes them.
+    await assertFails(setDoc(doc(department, 'floorstock_state', 'accountability_usage_v2_h1448-03'), statePayload([])));
+    await assertFails(setDoc(doc(department, 'floorstock_state', 'deleted_request_audit_v4_g2026-09'), statePayload([])));
+
+    const warehouse = dbFor('warehouse');
+    await assertSucceeds(setDoc(doc(warehouse, 'floorstock_state', 'controlled_pdf_receipts_h1448-03'), statePayload([])));
+    await assertFails(setDoc(doc(warehouse, 'floorstock_state', 'dept_notes_g2026-09'), statePayload([])));
+
+    const supervisor = dbFor('inpatient_supervisor');
+    for (const key of ['deleted_request_audit_v4_g2026-09', 'department_request_notifications_v1_g2026-09']) {
+      await assertSucceeds(setDoc(doc(supervisor, 'floorstock_state', key), statePayload([])));
+    }
+
+    /* An id that only looks like a partition of an unregistered key keeps its own
+       identity, so nothing inherits a permission by accident. */
+    await assertFails(setDoc(doc(dbFor('department'), 'floorstock_state', 'controlled_catalog_g2026-09'), statePayload([])));
+  });
+
   test('legacy accounts with tenantId null can still save to legacy state', async () => {
     const db = dbFor('legacy_null_master');
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'requests'), statePayload([])));

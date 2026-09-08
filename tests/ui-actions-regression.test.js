@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { baseStateKey } from '../public/assets/js/core/partitioned-key-names.js';
 import fs from 'node:fs';
 import test from 'node:test';
 import {
@@ -709,9 +710,13 @@ test('inpatient supervisor capabilities align across Inventory, Crash Cart, Acco
       mayWriteState('inpatient_supervisor', key),
       `client/rules test-matrix mismatch for ${key}`,
     );
+    /* firestore.rules asks its question about the base key: stateKey(docId) maps
+       a month partition back to the record it belongs to before any pattern sees
+       it, so the pattern is compared against the same normalised key the client
+       normalises through baseStateKey(). */
     assert.equal(
       clientDecision,
-      firestoreSupervisorRegex.test(key),
+      firestoreSupervisorRegex.test(baseStateKey(key)),
       `client/firestore.rules mismatch for ${key}`,
     );
   }

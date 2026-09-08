@@ -139,7 +139,21 @@ const confirm = await fetch(`${FN}/confirmAccountabilityHandover`, {
 const confirmBody = await confirm.json().catch(() => ({}));
 step('the nurse alone completes the handover', confirm.ok && confirmBody.completed === true, JSON.stringify(confirmBody).slice(0, 120));
 
-const receipts = await get('floorstock_state/accountability_receipts_v2');
+/* The completed handover is filed in its own Hijri month, not in a single
+   accountability_receipts_v2 document — that document is the last append-forever
+   custody record and would have met the same 1 MiB wall the usage rows did. The
+   month is computed here the same way the function computes it, so the test
+   proves the write landed where a reader will look for it. */
+const hijriNow = new Intl.DateTimeFormat('en-u-ca-islamic-umalqura', { year: 'numeric', month: 'numeric' })
+  .formatToParts(new Date())
+  .reduce((acc, part) => (part.type === 'year' || part.type === 'month' ? { ...acc, [part.type]: Number(part.value) } : acc), {});
+const receiptMonth = `${hijriNow.year}-${String(hijriNow.month).padStart(2, '0')}`;
+const legacyReceipts = await get('floorstock_state/accountability_receipts_v2');
+step('the legacy single receipts document is not created', !legacyReceipts?.fields,
+  legacyReceipts?.fields ? 'legacy document was written' : 'absent');
+const receipts = await get(`floorstock_state/accountability_receipts_v2_h${receiptMonth}`);
+step('the receipt is filed in its Hijri month', !!receipts?.fields?.value?.arrayValue?.values?.length,
+  `accountability_receipts_v2_h${receiptMonth}`);
 const receipt = receipts?.fields?.value?.arrayValue?.values?.[0]?.mapValue?.fields;
 step('the receipt names both parties',
   receipt?.pharmacyName?.stringValue === 'Ahmed Al-Qahtani' && receipt?.nurseName?.stringValue === 'Fatimah',

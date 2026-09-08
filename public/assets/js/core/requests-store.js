@@ -35,6 +35,11 @@ registerMonthPartitionedKey({
   // rows that predate `created` being written.
   dateField: ['created', 'fulfilledAt'],
   sortField: 'created',
+  /* Orders are read far more often and by far more roles than the ledgers, and a
+     department's working view is the last few weeks, so a short window keeps the
+     read cost down. Older months stay reachable by a master, who lists the whole
+     collection rather than naming documents. */
+  sessionMonths: 3,
 });
 
 export function requestRows() {

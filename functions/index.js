@@ -538,7 +538,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     await db.runTransaction(async (tx) => {
       // The pending total has to be searched for rather than addressed by id, so
       // this is the one operation that reads a window of months.
-      const loaded = await readUsagePartitions(tx, tenantId, accountabilityPartitions.recentHijriMonths(USAGE_WINDOW_MONTHS));
+      const loaded = await readMonthPartitions(tx, tenantId, accountabilityPartitions.recentHijriMonths(USAGE_WINDOW_MONTHS));
       const assignSnap = await tx.get(assignmentsRef);
       const assignments = stateArray(assignSnap);
       const a = assignments.find((x) => String(x.id) === String(assignmentId));
@@ -582,7 +582,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         submittedByUser: caller.email || '',
         locked: false
       };
-      writeUsagePartitions(tx, tenantId, loaded, rows.concat([created]));
+      writeMonthPartitions(tx, tenantId, loaded, rows.concat([created]));
     });
     // Returned so the caller can mirror the committed row into its local cache
     // immediately instead of waiting for the listener round trip.
@@ -595,7 +595,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     const id = String(data.id || '');
     if (!id) throw new HttpsError('invalid-argument', 'id is required.');
     await db.runTransaction(async (tx) => {
-      const loaded = await readUsagePartitions(tx, tenantId, usageMonthsForIds([id]));
+      const loaded = await readMonthPartitions(tx, tenantId, usageMonthsForIds([id]));
       const rows = loaded.rows;
       const u = rows.find((x) => String(x.id) === String(id));
       if (!u) throw new HttpsError('not-found', 'This submission no longer exists.');
@@ -604,7 +604,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       if (u.status !== 'pending_pharmacy' && u.status !== 'rejected') {
         throw new HttpsError('failed-precondition', 'This submission can no longer be modified.');
       }
-      writeUsagePartitions(tx, tenantId, loaded, rows.filter((x) => String(x.id) !== String(id)));
+      writeMonthPartitions(tx, tenantId, loaded, rows.filter((x) => String(x.id) !== String(id)));
     });
     return { ok: true };
   }
@@ -677,7 +677,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
          across the whole retention window rather than a recent slice — a stale
          read here would delete a custody with records behind it. Sixty months is
          the five-year floor; it runs only on a master's explicit delete. */
-      const loaded = await readUsagePartitions(tx, tenantId, accountabilityPartitions.recentHijriMonths(60));
+      const loaded = await readMonthPartitions(tx, tenantId, accountabilityPartitions.recentHijriMonths(60));
       const assignSnap = await tx.get(assignmentsRef);
       const list = stateArray(assignSnap).map((x) => ({ ...x }));
       const usage = loaded.rows;
@@ -701,7 +701,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       throw new HttpsError('invalid-argument', 'id and decision (approve/reject) are required.');
     }
     await db.runTransaction(async (tx) => {
-      const loaded = await readUsagePartitions(tx, tenantId, usageMonthsForIds([id]));
+      const loaded = await readMonthPartitions(tx, tenantId, usageMonthsForIds([id]));
       const assignSnap = await tx.get(assignmentsRef);
       const rows = loaded.rows.map((x) => ({ ...x }));
       const u = rows.find((x) => String(x.id) === String(id));
@@ -736,7 +736,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         u.rejectionReason = noteStr;
         u.pharmacyNote = noteStr;
       }
-      writeUsagePartitions(tx, tenantId, loaded, rows);
+      writeMonthPartitions(tx, tenantId, loaded, rows);
     });
     return { ok: true };
   }
@@ -745,7 +745,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     const { id } = data;
     if (!id) throw new HttpsError('invalid-argument', 'id is required.');
     await db.runTransaction(async (tx) => {
-      const loaded = await readUsagePartitions(tx, tenantId, usageMonthsForIds([id]));
+      const loaded = await readMonthPartitions(tx, tenantId, usageMonthsForIds([id]));
       const assignSnap = await tx.get(assignmentsRef);
       const rows = loaded.rows.map((x) => ({ ...x }));
       const u = rows.find((x) => String(x.id) === String(id));
@@ -770,7 +770,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       u.pharmacyNote = '';
       u.undoneAt = now;
       u.undoneBy = actorName;
-      writeUsagePartitions(tx, tenantId, loaded, rows);
+      writeMonthPartitions(tx, tenantId, loaded, rows);
     });
     return { ok: true };
   }
@@ -905,7 +905,8 @@ function stateRef(key, tenantId = '') {
 const USAGE_WINDOW_MONTHS = 24;
 const USAGE_MAX_PARTS = 50;
 
-async function readUsagePartitions(tx, tenantId, months) {
+async function readMonthPartitions(tx, tenantId, months, partitionIdFor) {
+  const idFor = partitionIdFor || accountabilityPartitions.usagePartitionId;
   const loadedMonths = [];
   const rowsByMonth = {};
   const refsByMonth = {};
@@ -914,7 +915,7 @@ async function readUsagePartitions(tx, tenantId, months) {
     const partRefs = [];
     let monthRows = [];
     for (let part = 1; part <= USAGE_MAX_PARTS; part += 1) {
-      const ref = stateRef(accountabilityPartitions.usagePartitionId(month, part), tenantId);
+      const ref = stateRef(idFor(month, part), tenantId);
       // eslint-disable-next-line no-await-in-loop
       const snapshot = await tx.get(ref);
       partRefs.push(ref);
@@ -926,12 +927,13 @@ async function readUsagePartitions(tx, tenantId, months) {
     refsByMonth[month] = partRefs;
     rows = rows.concat(monthRows);
   }
-  return { rows, loadedMonths, rowsByMonth, refsByMonth };
+  return { rows, loadedMonths, rowsByMonth, refsByMonth, idFor };
 }
 
 /* Splits a month's rows back across its parts under the size limit, so a busy
    month grows another document instead of refusing the write. */
-function writeUsageMonth(tx, loaded, tenantId, month, rows) {
+function writeMonthPartition(tx, loaded, tenantId, month, rows) {
+  const idFor = loaded.idFor || accountabilityPartitions.usagePartitionId;
   const LIMIT = 800 * 1024;
   const chunks = [[]];
   rows.forEach((row) => {
@@ -944,25 +946,25 @@ function writeUsageMonth(tx, loaded, tenantId, month, rows) {
   });
   const existing = (loaded.refsByMonth[month] || []).length;
   chunks.forEach((chunk, index) => {
-    writeState(tx, stateRef(accountabilityPartitions.usagePartitionId(month, index + 1), tenantId), chunk);
+    writeState(tx, stateRef(idFor(month, index + 1), tenantId), chunk);
   });
   // A month that shrank leaves trailing parts behind; empty them rather than
   // leaving stale rows readable.
   for (let part = chunks.length + 1; part <= existing; part += 1) {
-    writeState(tx, stateRef(accountabilityPartitions.usagePartitionId(month, part), tenantId), []);
+    writeState(tx, stateRef(idFor(month, part), tenantId), []);
   }
 }
 
-function writeUsagePartitions(tx, tenantId, loaded, nextRows) {
-  const plan = accountabilityPartitions.planUsageWrites(loaded.loadedMonths, loaded.rowsByMonth, nextRows);
-  plan.writes.forEach((entry) => writeUsageMonth(tx, loaded, tenantId, entry.month, entry.rows));
+function writeMonthPartitions(tx, tenantId, loaded, nextRows, monthOf) {
+  const plan = accountabilityPartitions.planPartitionWrites(loaded.loadedMonths, loaded.rowsByMonth, nextRows, monthOf);
+  plan.writes.forEach((entry) => writeMonthPartition(tx, loaded, tenantId, entry.month, entry.rows));
   /* A row grouped into a month the transaction never read cannot be written:
      the write would replace that document with only these rows, discarding
      whatever else it holds. It should be unreachable — every operation loads the
      months its rows belong to — so this fails loudly rather than corrupting the
      record it could not see. */
   if (plan.unplaced.length) {
-    console.error('accountability usage rows fell outside the loaded months', plan.unplaced.map((e) => e.month));
+    console.error('custody rows fell outside the loaded months', plan.unplaced.map((e) => e.month));
     throw new HttpsError('internal', 'A custody record fell outside the months this operation loaded. Nothing was changed.');
   }
 }
@@ -1109,7 +1111,7 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
   await db.runTransaction(async (transaction) => {
     // The selected records are named by id, so their Hijri months are known
     // exactly — no window, and nothing outside them is read or rewritten.
-    const loaded = await readUsagePartitions(transaction, caller.tenantId, usageMonthsForIds(usageIds));
+    const loaded = await readMonthPartitions(transaction, caller.tenantId, usageMonthsForIds(usageIds));
     const departmentsSnap = await transaction.get(departmentsRef);
     const usage = loaded.rows.map((row) => ({ ...row }));
     const selected = usage.filter((row) => usageIds.includes(String(row.id)));
@@ -1169,7 +1171,7 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
       pharmacyConfirmation: pharmacyConfirmationFromAccount(caller, nowIso),
       departmentConfirmation: null
     };
-    writeUsagePartitions(transaction, caller.tenantId, loaded, usage);
+    writeMonthPartitions(transaction, caller.tenantId, loaded, usage);
     transaction.set(sessionRef, session, { merge: false });
     responsePayload = {
       sessionId: sessionRef.id,
@@ -1224,7 +1226,7 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
   await db.runTransaction(async (transaction) => {
     // The selected records are named by id, so their Hijri months are known
     // exactly — no window, and nothing outside them is read or rewritten.
-    const loaded = await readUsagePartitions(transaction, caller.tenantId, usageMonthsForIds(usageIds));
+    const loaded = await readMonthPartitions(transaction, caller.tenantId, usageMonthsForIds(usageIds));
     const departmentsSnap = await transaction.get(departmentsRef);
     const usage = loaded.rows.map((row) => ({ ...row }));
     const selected = usage.filter((row) => usageIds.includes(String(row.id)));
@@ -1290,7 +1292,7 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
       departmentConfirmation: null,
       reissuedFrom: existingSessionIds[0] || null
     };
-    writeUsagePartitions(transaction, caller.tenantId, loaded, usage);
+    writeMonthPartitions(transaction, caller.tenantId, loaded, usage);
     transaction.set(newSessionRef, session, { merge: false });
     responsePayload = {
       sessionId: newSessionRef.id,
@@ -1382,20 +1384,29 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
     if (!routingSnap.exists) throw asPublicError('This handover link does not exist.', 404);
     const tenantId = String(routingSnap.data().tenantId || '');
     const assignmentsRef = stateRef('accountability_assignments_v2', tenantId);
-    const receiptsRef = stateRef('accountability_receipts_v2', tenantId);
+    /* Completed handovers are stored one document per Hijri month, like usage and
+       the movement ledger. The legacy single document is read too: until a master
+       runs the migration it is still the live record, and writing the partition
+       first would split the register in two. `nowIso` is fixed here rather than
+       inside the transaction so the receipt's month and its receivedAt cannot
+       disagree across a month boundary — a disagreement would be refused as a row
+       outside the loaded months, failing a handover for a millisecond. */
+    const legacyReceiptsRef = stateRef(accountabilityPartitions.RECEIPTS_KEY, tenantId);
+    const nowIso = new Date().toISOString();
+    const receiptMonth = accountabilityPartitions.hijriMonthKeyOf(nowIso);
     let result;
     await db.runTransaction(async (transaction) => {
       /* The session names the usage records, so it is read first and its ids
          decide which Hijri months are loaded. Firestore only requires that every
          read precede every write, not that they be issued together. */
-      const [sessionSnap, assignmentsSnap, receiptsSnap] = await Promise.all([
+      const [sessionSnap, assignmentsSnap, legacyReceiptsSnap] = await Promise.all([
         transaction.get(sessionRef),
         transaction.get(assignmentsRef),
-        transaction.get(receiptsRef)
+        transaction.get(legacyReceiptsRef)
       ]);
       if (!sessionSnap.exists) throw asPublicError('This handover link does not exist.', 404);
       const session = { id: sessionId, ...sessionSnap.data() };
-      const loaded = await readUsagePartitions(
+      const loaded = await readMonthPartitions(
         transaction,
         tenantId,
         usageMonthsForIds(Array.isArray(session.usageIds) ? session.usageIds : []),
@@ -1410,7 +1421,9 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
         ? (typeof session.expiresAt.toMillis === 'function' ? session.expiresAt.toMillis() : new Date(session.expiresAt).getTime())
         : 0;
       if (!session.expiresAt || expiresAtMs <= Date.now()) throw asPublicError('This handover link has expired.', 410);
-      const nowIso = new Date().toISOString();
+      const receiptsLoaded = legacyReceiptsSnap.exists
+        ? null
+        : await readMonthPartitions(transaction, tenantId, [receiptMonth], accountabilityPartitions.receiptsPartitionId);
       const confirmation = applyPartyConfirmation(session, party, { name, employeeId }, nowIso);
       Object.assign(session, confirmation.session);
       if (confirmation.alreadyConfirmed) {
@@ -1426,7 +1439,7 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
       const completed = completeHandoverState({
         assignments: stateArray(assignmentsSnap),
         usage: loaded.rows,
-        receipts: stateArray(receiptsSnap),
+        receipts: legacyReceiptsSnap.exists ? stateArray(legacyReceiptsSnap) : receiptsLoaded.rows,
         session,
         nowIso
       });
@@ -1434,8 +1447,9 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
       session.completedAt = nowIso;
       session.receiptId = completed.receipt.id;
       writeState(transaction, assignmentsRef, completed.assignments);
-      writeUsagePartitions(transaction, tenantId, loaded, completed.usage);
-      writeState(transaction, receiptsRef, completed.receipts);
+      writeMonthPartitions(transaction, tenantId, loaded, completed.usage);
+      if (legacyReceiptsSnap.exists) writeState(transaction, legacyReceiptsRef, completed.receipts);
+      else writeMonthPartitions(transaction, tenantId, receiptsLoaded, completed.receipts, accountabilityPartitions.monthOfReceiptRow);
       transaction.set(sessionRef, { ...session, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
       result = { completed: true, alreadyConfirmed: false, status: 'completed', receiptId: completed.receipt.id };
     });

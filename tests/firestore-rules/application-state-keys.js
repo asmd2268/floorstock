@@ -1,3 +1,5 @@
+import { baseStateKey } from '../../public/assets/js/core/partitioned-key-names.js';
+
 export const DEPARTMENT_ID = 'dept-a';
 
 // Every floorstock_state key currently referenced by the R6.66 application.
@@ -6,6 +8,7 @@ export const DEPARTMENT_ID = 'dept-a';
 export const APPLICATION_STATE_KEYS = [
   'accountability_assignments_v2',
   'accountability_receipts_v2',
+  'accountability_receipts_v2_h1448-03',
   'accountability_regimens_v2',
   'accountability_usage_v2',
   'accountability_usage_v2_h1448-03',
@@ -23,6 +26,7 @@ export const APPLICATION_STATE_KEYS = [
   'controlled_moves',
   'controlled_moves_h1448-03',
   'controlled_pdf_receipts',
+  'controlled_pdf_receipts_h1448-03',
   'controlled_pharmacy_stock',
   'controlled_pharmacy_storage_v1',
   'controlled_print_logo',
@@ -31,12 +35,15 @@ export const APPLICATION_STATE_KEYS = [
   'crash_cart_medication_names_v1',
   'crash_carts',
   'deleted_request_audit_v4',
+  'deleted_request_audit_v4_g2026-09',
   'department_request_notifications_v1',
+  'department_request_notifications_v1_g2026-09',
   'custom_categories',
   'daily_limits_v2',
   'deleted_departments',
   'departments',
   'dept_notes',
+  'dept_notes_g2026-09',
   'disp_slots',
   `expiry_${DEPARTMENT_ID}`,
   'facility_logo',
@@ -65,13 +72,21 @@ export const APPLICATION_STATE_KEYS = [
   'request_hour_grids_v1',
   'requests',
   'requests_g2026-09',
+  'requests_g2026-09_p2',
+  'user_activity_daily_v1',
+  'user_activity_daily_v1_g2026-09',
   `shelves_${DEPARTMENT_ID}`,
   'similar_medicine_separations_v1',
   'theme',
   'weekly_limits_v2'
 ];
 
-export function mayWriteState(role, key) {
+/* firestore.rules normalises a month partition to the key it belongs to before
+   any pattern sees it (stateKey), so the matrix asks its question about the same
+   normalised key. Spelling every suffix out again here is what let the two
+   drift. */
+export function mayWriteState(role, rawKey) {
+  const key = baseStateKey(rawKey);
   if (key === 'fulfillment_edit_settings_v1') return role === 'master';
   if (role === 'master' || role === 'pharmacy') return true;
   // audit_log is no longer writable from any client: firestore.rules denies it and
@@ -90,17 +105,15 @@ export function mayWriteState(role, key) {
   // Custody usage is one document per Hijri month. Writes stay denied for every
   // client role — submissions go through the accountabilityMutation callable,
   // which enforces the custody balance inside a transaction.
-  /* Orders are one document per Gregorian month. Every role that could write the
-     single requests document writes the month partitions the same way. */
-  if (/^requests_g\d{4}-\d{2}(_p\d+)?$/.test(key)) return mayWriteState(role, 'requests');
-  if (/^accountability_usage_v2(_h\d{4}-\d{2}(_p\d+)?)?$/.test(key)) {
+  if (key === 'accountability_usage_v2') {
     return role === 'master' || role === 'pharmacy' || role === 'inpatient_supervisor'
       || role === 'pharmacy_staff' || role === 'controlled_pharmacy';
   }
   if (key === 'accountability_usage_summary_v1') {
     return role === 'master' || role === 'pharmacy' || role === 'controlled_pharmacy';
   }
-  if (key === 'theme') return true;
+  // Activity instrumentation is written by every signed-in client, whatever the role.
+  if (key === 'theme' || key === 'user_activity_daily_v1') return true;
   if (role === 'inpatient_supervisor') {
     return /^(crash_.*|accountability_.*|requests|request_analytics_summary_v1|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
   }
@@ -117,10 +130,7 @@ export function mayWriteState(role, key) {
     return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme)$/.test(key);
   }
   if (role === 'warehouse') {
-    // The ledger is one document per Hijri month, and the warehouse records
-    // transfers into it, so the month partitions are writable exactly as the
-    // single controlled_moves document was.
-    return /^(controlled_warehouse|controlled_moves(_h\d{4}-\d{2}(_p\d+)?)?|controlled_pdf_receipts|theme)$/.test(key);
+    return /^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|theme)$/.test(key);
   }
   if (role === 'department' || role === 'custodian') {
     // crash_cart_reports intentionally excluded: departments submit via the

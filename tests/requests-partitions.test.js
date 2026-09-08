@@ -51,9 +51,14 @@ test('nothing is deleted to make room', () => {
 });
 
 test('departments can write the month partitions, as they could the old document', () => {
-  assert.match(rules, /docId\.matches\('\^requests_g\[0-9\]\{4\}-\[0-9\]\{2\}\(_p\[0-9\]\+\)\?\$'\)/);
-  // Read access too, for both the department and pharmacy readers.
-  assert.equal((rules.match(/\^requests_g\[0-9\]\{4\}-\[0-9\]\{2\}\(_p\[0-9\]\+\)\?\$/g) || []).length >= 3, true);
+  /* Permission is granted on the base key and stateKey() maps a partition back
+     to it, so `requests` appearing in the department write list IS the grant for
+     requests_g2026-03. The mapping itself is held to the client's copy of the
+     list by tests/partitioned-key-names.test.js. */
+  assert.match(rules, /function stateKey\(docId\)/);
+  assert.match(rules, /canWriteState\(stateKey\(docId\)\)/);
+  assert.match(rules, /canReadScopedState\(stateKey\(docId\)\)/);
+  assert.ok(rules.includes("'requests', 'dept_notes', 'notes',"), 'departments keep the orders grant');
 });
 
 test('no capability pattern is double-escaped', async () => {

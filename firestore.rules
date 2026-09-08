@@ -90,6 +90,20 @@ service cloud.firestore {
       return activeUser() && role() in ['department', 'outpatient_pharmacy_supervisor', 'warehouse', 'controlled_pharmacy', 'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'];
     }
 
+    /* A month partition is the same record as the key it belongs to:
+       dept_notes_g2026-09 holds what dept_notes held, requests_g2026-03 holds
+       orders. Every permission question about a partition therefore has the same
+       answer as its base key, and stating that once here is what keeps a dozen
+       rule sites from each having to spell the suffix out again — which is how
+       one of them eventually gets it wrong. The list is mirrored in
+       public/assets/js/core/partitioned-key-names.js; a key added to one and not
+       the other fails tests/partitioned-key-names.test.js. */
+    function stateKey(docId) {
+      return docId.matches('^(requests|controlled_moves|accountability_usage_v2|controlled_pdf_receipts|accountability_receipts_v2|dept_notes|deleted_request_audit_v4|department_request_notifications_v1|user_activity_daily_v1)_[gh][0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
+        ? docId.split('_[gh][0-9]{4}-[0-9]{2}(_p[0-9]+)?$')[0]
+        : docId;
+    }
+
     function canReadScopedState(docId) {
       // The audit trail is one document per calendar month (audit_log_YYYY-MM,
       // plus _pN if a heavy month overflows) rather than one ever-growing
@@ -106,12 +120,7 @@ service cloud.firestore {
     function canReadPharmacyState(docId) {
       return docId in ['departments', 'deleted_departments', 'custom_categories', 'requests', 'dept_notes', 'notes', 'crash_carts', 'crash_cart_medication_names_v1', 'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_receipts_v2', 'accountability_regimens_v2', 'accountability_regimens_v3', 'accountability_regimen_catalog_v1', 'accountability_expiry_batches_v1', 'accountability_plan_usage_v1',
           'accountability_usage_summary_v1', 'department_print_names_v1', 'theme', 'facility_logo', 'pharmacy_category_config', 'pharmacy_department_announcements', 'pharmacy_department_expiry_rules', 'medication_freeze_rules_v3', 'medication_visibility_rules_v3', 'fulfillment_edit_settings_v1', 'req_windows', 'disp_slots', 'daily_limits_v2', 'weekly_limits_v2', 'monthly_limits', 'rate_limits_v2', 'request_count_limits_v1', 'request_hour_grids_v1', 'shelves_anesthesia', 'user_activity_daily_v1', 'crash_cart_min_seal_length', 'classification_lists_v1', 'page_visibility_overrides_v1', 'user_dept_restrictions_v1', 'classification_colors_v1']
-        || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*')
-        // Custody usage is one document per Hijri month; the reader needs the
-        // family, not the single document it replaced.
-        || docId.matches('^accountability_usage_v2_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
-        // Orders are the same, by Gregorian month.
-        || docId.matches('^requests_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?$');
+        || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*');
     }
 
     // Same narrowed pattern as role() above: isolated early-return, verified
@@ -181,7 +190,7 @@ service cloud.firestore {
         || (docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*)$') && tenantFeature(id, 'controlled'))
         || (docId.matches('^(requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$') && tenantFeature(id, 'requests'))
         || (
-          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
+          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
           && tenantFeature(id, 'inventory')
         );
     }
@@ -275,12 +284,10 @@ service cloud.firestore {
           profile().get('controlledCustodian', false) == true
           && docId == 'controlled_dept_shelves_' + departmentId()
         )
-        // Custody usage is one document per Hijri month; a department reads the
-        // family, exactly as it read the single document that preceded it. Writes
-        // stay denied — submissions go through the accountabilityMutation callable.
-        || docId.matches('^accountability_usage_v2_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
-        // Orders, by Gregorian month. Departments both read and write these.
-        || docId.matches('^requests_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?$');
+        // Custody usage and orders are read by base key; stateKey() has already
+        // mapped a month partition back to it. Usage writes stay denied —
+        // submissions go through the accountabilityMutation callable.
+        || docId in ['accountability_usage_v2', 'requests'];
     }
 
     function canWriteState(docId) {
@@ -324,10 +331,6 @@ service cloud.firestore {
               'inventory_integrity_' + dept,
               'inventory_snapshot_index_' + dept
             ]
-            // Orders are one document per Gregorian month now; a department
-            // writes the month its own order belongs to, exactly as it wrote the
-            // single requests document before.
-            || docId.matches('^requests_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
             || docId.matches('^inventory_snapshot_' + dept + '_.*$')
             || (
               p.get('controlledCustodian', false) == true
@@ -345,15 +348,15 @@ service cloud.firestore {
             r in ['pharmacy', 'pharmacy_director']
             || (
               r in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']
-              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'outpatient_pharmacy_supervisor'
-              && docId.matches('^(crash_carts|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|requests|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'pharmacy_staff'
-              && docId.matches('^(crash_carts|accountability_assignments_v2|accountability_usage_v2(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'controlled_pharmacy'
@@ -366,7 +369,7 @@ service cloud.firestore {
             )
             || (
               r == 'warehouse'
-              && docId.matches('^(controlled_warehouse|controlled_moves(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|controlled_pdf_receipts|theme|user_activity_daily_v1)$')
+              && docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|theme|user_activity_daily_v1)$')
             )
           )
         );
@@ -385,13 +388,13 @@ service cloud.firestore {
     }
 
     match /tenants/{tenant}/state/{docId} {
-      allow get: if sameTenant(tenant) && (!scopedStateUser() || canReadScopedState(docId));
+      allow get: if sameTenant(tenant) && (!scopedStateUser() || canReadScopedState(stateKey(docId)));
       allow list: if sameTenant(tenant) && !scopedStateUser();
       allow create, update: if sameTenant(tenant)
         && tenantWritable(tenant)
-        && stateFeatureAllowed(tenant, docId)
-        && departmentLimitAllowed(tenant, docId)
-        && canWriteState(docId)
+        && stateFeatureAllowed(tenant, stateKey(docId))
+        && departmentLimitAllowed(tenant, stateKey(docId))
+        && canWriteState(stateKey(docId))
         && validStateShape()
         && validFulfillmentEditSettings(docId);
       allow delete: if sameTenant(tenant) && tenantWritable(tenant) && (
@@ -471,7 +474,7 @@ service cloud.firestore {
     // the client can retain only the authenticated department's carts and reports.
     match /floorstock_state/{docId} {
       allow get: if legacyTenantWritable() && (
-        !scopedStateUser() || canReadScopedState(docId)
+        !scopedStateUser() || canReadScopedState(stateKey(docId))
       );
       allow list: if legacyTenantWritable() && !scopedStateUser();
       // Structurally mirrors tenants/{id}/state/{docId} create/update:
@@ -479,9 +482,9 @@ service cloud.firestore {
       //   legacyFeatureAllowed(docId) ≡ stateFeatureAllowed(t, docId)
       //   legacyDepartmentLimitAllowed(docId) ≡ departmentLimitAllowed(t, docId)
       allow create, update: if legacyTenantWritable()
-        && legacyFeatureAllowed(docId)
-        && legacyDepartmentLimitAllowed(docId)
-        && canWriteState(docId)
+        && legacyFeatureAllowed(stateKey(docId))
+        && legacyDepartmentLimitAllowed(stateKey(docId))
+        && canWriteState(stateKey(docId))
         && (docId != 'fulfillment_edit_settings_v1' || (role() in ['pharmacy', 'pharmacy_director'] && masterClaim()))
         && validStateShape()
         && validFulfillmentEditSettings(docId);

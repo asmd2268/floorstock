@@ -51,22 +51,22 @@ test('only the months that actually changed are rewritten', () => {
 
   // Nothing changed -> nothing written. A month left alone must not be rewritten,
   // both to save writes and so a concurrent editor there is not clobbered.
-  assert.deepEqual(core.planUsageWrites(loadedMonths, loadedRows, [b, a]).writes, []);
+  assert.deepEqual(core.planPartitionWrites(loadedMonths, loadedRows, [b, a]).writes, []);
 
   // Editing the September row touches only September.
   const edited = Object.assign({}, b, { units: 99 });
-  const plan = core.planUsageWrites(loadedMonths, loadedRows, [edited, a]);
+  const plan = core.planPartitionWrites(loadedMonths, loadedRows, [edited, a]);
   assert.deepEqual(plan.writes.map((w) => w.month), ['1448-03']);
   assert.equal(plan.writes[0].rows[0].units, 99);
 
   // Removing a row empties its month rather than leaving it stale.
-  const removed = core.planUsageWrites(loadedMonths, loadedRows, [b]);
+  const removed = core.planPartitionWrites(loadedMonths, loadedRows, [b]);
   assert.deepEqual(removed.writes, [{ month: '1448-02', rows: [] }]);
 });
 
 test('a row belonging to a month that was not read is reported, never dropped', () => {
   const stray = { id: 'acc2u_3_z', submittedAt: '2025-01-10T00:00:00Z', units: 5 };
-  const plan = core.planUsageWrites(['1448-03'], { '1448-03': [] }, [stray]);
+  const plan = core.planPartitionWrites(['1448-03'], { '1448-03': [] }, [stray]);
   assert.equal(plan.writes.length, 0);
   assert.equal(plan.unplaced.length, 1);
   assert.deepEqual(plan.unplaced[0].rows, [stray]);

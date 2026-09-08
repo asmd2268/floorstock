@@ -37,6 +37,15 @@ function hijriMonthKeyOf(value) {
   return `${year}-${String(month).padStart(2, '0')}`;
 }
 
+/* Completed handovers, the other append-forever custody record. One row per
+   handover carrying its medicine totals, so a single document met the same 1 MiB
+   wall the usage rows did — just more slowly. Same Hijri months, same shape. */
+const RECEIPTS_KEY = 'accountability_receipts_v2';
+
+function receiptsPartitionId(month, part) {
+  return (part || 1) <= 1 ? `${RECEIPTS_KEY}_h${month}` : `${RECEIPTS_KEY}_h${month}_p${part}`;
+}
+
 function usagePartitionId(month, part) {
   return (part || 1) <= 1 ? `${USAGE_KEY}_h${month}` : `${USAGE_KEY}_h${month}_p${part}`;
 }
@@ -53,6 +62,14 @@ function monthOfUsageId(id) {
 function monthOfUsageRow(row) {
   if (!row) return null;
   return hijriMonthKeyOf(row.submittedAt) || monthOfUsageId(row.id);
+}
+
+/* A completed handover is filed by when it was received. Older rows wrote that
+   date under two other names before the field settled, so all three are tried
+   rather than filing a legacy receipt under the month it was migrated. */
+function monthOfReceiptRow(row) {
+  if (!row) return null;
+  return hijriMonthKeyOf(row.receivedAt) || hijriMonthKeyOf(row.createdAt) || hijriMonthKeyOf(row.receivedDate);
 }
 
 /* Walks back from `from`, newest first. Used where rows must be found without an
@@ -72,10 +89,11 @@ function recentHijriMonths(count, from) {
 /* Groups rows by the partition they belong to. A row's month is fixed at creation
    and never changes, so a partition assignment is stable across edits — an update
    rewrites the row in place rather than moving it between documents. */
-function groupRowsByMonth(rows) {
+function groupRowsByMonth(rows, monthOf) {
   const grouped = {};
+  const pick = monthOf || monthOfUsageRow;
   (rows || []).forEach((row) => {
-    const month = monthOfUsageRow(row);
+    const month = pick(row);
     if (!month) return;
     (grouped[month] = grouped[month] || []).push(row);
   });
@@ -93,8 +111,8 @@ function rowsAreEqual(left, right) {
    rewritten. `loadedMonths` is what the caller read; anything grouped into a month
    outside that set is returned in `unplaced` so the caller can decide rather than
    losing it silently. */
-function planUsageWrites(loadedMonths, loadedRowsByMonth, nextRows) {
-  const grouped = groupRowsByMonth(nextRows);
+function planPartitionWrites(loadedMonths, loadedRowsByMonth, nextRows, monthOf) {
+  const grouped = groupRowsByMonth(nextRows, monthOf);
   const writes = [];
   const known = new Set(loadedMonths);
   loadedMonths.forEach((month) => {
@@ -108,11 +126,14 @@ function planUsageWrites(loadedMonths, loadedRowsByMonth, nextRows) {
 
 module.exports = {
   USAGE_KEY,
+  RECEIPTS_KEY,
+  receiptsPartitionId,
   hijriMonthKeyOf,
   usagePartitionId,
   monthOfUsageId,
   monthOfUsageRow,
   recentHijriMonths,
   groupRowsByMonth,
-  planUsageWrites,
+  monthOfReceiptRow,
+  planPartitionWrites,
 };
