@@ -206,6 +206,20 @@ window.runSystemHealthDiagnostics=async function(){
   if(typeof window.renderLedgerExport==='function')window.renderLedgerExport();
   var report=document.getElementById('health-report');if(report)report.textContent=lines.join('\n');var last=document.getElementById('health-last-run');if(last)last.textContent='Last run: '+new Date().toLocaleString('en-GB',{calendar:'gregory'});
 };
+/* The storage panels live on System Health — the page a master actually opens
+   and calls "Health" — not on Backup & Restore where they started. They render on
+   navigation rather than only when Run Diagnostics is pressed: the document sizes
+   and the pending migrations are what the page is worth opening for, and waiting
+   behind a button is how they went unnoticed. */
+window.__showPgAfterExtensions = window.__showPgAfterExtensions || [];
+window.__showPgAfterExtensions.push(function(id){
+  if(id!=='pg-system-health')return;
+  if(typeof window.installStorageCleanupPanel==='function')window.installStorageCleanupPanel();
+  if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
+  if(typeof window.installLedgerExportPanel==='function')window.installLedgerExportPanel();
+  if(typeof window.renderLedgerExport==='function')window.renderLedgerExport();
+});
+
 function initial(){setStatus('health-network',navigator.onLine?'Online':'Offline',navigator.onLine?'health-ok':'health-bad')}
 initial();window.addEventListener('online',initial);window.addEventListener('offline',initial);
 })();

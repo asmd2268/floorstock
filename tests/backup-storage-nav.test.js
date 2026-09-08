@@ -2,10 +2,14 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 
-/* pg-backup-restore holds the local backups, the System Health figures and the
-   storage cleanup panel — the document-size gauge and every archive/migration
-   action. The page existed and the master was permitted to see it, but no nav
-   entry anywhere opened it, so all of that was unreachable in the UI. */
+/* Two ways the storage controls were unreachable.
+
+   First, they were built onto pg-backup-restore, which no nav entry anywhere
+   opened — the page existed and the master was permitted to see it, but nothing
+   led there. Second, and the reason it was noticed: a master looking for them
+   opens "System Health", which is a different page. The panels now live on
+   pg-system-health, and pg-backup-restore has a nav entry of its own for the
+   local backups it still holds. */
 
 const nav = await readFile(new URL('../public/assets/js/modules/80-controlled-pharmacy-ui-redesign.js', import.meta.url), 'utf8');
 const health = await readFile(new URL('../public/assets/js/modules/12-local-daily-backups-system-health.js', import.meta.url), 'utf8');
@@ -24,13 +28,27 @@ test('the entry is gated by the same rule as the page itself', () => {
   assert.match(health, /function removeMasterOnlyForNonMaster\(\)/);
 });
 
-test('the panel really does live on that page', () => {
-  const page = indexHtml.indexOf('id="pg-backup-restore"');
+test('the storage panels live on the page a master calls Health', () => {
+  const health = indexHtml.indexOf('id="pg-system-health"');
   const panel = indexHtml.indexOf('id="storage-cleanup"');
   const exporter = indexHtml.indexOf('id="ledger-export"');
-  assert.ok(page > -1 && panel > page, 'the cleanup panel is inside the backup page');
-  assert.ok(exporter > page, 'so is the ledger export');
+  const backup = indexHtml.indexOf('id="pg-backup-restore"');
+  assert.ok(health > -1 && panel > health, 'the cleanup panel is on System Health');
+  assert.ok(exporter > health, 'so is the ledger export');
+  // They must not have been left behind on the backup page as well.
+  assert.ok(panel > backup ? panel > health : true);
+  assert.equal((indexHtml.match(/id="storage-cleanup"/g) || []).length, 1);
+  assert.equal((indexHtml.match(/id="ledger-export"/g) || []).length, 1);
   // Nothing else should claim the ids the panel renders into.
   assert.equal((indexHtml.match(/id="storage-cleanup-body"/g) || []).length, 1);
   assert.equal((indexHtml.match(/id="ledger-export-grants"/g) || []).length, 1);
 });
+
+test('the panels render when System Health opens, not behind a button', () => {
+  // The document sizes and the pending migrations are what the page is worth
+  // opening for; waiting behind Run Diagnostics is how they went unnoticed.
+  assert.match(health, /if\(id!=='pg-system-health'\)return;/);
+  assert.match(health, /renderStorageCleanup\(\)/);
+  assert.match(health, /renderLedgerExport\(\)/);
+});
+
