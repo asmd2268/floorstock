@@ -1,6 +1,6 @@
 import { hijriMonthLabelBilingual, currentHijriMonthKey, shiftHijriMonth } from './hijri-calendar.js?v=9e42fa0bb9';
-import { availableControlledMonths } from './controlled-moves-store.js?v=b8dbb67980';
-import { exportControlledLedger, describeExportRange } from './controlled-ledger-export.js?v=940e9c84f7';
+import { availableControlledMonths } from './controlled-moves-store.js?v=54aa0549c3';
+import { exportControlledLedger, describeExportRange } from './controlled-ledger-export.js?v=1ac34981af';
 import {
   grantExportPermission, revokeExportPermission, grantsForDisplay,
   liveGrantsFor, mayExportMonths, defaultGrantRange, grantIsLive,

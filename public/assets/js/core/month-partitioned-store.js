@@ -199,6 +199,40 @@ export function deleteMonthPartitionedRow(key, rowId) {
   return mutateExistingRow(key, rowId, (rows, id) => rows.filter((item) => !item || String(item.id) !== id));
 }
 
+/* Mirrors a full set of rows back into the local cache, each into the partition
+   its own date selects. Used after a Cloud Function commits a change: the callable
+   writes server-side, so the cache would otherwise not move until the listener
+   echoes back and the page would show stale rows for that moment.
+
+   Local only — it never writes Firestore. Partitions the session holds that the
+   new set no longer mentions are emptied, so a removed row disappears at once
+   rather than lingering until the snapshot arrives. A month split across parts is
+   collapsed into part 1 and its later parts emptied: this cannot know how the
+   server chose to split them, and leaving them would show a row twice. The next
+   listener snapshot restores the server's own split. */
+export function mirrorMonthPartitionedRows(key, rows) {
+  const spec = monthPartitionSpec(key);
+  if (!spec || !globalThis.S || !globalThis.S.cache) return;
+  const grouped = {};
+  (rows || []).forEach((row) => {
+    const month = monthOf(row, spec);
+    if (!month) return;
+    (grouped[month] = grouped[month] || []).push(row);
+  });
+  const placed = new Set();
+  partitionKeysInCache(key).forEach((name) => {
+    const match = /_h(\d{4}-\d{2})(_p\d+)?$/.exec(name);
+    const month = match && match[1];
+    if (!month) return;
+    if (match[2]) { globalThis.S.cache[name] = []; return; }
+    globalThis.S.cache[name] = grouped[month] || [];
+    placed.add(month);
+  });
+  Object.keys(grouped).forEach((month) => {
+    if (!placed.has(month)) globalThis.S.cache[partitionKey(key, month, 1)] = grouped[month];
+  });
+}
+
 /* The realtime listener is the source of truth, but only after the round trip.
    Applying locally first keeps a render immediately after an await from showing
    the pre-write ledger. */
@@ -225,4 +259,5 @@ Object.assign(globalThis, {
   appendMonthPartitionedRows,
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
+  mirrorMonthPartitionedRows,
 });

@@ -2,6 +2,7 @@
 
 const crypto = require('crypto');
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
+const accountabilityPartitions = require('./accountability-partitions-core');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
 const { getAppCheck } = require('firebase-admin/app-check');
@@ -511,7 +512,6 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
   }
 
   const assignmentsRef = stateRef('accountability_assignments_v2', tenantId);
-  const usageRef = stateRef('accountability_usage_v2', tenantId);
 
   if (action === 'submitUsage') {
     const callerDept = String(caller.deptId || caller.departmentId || '').trim();
@@ -536,13 +536,16 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     }
     let created = null;
     await db.runTransaction(async (tx) => {
-      const [assignSnap, usageSnap] = await Promise.all([tx.get(assignmentsRef), tx.get(usageRef)]);
+      // The pending total has to be searched for rather than addressed by id, so
+      // this is the one operation that reads a window of months.
+      const loaded = await readUsagePartitions(tx, tenantId, accountabilityPartitions.recentHijriMonths(USAGE_WINDOW_MONTHS));
+      const assignSnap = await tx.get(assignmentsRef);
       const assignments = stateArray(assignSnap);
       const a = assignments.find((x) => String(x.id) === String(assignmentId));
       if (!a || a.active === false) throw new HttpsError('failed-precondition', 'Custody is not available.');
       // The department may only spend against its own custody record.
       if (String(a.deptId) !== callerDept) throw new HttpsError('permission-denied', 'This custody belongs to another department.');
-      const rows = stateArray(usageSnap);
+      const rows = loaded.rows;
       // Effective balance mirrors the client: recorded balance minus everything
       // already submitted and not yet decided, so concurrent submissions cannot
       // each pass against the same untouched balance.
@@ -579,7 +582,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         submittedByUser: caller.email || '',
         locked: false
       };
-      writeState(tx, usageRef, rows.concat([created]));
+      writeUsagePartitions(tx, tenantId, loaded, rows.concat([created]));
     });
     // Returned so the caller can mirror the committed row into its local cache
     // immediately instead of waiting for the listener round trip.
@@ -592,8 +595,8 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     const id = String(data.id || '');
     if (!id) throw new HttpsError('invalid-argument', 'id is required.');
     await db.runTransaction(async (tx) => {
-      const snap = await tx.get(usageRef);
-      const rows = stateArray(snap);
+      const loaded = await readUsagePartitions(tx, tenantId, usageMonthsForIds([id]));
+      const rows = loaded.rows;
       const u = rows.find((x) => String(x.id) === String(id));
       if (!u) throw new HttpsError('not-found', 'This submission no longer exists.');
       // Only the owning department, and only before pharmacy has acted on it.
@@ -601,7 +604,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       if (u.status !== 'pending_pharmacy' && u.status !== 'rejected') {
         throw new HttpsError('failed-precondition', 'This submission can no longer be modified.');
       }
-      writeState(tx, usageRef, rows.filter((x) => String(x.id) !== String(id)));
+      writeUsagePartitions(tx, tenantId, loaded, rows.filter((x) => String(x.id) !== String(id)));
     });
     return { ok: true };
   }
@@ -670,9 +673,14 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     const { id } = data;
     if (!id) throw new HttpsError('invalid-argument', 'id is required.');
     await db.runTransaction(async (tx) => {
-      const [assignSnap, usageSnap] = await Promise.all([tx.get(assignmentsRef), tx.get(usageRef)]);
+      /* This refuses to delete a custody that has ANY history, so it has to look
+         across the whole retention window rather than a recent slice — a stale
+         read here would delete a custody with records behind it. Sixty months is
+         the five-year floor; it runs only on a master's explicit delete. */
+      const loaded = await readUsagePartitions(tx, tenantId, accountabilityPartitions.recentHijriMonths(60));
+      const assignSnap = await tx.get(assignmentsRef);
       const list = stateArray(assignSnap).map((x) => ({ ...x }));
-      const usage = stateArray(usageSnap);
+      const usage = loaded.rows;
       const row = list.find((x) => String(x.id) === String(id));
       if (!row) throw new HttpsError('not-found', 'Assignment not found.');
       if (isDeptBlocked(row.deptId)) {
@@ -693,8 +701,9 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       throw new HttpsError('invalid-argument', 'id and decision (approve/reject) are required.');
     }
     await db.runTransaction(async (tx) => {
-      const [usageSnap, assignSnap] = await Promise.all([tx.get(usageRef), tx.get(assignmentsRef)]);
-      const rows = stateArray(usageSnap).map((x) => ({ ...x }));
+      const loaded = await readUsagePartitions(tx, tenantId, usageMonthsForIds([id]));
+      const assignSnap = await tx.get(assignmentsRef);
+      const rows = loaded.rows.map((x) => ({ ...x }));
       const u = rows.find((x) => String(x.id) === String(id));
       if (!u || u.status !== 'pending_pharmacy') throw new HttpsError('failed-precondition', 'This request is no longer pending.');
       if (isDeptBlocked(u.deptId)) {
@@ -727,7 +736,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         u.rejectionReason = noteStr;
         u.pharmacyNote = noteStr;
       }
-      writeState(tx, usageRef, rows);
+      writeUsagePartitions(tx, tenantId, loaded, rows);
     });
     return { ok: true };
   }
@@ -736,8 +745,9 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     const { id } = data;
     if (!id) throw new HttpsError('invalid-argument', 'id is required.');
     await db.runTransaction(async (tx) => {
-      const [usageSnap, assignSnap] = await Promise.all([tx.get(usageRef), tx.get(assignmentsRef)]);
-      const rows = stateArray(usageSnap).map((x) => ({ ...x }));
+      const loaded = await readUsagePartitions(tx, tenantId, usageMonthsForIds([id]));
+      const assignSnap = await tx.get(assignmentsRef);
+      const rows = loaded.rows.map((x) => ({ ...x }));
       const u = rows.find((x) => String(x.id) === String(id));
       if (!u || u.status !== 'approved_waiting_receipt') {
         throw new HttpsError('failed-precondition', 'This request is not in an approved state.');
@@ -760,7 +770,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
       u.pharmacyNote = '';
       u.undoneAt = now;
       u.undoneBy = actorName;
-      writeState(tx, usageRef, rows);
+      writeUsagePartitions(tx, tenantId, loaded, rows);
     });
     return { ok: true };
   }
@@ -878,6 +888,92 @@ function stateRef(key, tenantId = '') {
   return tenantId
     ? db.collection('tenants').doc(String(tenantId)).collection('state').doc(key)
     : db.collection('floorstock_state').doc(key);
+}
+
+/* Accountability usage is stored one document per Hijri month (see
+   accountability-partitions-core.js for why). These three helpers are the whole
+   difference at the call sites: read the partitions an operation could touch,
+   run exactly the same logic on the flat array it used to get, then write back
+   only the months that actually changed.
+
+   Which partitions to read is decided two ways. An operation that names rows by
+   id derives their months from the ids themselves, which is exact and reads
+   nothing extra. An operation that has to search — the pending-balance check —
+   reads a window of recent months; a row left pending beyond that window is not
+   silently mishandled, it simply is not found, and the existing not-found guards
+   turn that into a clear error. */
+const USAGE_WINDOW_MONTHS = 24;
+const USAGE_MAX_PARTS = 50;
+
+async function readUsagePartitions(tx, tenantId, months) {
+  const loadedMonths = [];
+  const rowsByMonth = {};
+  const refsByMonth = {};
+  let rows = [];
+  for (const month of months) {
+    const partRefs = [];
+    let monthRows = [];
+    for (let part = 1; part <= USAGE_MAX_PARTS; part += 1) {
+      const ref = stateRef(accountabilityPartitions.usagePartitionId(month, part), tenantId);
+      // eslint-disable-next-line no-await-in-loop
+      const snapshot = await tx.get(ref);
+      partRefs.push(ref);
+      if (!snapshot.exists) break;
+      monthRows = monthRows.concat(stateArray(snapshot));
+    }
+    loadedMonths.push(month);
+    rowsByMonth[month] = monthRows;
+    refsByMonth[month] = partRefs;
+    rows = rows.concat(monthRows);
+  }
+  return { rows, loadedMonths, rowsByMonth, refsByMonth };
+}
+
+/* Splits a month's rows back across its parts under the size limit, so a busy
+   month grows another document instead of refusing the write. */
+function writeUsageMonth(tx, loaded, tenantId, month, rows) {
+  const LIMIT = 800 * 1024;
+  const chunks = [[]];
+  rows.forEach((row) => {
+    const current = chunks[chunks.length - 1];
+    current.push(row);
+    if (current.length > 1 && Buffer.byteLength(JSON.stringify(current), 'utf8') > LIMIT) {
+      chunks[chunks.length - 1] = current.slice(0, -1);
+      chunks.push([row]);
+    }
+  });
+  const existing = (loaded.refsByMonth[month] || []).length;
+  chunks.forEach((chunk, index) => {
+    writeState(tx, stateRef(accountabilityPartitions.usagePartitionId(month, index + 1), tenantId), chunk);
+  });
+  // A month that shrank leaves trailing parts behind; empty them rather than
+  // leaving stale rows readable.
+  for (let part = chunks.length + 1; part <= existing; part += 1) {
+    writeState(tx, stateRef(accountabilityPartitions.usagePartitionId(month, part), tenantId), []);
+  }
+}
+
+function writeUsagePartitions(tx, tenantId, loaded, nextRows) {
+  const plan = accountabilityPartitions.planUsageWrites(loaded.loadedMonths, loaded.rowsByMonth, nextRows);
+  plan.writes.forEach((entry) => writeUsageMonth(tx, loaded, tenantId, entry.month, entry.rows));
+  /* A row grouped into a month the transaction never read cannot be written:
+     the write would replace that document with only these rows, discarding
+     whatever else it holds. It should be unreachable — every operation loads the
+     months its rows belong to — so this fails loudly rather than corrupting the
+     record it could not see. */
+  if (plan.unplaced.length) {
+    console.error('accountability usage rows fell outside the loaded months', plan.unplaced.map((e) => e.month));
+    throw new HttpsError('internal', 'A custody record fell outside the months this operation loaded. Nothing was changed.');
+  }
+}
+
+function usageMonthsForIds(ids) {
+  const months = new Set();
+  (ids || []).forEach((id) => {
+    const month = accountabilityPartitions.monthOfUsageId(id);
+    if (month) months.add(month);
+  });
+  return [...months];
 }
 
 function stateArray(snapshot) {
@@ -1007,17 +1103,16 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
   const pharmacyToken = createToken();
   const departmentToken = createToken();
   const sessionRef = db.collection(HANDOVER_COLLECTION).doc();
-  const usageRef = stateRef('accountability_usage_v2', caller.tenantId);
   const departmentsRef = stateRef('departments', caller.tenantId);
   const expiresAt = Timestamp.fromMillis(Date.now() + minutes * 60 * 1000);
 
   let responsePayload;
   await db.runTransaction(async (transaction) => {
-    const [usageSnap, departmentsSnap] = await Promise.all([
-      transaction.get(usageRef),
-      transaction.get(departmentsRef)
-    ]);
-    const usage = stateArray(usageSnap).map((row) => ({ ...row }));
+    // The selected records are named by id, so their Hijri months are known
+    // exactly — no window, and nothing outside them is read or rewritten.
+    const loaded = await readUsagePartitions(transaction, caller.tenantId, usageMonthsForIds(usageIds));
+    const departmentsSnap = await transaction.get(departmentsRef);
+    const usage = loaded.rows.map((row) => ({ ...row }));
     const selected = usage.filter((row) => usageIds.includes(String(row.id)));
     if (selected.length !== usageIds.length) {
       throw new HttpsError('failed-precondition', 'One or more selected accountability records no longer exist.');
@@ -1074,7 +1169,7 @@ exports.createAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request) 
       pharmacyConfirmation: null,
       departmentConfirmation: null
     };
-    writeState(transaction, usageRef, usage);
+    writeUsagePartitions(transaction, caller.tenantId, loaded, usage);
     transaction.set(sessionRef, session, { merge: false });
     responsePayload = {
       sessionId: sessionRef.id,
@@ -1121,17 +1216,16 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
   const pharmacyToken = createToken();
   const departmentToken = createToken();
   const newSessionRef = db.collection(HANDOVER_COLLECTION).doc();
-  const usageRef = stateRef('accountability_usage_v2', caller.tenantId);
   const departmentsRef = stateRef('departments', caller.tenantId);
   const expiresAt = Timestamp.fromMillis(Date.now() + minutes * 60 * 1000);
 
   let responsePayload;
   await db.runTransaction(async (transaction) => {
-    const [usageSnap, departmentsSnap] = await Promise.all([
-      transaction.get(usageRef),
-      transaction.get(departmentsRef)
-    ]);
-    const usage = stateArray(usageSnap).map((row) => ({ ...row }));
+    // The selected records are named by id, so their Hijri months are known
+    // exactly — no window, and nothing outside them is read or rewritten.
+    const loaded = await readUsagePartitions(transaction, caller.tenantId, usageMonthsForIds(usageIds));
+    const departmentsSnap = await transaction.get(departmentsRef);
+    const usage = loaded.rows.map((row) => ({ ...row }));
     const selected = usage.filter((row) => usageIds.includes(String(row.id)));
     if (selected.length !== usageIds.length) {
       throw new HttpsError('failed-precondition', 'One or more selected records no longer exist.');
@@ -1194,7 +1288,7 @@ exports.reissueAccountabilityHandover = onCall(CALLABLE_OPTIONS, async (request)
       departmentConfirmation: null,
       reissuedFrom: existingSessionIds[0] || null
     };
-    writeState(transaction, usageRef, usage);
+    writeUsagePartitions(transaction, caller.tenantId, loaded, usage);
     transaction.set(newSessionRef, session, { merge: false });
     responsePayload = {
       sessionId: newSessionRef.id,
@@ -1275,19 +1369,25 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
     const routingSnap = await sessionRef.get();
     if (!routingSnap.exists) throw asPublicError('This handover link does not exist.', 404);
     const tenantId = String(routingSnap.data().tenantId || '');
-    const usageRef = stateRef('accountability_usage_v2', tenantId);
     const assignmentsRef = stateRef('accountability_assignments_v2', tenantId);
     const receiptsRef = stateRef('accountability_receipts_v2', tenantId);
     let result;
     await db.runTransaction(async (transaction) => {
-      const [sessionSnap, usageSnap, assignmentsSnap, receiptsSnap] = await Promise.all([
+      /* The session names the usage records, so it is read first and its ids
+         decide which Hijri months are loaded. Firestore only requires that every
+         read precede every write, not that they be issued together. */
+      const [sessionSnap, assignmentsSnap, receiptsSnap] = await Promise.all([
         transaction.get(sessionRef),
-        transaction.get(usageRef),
         transaction.get(assignmentsRef),
         transaction.get(receiptsRef)
       ]);
       if (!sessionSnap.exists) throw asPublicError('This handover link does not exist.', 404);
       const session = { id: sessionId, ...sessionSnap.data() };
+      const loaded = await readUsagePartitions(
+        transaction,
+        tenantId,
+        usageMonthsForIds(Array.isArray(session.usageIds) ? session.usageIds : []),
+      );
       const expected = party === 'pharmacy' ? session.pharmacyTokenHash : session.departmentTokenHash;
       if (!tokenMatches(token, expected)) throw asPublicError('This handover link is invalid.', 403);
       const expiresAtMs = session.expiresAt
@@ -1309,7 +1409,7 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
 
       const completed = completeHandoverState({
         assignments: stateArray(assignmentsSnap),
-        usage: stateArray(usageSnap),
+        usage: loaded.rows,
         receipts: stateArray(receiptsSnap),
         session,
         nowIso
@@ -1318,7 +1418,7 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
       session.completedAt = nowIso;
       session.receiptId = completed.receipt.id;
       writeState(transaction, assignmentsRef, completed.assignments);
-      writeState(transaction, usageRef, completed.usage);
+      writeUsagePartitions(transaction, tenantId, loaded, completed.usage);
       writeState(transaction, receiptsRef, completed.receipts);
       transaction.set(sessionRef, { ...session, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
       result = { completed: true, alreadyConfirmed: false, status: 'completed', receiptId: completed.receipt.id };

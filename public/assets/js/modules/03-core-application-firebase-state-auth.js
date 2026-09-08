@@ -366,7 +366,7 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   // they were readable per firestore.rules but never fetched into a
   // department account's scoped state, so the page always showed zero
   // assigned medicines regardless of pharmacy-created custody records.
-  'accountability_assignments_v2','accountability_usage_v2','accountability_receipts_v2',
+  'accountability_assignments_v2','accountability_receipts_v2',
   // Treatment plans and plan usage visible to dept users (read-only).
   'accountability_regimens_v3','accountability_plan_usage_v1','accountability_expiry_batches_v1',
   'accountability_regimen_catalog_v1','department_print_names_v1'
@@ -377,7 +377,7 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
 // readable. Keep this list aligned with canReadPharmacyState() in firestore.rules.
 globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','requests','dept_notes','notes',
-  'crash_carts','accountability_assignments_v2','accountability_usage_v2',
+  'crash_carts','accountability_assignments_v2',
   'accountability_receipts_v2','accountability_regimens_v3','accountability_plan_usage_v1',
   'accountability_expiry_batches_v1','accountability_regimen_catalog_v1','department_print_names_v1',
   'theme','facility_logo','pharmacy_category_config',
@@ -393,7 +393,7 @@ function fsIsPharmacyScopedProfile(profile){
 function fsStateKeysForProfile(profile){
   if(!profile)return null;
   if(profile.master===true)return null;
-  if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
+  if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.concat(fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
   /* The audit months and the Hijri ledger months are appended at read time so the
      lists follow the calendar instead of being frozen at deploy. A scoped role
      cannot LIST the collection, so it has to name every document it reads; older
@@ -402,7 +402,7 @@ function fsStateKeysForProfile(profile){
   if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.concat(fsRecentAuditLogKeys(1),fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
   if(String(profile.role||'')==='warehouse')return WAREHOUSE_STATE_KEYS.concat(fsRecentAuditLogKeys(1),fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
   if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
-  var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
+  var keys=DEPARTMENT_SHARED_STATE_KEYS.concat(fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION)),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
     ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
     // Every department may view its own controlled-custody list.  Editing and

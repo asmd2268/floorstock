@@ -1,5 +1,7 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { registerStorageCleanup } from './storage-cleanup.js?v=a48006791d';
+import { hijriMonthKey, hijriMonthLabelBilingual } from './hijri-calendar.js?v=9e42fa0bb9';
+import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=a9eafb6973';
 
 /* Accountability history retention.
 
@@ -31,6 +33,21 @@ import { registerStorageCleanup } from './storage-cleanup.js?v=a48006791d';
 
 const ACCOUNTABILITY_RETENTION_MONTHS = 60;
 const USAGE_KEY = 'accountability_usage_v2';
+
+/* Usage is stored one document per Hijri month, like the controlled movement
+   ledger and for the same reason: a usage row is ~688 bytes, so a single document
+   met the 1 MiB cap after roughly 1,500 entries — two to three months at twenty a
+   day — which cannot carry a five-year retention floor at any setting. Reads still
+   go through usageRows(), which concatenates the partitions the session holds. */
+registerMonthPartitionedKey({
+  key: USAGE_KEY,
+  dateField: ['submittedAt', 'consumptionDate'],
+  sortField: 'submittedAt',
+});
+
+export function usageRows() {
+  return monthPartitionRows(USAGE_KEY);
+}
 const RECEIPTS_KEY = 'accountability_receipts_v2';
 const SUMMARY_KEY = 'accountability_usage_summary_v1';
 
@@ -138,6 +155,7 @@ function isActualMaster() {
 }
 
 function stateRows(key) {
+  if (key === USAGE_KEY) return usageRows();
   const value = globalThis.S && typeof globalThis.S.g === 'function' ? globalThis.S.g(key) : null;
   return Array.isArray(value) ? value : [];
 }
@@ -220,11 +238,16 @@ export async function archiveAccountabilityHistory() {
      those months on a retry. Restoring the previous summary keeps a retry
      correct; the trims themselves are filters and are safe to repeat. */
   try {
-    await globalThis.S.s(USAGE_KEY, usage.filter((row) => !isOldUsage(row)));
+    // Usage lives across Hijri-month documents, so archived rows are removed from
+    // whichever month holds each one; only the months actually touched are written.
+    for (const row of removedUsage) {
+      // eslint-disable-next-line no-await-in-loop
+      await globalThis.deleteMonthPartitionedRow(USAGE_KEY, row.id);
+    }
     try {
       await globalThis.S.s(RECEIPTS_KEY, receipts.filter((row) => !isOldReceipt(row)));
     } catch (receiptsError) {
-      await globalThis.S.s(USAGE_KEY, usage);
+      await globalThis.appendMonthPartitionedRows(USAGE_KEY, removedUsage);
       throw receiptsError;
     }
   } catch (trimError) {
@@ -247,8 +270,61 @@ export async function archiveAccountabilityHistory() {
   if (typeof globalThis.renderMedicationAccountability === 'function') globalThis.renderMedicationAccountability();
 }
 
+/* One-time migration: the single accountability_usage_v2 document into Hijri
+   months. Rows are filed into their months first and the old document removed
+   only afterwards, so nothing is deleted before it exists elsewhere; re-running
+   is safe because rows are matched by id within a month. */
+export async function migrateAccountabilityUsageToMonths() {
+  if (!isActualMaster()) {
+    globalThis.toast('Only Master can migrate the custody records.', 'err');
+    return;
+  }
+  const legacy = globalThis.S && typeof globalThis.S.g === 'function' ? globalThis.S.g(USAGE_KEY) : null;
+  const rows = Array.isArray(legacy) ? legacy : [];
+  if (!rows.length) {
+    if (legacy !== null) {
+      await globalThis.S.rm(USAGE_KEY);
+      globalThis.toast('The legacy custody record was already empty and has been removed.', 'succ');
+    } else {
+      globalThis.toast('No legacy custody record found — usage is already stored by Hijri month.', 'info');
+    }
+    return;
+  }
+
+  const undated = rows.filter((row) => !hijriMonthKey(row && (row.submittedAt || row.consumptionDate)));
+  if (undated.length) {
+    globalThis.toast(`${undated.length} usage record(s) have no readable date and cannot be filed. Fix them first.`, 'err');
+    return;
+  }
+  const months = [...new Set(rows.map((row) => hijriMonthKey(row.submittedAt || row.consumptionDate)))].sort();
+
+  const confirmed = await globalThis.uiConfirm(
+    `${rows.length} custody usage record(s) will be filed into ${months.length} Hijri month record(s), from `
+    + `${hijriMonthLabelBilingual(months[0])} to ${hijriMonthLabelBilingual(months[months.length - 1])}.\n\n`
+    + 'This removes the size limit that stopped custody records holding five years. Nothing is deleted until every record has been filed, and re-running is safe.\n\n'
+    + `سيتم توزيع ${rows.length} سجل عهدة على ${months.length} سجل شهري هجري. لن يُحذف القديم إلا بعد اكتمال النسخ.`,
+    { okText: 'Migrate custody records / ترحيل السجلات' },
+  );
+  if (!confirmed) { globalThis.toast('Migration cancelled; nothing changed.', 'info'); return; }
+
+  await appendMonthPartitionedRows(USAGE_KEY, rows);
+  await globalThis.S.rm(USAGE_KEY);
+  globalThis.toast(`${rows.length} custody record(s) filed into ${months.length} Hijri month record(s). ✓`, 'succ');
+}
+
+/* Two actions, two keys, because registerStorageCleanup allows one per key. The
+   migration is offered under the legacy document's own key and disappears with it
+   once it has run; the archive is offered under the ledger's synthetic row. */
 registerStorageCleanup({
   key: USAGE_KEY,
+  label: 'File custody by Hijri month / ترحيل سجل العهد',
+  hint: 'Files custody usage into one record per Hijri month, removing the size limit that stopped it holding five years.',
+  run: () => migrateAccountabilityUsageToMonths(),
+  canRun: () => isActualMaster() && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(USAGE_KEY)),
+});
+
+registerStorageCleanup({
+  key: `${USAGE_KEY}_ledger`,
   label: 'Archive history > 5 years / أرشفة سجل العهد',
   hint: 'Optional. Downloads full detail as JSON + Excel, keeps monthly totals per department and medicine, then removes entries past the 5-year regulatory floor.',
   run: () => archiveAccountabilityHistory(),
@@ -260,5 +336,7 @@ Object.assign(globalThis, {
   buildAccountabilityUsageAggregates,
   mergeAccountabilityAggregates,
   archiveAccountabilityHistory,
+  migrateAccountabilityUsageToMonths,
+  usageRows,
   olderThanRetention,
 });

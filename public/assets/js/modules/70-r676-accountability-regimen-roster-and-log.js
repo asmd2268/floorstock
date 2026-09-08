@@ -4,7 +4,12 @@
 (function(){
 'use strict';
 function norm(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g,'')}
-function state(key){return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[]}
+/* Usage is one document per Hijri month, so it is read by concatenating the
+   partitions the session holds; every other key is still a single document. */
+function state(key){
+  if(key==='accountability_usage_v2'&&typeof window.monthPartitionRows==='function')return window.monthPartitionRows(key);
+  return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[];
+}
 function depts(){return state('departments')}
 function deptName(id){var exact=depts().find(function(row){return String(row.id)===String(id)});if(exact)return exact.name||exact.id;var target=norm(id),match=depts().find(function(row){return norm(row.id)===target||norm(row.name)===target});return match?(match.name||match.id):id||'—'}
 function assignments(){return state('accountability_assignments_v2').filter(function(row){return row&&row.active!==false&&row.medName})}
@@ -51,7 +56,10 @@ setTimeout(enhance,0);
 (function(){
 'use strict';
 function isActualMaster(){return !!((window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)||(window.CU&&window.CU.master===true))&&!window.MASTER_EFFECTIVE}
-function appState(key){return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[]}
+function appState(key){
+  if(key==='accountability_usage_v2'&&typeof window.monthPartitionRows==='function')return window.monthPartitionRows(key);
+  return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[];
+}
 /* The retention window is owned by core/accountability-retention.js — this panel
    only counts what that action would archive, so it must not carry its own copy
    of the cutoff. It was a hard-coded six months here while the action used five

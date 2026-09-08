@@ -259,7 +259,13 @@ var ACC2_UI={adminTab:'custody',deptTab:'custody',filters:{dept:'',status:'',med
 window.acc2SubSetMed=function(v){ACC2_UI.subMed=v;renderMedicationAccountability()};
 window.acc2MedSearch=function(val){ACC2_UI.medSearch=val;clearTimeout(window._acc2ST);window._acc2ST=setTimeout(function(){var pos=val.length;renderMedicationAccountability();var inp=document.getElementById('acc2-med-search');if(inp){inp.focus();try{inp.setSelectionRange(pos,pos)}catch(e){}}},120)};
 
-function acc2Array(key){var value=S.g(key);return Array.isArray(value)?value:[]}
+/* Usage is stored one document per Hijri month, so it is read by concatenating
+   the partitions the session holds. Every other accountability key is still a
+   single document, and reads exactly as before. */
+function acc2Array(key){
+  if(key===ACC2_USAGE_KEY&&typeof window.monthPartitionRows==='function')return window.monthPartitionRows(key);
+  var value=S.g(key);return Array.isArray(value)?value:[];
+}
 function acc2ScopeDept(){return role()==='outpatient_pharmacy_supervisor'?(window.fsOutpatientDeptId?window.fsOutpatientDeptId():String(CU&&CU.deptId||'')):''}
 function acc2LockOutpatientSelectors(){var d=acc2ScopeDept();if(!d)return;['acc2-assignment-dept','acc2-regimen-dept'].forEach(function(id){var s=E(id);if(s){s.innerHTML='<option value="'+esc(d)+'">'+esc(deptName(d))+'</option>';s.value=d;s.disabled=true}});document.querySelectorAll('#r17-accountability-root select').forEach(function(s){if(s.id==='acc2-assignment-dept'||s.id==='acc2-regimen-dept')return;var opts=Array.from(s.options);if(opts.some(function(o){return o.value===d})){s.innerHTML='<option value="'+esc(d)+'">'+esc(deptName(d))+'</option>';s.value=d;s.disabled=true}})}
 /* A pharmacy supervisor may be explicitly assigned to one clinical unit.
@@ -306,6 +312,12 @@ function acc2UsesCF(){
 function acc2ReflectUsageLocally(mutate){
   try{
     if(!window.S||typeof S.g!=='function'||!S.cache)return;
+    if(typeof window.mirrorMonthPartitionedRows==='function'){
+      // The rows live across Hijri-month documents, so the mirror has to put each
+      // one back in the partition it belongs to rather than into a single key.
+      window.mirrorMonthPartitionedRows(ACC2_USAGE_KEY,mutate(acc2Array(ACC2_USAGE_KEY).slice()));
+      return;
+    }
     var rows=S.g(ACC2_USAGE_KEY)||[];
     S.cache[ACC2_USAGE_KEY]=mutate(rows.slice());
   }catch(e){console.warn('Local usage mirror failed; the listener will correct it.',e)}

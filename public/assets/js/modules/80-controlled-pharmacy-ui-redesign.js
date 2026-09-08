@@ -898,7 +898,7 @@ window.ctlCmpPrint=function(){
     var cb=document.querySelector('[data-pg="pg-crashcart"]'),rb=document.querySelector('[data-pg="pg-reqs"]'),ab=document.querySelector('[data-pg="pg-med-accountability"]');
     if(cb){cb.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});if(open)cb.insertAdjacentHTML('beforeend','<span class="cc-badge">'+open+'</span>')}
     if(rb){rb.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});if(req)rb.insertAdjacentHTML('beforeend','<span class="cc-badge">'+req+'</span>')}
-    if(ab){ab.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});var _accPending=window.S&&typeof window.S.g==='function'?((window.S.g('accountability_usage_v2')||[]).filter(function(u){return u&&u.status==='pending_pharmacy'}).length+(window.S.g('accountability_plan_usage_v1')||[]).filter(function(u){return u&&u.status==='pending_pharmacy'}).length):0;if(_accPending)ab.insertAdjacentHTML('beforeend','<span class="cc-badge">'+_accPending+'</span>')}
+    if(ab){ab.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});var _accPending=typeof window.monthPartitionRows==='function'?((window.monthPartitionRows('accountability_usage_v2')||[]).filter(function(u){return u&&u.status==='pending_pharmacy'}).length+(window.S.g('accountability_plan_usage_v1')||[]).filter(function(u){return u&&u.status==='pending_pharmacy'}).length):0;if(_accPending)ab.insertAdjacentHTML('beforeend','<span class="cc-badge">'+_accPending+'</span>')}
   }
   window.ccUpdateBadges=ccUpdateBadges;
 

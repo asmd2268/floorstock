@@ -16,7 +16,7 @@ function renderAccAnalytics(){
      reads it without a special case. Its rows carry status 'archived' so they
      never inflate the pending / awaiting-receipt counts, which are live work;
      the real outcomes they were built from are added back from statusCounts. */
-  var liveUsage=(window.S&&typeof S.g==='function'?S.g('accountability_usage_v2'):[])||[];
+  var liveUsage=(typeof window.monthPartitionRows==='function'?window.monthPartitionRows('accountability_usage_v2'):[])||[];
   var archivedUsage=(window.S&&typeof S.g==='function'?S.g('accountability_usage_summary_v1'):[])||[];
   var usage=liveUsage.concat(archivedUsage);
   function archivedStatusCount(status){

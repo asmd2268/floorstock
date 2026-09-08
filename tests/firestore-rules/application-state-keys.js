@@ -8,6 +8,7 @@ export const APPLICATION_STATE_KEYS = [
   'accountability_receipts_v2',
   'accountability_regimens_v2',
   'accountability_usage_v2',
+  'accountability_usage_v2_h1448-03',
   'accountability_usage_summary_v1',
   `alerts_${DEPARTMENT_ID}`,
   'audit_log',
@@ -85,6 +86,13 @@ export function mayWriteState(role, key) {
      each scoped role may write explicitly and does not include this one, so the
      roles whose model uses a broad accountability_.* pattern must exclude it.
      controlled_pharmacy is not excluded — its rule really is the broad pattern. */
+  // Custody usage is one document per Hijri month. Writes stay denied for every
+  // client role — submissions go through the accountabilityMutation callable,
+  // which enforces the custody balance inside a transaction.
+  if (/^accountability_usage_v2(_h\d{4}-\d{2}(_p\d+)?)?$/.test(key)) {
+    return role === 'master' || role === 'pharmacy' || role === 'inpatient_supervisor'
+      || role === 'pharmacy_staff' || role === 'controlled_pharmacy';
+  }
   if (key === 'accountability_usage_summary_v1') {
     return role === 'master' || role === 'pharmacy' || role === 'controlled_pharmacy';
   }

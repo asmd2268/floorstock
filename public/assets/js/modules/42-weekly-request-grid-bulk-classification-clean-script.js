@@ -347,13 +347,19 @@ async function floorstockPurgeDepartmentState(id,aliases,removeOfficial){
     function(){return S.s('accountability_assignments_v2',accountabilityAssignments);}
   );
 
-  var accountabilityUsage=(S.g('accountability_usage_v2')||[]).filter(function(item){
-    return !item||!matches(item.deptId);
-  });
+  /* Usage is one document per Hijri month, so the department's rows are removed
+     from whichever months hold them rather than from a single key. */
+  var accountabilityUsageIds=(typeof window.monthPartitionRows==='function'?window.monthPartitionRows('accountability_usage_v2'):[])
+    .filter(function(item){return item&&matches(item.deptId)})
+    .map(function(item){return item.id});
   await floorstockDeletionStep(
     report,
     'Remove medication-accountability usage requests',
-    function(){return S.s('accountability_usage_v2',accountabilityUsage);}
+    async function(){
+      for(var i=0;i<accountabilityUsageIds.length;i++){
+        await window.deleteMonthPartitionedRow('accountability_usage_v2',accountabilityUsageIds[i]);
+      }
+    }
   );
 
   /* The archived monthly totals for this department go too. Leaving them behind
