@@ -36,10 +36,10 @@ function iconKeyFor(el){
   var button=el.closest?el.closest('button,[role="button"],a,.btn,.tab,.topnav a,.ctl-tab'):null;
   if(!button)return null;
   if(button.id)return '#'+button.id;
+  var text=(button.textContent||button.title||button.getAttribute('aria-label')||'').replace(/\s+/g,' ').trim().slice(0,40);
+  if(text)return 'txt:'+text;
   var binding=button.getAttribute&&button.getAttribute('data-asdh-binding');
   if(binding)return 'bind:'+binding;
-  var text=(button.textContent||'').replace(/\s+/g,' ').trim().slice(0,40);
-  if(text)return 'txt:'+text;
   var cls=button.className&&String(button.className).split(' ')[0];
   return cls?'cls:'+cls:null;
 }

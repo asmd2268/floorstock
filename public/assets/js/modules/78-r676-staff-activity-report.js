@@ -42,9 +42,10 @@ function inRange(dateStr,from,to){
   return true;
 }
 
+var _bL={"b005":"Login","b009":"Logout","b010":"Inventory","b011":"Add Medicine","b012":"Manage Categories","b019":"Bulk Delete","b029":"Add User","b036":"Print","b040":"Import Excel","b045":"Confirm Import","b046":"New Request","b047":"Submit Request","b048":"Print Options","b052":"Approve Receipt","b054":"Controlled","b055":"Assign Medicine","b059":"Create Storage Unit","b066":"Save Unit","b071":"Add Shelf","b078":"Save Note","b082":"Save Schedule","b087":"Add Dispense Slot","b090":"Add Cart","b097":"Bulk Execute","b101":"Save Correction","b117":"Save Medicine","b121":"Save User","b124":"Submit Fulfill","b136":"Save Expiry","b156":"Save Request Window","b179":"Save Receipt","b183":"Save Stock","b186":"Save Cart","b190":"Receive Stock","b193":"Submit Report","b196":"Pharmacy Response","b197":"System Diagnostics","b201":"Bulk Receive","b205":"Bulk Dispense","b213":"Custody Log","b215":"Filter Log","b220":"Extra Batches"};
 function iconLabel(key){
   if(key.indexOf('#')===0)return key.slice(1);
-  if(key.indexOf('bind:')===0)return key.slice(5);
+  if(key.indexOf('bind:')===0){var id=key.slice(5);return _bL[id]||id;}
   if(key.indexOf('txt:')===0)return key.slice(4);
   if(key.indexOf('cls:')===0)return key.slice(4);
   return key;
