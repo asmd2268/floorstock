@@ -607,19 +607,31 @@ async function assignSelectedMedsToShelf(){
 // Crash Cart
 function crashCarts(){return S.g('crash_carts')||[]}
 function crashReports(){return S.g('crash_cart_reports')||[]}
+function _writeCrashReportDocs(newReports){
+  // Write each report as an individual document directly to the v2 collection.
+  // Deletes docs for reports that were removed (master delete). Runs in 400-op
+  // batches to stay under the 500-op Firestore batch limit.
+  if(!window.FB_DB||typeof crashReportsCollectionRef!=='function')return Promise.resolve();
+  var col=crashReportsCollectionRef(FB_DB,S&&S.scopeProfile);
+  var updatedAt=(window.firebase&&firebase.firestore)?firebase.firestore.FieldValue.serverTimestamp():new Date().toISOString();
+  var newIds=new Set((newReports||[]).map(function(r){return r&&String(r.id||'')}).filter(Boolean));
+  var removedIds=((S&&S.cache&&S.cache.crash_cart_reports)||[]).map(function(r){return r&&String(r.id||'')}).filter(function(id){return id&&!newIds.has(id)});
+  var ops=[];
+  (newReports||[]).forEach(function(r){if(!r||!r.id)return;ops.push({t:'set',id:String(r.id),d:Object.assign({},r,{updatedAt:updatedAt})})});
+  removedIds.forEach(function(id){ops.push({t:'del',id:id})});
+  if(!ops.length)return Promise.resolve();
+  var BATCH=400,promises=[];
+  for(var i=0;i<ops.length;i+=BATCH){
+    var chunk=ops.slice(i,i+BATCH),b=FB_DB.batch();
+    chunk.forEach(function(op){op.t==='set'?b.set(col.doc(op.id),op.d,{merge:false}):b.delete(col.doc(op.id))});
+    promises.push(b.commit());
+  }
+  return Promise.all(promises);
+}
 function setCrashReports(v){
-  var p=S.s('crash_cart_reports',v);
-  // Every legacy direct-write path (close/respond, bulk open+replace, seal
-  // correction) still only touches this state-doc array. Mirror the affected
-  // reports into crash_cart_reports_v2 afterward, best-effort, so scoped
-  // roles (inpatient_supervisor, pharmacy_staff) — who only read v2 — don't
-  // see a report stuck at a stale status.
-  Promise.resolve(p).then(function(){
-    if(typeof window.fsCallFunction!=='function')return;
-    var ids=(v||[]).map(function(r){return r&&r.id}).filter(Boolean);
-    if(!ids.length)return;
-    window.fsCallFunction('syncCrashCartReportsToV2',{reportIds:ids}).catch(function(e){console.warn('crash_cart_reports_v2 sync failed',e)});
-  });
+  // Primary: write individual docs to v2 collection so reads never see the full array.
+  // Secondary: keep legacy state-doc array for Cloud Functions that still transact on it.
+  var p=_writeCrashReportDocs(v||[]).then(function(){return S.s('crash_cart_reports',v)});
   return p;
 }
 function crashCart(id){return crashCarts().find(function(c){return c.id===id})}

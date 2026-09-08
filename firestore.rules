@@ -375,8 +375,8 @@ service cloud.firestore {
       allow list: if platformAdmin();
       allow create, update, delete: if false;
 
-      // Individual crash cart report documents.  All writes are via Cloud
-      // Functions (admin SDK) — the rules here gate client-side reads only.
+      // Individual crash cart report documents.  Pharmacy and master write
+      // directly from the browser; Cloud Functions (admin SDK) also write here.
       match /crash_cart_reports/{reportId} {
         allow get: if sameTenant(tenant);
         allow list: if sameTenant(tenant) && (
@@ -384,7 +384,8 @@ service cloud.firestore {
           || departmentUser()
           || role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']
         );
-        allow create, update, delete: if false;
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && pharmacyDirector();
+        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && masterUser();
       }
 
       match /public_expiry/{docId} {
@@ -497,12 +498,13 @@ service cloud.firestore {
       allow create, update, delete: if tenantId() == '' && masterUser();
     }
 
-    // Legacy (non-tenant) crash cart report collection.  All writes are via
-    // Cloud Functions (admin SDK) — rules here gate client reads only.
+    // Legacy (non-tenant) crash cart report collection.  Pharmacy and master
+    // write directly from the browser; Cloud Functions (admin SDK) also write.
     match /crash_cart_reports_v2/{reportId} {
       allow get: if activeUser() && tenantId() == '';
       allow list: if activeUser() && tenantId() == '';
-      allow create, update, delete: if false;
+      allow create, update: if activeUser() && tenantId() == '' && pharmacyDirector();
+      allow delete: if activeUser() && tenantId() == '' && masterUser();
     }
 
     match /floorstock_backups/{uid}/snapshots/{snapshotId} {
