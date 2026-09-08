@@ -31,9 +31,16 @@ service firebase.storage {
 
     match /archives/{kind}/{fileName} {
       allow read: if activeMaster();
-      // Archives are written once and never edited: a new export is a new file.
-      // Overwriting one would destroy the only copy of what it holds.
+      /* Written once and never edited: a new export is a new file, and
+         overwriting one would destroy the only copy of what it holds.
+
+         `resource == null` is what actually enforces that. Cloud Storage treats
+         an upload over an existing object as a create — each upload is a new
+         object generation — so `allow update: if false` never fires and the
+         object would be silently replaced. Requiring the object not to exist is
+         the only guard that holds. */
       allow create: if activeMaster()
+        && resource == null
         && request.resource.size < 50 * 1024 * 1024
         && request.resource.contentType.matches('application/json|text/.*|application/vnd.*');
       allow update: if false;
