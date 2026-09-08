@@ -1,9 +1,9 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { registerStorageCleanup } from './storage-cleanup.js?v=15650a41cb';
-import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=813f523ca6';
-import { uploadArchive } from './archive-storage.js?v=a4e3b69c50';
-import { hijriMonthKey, hijriMonthLabelBilingual } from './hijri-calendar.js?v=9e42fa0bb9';
-import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=cefa62be33';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
+import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
+import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
+import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=fe76ca50ef';
 
 /* Accountability history retention.
 
@@ -27,13 +27,13 @@ import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitioned
    likewise only covers what is still live — the archive file is the record for
    older periods.
 
-   The window is five years, matching the controlled/narcotic movement ledger.
-   Accountability custody covers controlled medicines, so the same regulatory
-   floor applies: nothing here may be removed from Firestore until it is at least
-   five years old. It was six months before, which was the general-history
-   default rather than a decision about controlled custody. */
+   The window matches the controlled/narcotic movement ledger: six HIJRI years.
+   Custody covers controlled medicines, so the same floor applies, and it is
+   counted in the calendar the register is kept in — measuring in Gregorian years
+   while storing by Hijri month made "five years" mean two different spans. Six
+   Hijri years is deliberately longer than any five-year reading of the rule. */
 
-const ACCOUNTABILITY_RETENTION_MONTHS = 60;
+const ACCOUNTABILITY_RETENTION_YEARS = 6;
 const USAGE_KEY = 'accountability_usage_v2';
 
 /* Usage is stored one document per Hijri month, like the controlled movement
@@ -53,17 +53,16 @@ export function usageRows() {
 const RECEIPTS_KEY = 'accountability_receipts_v2';
 const SUMMARY_KEY = 'accountability_usage_summary_v1';
 
-function retentionCutoff() {
-  const date = new Date();
-  date.setMonth(date.getMonth() - ACCOUNTABILITY_RETENTION_MONTHS);
-  return date.getTime();
+function retentionCutoffMonth() {
+  return hijriRetentionCutoffMonth(ACCOUNTABILITY_RETENTION_YEARS);
 }
 
-export { ACCOUNTABILITY_RETENTION_MONTHS };
+export { ACCOUNTABILITY_RETENTION_YEARS };
 
+/* `cutoff` is a Hijri month key. A row with no readable date is never past the
+   floor — it is refused rather than deleted. */
 export function olderThanRetention(value, cutoff) {
-  const time = new Date(value || 0).getTime();
-  return Number.isFinite(time) && time > 0 && time < (cutoff == null ? retentionCutoff() : cutoff);
+  return isPastHijriRetention(value, cutoff == null ? retentionCutoffMonth() : cutoff);
 }
 
 function monthKey(value) {
@@ -167,7 +166,7 @@ export async function archiveAccountabilityHistory() {
     globalThis.toast('Actual Master access is required. / يتطلب صلاحية الماستر الفعلية.', 'err');
     return;
   }
-  const cutoff = retentionCutoff();
+  const cutoff = retentionCutoffMonth();
   const usage = stateRows(USAGE_KEY);
   const receipts = stateRows(RECEIPTS_KEY);
   const isOldUsage = (row) => olderThanRetention(row.submittedAt || row.consumptionDate, cutoff);
@@ -175,7 +174,7 @@ export async function archiveAccountabilityHistory() {
   const removedUsage = usage.filter(isOldUsage);
   const removedReceipts = receipts.filter(isOldReceipt);
   if (!removedUsage.length && !removedReceipts.length) {
-    globalThis.toast(`No accountability history is older than ${ACCOUNTABILITY_RETENTION_MONTHS} months. / لا توجد سجلات أقدم من ذلك.`, 'info');
+    globalThis.toast(`No custody history older than ${ACCOUNTABILITY_RETENTION_YEARS} Hijri years (before ${hijriMonthLabelBilingual(cutoff)}). / لا توجد سجلات أقدم من ذلك.`, 'info');
     return;
   }
 
@@ -183,7 +182,7 @@ export async function archiveAccountabilityHistory() {
     kind: 'Custody-History',
     rows: removedUsage.concat(removedReceipts),
     dateFields: ['submittedAt', 'consumptionDate', 'receivedAt', 'createdAt'],
-    note: `Custody usage and receipts past the ${ACCOUNTABILITY_RETENTION_MONTHS / 12}-year retention floor.`,
+    note: `Custody usage and receipts past the ${ACCOUNTABILITY_RETENTION_YEARS}-Hijri-year retention floor.`,
   });
   const fileName = archiveFileName(manifest, 'json');
   const exportPayload = {
@@ -221,7 +220,7 @@ export async function archiveAccountabilityHistory() {
   const upload = await uploadArchive(manifest, exportPayload);
 
   const confirmed = await globalThis.uiConfirm(
-    `Files with the full detail of ${removedUsage.length} usage record(s) and ${removedReceipts.length} receipt/handover record(s) older than ${ACCOUNTABILITY_RETENTION_MONTHS} months have been downloaded.\n\n${describeArchive(manifest, fileName)}\n\n${upload.ok ? 'A copy is also kept in this project, readable only by Master.\nونسخة محفوظة في المشروع نفسه، يقرأها الماستر فقط.\n\n' : `The project copy could NOT be saved (${upload.reason}), so the downloaded files are the only copies.\n\n`}`
+    `Files with the full detail of ${removedUsage.length} usage record(s) and ${removedReceipts.length} receipt/handover record(s) older than ${ACCOUNTABILITY_RETENTION_YEARS} Hijri years — everything before ${hijriMonthLabelBilingual(cutoff)} — have been downloaded.\n\n${describeArchive(manifest, fileName)}\n\n${upload.ok ? 'A copy is also kept in this project, readable only by Master.\nونسخة محفوظة في المشروع نفسه، يقرأها الماستر فقط.\n\n' : `The project copy could NOT be saved (${upload.reason}), so the downloaded files are the only copies.\n\n`}`
     + 'Monthly totals per department and medicine stay in the system, so consumption reports keep the same figures at monthly resolution. The per-patient detail and the per-entry handover timeline for those months live only in these files afterwards.\n\n'
     + 'Active custody lines and regimens are never touched. Confirm you saved the files and want to continue?\n\n'
     + 'تم تنزيل ملفات بالتفاصيل الكاملة. تبقى المجاميع الشهرية في النظام فتظل التقارير بنفس الأرقام. أكّد أنك حفظت الملفات.',
@@ -263,7 +262,7 @@ export async function archiveAccountabilityHistory() {
 
   if (typeof globalThis.auditAction === 'function') {
     await Promise.resolve(globalThis.auditAction('accountability_history_retention_archive', {
-      olderThanMonths: ACCOUNTABILITY_RETENTION_MONTHS,
+      olderThanHijriYears: ACCOUNTABILITY_RETENTION_YEARS,
       removedUsage: removedUsage.length,
       removedReceipts: removedReceipts.length,
       summaryRows: summary.length,
@@ -328,14 +327,14 @@ registerStorageCleanup({
 
 registerStorageCleanup({
   key: `${USAGE_KEY}_ledger`,
-  label: 'Archive history > 5 years / أرشفة سجل العهد',
-  hint: 'Optional. Downloads full detail as JSON + Excel, keeps monthly totals per department and medicine, then removes entries past the 5-year regulatory floor.',
+  label: 'Archive history > 6 Hijri years / أرشفة سجل العهد',
+  hint: 'Optional. Downloads full detail as JSON + Excel, keeps monthly totals per department and medicine, then removes entries past the 6-Hijri-year regulatory floor.',
   run: () => archiveAccountabilityHistory(),
   canRun: () => isActualMaster(),
 });
 
 Object.assign(globalThis, {
-  ACCOUNTABILITY_RETENTION_MONTHS,
+  ACCOUNTABILITY_RETENTION_YEARS,
   buildAccountabilityUsageAggregates,
   mergeAccountabilityAggregates,
   archiveAccountabilityHistory,

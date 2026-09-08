@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
-  ACCOUNTABILITY_RETENTION_MONTHS,
+  ACCOUNTABILITY_RETENTION_YEARS,
   buildAccountabilityUsageAggregates,
   mergeAccountabilityAggregates,
   olderThanRetention,
@@ -71,14 +71,17 @@ test('rows without a usable date are dropped rather than bucketed wrongly', () =
   assert.deepEqual(buildAccountabilityUsageAggregates([null, undefined]), []);
 });
 
-test('the retention cutoff only matches real past dates', () => {
-  const cutoff = new Date('2025-06-01').getTime();
-  assert.equal(olderThanRetention('2025-03-04T00:00:00.000Z', cutoff), true);
-  assert.equal(olderThanRetention('2025-09-04T00:00:00.000Z', cutoff), false);
-  // An empty or unparseable value must not read as "very old" and be deleted.
-  assert.equal(olderThanRetention('', cutoff), false);
-  assert.equal(olderThanRetention(null, cutoff), false);
-  assert.equal(olderThanRetention('not a date', cutoff), false);
+test('the retention floor is measured in Hijri months', () => {
+  // The cutoff is a Hijri month key, because the register is kept in Hijri
+  // months — measuring in Gregorian years while storing by Hijri month made
+  // "five years" mean two different spans depending which end you read from.
+  const cutoff = '1446-01';
+  assert.equal(olderThanRetention('2024-03-14T00:00:00.000Z', cutoff), true, '1445-09 is before 1446-01');
+  assert.equal(olderThanRetention('2026-09-08T00:00:00.000Z', cutoff), false, '1448-03 is after it');
+  // An empty or unreadable value must never read as "very old" and be deleted.
+  for (const value of ['', null, undefined, 'not a date', {}]) {
+    assert.equal(olderThanRetention(value, cutoff), false, String(value));
+  }
 });
 
 test('the destructive purge is gone and the archive writes the summary first', async () => {

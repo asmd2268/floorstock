@@ -1,7 +1,8 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { registerStorageCleanup } from './storage-cleanup.js?v=15650a41cb';
-import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=813f523ca6';
-import { uploadArchive } from './archive-storage.js?v=a4e3b69c50';
+import { hijriRetentionCutoffMonth, isPastHijriRetention, hijriMonthLabelBilingual } from './hijri-calendar.js?v=7cb3fbc1ff';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
+import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 
 /* Controlled/narcotic movement log retention.
 
@@ -24,13 +25,16 @@ import { uploadArchive } from './archive-storage.js?v=a4e3b69c50';
    reporting at monthly resolution. Nothing older than five years can be removed,
    and the action refuses rather than silently narrowing the window. */
 
-// The regulatory floor. Movements newer than this are never removable by this path.
-const CONTROLLED_MOVES_MIN_RETENTION_YEARS = 5;
+/* The regulatory floor, counted in HIJRI years because that is the calendar the
+   controlled register is kept in. It was five Gregorian years, which is a
+   different span from five Hijri ones — a Hijri year is about eleven days
+   shorter — so the two ends of the same rule disagreed. Six Hijri years is the
+   floor now: deliberately longer than any five-year reading of the requirement,
+   so no argument about which calendar was meant can put a record at risk. */
+const CONTROLLED_MOVES_MIN_RETENTION_YEARS = 6;
 
-function controlledMovesRetentionCutoff(){
-  var d=new Date();
-  d.setFullYear(d.getFullYear()-CONTROLLED_MOVES_MIN_RETENTION_YEARS);
-  return d;
+function controlledMovesRetentionCutoffMonth(){
+  return hijriRetentionCutoffMonth(CONTROLLED_MOVES_MIN_RETENTION_YEARS);
 }
 
 function monthKey(dateValue){var d=new Date(dateValue||0);if(isNaN(d))return null;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
@@ -95,10 +99,10 @@ window.archiveOldControlledMoves=async function(){
   var user=globalThis.CU;
   if(!user||user.master!==true)return globalThis.toast('Only Master can archive controlled/narcotic movement records.','err');
 
-  var cutoff=controlledMovesRetentionCutoff();
+  var cutoffMonth=controlledMovesRetentionCutoffMonth();
   var all=(typeof window.ctlMoves==='function'?window.ctlMoves():[])||[];
-  var old=all.filter(function(m){var dt=new Date(m.at||0);return !isNaN(dt)&&dt<cutoff});
-  if(!old.length){globalThis.toast('No controlled/narcotic movement records older than '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+' years. The ledger has no size limit, so nothing needs archiving.','info');return}
+  var old=all.filter(function(m){return isPastHijriRetention(m&&m.at,cutoffMonth)});
+  if(!old.length){globalThis.toast('No movements older than '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+' Hijri years (before '+hijriMonthLabelBilingual(cutoffMonth)+'). The ledger has no size limit, so nothing needs archiving.','info');return}
 
   var manifest=buildArchiveManifest({kind:'Controlled-Movements',rows:old,dateFields:['at'],note:'Controlled/narcotic movements past the '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+'-year retention floor.'});
   await exportControlledMovesArchive(old,manifest);
@@ -106,7 +110,7 @@ window.archiveOldControlledMoves=async function(){
   var upload=await uploadArchive(manifest,{format:'ASDHealth-Controlled-Moves-Archive',version:2,manifest:manifest,count:old.length,moves:old});
 
   var confirmed=await globalThis.uiConfirm(
-    'Files with the full detail of '+old.length+' controlled/narcotic movement record(s) older than '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+' years have been downloaded (JSON + Excel).\n\n'+
+    'Files with the full detail of '+old.length+' controlled/narcotic movement record(s) older than '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+' Hijri years — everything before '+hijriMonthLabelBilingual(cutoffMonth)+' — have been downloaded (JSON + Excel).\n\n'+
     describeArchive(manifest,archiveFileName(manifest,'json'))+'\n\n'+
     (upload.ok
       ? 'A copy is also kept in this project, readable only by Master.\nونسخة محفوظة في المشروع نفسه، يقرأها الماستر فقط.\n\n'
@@ -155,7 +159,7 @@ window.archiveOldControlledMoves=async function(){
   }
 };
 
-export {CONTROLLED_MOVES_MIN_RETENTION_YEARS,controlledMovesRetentionCutoff,buildControlledMovesAggregates};
+export {CONTROLLED_MOVES_MIN_RETENTION_YEARS,controlledMovesRetentionCutoffMonth,buildControlledMovesAggregates};
 
 /* Registered under the ledger's synthetic panel row, not under the legacy
    controlled_moves document: that document only exists until the Hijri-month
@@ -163,8 +167,8 @@ export {CONTROLLED_MOVES_MIN_RETENTION_YEARS,controlledMovesRetentionCutoff,buil
    would silently replace each other — registerStorageCleanup now refuses it. */
 registerStorageCleanup({
   key:'controlled_moves_ledger',
-  label:'Export movements > 5 years / تصدير الحركات',
-  hint:'Optional. The ledger has no size limit; this exports movements past the 5-year regulatory floor and keeps monthly totals for reports.',
+  label:'Export movements > 6 Hijri years / تصدير الحركات',
+  hint:'Optional. The ledger has no size limit; this exports movements past the 6-Hijri-year regulatory floor and keeps monthly totals for reports.',
   run:function(){return window.archiveOldControlledMoves()},
   canRun:function(){return !!(globalThis.CU&&globalThis.CU.master===true)}
 });

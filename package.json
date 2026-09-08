@@ -12,9 +12,10 @@
     "test:browser": "playwright test",
     "test:rules:emulator": "node --test --test-concurrency=1 tests/firestore-rules/firestore.rules.test.js tests/firestore-rules/storage.rules.test.js",
     "test:rules": "firebase emulators:exec --only firestore,storage --project demo-floorstock-rules --config firebase.json \"npm run test:rules:emulator\"",
-    "test": "npm run verify && npm run test:ui && npm run test:functions && npm run test:browser && npm run test:rules",
+    "test": "npm run verify && npm run test:ui && npm run test:functions && npm run test:browser && npm run test:rules && npm run test:cf",
     "test:functions": "npm --prefix functions test",
-    "stamp": "node tools/stamp_module_hashes.mjs && node tools/mirror_root_index.mjs"
+    "stamp": "node tools/stamp_module_hashes.mjs && node tools/mirror_root_index.mjs",
+    "test:cf": "firebase emulators:exec --only functions,firestore,auth --project demo-floorstock-cf --config firebase.json \"node tests/integration/accountability-handover.cf.mjs\""
   },
   "dependencies": {
     "@vercel/edge": "1.3.3"

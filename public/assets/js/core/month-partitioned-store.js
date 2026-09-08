@@ -1,4 +1,4 @@
-import { hijriMonthKey, shiftHijriMonth } from './hijri-calendar.js?v=9e42fa0bb9';
+import { hijriMonthKey, shiftHijriMonth } from './hijri-calendar.js?v=7cb3fbc1ff';
 
 /* State keys stored as one document per calendar month.
 
@@ -194,9 +194,16 @@ async function mutateExistingRow(key, rowId, transform) {
   await globalThis.FB_DB.runTransaction(async (tx) => {
     const snapshot = await tx.get(ref);
     const existing = snapshot.exists && Array.isArray(snapshot.data().value) ? snapshot.data().value : [];
-    tx.set(ref, { value: transform(existing, id), updatedAt: stateStamp() }, { merge: false });
+    const next = transform(existing, id);
+    /* A month emptied by archiving leaves no document behind. Keeping an empty
+       one would cost a read on every load forever and make the partition list
+       claim months that hold nothing. */
+    if (!next.length) tx.delete(ref);
+    else tx.set(ref, { value: next, updatedAt: stateStamp() }, { merge: false });
   });
   applyLocally(key, holder, (current) => transform(current, id));
+  // Mirror the removal locally too, so the emptied month disappears at once.
+  if (globalThis.S.cache[holder] && !globalThis.S.cache[holder].length) delete globalThis.S.cache[holder];
   scheduleRefresh();
   return true;
 }

@@ -1,4 +1,4 @@
-import { archiveFileName } from './archive-manifest.js?v=813f523ca6';
+import { archiveFileName } from './archive-manifest.js?v=6bf6b393b9';
 
 /* Keeping archives in the project instead of only on one computer.
 

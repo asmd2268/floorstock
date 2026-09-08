@@ -1,4 +1,4 @@
-import { hijriMonthLabelBilingual, currentHijriMonthKey, shiftHijriMonth, hijriMonthsBetween } from './hijri-calendar.js?v=9e42fa0bb9';
+import { hijriMonthLabelBilingual, currentHijriMonthKey, shiftHijriMonth, hijriMonthsBetween } from './hijri-calendar.js?v=7cb3fbc1ff';
 
 /* Temporary, master-granted permission to export the controlled ledger.
 

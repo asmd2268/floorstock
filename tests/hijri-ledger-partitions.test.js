@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFile } from 'node:fs/promises';
 import {
   hijriMonthKey, shiftHijriMonth, hijriMonthsBetween, currentHijriMonthKey, hijriMonthLabelBilingual,
 } from '../public/assets/js/core/hijri-calendar.js';
@@ -53,4 +54,28 @@ test('month labels name the Hijri month in both scripts', () => {
   const label = hijriMonthLabelBilingual('1448-09');
   assert.match(label, /Ramadan/);
   assert.match(label, /رمضان/);
+});
+
+test('the retention floor is six Hijri years, counted in Hijri months', async () => {
+  const { hijriRetentionCutoffMonth, isPastHijriRetention } = await import('../public/assets/js/core/hijri-calendar.js');
+  const now = new Date('2026-09-09T00:00:00.000Z');
+  // Six Hijri years back from Rabi I 1448 is Rabi I 1442.
+  assert.equal(hijriRetentionCutoffMonth(6, now), '1442-03');
+  // Exactly 72 months, not "six times 365 days" — a Hijri year is ~11 days shorter,
+  // so counting in Gregorian would quietly shorten or lengthen the floor.
+  assert.equal(hijriMonthsBetween(hijriRetentionCutoffMonth(6, now), '1448-03').length, 73);
+
+  const cutoff = hijriRetentionCutoffMonth(6, now);
+  assert.equal(isPastHijriRetention('2020-01-02T00:00:00.000Z', cutoff), true);
+  assert.equal(isPastHijriRetention('2024-03-14T00:00:00.000Z', cutoff), false);
+  // A row on the cutoff month itself is kept, not removed.
+  assert.equal(isPastHijriRetention(new Date('2020-10-20T00:00:00.000Z'), cutoff), false);
+});
+
+test('a month emptied by archiving leaves no document behind', async () => {
+  const store = await readFile(new URL('../public/assets/js/core/month-partitioned-store.js', import.meta.url), 'utf8');
+  // An empty partition would cost a read on every load forever and make the
+  // partition list claim months that hold nothing.
+  assert.match(store, /if \(!next\.length\) tx\.delete\(ref\)/);
+  assert.match(store, /delete globalThis\.S\.cache\[holder\]/);
 });

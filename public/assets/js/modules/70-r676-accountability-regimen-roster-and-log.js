@@ -64,8 +64,8 @@ function appState(key){
    only counts what that action would archive, so it must not carry its own copy
    of the cutoff. It was a hard-coded six months here while the action used five
    years, which would have reported a count the button could not act on. */
-function retentionMonths(){return Number(window.ACCOUNTABILITY_RETENTION_MONTHS)||60}
-function retentionYearsLabel(){var months=retentionMonths();return months%12===0?(months/12)+' year(s)':months+' month(s)'}
+function retentionYears(){return Number(window.ACCOUNTABILITY_RETENTION_YEARS)||6}
+function retentionYearsLabel(){return retentionYears()+' Hijri year(s) / سنة هجرية'}
 function olderThanRetentionWindow(value){
   return typeof window.olderThanRetention==='function'?window.olderThanRetention(value):false;
 }

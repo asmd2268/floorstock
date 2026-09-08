@@ -1,4 +1,4 @@
-import { hijriMonthKey, hijriDateLabel, currentHijriMonthKey } from './hijri-calendar.js?v=9e42fa0bb9';
+import { hijriMonthKey, hijriDateLabel, currentHijriMonthKey } from './hijri-calendar.js?v=7cb3fbc1ff';
 
 /* One way of naming and describing an archive file.
 

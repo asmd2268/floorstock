@@ -1,4 +1,4 @@
-import { hijriMonthLabelBilingual, hijriMonthKey } from './hijri-calendar.js?v=9e42fa0bb9';
+import { hijriMonthLabelBilingual, hijriMonthKey } from './hijri-calendar.js?v=7cb3fbc1ff';
 import {
   registerMonthPartitionedKey,
   monthPartitionRows,
@@ -7,7 +7,7 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
   partitionKey,
-} from './month-partitioned-store.js?v=cefa62be33';
+} from './month-partitioned-store.js?v=fe76ca50ef';
 import { registerStorageCleanup } from './storage-cleanup.js?v=15650a41cb';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.

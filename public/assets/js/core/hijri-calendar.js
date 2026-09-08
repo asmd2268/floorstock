@@ -87,6 +87,27 @@ export function shiftHijriMonth(monthKey, delta) {
   return `${nextYear}-${String(nextMonth).padStart(2, '0')}`;
 }
 
+/* The retention floor, expressed in the calendar the register is actually kept
+   in. Retention was measured in Gregorian years while the ledgers are stored and
+   reported by Hijri month, so "five years" meant two different spans depending on
+   which end you looked from — a Hijri year is about eleven days shorter, so five
+   Gregorian years is roughly 5.15 Hijri ones. Counting in Hijri months removes
+   the ambiguity: the cutoff is a month key, and a row is past the floor when its
+   own Hijri month is older than it. */
+export function hijriRetentionCutoffMonth(years, from) {
+  const start = hijriMonthKey(from || new Date());
+  if (!start) return null;
+  return shiftHijriMonth(start, -Math.round(Number(years) * 12));
+}
+
+/* True when a row's date falls before the retention floor. An unreadable or
+   missing date is never past the floor — it is refused rather than deleted. */
+export function isPastHijriRetention(value, cutoffMonth) {
+  if (!cutoffMonth) return false;
+  const month = hijriMonthKey(value);
+  return !!month && month < cutoffMonth;
+}
+
 export function hijriMonthsBetween(fromMonthKey, toMonthKey) {
   const months = [];
   let cursor = fromMonthKey;
@@ -111,4 +132,6 @@ Object.assign(globalThis, {
   currentHijriMonthKey,
   shiftHijriMonth,
   hijriMonthsBetween,
+  hijriRetentionCutoffMonth,
+  isPastHijriRetention,
 });
