@@ -154,8 +154,15 @@ test('no function in the analytics report module is defined more than once', () 
   assert.deepEqual(dupes, [], `defined more than once: ${dupes.map(([n, c]) => `${n} x${c}`).join(', ')}`);
 });
 
+test('esc is not redeclared here — it comes from core/dom-utils.js', () => {
+  // dom-utils publishes globalThis.esc before any feature module loads, so the
+  // bare `esc` calls inside this module's IIFEs resolve to the one canonical
+  // implementation. A local copy re-derived the same fallback and could drift.
+  assert.doesNotMatch(report, /^function esc\(/m);
+});
+
 test('shared helpers sit at module scope, above every IIFE', () => {
-  for (const name of ['esc', 'spikeThresholdPct', 'spikeBadgeClass', 'spikeBadge', 'renderSpikeLegend']) {
+  for (const name of ['spikeThresholdPct', 'spikeBadgeClass', 'spikeBadge', 'renderSpikeLegend']) {
     const at = reportLines.findIndex(l => l.startsWith(`function ${name}(`));
     assert.ok(at >= 0, `${name} is missing`);
     assert.ok(at < firstIife, `${name} is inside an IIFE and invisible to the others`);

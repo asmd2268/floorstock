@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 // ── CONTROLLED & PSYCHOTROPIC MEDICINES ────────────────────────────────
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module
@@ -141,10 +141,14 @@ async function ctlReceiveDelivery(moveId,accept){
     wx.system=ctlNum(wx.system)+backSystem;wx.outside=ctlNum(wx.outside)+backOutside;stockNext[move.medId]=wx;saveStock=function(){return ctlSetWarehouse(stockNext)};rollbackStock=function(){return ctlSetWarehouse(stockOriginal)};
     nextMoves[index]=Object.assign({},move,{status:'rejected',type:'receipt_rejected',note:String(why).trim(),resolvedAt:nowISO()});
   }
-  try{await saveStock();await S.s('controlled_moves',nextMoves)}catch(e){
+  /* Only the resolved movement is written, not the whole ledger. The rollback
+     still restores the single movement's previous state, which is all this
+     operation ever changed. */
+  var resolvedMove=nextMoves[index],previousMove=originalMoves[index];
+  try{await saveStock();await window.saveControlledMove(resolvedMove)}catch(e){
     console.error('Controlled delivery resolution failed',e);var rollbackFailed=false;
     try{await rollbackStock()}catch(err){rollbackFailed=true;console.error('Controlled delivery stock rollback failed',err)}
-    try{await S.s('controlled_moves',originalMoves)}catch(err){rollbackFailed=true;console.error('Controlled delivery movement rollback failed',err)}
+    try{if(previousMove)await window.saveControlledMove(previousMove)}catch(err){rollbackFailed=true;console.error('Controlled delivery movement rollback failed',err)}
     return toast(rollbackFailed?'The transfer update failed and rollback could not be confirmed. Review both warehouse and pharmacy balances.':'The transfer update failed. Stock and pending status were restored.','err')
   }
   renderControlled();toast(accept?'Transfer accepted into pharmacy custody ✓':'Transfer rejected and warehouse balance restored ✓','succ');return true

@@ -1,18 +1,14 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+/* Early global placeholders: prevent ReferenceError in modules that reference the
+   Firebase handles before initialization has produced them.
 
-/* Early global aliases: prevent ReferenceError before Firebase initialization. */
-globalThis.FB_APP = window.FB_APP||null;
-globalThis.FB_AUTH = window.FB_AUTH||null;
-globalThis.FB_DB = window.FB_DB||null;
-globalThis.FB_FUNCTIONS = window.FB_FUNCTIONS||null;
+   These are declarations, not ownership. The real handles are created and
+   published by 03-core-application-firebase-state-auth.js, which is why nothing
+   here goes through publishLegacy — the registry now allows a name exactly one
+   publisher, and claiming these here would make the owner's publish throw. */
+globalThis.FB_APP = window.FB_APP || null;
+globalThis.FB_AUTH = window.FB_AUTH || null;
+globalThis.FB_DB = window.FB_DB || null;
+globalThis.FB_FUNCTIONS = window.FB_FUNCTIONS || null;
 
-
-const __asdhLegacyApi = {
-  FB_APP: globalThis.FB_APP,
-  FB_AUTH: globalThis.FB_AUTH,
-  FB_DB: globalThis.FB_DB,
-  FB_FUNCTIONS: globalThis.FB_FUNCTIONS
-};
-publishLegacy("01-firebase-global-bootstrap.js", __asdhLegacyApi);
 export const legacyVariableNames = Object.freeze(["FB_APP", "FB_AUTH", "FB_DB", "FB_FUNCTIONS"]);
-export default __asdhLegacyApi;
+export default { FB_APP: globalThis.FB_APP, FB_AUTH: globalThis.FB_AUTH, FB_DB: globalThis.FB_DB, FB_FUNCTIONS: globalThis.FB_FUNCTIONS };

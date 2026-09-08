@@ -1,9 +1,12 @@
+/* HTML escaping has one implementation: fsEsc, from core/dom-utils.js, which
+   also publishes it as the global `esc` before any feature module loads. The
+   local copies removed here each re-derived the same fallback. */
 import {
   allRows, rowsForPeriod, computeStats, topMedicines,
   availableYears, priorPeriod, sameQuarterPriorYear, periodLabel,
   detectSpikes, zeroDispenseSummary, deptLabel,
   topShortfalls, departmentFillRates, detectQuantityOutliers
-} from '../core/analytics-engine.js?v=1d73f24e1d';
+} from '../core/analytics-engine.js?v=c7b1bd3819';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -47,7 +50,6 @@ th{background:#dbeafe;color:#102a5c}
    edited in lockstep; the spike helpers in particular decide how a consumption
    rise is graded, and a threshold changed in one copy and not the other would
    have graded the same rise two ways in one report. One definition now. */
-function esc(v) { return window.fsEsc ? window.fsEsc(v) : String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
 function spikeThresholdPct() {
   const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
@@ -898,7 +900,7 @@ function renderFulfillLegend() {
 
 function fulfillmentRequests() {
   const live = (typeof window.gr === 'function' ? window.gr() : (window.S && typeof S.g === 'function' ? S.g('requests') : [])) || [];
-  const archive = (window.S && typeof S.g === 'function' ? S.g('request_analytics_archive') : []) || [];
+  const archive = (window.S && typeof S.g === 'function' ? S.g('request_analytics_summary_v1') : []) || [];
   return live.concat(archive);
 }
 function requestFulfillmentPct(r) {

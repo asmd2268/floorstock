@@ -1,25 +1,35 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
+import { registerStorageCleanup } from './storage-cleanup.js?v=46cb1ec8ee';
 
-/* Controlled/narcotic movement log retention: controlled_moves is a single
-   ever-growing Firestore array — the exact same unbounded-document risk
-   requests had before order-retention.js's redesign — but narcotic/
-   controlled-substance records typically carry longer regulatory retention
-   expectations than general order history, so this defaults to 1 year
-   (not the 6 months used for orders), per explicit instruction rather than
-   assumed parity.
+/* Controlled/narcotic movement log retention.
 
-   Same safety shape as order-retention.js: full raw detail is exported
-   (both JSON and Excel, since narcotic records are the kind an
-   administrator plausibly needs to review/compare/hand to an auditor) and
-   the master must explicitly confirm the file is saved before anything is
-   deleted from Firestore. A compact monthly aggregate — grouped by
-   month × type × medicine × dispenseType, matching exactly the fields
-   narcoticStatsForYear() in the analytics report reads — replaces the
-   detail in Firestore under controlled_moves_summary_v1, so year-over-year
-   narcotic reports keep working for archived periods at monthly
-   resolution instead of losing that history outright. */
+   This used to archive at 1 YEAR and delete the detail, because controlled_moves
+   was one array in one Firestore document capped at 1 MiB and deleting was the
+   only way to keep the ledger writable. That is not compatible with the custody
+   officer's requirement of at least five years of individual movements: five
+   years of narcotic movements does not fit in one 1 MiB document at any
+   retention setting, so the shape had to change rather than the number.
 
-function controlledMovesRetentionCutoff(){var d=new Date();d.setFullYear(d.getFullYear()-1);return d}
+   controlled_moves is now one document per movement (see
+   core/collection-backed-keys.js and core/controlled-moves-store.js). There is no
+   ceiling to relieve, so nothing has to be deleted to keep the ledger working,
+   and archiving is no longer a maintenance requirement — it is an export.
+
+   What remains here: a manual, master-confirmed export of movements older than
+   the five-year floor, for an administrator who wants them out of the live view.
+   It writes the same monthly aggregate into controlled_moves_summary_v1 that the
+   year-over-year narcotic reports already read, so archived periods keep
+   reporting at monthly resolution. Nothing older than five years can be removed,
+   and the action refuses rather than silently narrowing the window. */
+
+// The regulatory floor. Movements newer than this are never removable by this path.
+const CONTROLLED_MOVES_MIN_RETENTION_YEARS = 5;
+
+function controlledMovesRetentionCutoff(){
+  var d=new Date();
+  d.setFullYear(d.getFullYear()-CONTROLLED_MOVES_MIN_RETENTION_YEARS);
+  return d;
+}
 
 function monthKey(dateValue){var d=new Date(dateValue||0);if(isNaN(d))return null;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function monthStartIso(key){var parts=key.split('-');return new Date(Number(parts[0]),Number(parts[1])-1,1).toISOString()}
@@ -85,14 +95,15 @@ window.archiveOldControlledMoves=async function(){
   var cutoff=controlledMovesRetentionCutoff();
   var all=(typeof window.ctlMoves==='function'?window.ctlMoves():[])||[];
   var old=all.filter(function(m){var dt=new Date(m.at||0);return !isNaN(dt)&&dt<cutoff});
-  if(!old.length){globalThis.toast('No controlled/narcotic movement records older than 1 year.','info');return}
+  if(!old.length){globalThis.toast('No controlled/narcotic movement records older than '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+' years. The ledger has no size limit, so nothing needs archiving.','info');return}
 
   var stamp=new Date().toISOString().replace(/[:.]/g,'-');
   await exportControlledMovesArchive(old,stamp);
   await localArchiveDbSave('controlled_moves',{id:stamp,createdAt:new Date().toISOString(),count:old.length,payload:old});
 
   var confirmed=await globalThis.uiConfirm(
-    'Files with the full detail of '+old.length+' controlled/narcotic movement record(s) older than 1 year have been downloaded (JSON + Excel).\n\n'+
+    'Files with the full detail of '+old.length+' controlled/narcotic movement record(s) older than '+CONTROLLED_MOVES_MIN_RETENTION_YEARS+' years have been downloaded (JSON + Excel).\n\n'+
+    'The ledger is no longer size-limited, so this is optional housekeeping, not maintenance — movements can be left in place indefinitely.\n\n'+
     'Save these files somewhere safe outside the browser — they are the ONLY full-detail copy once you continue; only a compact monthly summary stays in the system afterward.\n\n'+
     'Confirm you saved the files and want to permanently remove these records from Firestore now?',
     {danger:true,okText:'I saved the files — delete now'}
@@ -120,7 +131,10 @@ window.archiveOldControlledMoves=async function(){
   var previousSummary=globalThis.S.g('controlled_moves_summary_v1')||[];
   await globalThis.S.s('controlled_moves_summary_v1',summary);
   try{
-    await globalThis.S.s('controlled_moves',all.filter(function(m){return old.indexOf(m)<0}));
+    // Deletes only the archived movements' own documents. It used to rewrite the
+    // entire ledger array into one document, which is both the write pattern this
+    // conversion removed and the reason a failure here could lose live movements.
+    for(var i=0;i<old.length;i++)await globalThis.deleteControlledMove(old[i].id);
   }catch(trimError){
     try{await globalThis.S.s('controlled_moves_summary_v1',previousSummary)}
     catch(rollbackError){console.error('Could not restore the previous controlled-movement summary; re-running cleanup would double-count these months.',rollbackError)}
@@ -132,4 +146,14 @@ window.archiveOldControlledMoves=async function(){
   }
 };
 
-export {controlledMovesRetentionCutoff,buildControlledMovesAggregates};
+export {CONTROLLED_MOVES_MIN_RETENTION_YEARS,controlledMovesRetentionCutoff,buildControlledMovesAggregates};
+
+/* Registered so the action is reachable, but the panel reports this key as
+   collection-backed and therefore uncapped — archiving here is optional. */
+registerStorageCleanup({
+  key:'controlled_moves',
+  label:'Export movements > 5 years / تصدير الحركات',
+  hint:'Optional. The ledger has no size limit; this exports movements past the 5-year regulatory floor and keeps monthly totals for reports.',
+  run:function(){return window.archiveOldControlledMoves()},
+  canRun:function(){return !!(globalThis.CU&&globalThis.CU.master===true)}
+});

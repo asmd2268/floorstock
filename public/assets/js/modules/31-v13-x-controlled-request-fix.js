@@ -66,9 +66,15 @@ window.renderReqForm=function(){function after(){if(typeof window.refreshRequest
     var dept=(gd().find(function(d){return d.id===r.deptId})||{}).name||r.deptId||'';
     if(!await uiConfirm('Delete this request now?\n\nDepartment: '+dept+'\nDate: '+fmtDate(r.created||r.fulfilledAt)+'\n\nFulfilled quantities will remain in Analytics.'))return;
     if(r.status!=='pending'){
-      var archive=(S.g('request_analytics_archive')||[]).slice();
-      if(!archive.some(function(x){return x.id===r.id}))archive.push(requestArchiveRecord(r));
-      await S.s('request_analytics_archive',archive);
+      /* The deleted order stays in the statistics, folded into the same monthly
+         summary the retention path writes to. It used to be pushed into
+         request_analytics_archive — a second archive of the same orders in a
+         Firestore document that grew without bound. mergeAggregateRows adds to the
+         existing month×department row rather than replacing it, and every counter
+         the reports use (order count, zero-dispense count, fill outcomes, requested
+         and dispensed lines) travels with it. */
+      await S.s('request_analytics_summary_v1',
+        window.mergeAggregateRows(S.g('request_analytics_summary_v1')||[],window.buildMonthlyAggregates([r])));
     }
     await S.s('requests',all.filter(function(x){return x.id!==id}));
     toast('Request deleted; analytics preserved ✓','succ');
@@ -229,7 +235,7 @@ window.ensureControlledBulkReplacementButton=addBulkReplacement;
 
 
 // --- Merged from 08-controlled-shared-list-filters.js (Phase 6 consolidation) ---
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 /* ── Controlled medicines organised shared lists + role-specific filters ── */
 function ctlWarehouseQtyForFilter(w){return ctlNum((w||{}).system)+ctlNum((w||{}).outside)}

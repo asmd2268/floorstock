@@ -1,6 +1,6 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=95e63d4c90';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=7eaec50bbd';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
@@ -13,8 +13,10 @@ import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=f014fcad89'
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=7975fe045f';
-import { tenantIdFromProfile, stateCollectionPath, crashReportsCollectionPath } from '../core/firestore-scope.js?v=73cbf4aa5d';
-import { stateCollectionRef, crashReportsCollectionRef } from '../core/firestore-sdk-scope.js?v=460959c806';
+import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=4fdac36d91';
+import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=f33c609381';
+import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=4510baaaca';
+import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=15e4458489';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
@@ -339,12 +341,12 @@ async function fsStateLoadFloorstockViaRest(){
   });
   return {cache:cache,source:'rest'};
 }
-// crash_cart_reports intentionally omitted from both lists below: scoped
-// roles now read crash_cart_reports_v2 (the individual-document collection)
-// via fsStateLoadCrashReportsViaRest instead of the legacy state-doc blob —
-// see fsStateLoadFloorstockForProfileViaRest. The Cloud Functions still
-// dual-write both, and the SDK realtime path made the same switch earlier
-// (see crashReportsCollectionRef / S.crashReportsUnsub in this same file).
+// Every key in COLLECTION_BACKED_KEYS is intentionally omitted from the lists
+// below: scoped roles read those from their own collection (one document per
+// row, no 1 MiB ceiling) via fsStateLoadCollectionViaRest rather than from a
+// legacy state document — see fsStateLoadFloorstockForProfileViaRest. The SDK
+// realtime path reads the same collections through
+// fsStateInstallCollectionListeners.
 globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','daily_limits_v2',
   'weekly_limits_v2','monthly_limits','rate_limits_v2','req_windows','disp_slots',
@@ -392,8 +394,9 @@ function fsStateKeysForProfile(profile){
   if(!profile)return null;
   if(profile.master===true)return null;
   if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
-  if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.slice();
-  if(String(profile.role||'')==='warehouse')return WAREHOUSE_STATE_KEYS.slice();
+  // The audit months are appended at read time so the list follows the calendar.
+  if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.concat(fsRecentAuditLogKeys(1));
+  if(String(profile.role||'')==='warehouse')return WAREHOUSE_STATE_KEYS.concat(fsRecentAuditLogKeys(1));
   if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
@@ -465,15 +468,28 @@ async function fsStateLoadScoped(keys,loader,source,profile){
 }
 // Warehouse role is a scopedStateUser — it cannot LIST the collection.
 // It reads only the specific documents permitted by canReadScopedState() in firestore.rules.
+/* The audit trail is one document per calendar month now, so a scoped role that
+   cannot LIST the collection has to name the months it wants. It reads the current
+   and previous month, which is what its screens actually show; the full history is
+   available to the roles that can list. */
+function fsRecentAuditLogKeys(monthsBack){
+  var keys=[],now=new Date();
+  for(var i=0;i<=(monthsBack||1);i++){
+    var d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-i,1));
+    keys.push('audit_log_'+d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'));
+  }
+  return keys;
+}
+globalThis.fsRecentAuditLogKeys=fsRecentAuditLogKeys;
 globalThis.WAREHOUSE_STATE_KEYS = Object.freeze([
-  'departments','deleted_departments','theme','audit_log',
-  'controlled_warehouse','controlled_moves','controlled_pdf_receipts','user_activity_daily_v1',
+  'departments','deleted_departments','theme',
+  'controlled_warehouse','controlled_pdf_receipts','user_activity_daily_v1',
   'classification_lists_v1','page_visibility_overrides_v1'
 ]);
 globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
-  'controlled_moves','controlled_moves_summary_v1','controlled_pdf_receipts','controlled_pharmacy_storage_v1',
+  'controlled_moves_summary_v1','controlled_pdf_receipts','controlled_pharmacy_storage_v1',
   'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
   'narcotic_restore_from_backup_20260728_v1',
   'controlled_dept_list_name_enrich_v1',
@@ -540,38 +556,41 @@ async function fsStateLoadPharmacyScoped(profile,loader,source){
   var failedKeys=(deptOnly.failedKeys||[]).concat(pair[0].failedKeys||[],pair[1].failedKeys||[]);
   return {cache:cache,source:source,failedKeys:failedKeys};
 }
-async function fsStateMergeCrashReports(resultPromise,profile){
-  // The crash-reports collection list has no dependency on the scoped state
-  // fetch's result, so it used to be a needless extra sequential round trip
-  // (await resultPromise, THEN start this) on every login/poll for every
-  // scoped role — fire both at once instead.
-  var crashPromise=fsStateLoadCrashReportsViaRest(profile).then(
-    function(reports){return {ok:true,reports:reports}},
-    function(error){return {ok:false,error:error}}
-  );
+async function fsStateMergeCollectionKeys(resultPromise,profile){
+  // Each collection list is independent of the scoped state fetch and of the
+  // others, so they all start before the state result is awaited rather than
+  // adding a sequential round trip per key to every login and poll.
+  var pending=COLLECTION_BACKED_KEYS.map(function(spec){
+    return fsStateLoadCollectionViaRest(spec,profile).then(
+      function(rows){return {spec:spec,ok:true,rows:rows}},
+      function(error){return {spec:spec,ok:false,error:error}}
+    );
+  });
   var result=await resultPromise;
-  var crash=await crashPromise;
-  if(crash.ok){
-    result.cache.crash_cart_reports=crash.reports;
-  }else{
+  var settled=await Promise.all(pending);
+  settled.forEach(function(entry){
+    if(entry.ok){
+      result.cache[entry.spec.key]=entry.rows;
+      return;
+    }
     // Leave the key out of the returned cache entirely and record it as
     // failed instead — pollRest() already restores a failed key's previous
     // cached value from before this poll (same guard it uses for every
     // other document read), so a transient network/permission hiccup here
-    // can't blank out crash cart reports the way an unconditional [] would.
-    console.warn('crash_cart_reports_v2 REST load failed for this poll.',crash.error);
-    result.failedKeys=(result.failedKeys||[]).concat('crash_cart_reports');
-  }
+    // can't blank out the ledger the way an unconditional [] would.
+    console.warn(entry.spec.legacyPath+' REST load failed for this poll.',entry.error);
+    result.failedKeys=(result.failedKeys||[]).concat(entry.spec.key);
+  });
   return result;
 }
 function fsStateLoadFloorstockForProfileViaRest(profile){
-  if(fsIsPharmacyScopedProfile(profile))return fsStateMergeCrashReports(fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped'),profile);
-  if(String(profile&&profile.role||'')==='controlled_pharmacy')return fsStateLoadControlledPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped');
+  if(fsIsPharmacyScopedProfile(profile))return fsStateMergeCollectionKeys(fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped'),profile);
+  if(String(profile&&profile.role||'')==='controlled_pharmacy')return fsStateMergeCollectionKeys(fsStateLoadControlledPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped'),profile);
   var keys=fsStateKeysForProfile(profile);
   if(!keys)return fsStateLoadFloorstockViaRest();
   var scoped=fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped',profile);
   return ['department','outpatient_pharmacy_supervisor'].includes(String(profile&&profile.role||''))
-    ? fsStateMergeCrashReports(scoped,profile)
+    ? fsStateMergeCollectionKeys(scoped,profile)
     : scoped;
 }
 function fsStateLoadFloorstockForProfileViaSdk(profile){
@@ -580,22 +599,17 @@ function fsStateLoadFloorstockForProfileViaSdk(profile){
   var keys=fsStateKeysForProfile(profile);
   return keys?fsStateLoadScoped(keys,fsStateLoadDocumentViaSdk,'sdk-scoped',profile):fsStateLoadFloorstockViaSdk();
 }
-// REST-path counterpart of the SDK's crashReportsCollectionRef + docChanges
-// aggregation (see S.crashReportsUnsub in startRealtime): scoped roles never
-// use the SDK realtime listener (fsStateKeysForProfile forces transport:
-// 'rest'), so this is the only way they pick up crash_cart_reports_v2.
-// Every call re-lists the whole collection — S.pollRest() already runs this
-// every 30s regardless, same cadence the legacy crash_cart_reports blob key
-// used to get polled at.
-async function fsStateLoadCrashReportsViaRest(profile){
-  var documents=await fsStateRestListCollection(crashReportsCollectionPath(profile));
-  var reports=documents.map(function(documentValue){
-    var data=fsLoginDecodeRestDocument(documentValue)||{};
-    delete data.updatedAt;delete data._migratedAt;
-    return data;
-  });
-  reports.sort(function(a,b){return String(a.openedAt||'').localeCompare(String(b.openedAt||''))||String(a.id||'').localeCompare(String(b.id||''));});
-  return reports;
+// REST-path counterpart of the SDK's collection listener (see
+// S.collectionUnsubs in startRealtime): scoped roles never use the SDK realtime
+// listener (fsStateKeysForProfile forces transport: 'rest'), so this is the only
+// way they pick up a collection-backed key. Every call re-lists the whole
+// collection — S.pollRest() already runs this every 30s regardless, the same
+// cadence the blob keys these replaced used to be polled at.
+async function fsStateLoadCollectionViaRest(spec,profile){
+  var documents=await fsStateRestListCollection(collectionBackedPath(spec,profile));
+  return sortCollectionRows(spec,documents.map(function(documentValue){
+    return normalizeCollectionRow(spec,fsLoginDecodeRestDocument(documentValue)||{});
+  }));
 }
 async function fsStateLoadUsersViaRest(){
   var documents=await fsStateRestListCollection('users');
@@ -743,27 +757,31 @@ async function ensureGeoAllowed(){
   }
 }
 window.ensureGeoAllowed=ensureGeoAllowed;
+/* The two implementations behind core/state-transport.js. The selection rule —
+   which transport, and what happens when one fails — lives there; these are just
+   the Firestore plumbing for each side. */
+registerStateTransport('rest',{
+  load:function(profile){return fsStateLoadFloorstockForProfileViaRest(profile)},
+  set:function(key,value){return fsStateRestSetDocument(key,value)},
+  remove:function(key){return fsStateRestDeleteDocument(key)}
+});
+registerStateTransport('sdk',{
+  load:function(profile){return fsStateLoadFloorstockForProfileViaSdk(profile)},
+  set:function(key,value){return fsStateSdkSetDocument(key,value)},
+  remove:function(key){return fsStateSdkDeleteDocument(key)}
+});
+onTransportFallback(function(operation,error){
+  console.warn('Firestore SDK '+operation+' failed; using REST for subsequent writes.',error);
+  S.writeTransport='rest';
+});
+
 async function fsStateSetSmart(key,value){
   await ensureGeoAllowed();
-  if(S.writeTransport==='rest'||!window.FB_DB)return fsStateRestSetDocument(key,value);
-  try{
-    return await fsStateSdkSetDocument(key,value);
-  }catch(error){
-    console.warn('Firestore SDK save failed; using REST for subsequent writes.',error);
-    S.writeTransport='rest';
-    return fsStateRestSetDocument(key,value);
-  }
+  return portSetState(key,value);
 }
 async function fsStateDeleteSmart(key){
   await ensureGeoAllowed();
-  if(S.writeTransport==='rest'||!window.FB_DB)return fsStateRestDeleteDocument(key);
-  try{
-    return await fsStateSdkDeleteDocument(key);
-  }catch(error){
-    console.warn('Firestore SDK delete failed; using REST for subsequent writes.',error);
-    S.writeTransport='rest';
-    return fsStateRestDeleteDocument(key);
-  }
+  return portRemoveState(key);
 }
 function fsStateApplyCache(nextCache){
   var changed=false,current=S.cache||{};
@@ -793,8 +811,40 @@ function fsStateScheduleManagedUserLoad(profileHint){
   },0);
 }
 
+
+/* One realtime listener per collection-backed key, shared by the master path
+   (transport 'sdk') and the scoped path. Both used to carry their own copy of
+   this block naming crash_cart_reports throughout; a second converted key would
+   have meant a third and fourth copy. Returns the unsubscribe functions.
+
+   These collections grant list/get to any active user regardless of role — they
+   are not gated the way floorstock_state is — so the same listener works for
+   every profile. */
+function fsStateInstallCollectionListeners(profile,label){
+  S.__collectionRowsById=S.__collectionRowsById||{};
+  return COLLECTION_BACKED_KEYS.map(function(spec){
+    S.__collectionRowsById[spec.key]=S.__collectionRowsById[spec.key]||{};
+    return collectionRefForSpec(FB_DB,spec,profile).onSnapshot(function(snapshot){
+      // A collection listener attached to an empty in-memory SDK cache can fire
+      // an initial near-empty snapshot before the server-confirmed one arrives.
+      // Skip it rather than let it blank out rows the cold load already fetched.
+      if(snapshot.metadata.fromCache)return;
+      var byId=S.__collectionRowsById[spec.key];
+      snapshot.docChanges().forEach(function(change){
+        if(change.type==='removed'){delete byId[change.doc.id];return;}
+        byId[change.doc.id]=normalizeCollectionRow(spec,change.doc.data()||{});
+      });
+      var next=sortCollectionRows(spec,Object.keys(byId).map(function(id){return byId[id]}));
+      if(!stateValueEqual(S.cache[spec.key],next)){
+        S.cache[spec.key]=next;
+        S.scheduleRefresh();
+      }
+    },function(error){console.error(spec.legacyPath+' realtime error'+(label?' ('+label+')':'')+'.',error)});
+  });
+}
+
 globalThis.S = {
-  cache:{},ready:false,stateUnsub:null,usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,cacheKey:'',
+  cache:{},ready:false,stateUnsub:null,collectionUnsubs:null,__collectionRowsById:{},usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,cacheKey:'',
   persistLocalCache:function(){
     if(!S.cacheKey)return;
     try{
@@ -840,7 +890,7 @@ globalThis.S = {
     // collection read before it paints the application shell.
     if(hasCachedState){
       S.transport='rest';
-      S.writeTransport=window.FB_DB?'sdk':'rest';
+      resetWriteTransport();S.writeTransport=writeTransportName();
       var selfLoading=S.startRealtime();
       fsStateScheduleManagedUserLoad(profileHint);
       // Scoped roles attach one listener per allowed document and each fires an
@@ -858,27 +908,15 @@ globalThis.S = {
 
     if(statusCallback)statusCallback('Loading data… / جاري تحميل البيانات…');
 
-    var result;
-    try{
-      result=await fsLoginTimeout(
-        fsStateLoadFloorstockForProfileViaRest(profileHint),
-        9000,
-        'Floor Stock REST data request timed out.'
-      );
-    }catch(restError){
-      console.warn('Primary Floor Stock REST load failed; trying Firestore SDK.',restError);
-      result=await fsLoginTimeout(
-        fsStateLoadFloorstockForProfileViaSdk(profileHint),
-        9000,
-        'Floor Stock SDK data request timed out.'
-      );
-    }
+    var result=await portLoadState(profileHint,function(promise,message){
+      return fsLoginTimeout(promise,9000,message);
+    });
 
     var freshCache=result.cache||{};
 
 S.cache=freshCache;
 S.transport=result.source||'rest';
-S.writeTransport=window.FB_DB?'sdk':'rest';
+resetWriteTransport();S.writeTransport=writeTransportName();
 S.cache.users=S.cache.users||[];
 S.ready=true;
 if(!window.__ASDH_REAL_LOAD_COMPLETE){
@@ -1009,7 +1047,10 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
             // per-tenant) collection listener below instead of this legacy
             // state-doc array — the Cloud Functions still dual-write both,
             // this just switches which side the client reads from first.
-            if(change.doc.id==='users'||change.doc.id==='crash_cart_reports')return;
+            // Collection-backed keys are read from their own listeners (see
+            // fsStateInstallCollectionListeners); the legacy state document for
+            // the same key, where one still exists, must not overwrite them.
+            if(change.doc.id==='users'||collectionBackedKeyNames().indexOf(change.doc.id)>=0)return;
             var key=change.doc.id;
             if(change.type==='removed'){
               if(Object.prototype.hasOwnProperty.call(S.cache,key)){delete S.cache[key];changed=true;}
@@ -1024,32 +1065,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
           console.error('floorstock_state realtime error; switching to REST polling.',error);
           S.transport='rest';S.startRealtime();
         });
-        S.__crashReportsById=S.__crashReportsById||{};
-        S.crashReportsUnsub=crashReportsCollectionRef(FB_DB,S.scopeProfile).onSnapshot(function(snapshot){
-          // A listener attached to an empty in-memory SDK cache can fire an
-          // initial near-empty snapshot before the server-confirmed one
-          // arrives a moment later — skip it rather than blank out reports
-          // the cold-load already fetched.
-          if(snapshot.metadata.fromCache)return;
-          snapshot.docChanges().forEach(function(change){
-            if(change.type==='removed'){delete S.__crashReportsById[change.doc.id];return;}
-            var data=change.doc.data()||{};
-            // Strip fields the collection doc carries but the legacy array
-            // entry never had, so S.cache.crash_cart_reports stays byte-for-
-            // byte identical in shape to what the old path produced.
-            var report=Object.assign({},data);
-            delete report.updatedAt;delete report._migratedAt;
-            S.__crashReportsById[change.doc.id]=report;
-          });
-          var next=Object.keys(S.__crashReportsById).map(function(id){return S.__crashReportsById[id];})
-            .sort(function(a,b){return String(a.openedAt||'').localeCompare(String(b.openedAt||''))||String(a.id||'').localeCompare(String(b.id||''));});
-          if(!stateValueEqual(S.cache.crash_cart_reports,next)){
-            S.cache.crash_cart_reports=next;
-            S.scheduleRefresh();
-          }
-        },function(error){
-          console.error('crash_cart_reports_v2 realtime error.',error);
-        });
+        S.collectionUnsubs=fsStateInstallCollectionListeners(S.scopeProfile,'');
         var tenantId=fsTenantId(S.scopeProfile),canManageUsers=!!(S.scopeProfile&&(S.scopeProfile.master===true||['pharmacy','pharmacy_director'].indexOf(S.scopeProfile.role)>=0));
         if(canManageUsers){
           // Always refresh through the canonical directory callable.  A direct
@@ -1117,31 +1133,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
         }
       },fallBackToRest);
     });
-    // crash_cart_reports_v2 (or its per-tenant equivalent) grants list/get to
-    // any active user regardless of role — not gated the way floorstock_state
-    // is — so the same collection listener master uses already works here.
-    S.__crashReportsById=S.__crashReportsById||{};
-    S.crashReportsUnsub=crashReportsCollectionRef(FB_DB,profile).onSnapshot(function(snapshot){
-      // Same from-cache caveat as the per-document listeners above: a
-      // collection listener attached to an empty in-memory SDK cache can
-      // fire an initial near-empty snapshot before the server-confirmed one
-      // arrives. Skip it entirely rather than let it blank out the reports
-      // the cold-load already fetched — the real snapshot follows promptly.
-      if(snapshot.metadata.fromCache)return;
-      snapshot.docChanges().forEach(function(change){
-        if(change.type==='removed'){delete S.__crashReportsById[change.doc.id];return;}
-        var data=change.doc.data()||{};
-        var report=Object.assign({},data);
-        delete report.updatedAt;delete report._migratedAt;
-        S.__crashReportsById[change.doc.id]=report;
-      });
-      var next=Object.keys(S.__crashReportsById).map(function(id){return S.__crashReportsById[id];})
-        .sort(function(a,b){return String(a.openedAt||'').localeCompare(String(b.openedAt||''))||String(a.id||'').localeCompare(String(b.id||''));});
-      if(!stateValueEqual(S.cache.crash_cart_reports,next)){
-        S.cache.crash_cart_reports=next;
-        S.scheduleRefresh();
-      }
-    },function(error){console.error('crash_cart_reports_v2 realtime error (scoped).',error)});
+    S.collectionUnsubs=fsStateInstallCollectionListeners(profile,'scoped');
   },
   pollRest:async function(){
     if(S.pollBusy||!S.ready||document.visibilityState==='hidden')return;
@@ -1187,7 +1179,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
   stopRealtime:function(){
     if(Array.isArray(S.scopedUnsubs)){S.scopedUnsubs.forEach(function(fn){try{fn()}catch(e){}});S.scopedUnsubs=null;}
     if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
-    if(S.crashReportsUnsub){S.crashReportsUnsub();S.crashReportsUnsub=null;S.__crashReportsById={};}
+    if(Array.isArray(S.collectionUnsubs)){S.collectionUnsubs.forEach(function(fn){try{fn()}catch(e){}});S.collectionUnsubs=null;S.__collectionRowsById={};}
     if(S.selfProfileUnsub){S.selfProfileUnsub();S.selfProfileUnsub=null;}
     if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
     if(S.usersPollTimer){clearInterval(S.usersPollTimer);S.usersPollTimer=null;}
@@ -1378,8 +1370,8 @@ const __asdhLegacyApi = {
   fsStateKeysForProfile: fsStateKeysForProfile,
   fsStateLoadDocumentViaRest: fsStateLoadDocumentViaRest,
   fsStateLoadDocumentViaSdk: fsStateLoadDocumentViaSdk,
-  fsStateLoadCrashReportsViaRest: fsStateLoadCrashReportsViaRest,
-  fsStateMergeCrashReports: fsStateMergeCrashReports,
+  fsStateLoadCollectionViaRest: fsStateLoadCollectionViaRest,
+  fsStateMergeCollectionKeys: fsStateMergeCollectionKeys,
   fsStateScopeCacheForProfile: fsStateScopeCacheForProfile,
   fsStateLoadScoped: fsStateLoadScoped,
   fsControlledPharmacyDeptKeys: fsControlledPharmacyDeptKeys,
@@ -1470,8 +1462,8 @@ export {
   fsStateKeysForProfile,
   fsStateLoadDocumentViaRest,
   fsStateLoadDocumentViaSdk,
-  fsStateLoadCrashReportsViaRest,
-  fsStateMergeCrashReports,
+  fsStateLoadCollectionViaRest,
+  fsStateMergeCollectionKeys,
   fsStateScopeCacheForProfile,
   fsStateLoadScoped,
   fsControlledPharmacyDeptKeys,

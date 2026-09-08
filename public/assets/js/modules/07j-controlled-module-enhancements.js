@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, PDF receipt import,
 // batch editor v6, dispensing, analytics, print suite, department shelf
@@ -607,40 +607,89 @@ async function assignSelectedMedsToShelf(){
 // Crash Cart
 function crashCarts(){return S.g('crash_carts')||[]}
 function crashReports(){return S.g('crash_cart_reports')||[]}
-function _writeCrashReportDocs(newReports){
-  // Write each report as an individual document directly to the v2 collection.
-  // Deletes docs for reports that were removed (master delete). Runs in 400-op
-  // batches to stay under the 500-op Firestore batch limit.
-  if(!window.FB_DB||typeof crashReportsCollectionRef!=='function')return Promise.resolve();
-  var col=crashReportsCollectionRef(FB_DB,S&&S.scopeProfile);
-  var updatedAt=(window.firebase&&firebase.firestore)?firebase.firestore.FieldValue.serverTimestamp():new Date().toISOString();
-  var newIds=new Set((newReports||[]).map(function(r){return r&&String(r.id||'')}).filter(Boolean));
-  var removedIds=((S&&S.cache&&S.cache.crash_cart_reports)||[]).map(function(r){return r&&String(r.id||'')}).filter(function(id){return id&&!newIds.has(id)});
-  var ops=[];
-  (newReports||[]).forEach(function(r){if(!r||!r.id)return;ops.push({t:'set',id:String(r.id),d:Object.assign({},r,{updatedAt:updatedAt})})});
-  removedIds.forEach(function(id){ops.push({t:'del',id:id})});
-  if(!ops.length)return Promise.resolve();
-  var BATCH=400,promises=[];
-  for(var i=0;i<ops.length;i+=BATCH){
-    var chunk=ops.slice(i,i+BATCH),b=FB_DB.batch();
-    chunk.forEach(function(op){op.t==='set'?b.set(col.doc(op.id),op.d,{merge:false}):b.delete(col.doc(op.id))});
-    promises.push(b.commit());
-  }
-  return Promise.all(promises);
+/* Crash cart reports are individual documents in the crash_cart_reports_v2
+   collection (or its per-tenant equivalent). Writes below are document-shaped:
+   editing one report costs one write, not one per report in the collection.
+
+   The whole-array entry point that used to be the only way in still exists as
+   replaceAllCrashReports() — its name now states its cost at the call site — and
+   is used only where the caller genuinely reconciles the entire collection, such
+   as a master department delete. */
+function _crashReportsRef(){
+  if(!window.FB_DB||typeof crashReportsCollectionRef!=='function')return null;
+  return crashReportsCollectionRef(FB_DB,S&&S.scopeProfile);
 }
-function setCrashReports(v){
-  var reports=v||[];
-  // Optimistic cache update so renders after this call see current data immediately.
-  if(S&&S.cache){
-    S.cache.crash_cart_reports=reports;
-    S.__crashReportsById=S.__crashReportsById||{};
-    reports.forEach(function(r){if(r&&r.id)S.__crashReportsById[String(r.id)]=r});
-  }
-  // Write each report as an individual document to v2 collection (sole source of truth).
-  var p=_writeCrashReportDocs(reports);
-  Promise.resolve(p).then(function(){if(S&&S.scheduleRefresh)S.scheduleRefresh()}).catch(function(){});
-  return p;
+function _crashStamp(){
+  return (window.firebase&&firebase.firestore)?firebase.firestore.FieldValue.serverTimestamp():new Date().toISOString();
 }
+/* The collection listener is the source of truth, but only after the round trip.
+   Applying the change locally first keeps a render that runs immediately after an
+   await from showing the pre-write state. */
+function _applyCrashReportsLocally(saved,removedIds){
+  if(!S||!S.cache)return;
+  var byId={};
+  (S.cache.crash_cart_reports||[]).forEach(function(r){if(r&&r.id)byId[String(r.id)]=r});
+  (saved||[]).forEach(function(r){if(r&&r.id)byId[String(r.id)]=r});
+  (removedIds||[]).forEach(function(id){delete byId[String(id)]});
+  var next=Object.keys(byId).map(function(id){return byId[id]})
+    .sort(function(a,b){return String(a.openedAt||'').localeCompare(String(b.openedAt||''))||String(a.id||'').localeCompare(String(b.id||''))});
+  S.cache.crash_cart_reports=next;
+  var tracked=S.__collectionRowsById&&S.__collectionRowsById.crash_cart_reports;
+  if(tracked){
+    (saved||[]).forEach(function(r){if(r&&r.id)tracked[String(r.id)]=r});
+    (removedIds||[]).forEach(function(id){delete tracked[String(id)]});
+  }
+}
+// Runs in 400-op batches to stay under the 500-op Firestore batch limit.
+async function _commitCrashReportOps(ops){
+  if(!ops.length)return;
+  var col=_crashReportsRef();
+  if(!col)return;
+  var stamp=_crashStamp();
+  for(var i=0;i<ops.length;i+=400){
+    var batch=FB_DB.batch();
+    ops.slice(i,i+400).forEach(function(op){
+      if(op.t==='del')batch.delete(col.doc(op.id));
+      else batch.set(col.doc(op.id),Object.assign({},op.d,{updatedAt:stamp}),{merge:false});
+    });
+    await batch.commit();
+  }
+}
+/* Saves one report — or a handful the caller actually changed. */
+async function saveCrashReport(reports){
+  var rows=(Array.isArray(reports)?reports:[reports]).filter(function(r){return r&&r.id});
+  if(!rows.length)return rows;
+  await _commitCrashReportOps(rows.map(function(r){return {t:'set',id:String(r.id),d:r}}));
+  _applyCrashReportsLocally(rows,[]);
+  if(S&&S.scheduleRefresh)S.scheduleRefresh();
+  return rows;
+}
+async function deleteCrashReport(reportIds){
+  var ids=(Array.isArray(reportIds)?reportIds:[reportIds]).map(String).filter(Boolean);
+  if(!ids.length)return false;
+  await _commitCrashReportOps(ids.map(function(id){return {t:'del',id:id}}));
+  _applyCrashReportsLocally([],ids);
+  if(S&&S.scheduleRefresh)S.scheduleRefresh();
+  return true;
+}
+/* Reconciles the whole collection against a complete desired array: writes every
+   report and deletes any that are no longer present. Costs one write per report,
+   so use saveCrashReport/deleteCrashReport for ordinary edits. */
+async function replaceAllCrashReports(v){
+  var rows=(v||[]).filter(function(r){return r&&r.id});
+  var nextIds=new Set(rows.map(function(r){return String(r.id)}));
+  var removedIds=((S&&S.cache&&S.cache.crash_cart_reports)||[])
+    .map(function(r){return String(r&&r.id||'')})
+    .filter(function(id){return id&&!nextIds.has(id)});
+  await _commitCrashReportOps(
+    rows.map(function(r){return {t:'set',id:String(r.id),d:r}})
+      .concat(removedIds.map(function(id){return {t:'del',id:id}}))
+  );
+  _applyCrashReportsLocally(rows,removedIds);
+  if(S&&S.scheduleRefresh)S.scheduleRefresh();
+  return rows;
+}
+
 function crashCart(id){return crashCarts().find(function(c){return c.id===id})}
 
 
@@ -658,7 +707,7 @@ window.migrateCrashReports=async function(){
     Object.keys(defaults).forEach(function(k){if(out[k]===undefined||out[k]===null){out[k]=defaults[k];fixed++}});
     return out;
   });
-  await setCrashReports(sanitized);
+  await replaceAllCrashReports(sanitized);
   window.toast&&toast('Migration complete. Fixed '+fixed+' undefined field(s) across '+reports.length+' report(s). ✓','succ');
   console.info('migrateCrashReports: done',{reports:reports.length,fixedFields:fixed});
 };
@@ -751,7 +800,9 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   assignSelectedMedsToShelf,
   crashCarts,
   crashReports,
-  setCrashReports,
+  saveCrashReport,
+  deleteCrashReport,
+  replaceAllCrashReports,
   crashCart,
   ctlSettingsGlobal,
 });

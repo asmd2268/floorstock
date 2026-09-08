@@ -43,9 +43,11 @@ async function hardDeleteCrashCart(id,opts){
   if(!opts.skipTypedConfirm&&!(await typedConfirm(cart.name||id)))throw new Error('Deletion cancelled');
   consumeBackup(token,'Crash Cart',id);
   var carts=(crashCarts()||[]).filter(function(c){return String(c.id)!==String(id)});
-  var reports=(typeof crashReports==='function'?crashReports():S.g('crash_cart_reports')||[]).filter(function(r){return String(r.cartId)!==String(id)});
+  /* A pure removal: delete the documents belonging to this cart rather than
+     rewriting every remaining report to express the same result. */
+  var removedReportIds=(typeof crashReports==='function'?crashReports():[]).filter(function(r){return String(r.cartId)===String(id)}).map(function(r){return r.id});
   await setCrashCarts(carts);
-  await (typeof setCrashReports==='function'?setCrashReports(reports):S.s('crash_cart_reports',reports));
+  if(removedReportIds.length)await deleteCrashReport(removedReportIds);
   var nameMap=Object.assign({},S.g('crash_cart_medication_names_v1')||{});delete nameMap[id];await S.s('crash_cart_medication_names_v1',nameMap);
   await removePublicCart(id);
   if(typeof auditAction==='function')await auditAction('master_hard_delete_crash_cart',{cartId:id,cartName:cart.name||'',departmentId:cart.deptId||'',backupId:token.id,backupAt:token.createdAt});
@@ -72,11 +74,11 @@ async function hardDeleteDepartment(id){
     var carts=(typeof crashCarts==='function'?crashCarts():[]).filter(function(c){return String(c.deptId)===String(id)});
     var allCarts=(typeof crashCarts==='function'?crashCarts():[]).filter(function(c){return String(c.deptId)!==String(id)});
     var cartIds=new Set(carts.map(function(c){return String(c.id)}));
-    var reports=(typeof crashReports==='function'?crashReports():S.g('crash_cart_reports')||[]).filter(function(r){return String(r.deptId)!==String(id)&&!cartIds.has(String(r.cartId))});
-    await setCrashCarts(allCarts);await (typeof setCrashReports==='function'?setCrashReports(reports):S.s('crash_cart_reports',reports));
+    var removedReportIds=(typeof crashReports==='function'?crashReports():[]).filter(function(r){return String(r.deptId)===String(id)||cartIds.has(String(r.cartId))}).map(function(r){return r.id});
+    await setCrashCarts(allCarts);if(removedReportIds.length)await deleteCrashReport(removedReportIds);
     for(var i=0;i<carts.length;i++)await removePublicCart(carts[i].id);
     await S.s('requests',(S.g('requests')||[]).filter(function(x){return String(x.deptId||x.departmentId||x.dept)!==String(id)}));
-    await S.s('request_analytics_archive',(S.g('request_analytics_archive')||[]).filter(function(x){return String(x.deptId||x.departmentId||x.dept)!==String(id)}));
+    await S.s('request_analytics_summary_v1',(S.g('request_analytics_summary_v1')||[]).filter(function(x){return String(x.deptId||x.departmentId||x.dept)!==String(id)}));
     if(typeof window.floorstockPurgeDepartmentState==='function')await window.floorstockPurgeDepartmentState(id,[id,dept.name,dept.code].filter(Boolean),true);
     else await S.s('departments',(S.g('departments')||[]).filter(function(d){return String(d.id)!==String(id)}));
     if(typeof auditAction==='function')await auditAction('master_hard_delete_department',{departmentId:id,departmentName:dept.name||'',deletedCrashCarts:carts.map(function(c){return c.id}),backupId:token.id,backupAt:token.createdAt});

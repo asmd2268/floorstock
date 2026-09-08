@@ -356,3 +356,52 @@ body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
   letter-spacing: .8px;
   text-transform: uppercase;
 }
+
+/* Storage cleanup panel (System Health) — one bar per floorstock_state document
+   against the 1 MiB Firestore cap, with the archive action that shrinks it. */
+.storage-cleanup {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  background: var(--c2, transparent);
+}
+.storage-cleanup-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.storage-cleanup-title { font-weight: 700; font-size: 14px; }
+.storage-row { padding: 10px 0; border-top: 1px solid var(--bd); }
+.storage-row:first-child { border-top: 0; }
+.storage-row-head,
+.storage-row-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.storage-key { font-weight: 600; font-size: 13px; }
+.storage-size { font-size: 12px; opacity: .8; font-variant-numeric: tabular-nums; }
+.storage-bar {
+  height: 8px;
+  margin: 7px 0;
+  border-radius: 999px;
+  background: var(--bd);
+  overflow: hidden;
+}
+.storage-bar > span { display: block; height: 100%; border-radius: 999px; background: var(--gn, #2e9e5b); }
+.storage-row[data-sev="near"] .storage-bar > span { background: var(--yl, #d9a406); }
+.storage-row[data-sev="warn"] .storage-bar > span { background: var(--or, #e07b39); }
+.storage-row[data-sev="bad"] .storage-bar > span { background: var(--rd, #d64545); }
+.storage-row[data-sev="bad"] .storage-size { color: var(--rd, #d64545); font-weight: 700; }
+/* A collection-backed key has no 1 MiB cap, so its bar reports "healthy, no
+   ceiling" rather than a fill level against a limit that does not apply. */
+.storage-row[data-sev="uncapped"] .storage-bar > span {
+  background: repeating-linear-gradient(90deg, var(--ok, #2e9e5b) 0 8px, transparent 8px 14px);
+  opacity: .55;
+}
+.storage-row[data-sev="uncapped"] .storage-size { color: var(--ok, #2e9e5b); }

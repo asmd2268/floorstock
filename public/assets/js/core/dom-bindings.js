@@ -1,5 +1,5 @@
-import bindings from './event-bindings.js?v=f34622d213';
-import { invokeLegacy } from './legacy-registry.js?v=babf19f181';
+import bindings from './event-bindings.js?v=edb5515df6';
+import { invokeLegacy } from './legacy-registry.js?v=003344116e';
 
 function parseArgument(token, element, event) {
   const value = token.trim();

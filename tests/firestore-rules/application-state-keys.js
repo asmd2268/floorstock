@@ -10,6 +10,7 @@ export const APPLICATION_STATE_KEYS = [
   'accountability_usage_v2',
   `alerts_${DEPARTMENT_ID}`,
   'audit_log',
+  'audit_log_2026-09',
   'controlled_alert_days',
   'controlled_catalog',
   'controlled_department_seed_v2',
@@ -55,7 +56,7 @@ export const APPLICATION_STATE_KEYS = [
   'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
   'rate_limits_v2',
   'req_windows',
-  'request_analytics_archive',
+  'request_analytics_summary_v1',
   'request_count_limits_v1',
   'request_hour_grids_v1',
   'requests',
@@ -71,16 +72,20 @@ export function mayWriteState(role, key) {
   // audit_log is no longer writable from any client: firestore.rules denies it and
   // entries are appended only through the appendAuditLog callable, which stamps the
   // actor server-side. A client state write replaces the whole document.
-  if (key === 'audit_log') return false;
+  // The trail is one document per calendar month now (audit_log_YYYY-MM, plus _pN
+  // for a month that overflowed). Every part stays write-denied for every client
+  // role: entries come only from the appendAuditLog callable, which stamps the actor
+  // server-side. A client state write replaces the whole document.
+  if (/^audit_log(_\d{4}-\d{2}(_p\d+)?)?$/.test(key)) return false;
   if (key === 'theme') return true;
   if (role === 'inpatient_supervisor') {
-    return /^(crash_.*|accountability_.*|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
+    return /^(crash_.*|accountability_.*|requests|request_analytics_summary_v1|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
   }
   if (role === 'pharmacy_staff') {
-    return /^(crash_carts|accountability_.*|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
+    return /^(crash_carts|accountability_.*|requests|notes|dept_notes|request_analytics_summary_v1|theme)$/.test(key);
   }
   if (role === 'outpatient_pharmacy_supervisor') {
-    return /^(crash_carts|requests|notes|dept_notes|request_analytics_archive|theme)$/.test(key);
+    return /^(crash_carts|requests|notes|dept_notes|request_analytics_summary_v1|theme)$/.test(key);
   }
   if (role === 'controlled_pharmacy') {
     return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme)$/.test(key);

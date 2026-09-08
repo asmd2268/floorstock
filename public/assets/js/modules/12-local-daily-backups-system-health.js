@@ -24,11 +24,29 @@
      so it only helps if someone knows it is time. Surface the largest document
      against the cap and warn well before it becomes urgent. */
   var FIRESTORE_DOC_LIMIT = 1048576;
-  var SIZE_WATCHED_KEYS = ['requests','accountability_usage_v2','audit_log','controlled_moves','crash_cart_reports','accountability_plan_usage_v1'];
+  /* Keys measured against the 1 MiB per-document cap, plus the two that are no
+     longer capped at all. A collection-backed key (crash_cart_reports,
+     controlled_moves) is one document per row, so it has no ceiling to approach;
+     it is still listed, reported as uncapped, so the master can see the ledger is
+     safe rather than wonder why it vanished from the panel. */
+  var SIZE_WATCHED_KEYS = ['requests','accountability_usage_v2','controlled_moves','crash_cart_reports','request_analytics_summary_v1','request_analytics_archive','accountability_plan_usage_v1'];
+  /* audit_log is measured as a family rather than a fixed key: it is one document
+     per calendar month, so the key names follow the calendar and only the current
+     month can be growing. Whichever part is largest is what the gauge reports. */
+  function auditLogKeys(){
+    if(!window.S||!window.S.cache)return [];
+    return Object.keys(window.S.cache).filter(function(key){
+      return /^audit_log(_\d{4}-\d{2}(_p\d+)?)?$/.test(key);
+    });
+  }
+  function isCollectionBacked(key){
+    return typeof window.collectionBackedKeyNames==='function'
+      && window.collectionBackedKeyNames().indexOf(key)>=0;
+  }
   function measureStateDocuments(){
     if(!window.S||typeof S.g!=='function')return [];
     var encoder = typeof TextEncoder==='function' ? new TextEncoder() : null;
-    return SIZE_WATCHED_KEYS.map(function(key){
+    return SIZE_WATCHED_KEYS.concat(auditLogKeys()).map(function(key){
       var value;
       try{ value = S.g(key); }catch(e){ return null; }
       if(value==null)return null;
@@ -36,7 +54,16 @@
       try{ json = JSON.stringify(value); }catch(e){ return null; }
       // Arabic text is multi-byte, so count encoded bytes rather than characters.
       var bytes = encoder ? encoder.encode(json).length : json.length;
-      return {key:key, bytes:bytes, pct:(bytes/FIRESTORE_DOC_LIMIT)*100};
+      var uncapped = isCollectionBacked(key);
+      return {
+        key:key,
+        bytes:bytes,
+        // pct drives the warning colour and the login-time alert. A collection has
+        // no cap, so it must never register as pressure however large it grows.
+        pct: uncapped ? 0 : (bytes/FIRESTORE_DOC_LIMIT)*100,
+        uncapped: uncapped,
+        rows: Array.isArray(value) ? value.length : null
+      };
     }).filter(Boolean).sort(function(a,b){return b.bytes-a.bytes});
   }
   window.fsMeasureStateDocuments = measureStateDocuments;
@@ -115,6 +142,11 @@
     }
     e=document.getElementById('health-doc-size-hint');
     if(e)e.textContent=biggest?biggest.key+' — 1 MiB limit'+(biggest.pct>=50?' · archive old orders soon / أرشف الطلبات القديمة':''):'';
+    /* The gauge above says WHICH document is under pressure; the cleanup panel
+       is where the master acts on it. Both read fsMeasureStateDocuments, so they
+       cannot disagree. */
+    if(typeof window.installStorageCleanupPanel==='function')window.installStorageCleanupPanel();
+    if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
   }catch(err){console.error(err)}};
   async function daily(){if(!masterOnly()||!window.FB_DB)return;var today=new Date().toISOString().slice(0,10),last=String(localStorage.getItem('abhealth_last_auto_backup')||'').slice(0,10);if(last!==today)await window.masterCreateLocalBackup(false);else await window.masterRefreshSystemHealth()}
   window.runDailyBackup=function(){return daily().catch(function(){})};
@@ -137,6 +169,8 @@ window.runSystemHealthDiagnostics=async function(){
   setStatus('health-firestore',fireMsg,fireOk?'health-ok':'health-bad');lines.push((fireOk?'✓':'✗')+' Firestore read: '+fireMsg);
   function count(name){try{return Array.isArray(window[name])?window[name].length:'—'}catch(e){return '—'}}
   lines.push('','Departments: '+count('DEPTS'),'Requests: '+count('REQS'),'Crash carts: '+count('CRASH_CARTS'),'Controlled medicines: '+count('CONTROLLED_MEDS'),'','Browser: '+navigator.userAgent,'Completed in '+Math.round(performance.now()-start)+' ms');
+  if(typeof window.installStorageCleanupPanel==='function')window.installStorageCleanupPanel();
+  if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
   var report=document.getElementById('health-report');if(report)report.textContent=lines.join('\n');var last=document.getElementById('health-last-run');if(last)last.textContent='Last run: '+new Date().toLocaleString('en-GB',{calendar:'gregory'});
 };
 function initial(){setStatus('health-network',navigator.onLine?'Online':'Offline',navigator.onLine?'health-ok':'health-bad')}
@@ -358,7 +392,8 @@ function encodeValue(v){
         if(x&&typeof x==='object'){
           if(namedTest(x))return false;
           if(x.id&&ids.has(String(x.id)))return false;
-          if(key==='audit_log'&&(relatedToIds(x,ids)||hasTestWord(JSON.stringify(x))))return false;
+          // audit_log is one document per month now; match the whole family.
+          if(/^audit_log(_\d{4}-\d{2}(_p\d+)?)?$/.test(String(key||''))&&(relatedToIds(x,ids)||hasTestWord(JSON.stringify(x))))return false;
           if(relatedToIds(x,ids))return false;
         }
         return true;

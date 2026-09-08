@@ -1,10 +1,10 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 // ── INVENTORY IMPORT (Excel / CSV / paste) ──────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
 // split). Everything referenced here that isn't declared in this file
 // (S, CU, esc, toast, el, gd, getMeds, setMeds, autoDetectCat, uid, now,
-// deptName, ensureXLSX's canonicalEnsureXLSX from module 40) is already
+// deptName; ensureXLSX is published by core/excel-loader.js) is already
 // published to globalThis by its owning module.
 function renderImport(){
   var dsel=el('imp-dept');
@@ -25,7 +25,6 @@ function clearImport(){
 }
 
 // Excel loader is shared by the import and controlled-import workflows.
-async function ensureXLSX(){return typeof canonicalEnsureXLSX==='function'?canonicalEnsureXLSX():undefined}
 
 // ── XLSX UPLOAD HANDLER ──────────────────────────────────
 function handleXlsxDrop(e){
@@ -365,7 +364,6 @@ async function confirmImport(){
 publishLegacy("07b-inventory-import.js", {
   renderImport,
   clearImport,
-  ensureXLSX,
   handleXlsxDrop,
   handleXlsxFile,
   parseCsvData,

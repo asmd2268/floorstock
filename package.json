@@ -3,19 +3,18 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build:modules": "python3 tools/build_es_modules.py",
     "verify:modules": "node tools/verify_modules.mjs",
-    "verify": "python3 verify_repo.py && npm run verify:modules",
+    "verify": "python3 verify_repo.py && npm run verify:modules && npm run audit:duplicates",
     "audit:architecture": "node tools/audit_architecture.mjs",
-    "audit:duplicates": "node tools/audit_duplicate_helpers.mjs",
+    "audit:duplicates": "node tools/audit_duplicate_helpers.mjs --strict",
     "audit:firebase": "node tools/audit_firebase_exports.mjs",
-    "test:ui": "node --test tests/ui-actions-regression.test.js tests/r676-regression.test.js tests/firebase-functions-client-regression.test.cjs tests/role-capabilities.test.js tests/wrapper-integrity.test.js tests/build-architecture.test.js tests/build-order.test.js tests/module-manifest-integrity.test.js tests/import-url-integrity.test.js tests/security-baseline.test.js tests/department-note-modules.test.js tests/schedule-controller.test.js tests/architecture-boundaries.test.js tests/core-boundaries.test.js tests/state-key-read-alignment.test.js tests/analytics-report-integrity.test.js tests/pharmacy-inventory-shelves.test.js",
+    "test:ui": "node --test tests/ui-actions-regression.test.js tests/r676-regression.test.js tests/firebase-functions-client-regression.test.cjs tests/role-capabilities.test.js tests/wrapper-integrity.test.js tests/build-architecture.test.js tests/build-order.test.js tests/module-manifest-integrity.test.js tests/import-url-integrity.test.js tests/security-baseline.test.js tests/department-note-modules.test.js tests/schedule-controller.test.js tests/architecture-boundaries.test.js tests/core-boundaries.test.js tests/state-key-read-alignment.test.js tests/analytics-report-integrity.test.js tests/pharmacy-inventory-shelves.test.js tests/root-index-mirror.test.js tests/single-archive-integrity.test.js tests/legacy-publish-ownership.test.js",
     "test:browser": "playwright test",
     "test:rules:emulator": "node --test --test-concurrency=1 tests/firestore-rules/firestore.rules.test.js",
     "test:rules": "firebase emulators:exec --only firestore --project demo-floorstock-rules --config firebase.json \"npm run test:rules:emulator\"",
     "test": "npm run verify && npm run test:ui && npm run test:functions && npm run test:browser && npm run test:rules",
     "test:functions": "npm --prefix functions test",
-    "stamp": "node tools/stamp_module_hashes.mjs"
+    "stamp": "node tools/stamp_module_hashes.mjs && node tools/mirror_root_index.mjs"
   },
   "dependencies": {
     "@vercel/edge": "1.3.3"

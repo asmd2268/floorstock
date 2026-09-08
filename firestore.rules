@@ -91,9 +91,15 @@ service cloud.firestore {
     }
 
     function canReadScopedState(docId) {
-      return (role() in ['department', 'outpatient_pharmacy_supervisor'] && canReadDepartmentState(docId))
-        || (role() == 'controlled_pharmacy' && (docId.matches('^(controlled_.*|psychotropic_.*|narcotic_.*)$') || docId in ['departments', 'deleted_departments', 'custom_categories', 'facility_logo', 'theme', 'audit_log', 'user_activity_daily_v1', 'classification_lists_v1', 'page_visibility_overrides_v1', 'classification_colors_v1']))
-        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'deleted_departments', 'theme', 'audit_log', 'user_activity_daily_v1', 'classification_lists_v1', 'page_visibility_overrides_v1', 'classification_colors_v1']))
+      // The audit trail is one document per calendar month (audit_log_YYYY-MM,
+      // plus _pN if a heavy month overflows) rather than one ever-growing
+      // audit_log document that silently discarded its oldest entries. Reads are
+      // granted on the family; writes stay denied for every client role — entries
+      // come only from the appendAuditLog callable.
+      return (docId.matches('^audit_log(_[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?$') && role() in ['controlled_pharmacy', 'warehouse'])
+        || (role() in ['department', 'outpatient_pharmacy_supervisor'] && canReadDepartmentState(docId))
+        || (role() == 'controlled_pharmacy' && (docId.matches('^(controlled_.*|psychotropic_.*|narcotic_.*)$') || docId in ['departments', 'deleted_departments', 'custom_categories', 'facility_logo', 'theme', 'user_activity_daily_v1', 'classification_lists_v1', 'page_visibility_overrides_v1', 'classification_colors_v1']))
+        || (role() == 'warehouse' && (docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|warehouse_).*') || docId in ['departments', 'deleted_departments', 'theme', 'user_activity_daily_v1', 'classification_lists_v1', 'page_visibility_overrides_v1', 'classification_colors_v1']))
         || (role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff'] && canReadPharmacyState(docId));
     }
 
@@ -319,15 +325,15 @@ service cloud.firestore {
             r in ['pharmacy', 'pharmacy_director']
             || (
               r in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']
-              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_archive|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'outpatient_pharmacy_supervisor'
-              && docId.matches('^(crash_carts|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|requests|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'pharmacy_staff'
-              && docId.matches('^(crash_carts|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|request_analytics_archive|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|accountability_assignments_v2|accountability_usage_v2|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'controlled_pharmacy'
@@ -377,6 +383,19 @@ service cloud.firestore {
 
       // Individual crash cart report documents.  Pharmacy and master write
       // directly from the browser; Cloud Functions (admin SDK) also write here.
+      /* Narcotic and controlled movement ledger, one document per movement.
+         It was a single state document capped at 1 MiB, which cannot hold the
+         five years of individual movements the custody officer must retain.
+         Readable by the roles that already read the ledger; written by the
+         controlled-pharmacy officer, pharmacy director and master. Deletes are
+         master-only and exist for the post-five-year export path. */
+      match /controlled_moves/{moveId} {
+        allow get, list: if sameTenant(tenant);
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant)
+          && (masterUser() || pharmacyDirector() || role() == 'controlled_pharmacy' || role() == 'warehouse');
+        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && masterUser();
+      }
+
       match /crash_cart_reports/{reportId} {
         allow get: if sameTenant(tenant);
         allow list: if sameTenant(tenant) && (
@@ -500,6 +519,15 @@ service cloud.firestore {
 
     // Legacy (non-tenant) crash cart report collection.  Pharmacy and master
     // write directly from the browser; Cloud Functions (admin SDK) also write.
+    // Legacy (non-tenant) controlled movement ledger. Same split as
+    // crash_cart_reports_v2 below; see the tenant block above for the rationale.
+    match /controlled_moves_v2/{moveId} {
+      allow get, list: if activeUser() && tenantId() == '';
+      allow create, update: if activeUser() && tenantId() == ''
+        && (masterUser() || pharmacyDirector() || role() == 'controlled_pharmacy' || role() == 'warehouse');
+      allow delete: if activeUser() && tenantId() == '' && masterUser();
+    }
+
     match /crash_cart_reports_v2/{reportId} {
       allow get: if activeUser() && tenantId() == '';
       allow list: if activeUser() && tenantId() == '';

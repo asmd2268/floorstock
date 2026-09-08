@@ -370,17 +370,17 @@ window.ctlEditLedgerMove=async function(moveId){
   if(!isFinite(n)||n<0)return window.toast&&window.toast('Invalid quantity / كمية غير صحيحة','err');
   var deleteIt=n===0&&await window.uiConfirm('Set quantity to 0 — remove this movement entirely from the log? / حذف الحركة بالكامل من السجل؟');
   var before=Object.assign({},move);
-  var next=all.map(function(m){return Object.assign({},m)});
-  if(deleteIt){
-    next=next.filter(function(m){return String(m.id)!==String(moveId)});
-  }else{
-    var target=next.find(function(m){return String(m.id)===String(moveId)});
-    target.qty=n;
-    target.correctedAt=typeof window.nowISO==='function'?window.nowISO():new Date().toISOString();
-    target.correctedBy=typeof window.actualActorName==='function'?window.actualActorName():'';
-  }
+  /* One movement changes, so one document is written. This used to copy the whole
+     ledger, apply the edit and rewrite every movement — which on a five-year
+     narcotic ledger is thousands of writes to correct one quantity. */
+  var corrected=deleteIt?null:Object.assign({},move,{
+    qty:n,
+    correctedAt:typeof window.nowISO==='function'?window.nowISO():new Date().toISOString(),
+    correctedBy:typeof window.actualActorName==='function'?window.actualActorName():''
+  });
   try{
-    await window.S.s('controlled_moves',next);
+    if(deleteIt)await window.deleteControlledMove(moveId);
+    else await window.saveControlledMove(corrected);
     if(typeof window.auditAction==='function')await Promise.resolve(window.auditAction('controlled_move_manual_correction',{moveId:moveId,before:before.qty,after:deleteIt?0:n,deleted:!!deleteIt})).catch(function(){});
     window.toast&&window.toast('Movement corrected ✓','succ');
     renderLedger();

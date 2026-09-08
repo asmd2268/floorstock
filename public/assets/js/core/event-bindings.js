@@ -1118,5 +1118,10 @@ export default [
     "id": "b223",
     "event": "click",
     "source": "setSelectedMedsOutOfStock(false)"
+  },
+  {
+    "id": "b224",
+    "event": "click",
+    "source": "renderStorageCleanup()"
   }
 ];

@@ -1,5 +1,5 @@
 /* Pharmacy Inventory — rooms → cabinets → shelves → medicines */
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────

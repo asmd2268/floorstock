@@ -6,18 +6,30 @@
 import { buildAnalyticsMedicineIndex, resolveAnalyticsMedicine } from './analytics-medicine-resolver.js?v=28ce20a94d';
 
 export function allRows() {
-  // request_analytics_archive: legacy full-detail archive (pre-existing data
-  // only — order-retention.js stopped writing new records here once it
-  // switched to compact monthly aggregates, since a single ever-growing
-  // Firestore document risked its 1MiB limit). request_analytics_summary_v1:
-  // the compact replacement — one synthetic row per month×department with
-  // dispensed[] already summed, shaped identically to a real request row so
-  // every function below (computeStats, rowsForPeriod, etc.) needs no
-  // special-casing for aggregated vs. individual data.
+  // Two sources, not three. request_analytics_archive was a second, parallel
+  // archive of the same orders — an ever-growing Firestore document that only
+  // relocated the 1 MiB problem — and it was concatenated here alongside its own
+  // replacement. It has been migrated into request_analytics_summary_v1 and
+  // retired; see migrateLegacyRequestArchive() in core/order-retention.js.
+  //
+  // request_analytics_summary_v1 holds one synthetic row per month×department,
+  // shaped identically to a real request row so nothing below needs to special-case
+  // it, and carrying the counts (requestCount, zeroDispenseCount, serviceCounts)
+  // that let an archived month weigh exactly as much as the orders it replaced.
   return (typeof window.gr === 'function' ? window.gr() : [])
-    .concat((window.S && window.S.g && window.S.g('request_analytics_archive')) || [])
     .concat((window.S && window.S.g && window.S.g('request_analytics_summary_v1')) || [])
     .filter(r => r && r.status !== 'pending');
+}
+
+/* How many real orders a row stands for. A live request is one order; an archived
+   month is the number of orders that were folded into it. Every order count in this
+   engine goes through here, so archiving changes the resolution of a report and
+   never its totals — a department that placed 340 orders last year still reads as
+   340 after those orders are archived, not as the 12 monthly rows that replaced them. */
+export function rowWeight(row) {
+  if (!row || !row.__aggregated) return 1;
+  const count = Number(row.requestCount);
+  return count > 0 ? count : 1;
 }
 
 export function rowDate(row) {
@@ -66,8 +78,9 @@ export function computeStats(rows) {
 
   rows.forEach(r => {
     const dept = deptLabel(r.deptId);
+    const weight = rowWeight(r);
     if (!departments[dept]) departments[dept] = { orders: 0, units: 0, zeroDispenseReqs: 0, requested: 0, served: 0 };
-    departments[dept].orders++;
+    departments[dept].orders += weight;
 
     /* Matched per request and per medicine, never as two grand totals: dispensing
        200 of one medicine does not make up for sending none of another, and
@@ -105,7 +118,11 @@ export function computeStats(rows) {
 
     const lines = r.dispensed || [];
     const deptTotal = lines.reduce((s, l) => s + Math.max(0, Number(l.qty) || 0), 0);
-    if (deptTotal === 0) departments[dept].zeroDispenseReqs++;
+    /* An archived month dispensed something in aggregate even when some of the
+       orders inside it dispensed nothing, so the count is carried on the row
+       rather than inferred from its summed total. */
+    if (r.__aggregated) departments[dept].zeroDispenseReqs += Number(r.zeroDispenseCount) || 0;
+    else if (deptTotal === 0) departments[dept].zeroDispenseReqs++;
 
     lines.forEach(line => {
       const qty = Number(line.qty) || 0;
@@ -124,7 +141,8 @@ export function computeStats(rows) {
   Object.values(departments).forEach(d => {
     d.fillRate = d.requested > 0 ? Math.round(d.served / d.requested * 1000) / 10 : null;
   });
-  return { orders: rows.length, units, departments, routine, high, shortfalls, service: serviceMetrics(rows, high, units) };
+  const orders = rows.reduce((total, r) => total + rowWeight(r), 0);
+  return { orders, units, departments, routine, high, shortfalls, service: serviceMetrics(rows, high, units) };
 }
 
 /* Service metrics.
@@ -151,12 +169,23 @@ function serviceMetrics(rows, high, totalUnits) {
     const want = (r.items || []).reduce((s, i) => s + Math.max(0, Number(i.qty) || 0), 0);
     const got = (r.dispensed || []).reduce((s, l) => s + Math.max(0, Number(l.qty) || 0), 0);
     if (want > 0) {
-      withItems++;
       requested += want;
       dispensed += Math.min(got, want); // over-dispensing must not read as >100% served
-      if (got <= 0) unfilled++;
-      else if (got < want) partial++;
-      else full++;
+      /* Fill outcomes are per order, and an archived month is many orders whose
+         individual outcomes differ. The aggregate carries the tally it was built
+         from; only a live row can be classified from its own totals. */
+      const counts = r.__aggregated ? (r.serviceCounts || null) : null;
+      if (counts) {
+        withItems += Number(counts.withItems) || 0;
+        unfilled += Number(counts.unfilled) || 0;
+        partial += Number(counts.partial) || 0;
+        full += Number(counts.full) || 0;
+      } else {
+        withItems++;
+        if (got <= 0) unfilled++;
+        else if (got < want) partial++;
+        else full++;
+      }
     }
     /* An archived month is one synthetic row standing for many orders, with created
        and fulfilledAt both set to the month start. Timing it would add a 0-hour

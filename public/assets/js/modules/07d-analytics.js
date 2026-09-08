@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 // ── ANALYTICS ────────────────────────────────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
@@ -76,7 +76,11 @@ function renderAn(){
   else if(p==='year')from=new Date(now.getFullYear(),0,1);
   else from=new Date(el('rfrom').value||'2000-01-01');
   var to=p==='custom'?new Date(el('rto').value||now):now;
-  var archived=S.g('request_analytics_archive')||[];
+  /* Archived orders keep counting. request_analytics_archive (a second, unbounded
+     copy of the same orders) was retired; request_analytics_summary_v1 carries the
+     same months as one aggregate row per month×department, with items[], dispensed[]
+     and the order counts intact. */
+  var archived=S.g('request_analytics_summary_v1')||[];
   var rs=gr().concat(archived).filter(function(r){if(r.status==='pending')return false;var d=new Date(r.created||0);return(!df||r.deptId===df)&&d>=from&&d<=to});
   /* Use the same stable identity across departments that the Similar Medicines
      workbench uses after a merge.  The medication id is department-local, so
@@ -149,7 +153,7 @@ function renderAn(){
   (function(){
     var host=el('analytics-period-compare');
     if(!host)return;
-    var allRs=gr().concat(S.g('request_analytics_archive')||[]).filter(function(r){return r.status!=='pending'});
+    var allRs=gr().concat(S.g('request_analytics_summary_v1')||[]).filter(function(r){return r.status!=='pending'});
     var nowD=new Date(),cy=nowD.getFullYear(),cm=nowD.getMonth();
     var cq=Math.floor(cm/3);
     /* Current quarter */

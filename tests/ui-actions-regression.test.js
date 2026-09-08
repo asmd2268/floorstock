@@ -220,10 +220,19 @@ test('department login hydrates its directory before assignment validation and s
   assert.match(requestSource, /floorstock_last_cache_v2_['"]?\+cacheUid/);
   assert.match(requestSource, /localStorage\.removeItem\('floorstock_last_cache_v1'\)/);
   assert.doesNotMatch(requestSource, /localStorage\.setItem\(\s*['"]floorstock_last_cache_v1/);
-  assert.match(requestSource, /fsStateLoadFloorstockForProfileViaRest\(profileHint\)/);
+  // The cold load still prefers REST and falls back to the SDK; the rule now lives
+  // in core/state-transport.js instead of being spelled out at this call site.
+  assert.match(requestSource, /portLoadState\(profileHint/);
+  assert.match(requestSource, /registerStateTransport\('rest'/);
+  assert.match(requestSource, /registerStateTransport\('sdk'/);
   assert.match(requestSource, /'crash_carts',\n/);
-  assert.match(requestSource, /function fsStateLoadCrashReportsViaRest\(profile\)/);
-  assert.match(requestSource, /result\.failedKeys=\(result\.failedKeys\|\|\[\]\)\.concat\('crash_cart_reports'\)/);
+  // Collection-backed keys (crash_cart_reports, controlled_moves) are listed from
+  // their own collection on the REST path rather than read as a state document.
+  // One generic loader now serves every such key; it replaced a per-key copy.
+  assert.match(requestSource, /function fsStateLoadCollectionViaRest\(spec,profile\)/);
+  // A failed collection list must be reported as a failed key so pollRest()
+  // restores the previous cached value, rather than blanking the ledger with [].
+  assert.match(requestSource, /result\.failedKeys=\(result\.failedKeys\|\|\[\]\)\.concat\(entry\.spec\.key\)/);
   assert.match(requestSource, /function fsStateScopeCacheForProfile\(cache,profile\)/);
   assert.match(requestSource, /function belongs\(row\)/);
   assert.match(requestSource, /Neonatal Intensive Care Unit/);
@@ -668,7 +677,7 @@ test('inpatient supervisor capabilities align across Inventory, Crash Cart, Acco
     'medication_visibility_rules_v3', 'medication_freeze_rules_v3',
     'crash_carts', 'crash_cart_reports', 'crash_cart_medication_names_v1',
     'accountability_assignments_v2', 'accountability_usage_v2', 'accountability_regimens_v2',
-    'requests', 'request_analytics_archive', 'deleted_request_audit_v4', 'department_request_notifications_v1',
+    'requests', 'request_analytics_summary_v1', 'deleted_request_audit_v4', 'department_request_notifications_v1',
   ]) assert.equal(canWriteStateKey(supervisor, key), true, key);
 
   for (const key of ['req_windows', 'disp_slots', 'monthly_limits', 'controlled_catalog', 'departments', 'deleted_departments']) {
@@ -804,5 +813,13 @@ test('scoped-role realtime uses per-document listeners, never a collection query
   // data the cold-load already fetched (regression: briefly showed 0
   // inventory / a wrong crash-cart-report count right after login).
   const fromCacheGuards = requestSource.match(/snapshot\.metadata\.fromCache/g) || [];
-  assert.equal(fromCacheGuards.length >= 3, true);
+  // Two, not three: the master and scoped paths used to carry their own copy of
+  // the crash-reports collection listener, guard included. Both now call the one
+  // shared installer, so there is one guard covering every collection-backed key
+  // plus the one on the per-document scoped listeners.
+  assert.equal(fromCacheGuards.length >= 2, true);
+  assert.match(requestSource, /function fsStateInstallCollectionListeners\(profile,label\)\{/);
+  // Both realtime paths must go through it rather than growing a second copy.
+  const installerCalls = requestSource.match(/S\.collectionUnsubs=fsStateInstallCollectionListeners\(/g) || [];
+  assert.equal(installerCalls.length, 2);
 });

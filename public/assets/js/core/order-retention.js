@@ -1,4 +1,5 @@
 import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
+import { registerStorageCleanup } from './storage-cleanup.js?v=46cb1ec8ee';
 
 /* Order retention: keep Firestore from growing without bound as fulfilled
    requests age past 6 months, without silently breaking historical
@@ -26,7 +27,11 @@ import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v
      since the file download itself cannot be automated — it stays a
      manual, confirmed action only). */
 function orderRetentionCutoff(){var d=new Date();d.setMonth(d.getMonth()-6);return d}
-function requestArchiveRecord(r){return {id:r.id,deptId:r.deptId||'',deptName:r.deptName||'',created:r.created||r.fulfilledAt||globalThis.nowISO(),fulfilledAt:r.fulfilledAt||'',status:r.status||'fulfilled',dispensed:(r.dispensed||[]).map(function(x){return {medId:x.medId,qty:Number(x.qty)||0}})}}
+// The downloaded file is the only full-detail copy that survives, so it carries
+// items[] (what the ward asked for) alongside dispensed[] (what it received).
+// Dropping items[] made the archive unable to answer the one question the
+// shortfall report exists for.
+function requestArchiveRecord(r){return {id:r.id,deptId:r.deptId||'',deptName:r.deptName||'',created:r.created||r.fulfilledAt||globalThis.nowISO(),fulfilledAt:r.fulfilledAt||'',scheduledFor:r.scheduledFor||'',status:r.status||'fulfilled',items:(r.items||[]).map(function(x){return {medId:x.medId,medName:x.medName||x.name||'',qty:Number(x.qty)||0}}),dispensed:(r.dispensed||[]).map(function(x){return {medId:x.medId,medName:x.medName||x.name||'',qty:Number(x.qty)||0}})}}
 
 function monthKey(dateValue){var d=new Date(dateValue||0);if(isNaN(d))return null;return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')}
 function monthStartIso(key){var parts=key.split('-');return new Date(Number(parts[0]),Number(parts[1])-1,1).toISOString()}
@@ -43,16 +48,43 @@ function buildMonthlyAggregates(oldRequests){
     var key=monthKey(r.fulfilledAt||r.created);
     if(!key)return;
     var groupKey=key+'|'+String(r.deptId||'');
-    if(!groups[groupKey])groups[groupKey]={month:key,deptId:r.deptId||'',deptName:r.deptName||'',requestCount:0,byMed:{}};
+    if(!groups[groupKey])groups[groupKey]={month:key,deptId:r.deptId||'',deptName:r.deptName||'',requestCount:0,zeroDispenseCount:0,
+      serviceCounts:{withItems:0,full:0,partial:0,unfilled:0},byMed:{},byRequestedMed:{}};
     var g=groups[groupKey];
     g.requestCount++;
+
+    var dispensedTotal=0;
     (r.dispensed||[]).forEach(function(line){
       var qty=Number(line.qty)||0;
       if(qty<=0)return;
+      dispensedTotal+=qty;
       var medId=String(line.medId||'');
       if(!g.byMed[medId])g.byMed[medId]={medId:medId,medName:line.medName||line.name||'',qty:0};
       g.byMed[medId].qty+=qty;
     });
+    if(dispensedTotal===0)g.zeroDispenseCount++;
+
+    /* What was ASKED for, not only what was sent. Without items[] the aggregate
+       loses fill rate and the per-medicine shortfall report for every archived
+       month, which is the measure that shows a ward being under-served. The fill
+       outcome of each order is tallied here too, because once orders are merged
+       into one row their individual outcomes can no longer be recovered from the
+       row's own totals. */
+    var requestedTotal=0;
+    (r.items||[]).forEach(function(line){
+      var qty=Number(line.qty)||0;
+      if(qty<=0)return;
+      requestedTotal+=qty;
+      var medId=String(line.medId||'');
+      if(!g.byRequestedMed[medId])g.byRequestedMed[medId]={medId:medId,medName:line.medName||line.name||'',qty:0};
+      g.byRequestedMed[medId].qty+=qty;
+    });
+    if(requestedTotal>0){
+      g.serviceCounts.withItems++;
+      if(dispensedTotal<=0)g.serviceCounts.unfilled++;
+      else if(dispensedTotal<requestedTotal)g.serviceCounts.partial++;
+      else g.serviceCounts.full++;
+    }
   });
   return Object.keys(groups).map(function(groupKey){
     var g=groups[groupKey];
@@ -64,10 +96,53 @@ function buildMonthlyAggregates(oldRequests){
       fulfilledAt:monthStartIso(g.month),
       created:monthStartIso(g.month),
       requestCount:g.requestCount,
+      zeroDispenseCount:g.zeroDispenseCount,
+      serviceCounts:g.serviceCounts,
+      items:Object.values(g.byRequestedMed),
       dispensed:Object.values(g.byMed),
       __aggregated:true
     };
   });
+}
+
+/* Merging two aggregate sets for the same month+department. Cleanup runs more than
+   once over the years and the legacy-archive migration folds a second set in, so
+   rows must combine rather than overwrite — otherwise the second run silently
+   replaces the first month's totals instead of adding to them. */
+function mergeAggregateRows(existing,incoming){
+  var byId={};
+  (existing||[]).forEach(function(row){if(row&&row.id)byId[row.id]=row});
+  (incoming||[]).forEach(function(row){
+    if(!row||!row.id)return;
+    var current=byId[row.id];
+    if(!current){byId[row.id]=row;return}
+    var merged=Object.assign({},current,{
+      requestCount:(Number(current.requestCount)||0)+(Number(row.requestCount)||0),
+      zeroDispenseCount:(Number(current.zeroDispenseCount)||0)+(Number(row.zeroDispenseCount)||0),
+      serviceCounts:{
+        withItems:(Number((current.serviceCounts||{}).withItems)||0)+(Number((row.serviceCounts||{}).withItems)||0),
+        full:(Number((current.serviceCounts||{}).full)||0)+(Number((row.serviceCounts||{}).full)||0),
+        partial:(Number((current.serviceCounts||{}).partial)||0)+(Number((row.serviceCounts||{}).partial)||0),
+        unfilled:(Number((current.serviceCounts||{}).unfilled)||0)+(Number((row.serviceCounts||{}).unfilled)||0)
+      },
+      items:sumMedLines(current.items,row.items),
+      dispensed:sumMedLines(current.dispensed,row.dispensed)
+    });
+    byId[row.id]=merged;
+  });
+  return Object.values(byId);
+}
+
+function sumMedLines(a,b){
+  var byMed={};
+  [].concat(a||[],b||[]).forEach(function(line){
+    if(!line)return;
+    var medId=String(line.medId||'');
+    if(!byMed[medId])byMed[medId]={medId:medId,medName:line.medName||line.name||'',qty:0};
+    if(!byMed[medId].medName&&line.medName)byMed[medId].medName=line.medName;
+    byMed[medId].qty+=Number(line.qty)||0;
+  });
+  return Object.values(byMed);
 }
 
 async function cleanupOldOrders(autoMode){
@@ -100,24 +175,7 @@ async function cleanupOldOrders(autoMode){
   );
   if(!confirmed){globalThis.toast('Archive file downloaded; orders were NOT deleted. Re-run this action when ready.','info');return}
 
-  var summary=(globalThis.S.g('request_analytics_summary_v1')||[]).slice();
-  var byId={};summary.forEach(function(x){byId[x.id]=x});
-  buildMonthlyAggregates(old).forEach(function(row){
-    if(byId[row.id]){
-      // Merge into an existing month×department aggregate instead of
-      // duplicating it, in case cleanup runs more than once for overlapping
-      // months (e.g. requests that aged past the cutoff between runs).
-      var existing=byId[row.id];
-      existing.requestCount=(existing.requestCount||0)+row.requestCount;
-      var byMed={};(existing.dispensed||[]).forEach(function(m){byMed[m.medId]=m});
-      row.dispensed.forEach(function(m){
-        if(byMed[m.medId])byMed[m.medId].qty+=m.qty;
-        else{byMed[m.medId]=m;existing.dispensed.push(m)}
-      });
-    }else{
-      byId[row.id]=row;summary.push(row);
-    }
-  });
+  var summary=mergeAggregateRows(globalThis.S.g('request_analytics_summary_v1')||[],buildMonthlyAggregates(old));
 
   /* Two documents, no transaction between them. The aggregate merge ADDS to any
      existing row for the same month and department, so if the trim below failed
@@ -138,6 +196,65 @@ async function cleanupOldOrders(autoMode){
   if(document.querySelector('#pg-print.on'))globalThis.renderPrint();
 }
 
+/* One-time migration: retire request_analytics_archive.
+
+   Two archives of the same orders ran side by side for months. The legacy key
+   held full-detail rows in a single Firestore document that grew without bound —
+   the exact problem the monthly summary was introduced to solve — and both were
+   concatenated into every report, so the same period was served through two
+   different code paths. This folds the legacy rows through the same aggregator
+   the live path uses and deletes the old document.
+
+   Nothing is lost from the statistics: buildMonthlyAggregates carries the order
+   count, the zero-dispense count, the fill outcomes and both medicine line sets,
+   and analytics-engine weighs each aggregate by rowWeight(), so a month reads
+   with the same totals afterwards at coarser resolution. The legacy rows are
+   downloaded first regardless, because they are full detail and this deletes them. */
+async function migrateLegacyRequestArchive(){
+  var user=globalThis.CU;
+  if(!user||user.master!==true)return globalThis.toast('Only Master can run the archive migration.','err');
+
+  var legacy=globalThis.S.g('request_analytics_archive')||[];
+  if(!legacy.length){
+    // Present but empty: still remove the key so the document stops existing.
+    if(globalThis.S.g('request_analytics_archive')!==null){
+      await globalThis.S.rm('request_analytics_archive');
+      globalThis.toast('Legacy order archive was already empty and has been removed.','succ');
+    }else{
+      globalThis.toast('No legacy order archive found — nothing to migrate.','info');
+    }
+    return;
+  }
+
+  var stamp=new Date().toISOString().replace(/[:.]/g,'-');
+  var fileName='ASDHealth_Legacy_Orders_Archive_'+stamp+'.json';
+  downloadJsonFile({format:'ASDHealth-Orders-Archive',version:1,exportedAt:new Date().toISOString(),
+    source:'request_analytics_archive',count:legacy.length,orders:legacy},fileName);
+  await localArchiveDbSave('orders',{id:'legacy_'+stamp,createdAt:new Date().toISOString(),count:legacy.length,payload:legacy});
+
+  var confirmed=await globalThis.uiConfirm(
+    'A file with the full detail of '+legacy.length+' legacy archived order(s) has been downloaded ('+fileName+').\n\n'+
+    'These records will be folded into the monthly analytics summary — every report keeps the same order counts and quantities, at monthly rather than per-order resolution — and the old record will then be deleted.\n\n'+
+    'Save the file somewhere safe outside the browser, then confirm to continue.',
+    {danger:true,okText:'I saved the file — migrate now'}
+  );
+  if(!confirmed){globalThis.toast('File downloaded; nothing was migrated. Re-run when ready.','info');return}
+
+  var previousSummary=globalThis.S.g('request_analytics_summary_v1')||[];
+  var merged=mergeAggregateRows(previousSummary,buildMonthlyAggregates(legacy));
+  await globalThis.S.s('request_analytics_summary_v1',merged);
+  try{
+    await globalThis.S.rm('request_analytics_archive');
+  }catch(removeError){
+    // The summary now contains these months; leaving the legacy key in place
+    // would double-count them on the next report, so put the summary back.
+    try{await globalThis.S.s('request_analytics_summary_v1',previousSummary)}
+    catch(rollbackError){console.error('Could not restore the previous analytics summary after a failed migration.',rollbackError)}
+    throw removeError;
+  }
+  globalThis.toast(legacy.length+' legacy archived order(s) folded into the monthly summary; the old record has been removed. Report totals are unchanged.','succ');
+}
+
 globalThis._orderCleanupStarted=false;
 function scheduleAutomaticOrderCleanup(){
   // Intentionally left as a no-op trigger guard only — see the autoMode
@@ -146,5 +263,27 @@ function scheduleAutomaticOrderCleanup(){
   if(globalThis._orderCleanupStarted||!globalThis.CU||globalThis.CU.role!=='pharmacy')return;
   globalThis._orderCleanupStarted=true;
 }
-Object.assign(globalThis,{orderRetentionCutoff,requestArchiveRecord,cleanupOldOrders,scheduleAutomaticOrderCleanup});
-export {orderRetentionCutoff,requestArchiveRecord,cleanupOldOrders,scheduleAutomaticOrderCleanup};
+Object.assign(globalThis,{orderRetentionCutoff,requestArchiveRecord,buildMonthlyAggregates,mergeAggregateRows,cleanupOldOrders,scheduleAutomaticOrderCleanup,migrateLegacyRequestArchive});
+export {orderRetentionCutoff,requestArchiveRecord,buildMonthlyAggregates,mergeAggregateRows,cleanupOldOrders,scheduleAutomaticOrderCleanup,migrateLegacyRequestArchive};
+
+/* The System Health storage panel needs to know which action shrinks `requests`.
+   Registering here keeps that knowledge with the module that owns the action
+   instead of hard-coding a key->function table in the panel. */
+/* The legacy archive is only visible while it still exists, so it registers under
+   its own key: once the migration has run the document is gone, the gauge stops
+   listing it, and the entry disappears on its own. */
+registerStorageCleanup({
+  key:'request_analytics_archive',
+  label:'Migrate legacy archive / ترحيل الأرشيف القديم',
+  hint:'Folds the retired second archive into the monthly summary. Report totals are unchanged.',
+  run:function(){return migrateLegacyRequestArchive()},
+  canRun:function(){return !!(globalThis.CU&&globalThis.CU.master===true)}
+});
+
+registerStorageCleanup({
+  key:'requests',
+  label:'Archive orders > 6 months / أرشفة الطلبات',
+  hint:'Downloads full detail as JSON, keeps monthly totals for reports, then removes the old rows.',
+  run:function(){return cleanupOldOrders(false)},
+  canRun:function(){return !!(globalThis.CU&&globalThis.CU.master===true)}
+});

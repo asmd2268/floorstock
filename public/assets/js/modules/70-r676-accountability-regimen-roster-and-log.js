@@ -1,6 +1,8 @@
+/* HTML escaping has one implementation: fsEsc, from core/dom-utils.js, which
+   also publishes it as the global `esc` before any feature module loads. The
+   local copies removed here each re-derived the same fallback. */
 (function(){
 'use strict';
-function esc(value){return window.fsEsc?window.fsEsc(value):String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function norm(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9\u0600-\u06ff]+/g,'')}
 function state(key){return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[]}
 function depts(){return state('departments')}
@@ -106,7 +108,6 @@ setTimeout(decorate,0);
 // --- Merged from 72-r676-accountability-handover-log-view.js (Phase 6 consolidation) ---
 (function(){
 'use strict';
-function esc(value){return window.fsEsc?window.fsEsc(value):String(value==null?'':value).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function state(key){return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[]}
 function departments(){return state('departments')}
 function deptName(id){var row=departments().find(function(item){return String(item.id)===String(id)});return row?(row.name||row.id):(id||'—')}
@@ -146,7 +147,6 @@ setTimeout(function(){var root=document.getElementById('r17-accountability-root'
 (function(){
 'use strict';
 var CATALOG='accountability_regimen_catalog_v1',REGIMENS='accountability_regimens_v3',PLAN_USAGE_KEY='accountability_plan_usage_v1',UI={dept:'',edit:''};
-function esc(v){return window.fsEsc?window.fsEsc(v):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 function rows(key){var value=window.S&&S.g&&S.g(key);return Array.isArray(value)?value:[]}
 function norm(value){return String(value||'').trim().toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g,'')}
 function sameDept(a,b){if(!a&&!b)return true;if(!a||!b)return false;if(norm(a)===norm(b))return true;var da=depts().find(function(d){return norm(d.id)===norm(a)||norm(d.name||'')===norm(a)});var db=depts().find(function(d){return norm(d.id)===norm(b)||norm(d.name||'')===norm(b)});return !!(da&&db&&String(da.id)===String(db.id))}

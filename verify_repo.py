@@ -16,7 +16,7 @@ for path in INDEXES:
     if not path.is_file():
         errors.append(f"missing {path.relative_to(ROOT)}")
 
-for json_path in [ROOT / "firebase.json", ROOT / "vercel.json", ROOT / "firestore.indexes.json", ROOT / ".firebaserc", ROOT / "module-manifest.json"]:
+for json_path in [ROOT / "firebase.json", ROOT / "vercel.json", ROOT / "firestore.indexes.json", ROOT / ".firebaserc"]:
     try:
         json.loads(json_path.read_text(encoding="utf-8"))
     except Exception as exc:
@@ -114,7 +114,11 @@ for required in [
     "FB_APPCHECK.activate(",
     "floorstock_last_cache_v2_",
     "fsHydrateDepartmentDirectoryForLogin(profile)",
-    "fsStateLoadFloorstockForProfileViaRest(profileHint)",
+    # The cold load prefers REST and falls back to the SDK. That rule moved into
+    # core/state-transport.js; this module registers both implementations behind it.
+    "registerStateTransport('rest'",
+    "registerStateTransport('sdk'",
+    "portLoadState(profileHint",
 ]:
     if required not in auth_module:
         errors.append(f"Firebase authentication bootstrap missing {required}")

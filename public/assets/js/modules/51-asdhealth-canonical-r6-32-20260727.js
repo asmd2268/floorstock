@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 /* ASDHealth FloorStock — R6.32 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
@@ -1718,14 +1718,18 @@ window.saveCrashCartSmartBulkReplacement=async function(){
   try{
     var result=fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled);
     if(typeof window.setCrashCarts==='function'){await window.setCrashCarts(result.carts);cartsSaved=true}
-    if(typeof window.setCrashReports==='function'){await window.setCrashReports(result.reports);reportsSaved=true}
+    /* The bulk flow only ADDS reports, so only the new ones are written — one
+       document each — instead of rewriting every report in the collection. */
+    if(typeof window.saveCrashReport==='function'){await window.saveCrashReport(result.createdReports||[]);reportsSaved=true}
     if(!fsR6CrashVerifyPersisted(result,compiled))throw new Error('Read-back verification failed. No completion was accepted.');
     await Promise.all((result.createdReports||[]).map(function(r){return fsR6Audit('crash_cart_open_report',{reportId:r.id,cartId:r.cartId,deptId:r.deptId,oldSeal:r.oldSeal,newSeal:r.newSeal,reason:r.reason,bulk:true,bulkActionId:result.bulkId,openedAt:r.openedAt})}));
     await fsR6Audit('crash_cart_smart_bulk_complete',{bulkActionId:result.bulkId,carts:compiled.carts.length,medicinePlans:(FS_R6_CRASH_WORKFLOW.plans||[]).filter(function(x){return x.enabled}).length,sourceSelection:FS_R6_CRASH_SELECTED.size,uniqueSeals:compiled.carts.map(function(x){return x.newSeal}),openingLogRecords:(result.createdReports||[]).length});
     FS_R6_CRASH_SELECTED.clear();fsR6CrashCloseModal();if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();fsR6Toast(compiled.carts.length+' Crash Cart(s) replaced, reviewed and resealed ✓ · '+result.bulkId,'succ');
   }catch(e){
     console.error(e);
-    try{if(reportsSaved&&typeof window.setCrashReports==='function')await window.setCrashReports(originalReports)}catch(rollbackReportError){console.error('Crash report rollback failed',rollbackReportError)}
+    // Rollback removes exactly what this run created; the reports that existed
+    // before it are untouched and need no rewrite.
+    try{if(reportsSaved&&typeof window.deleteCrashReport==='function')await window.deleteCrashReport((result&&result.createdReports||[]).map(function(r){return r.id}))}catch(rollbackReportError){console.error('Crash report rollback failed',rollbackReportError)}
     try{if(cartsSaved&&typeof window.setCrashCarts==='function')await window.setCrashCarts(originalCarts)}catch(rollbackCartError){console.error('Crash Cart rollback failed',rollbackCartError)}
     fsR6CrashStatus('Save failed and rollback was attempted: '+String(e&&e.message||e),'err');if(save){save.disabled=false;save.textContent='Validate and save / تحقق وحفظ'}
   }

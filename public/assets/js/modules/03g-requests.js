@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,

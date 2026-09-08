@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js?v=005b407b10';
 
@@ -90,27 +90,11 @@ window.runExpiryStartupAlert=function(){
 const __asdhLegacyApi = {
   startApp: startApp,
   boot: boot,
-  canonicalRenderShelfAlertSettings: globalThis.canonicalRenderShelfAlertSettings,
-  canonicalOpenAddExpiry: globalThis.canonicalOpenAddExpiry,
-  canonicalOpenEditExpiry: globalThis.canonicalOpenEditExpiry,
-  canonicalOrderRetentionCutoff: globalThis.canonicalOrderRetentionCutoff,
-  canonicalRequestArchiveRecord: globalThis.canonicalRequestArchiveRecord,
-  canonicalCleanupOldOrders: globalThis.canonicalCleanupOldOrders,
-  canonicalScheduleAutomaticOrderCleanup: globalThis.canonicalScheduleAutomaticOrderCleanup,
-  canonicalGetNextDispSlot: globalThis.canonicalGetNextDispSlot,
-  canonicalFmt12: globalThis.canonicalFmt12,
-  canonicalDayBits: globalThis.canonicalDayBits,
-  canonicalTimeToMins: globalThis.canonicalTimeToMins,
-  canonicalEnsureXLSX: globalThis.canonicalEnsureXLSX,
-  canonicalGetCatOptions: globalThis.canonicalGetCatOptions,
-  canonicalSetPPP: globalThis.canonicalSetPPP,
-  canonicalResetPrintPageState: globalThis.canonicalResetPrintPageState,
   _scanReader: globalThis._scanReader,
   _scanStream: globalThis._scanStream,
   _parsedScan: globalThis._parsedScan,
   _parsedType: globalThis._parsedType,
   DEFAULT_CATS: globalThis.DEFAULT_CATS,
-  canonicalGetMonthlyLimit: globalThis.canonicalGetMonthlyLimit,
   CTL_PDF_REVIEW: globalThis.CTL_PDF_REVIEW,
   CTL_BATCH_CTX: globalThis.CTL_BATCH_CTX,
   CTL_DEPT_SELECTED: globalThis.CTL_DEPT_SELECTED,
@@ -151,5 +135,5 @@ export {
   startApp,
   boot
 };
-export const legacyVariableNames = Object.freeze(["canonicalRenderShelfAlertSettings", "canonicalOpenAddExpiry", "canonicalOpenEditExpiry", "canonicalOrderRetentionCutoff", "canonicalRequestArchiveRecord", "canonicalCleanupOldOrders", "canonicalScheduleAutomaticOrderCleanup", "canonicalGetNextDispSlot", "canonicalFmt12", "canonicalDayBits", "canonicalTimeToMins", "canonicalEnsureXLSX", "canonicalGetCatOptions", "canonicalSetPPP", "canonicalResetPrintPageState", "_scanReader", "_scanStream", "_parsedScan", "_parsedType", "DEFAULT_CATS", "canonicalGetMonthlyLimit", "CTL_PDF_REVIEW", "CTL_BATCH_CTX", "CTL_DEPT_SELECTED", "MASTER_ACTUAL", "MASTER_EFFECTIVE", "SHELF_MED_SELECTED"]);
+export const legacyVariableNames = Object.freeze(["_scanReader", "_scanStream", "_parsedScan", "_parsedType", "DEFAULT_CATS",  "CTL_PDF_REVIEW", "CTL_BATCH_CTX", "CTL_DEPT_SELECTED", "MASTER_ACTUAL", "MASTER_EFFECTIVE", "SHELF_MED_SELECTED"]);
 export default __asdhLegacyApi;

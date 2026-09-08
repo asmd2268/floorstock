@@ -21,7 +21,11 @@ window.ctlMove=function(v){
   var many=Array.isArray(v),input=many?v:[v],stamp=Date.now(),actor=(window.CU&&(CU.username||CU.email))||'Unknown';
   var records=input.filter(Boolean).map(function(item,index){var x=Object.assign({},item);x.id=x.id||'ctl_'+stamp+'_'+index+'_'+Math.random().toString(36).slice(2,7);x.at=x.at||(typeof nowISO==='function'?nowISO():new Date().toISOString());x.by=x.by||actor;return x});
   if(!records.length)return Promise.resolve(many?[]:null);
-  var promise=many?S.s('controlled_moves',(typeof ctlMoves==='function'?(ctlMoves()||[]):[]).concat(records)).then(function(){return records}):S.push('controlled_moves',records[0]);
+  /* One document per movement. This used to rewrite the whole ledger array into a
+     single Firestore document on every recorded movement, which both cost a write
+     proportional to the ledger's length and put the five-year narcotic retention
+     requirement against a 1 MiB ceiling. */
+  var promise=window.appendControlledMoves(records).then(function(){return many?records:records[0]});
   promise.catch(function(err){console.error('Controlled movement save failed',err)});return promise
 };
 

@@ -894,7 +894,27 @@ function writeState(transaction, reference, value) {
 // write permission could previously erase or forge the entire trail; the rules
 // can only validate {value, updatedAt} shape, never append-only semantics.
 // audit_log is now write-denied in firestore.rules and this is the only path in.
-const AUDIT_LOG_MAX_ENTRIES = 5000;
+//
+// The trail is written to one document per calendar month — audit_log_YYYY-MM —
+// rather than to a single audit_log document. That document was capped at 1 MiB
+// like every other, and the cap was handled by silently discarding the OLDEST
+// 5000+ entries on every append: a compliance trail that quietly deleted its own
+// history, which is the opposite of what it is for. A monthly document starts
+// empty, so the ceiling is never approached in ordinary use and nothing is ever
+// dropped. A month that does fill up rolls to a numbered part rather than
+// discarding anything, so an unusually heavy month costs an extra document
+// instead of losing its beginning.
+const AUDIT_LOG_PART_MAX_BYTES = 800 * 1024;
+const AUDIT_LOG_MAX_PARTS = 50;
+
+function auditLogMonthKey(date = new Date()) {
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+// Part 1 keeps the bare month key so the common case reads as audit_log_2026-09.
+function auditLogPartKey(monthKey, part) {
+  return part <= 1 ? `audit_log_${monthKey}` : `audit_log_${monthKey}_p${part}`;
+}
 
 exports.appendAuditLog = onCall(CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
@@ -910,7 +930,6 @@ exports.appendAuditLog = onCall(CALLABLE_OPTIONS, async (request) => {
   const metaJson = JSON.stringify(meta);
   if (metaJson.length > 8000) throw new HttpsError('invalid-argument', 'meta payload is too large.');
 
-  const ref = stateRef('audit_log', caller.tenantId || '');
   const entry = {
     id: `aud_${Date.now()}_${crypto.randomBytes(6).toString('hex')}`,
     action,
@@ -923,14 +942,27 @@ exports.appendAuditLog = onCall(CALLABLE_OPTIONS, async (request) => {
     effectiveRole: caller.role || '',
     masterActing: caller.master === true
   };
-  await db.runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const rows = stateArray(snap);
-    const next = rows.concat([entry]);
-    // Trim oldest first so the document cannot grow past Firestore's 1MB limit.
-    writeState(tx, ref, next.length > AUDIT_LOG_MAX_ENTRIES ? next.slice(next.length - AUDIT_LOG_MAX_ENTRIES) : next);
-  });
-  return { ok: true, id: entry.id };
+  const monthKey = auditLogMonthKey();
+  const tenantId = caller.tenantId || '';
+  // Walk forward to the first part with room. Almost always the first read.
+  let part = 1;
+  let written = false;
+  for (; part <= AUDIT_LOG_MAX_PARTS; part += 1) {
+    const ref = stateRef(auditLogPartKey(monthKey, part), tenantId);
+    const full = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const rows = stateArray(snap);
+      const next = rows.concat([entry]);
+      // Measured, not counted: entry sizes vary with their meta payload, so a
+      // fixed row count either wastes most of the document or overshoots it.
+      if (rows.length && Buffer.byteLength(JSON.stringify(next), 'utf8') > AUDIT_LOG_PART_MAX_BYTES) return true;
+      writeState(tx, ref, next);
+      return false;
+    });
+    if (!full) { written = true; break; }
+  }
+  if (!written) throw new HttpsError('resource-exhausted', 'The audit trail for this month is full.');
+  return { ok: true, id: entry.id, key: auditLogPartKey(monthKey, part) };
 });
 
 function requestValue(request, name) {

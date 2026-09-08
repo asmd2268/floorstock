@@ -31,7 +31,22 @@ var ROLE_LABELS={
 function roleLabel(role){return ROLE_LABELS[role]||role||'Unknown role / دور غير معروف'}
 
 function usersDirectory(){return (window.S&&window.S.g?window.S.g('users')||[]:[])}
-function auditRows(){return (window.S&&window.S.g?window.S.g('audit_log')||[]:[])}
+/* The audit trail is one document per calendar month (audit_log_YYYY-MM, plus
+   _pN if a heavy month overflowed) instead of one audit_log document that was
+   capped at 1 MiB and silently discarded its oldest entries on every append.
+   Every part is read and concatenated, so this report now covers the whole
+   retained history rather than the last 5000 entries. The bare audit_log key is
+   still read: it holds everything written before the split. */
+function auditRows(){
+  if(!window.S||typeof window.S.g!=='function')return [];
+  var rows=[];
+  Object.keys(window.S.cache||{}).forEach(function(key){
+    if(key!=='audit_log'&&!/^audit_log_\d{4}-\d{2}(_p\d+)?$/.test(key))return;
+    var value=window.S.g(key);
+    if(Array.isArray(value))rows=rows.concat(value);
+  });
+  return rows.sort(function(a,b){return String((a&&a.at)||'').localeCompare(String((b&&b.at)||''))});
+}
 function activityRows(){return (window.S&&window.S.g?window.S.g('user_activity_daily_v1')||[]:[])}
 
 function inRange(dateStr,from,to){

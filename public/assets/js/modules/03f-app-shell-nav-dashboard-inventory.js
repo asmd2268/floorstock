@@ -1,5 +1,5 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
-import { normalizeRole } from '../core/role-capabilities.js?v=95e63d4c90';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { normalizeRole } from '../core/role-capabilities.js?v=7eaec50bbd';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
 import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=7975fe045f';
@@ -450,7 +450,11 @@ function renderInv(){
   var catf=(el('icatf')||{value:''}).value;
   var clsf=(el('iclsf')||{value:''}).value;
   var special=(el('inv-special-filter')||{value:''}).value,zeroDays=Math.max(1,Number((el('inv-zero-days')||{}).value)||183);
-  var requests=gr().concat(S.g('request_analytics_archive')||[]),nowMs=Date.now(),zeroCutoff=nowMs-zeroDays*24*60*60*1000;
+  /* Archived months are included so a medicine dispensed only before the archive
+     cutoff is not reported as never-requested. Their fulfilledAt is the month start,
+     so "last dispensed" resolves to the month for archived periods and to the exact
+     day for live ones. */
+  var requests=gr().concat(S.g('request_analytics_summary_v1')||[]),nowMs=Date.now(),zeroCutoff=nowMs-zeroDays*24*60*60*1000;
   function wasRequested(med){return requests.some(function(r){return String(r.deptId)===String(deptId)&&(r.items||[]).some(function(i){return String(i.medId)===String(med.id)})})}
   function hasExpiry(med){return (getExpiry(deptId)||[]).some(function(x){return String(x.medId)===String(med.id)&&String(x.date||x.expiry||'')})}
   function lastDispense(med){var dates=requests.filter(function(r){return String(r.deptId)===String(deptId)&&(r.dispensed||[]).some(function(i){return String(i.medId)===String(med.id)&&Number(i.qty)>0})}).map(function(r){return new Date(r.fulfilledAt||r.updatedAt||r.created||0).getTime()}).filter(isFinite);return dates.length?Math.max.apply(Math,dates):0}

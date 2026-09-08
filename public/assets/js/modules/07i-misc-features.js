@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=babf19f181';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js?v=005b407b10';
 
 // ── EXPIRY-STUB / ORDER RETENTION / PRINT / PUBLIC VIEW / NOTES /
@@ -11,51 +11,26 @@ import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule
 // core modules). Everything referenced here that isn't declared in this
 // file (S, CU, esc, el, toast, gd, gr, uiConfirm, deptName) is already
 // published to globalThis by its owning module.
-globalThis.canonicalRenderShelfAlertSettings = globalThis.renderShelfAlertSettings;
-globalThis.canonicalOpenAddExpiry = globalThis.openAddExpiry;
-globalThis.canonicalOpenEditExpiry = globalThis.openEditExpiry;
-function renderShelfAlertSettings(){return typeof canonicalRenderShelfAlertSettings==='function'&&canonicalRenderShelfAlertSettings!==renderShelfAlertSettings?canonicalRenderShelfAlertSettings():undefined}
-function openAddExpiry(){return typeof canonicalOpenAddExpiry==='function'&&canonicalOpenAddExpiry!==openAddExpiry?canonicalOpenAddExpiry():undefined}
-function openEditExpiry(btn){return typeof canonicalOpenEditExpiry==='function'&&canonicalOpenEditExpiry!==openEditExpiry?canonicalOpenEditExpiry(btn):undefined}
-// ── USERS
-// ── ORDER RETENTION (6 MONTHS) ───────────────────────────
-// Capture canonical references at module evaluation time.  publishLegacy()
-// later overwrites globalThis with these wrapper functions; resolving through
-// globalThis at call time would point back to the wrapper and recurse forever.
-globalThis.canonicalOrderRetentionCutoff = globalThis.orderRetentionCutoff;
-globalThis.canonicalRequestArchiveRecord = globalThis.requestArchiveRecord;
-globalThis.canonicalCleanupOldOrders = globalThis.cleanupOldOrders;
-globalThis.canonicalScheduleAutomaticOrderCleanup = globalThis.scheduleAutomaticOrderCleanup;
-globalThis.canonicalGetNextDispSlot = globalThis.getNextDispSlot;
-globalThis.canonicalFmt12 = globalThis.fmt12;
-globalThis.canonicalDayBits = globalThis.dayBits;
-globalThis.canonicalTimeToMins = globalThis.timeToMins;
-globalThis.canonicalEnsureXLSX = globalThis.ensureXLSX;
-globalThis.canonicalGetCatOptions = globalThis.getCatOptions;
-function orderRetentionCutoff(){return typeof canonicalOrderRetentionCutoff==='function'?canonicalOrderRetentionCutoff():undefined}
-function requestArchiveRecord(r){return typeof canonicalRequestArchiveRecord==='function'?canonicalRequestArchiveRecord(r):undefined}
-async function cleanupOldOrders(autoMode){return typeof canonicalCleanupOldOrders==='function'?canonicalCleanupOldOrders(autoMode):undefined}
-function scheduleAutomaticOrderCleanup(){return typeof canonicalScheduleAutomaticOrderCleanup==='function'?canonicalScheduleAutomaticOrderCleanup():undefined}
+/* The names below used to be re-declared here as `canonicalX` aliases plus
+   pass-through wrappers, because publishing them from this module overwrote the
+   owner's global with a function that called back through the global and
+   recursed. The wrappers added no behaviour and their typeof guards silently
+   returned undefined when the capture had not resolved. They are gone: each name
+   is published once, by the core module that owns it —
+   renderShelfAlertSettings / openAddExpiry / openEditExpiry (core/expiry-settings.js),
+   orderRetentionCutoff / requestArchiveRecord / cleanupOldOrders /
+   scheduleAutomaticOrderCleanup (core/order-retention.js), getNextDispSlot
+   (core/next-dispense-slot.js), fmt12 / dayBits / timeToMins (core/schedule-utils.js),
+   ensureXLSX (core/excel-loader.js), getCatOptions (core/category-options.js),
+   getMonthlyLimit (core/schedule-limits.js) — all of which load before this module.
+   publishLegacy now throws if a second module tries to publish any of them. */
 
+// ── USERS
 // ── PRINT (ORDER FORMS) ──────────────────────────────────
 // Final Print Orders renderer/engine is installed later in one canonical module.
 // Delegate to the canonical print-page state module without resolving through
 // globalThis at call time (publishing this legacy API would otherwise point
 // globalThis back to these wrappers and recurse forever).
-globalThis.canonicalSetPPP = globalThis.setPPP;
-globalThis.canonicalResetPrintPageState = globalThis.resetPrintPageState;
-function setPPP(n,btn){
-  if(typeof canonicalSetPPP==='function'&&canonicalSetPPP!==setPPP)return canonicalSetPPP(n,btn);
-  globalThis.PPP=n;
-  document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
-  if(btn)btn.classList.add('on');
-}
-function resetPrintPageState(){
-  if(typeof canonicalResetPrintPageState==='function'&&canonicalResetPrintPageState!==resetPrintPageState)return canonicalResetPrintPageState();
-  globalThis.PPP=0;
-  document.querySelectorAll('.ppp-btn').forEach(function(b){b.classList.remove('on')});
-}
-
 // ── PUBLIC REQUEST VIEW (read-only, no login) ────────────
 function checkPublicView(){
   var params=new URLSearchParams(window.location.search);
@@ -239,7 +214,6 @@ async function bulkDelete(){
 }
 
 // ── CATEGORY SELECTOR OPTIONS ────────────────────────────
-function getCatOptions(selected){return typeof canonicalGetCatOptions==='function'?canonicalGetCatOptions(selected):undefined}
 
 // ════════════════════════════════════════════════════════
 // SCHEDULE & LIMITS
@@ -253,16 +227,11 @@ function getMonthlyLimits(){return globalThis.scheduleGetMonthlyLimits()}
 function setMonthlyLimits(o){return globalThis.scheduleSetMonthlyLimits(o)}
 
 // ── Helpers ───────────────────────────────────────────────
-function fmt12(t){return typeof canonicalFmt12==='function'?canonicalFmt12(t):undefined}
-function dayBits(days){return typeof canonicalDayBits==='function'?canonicalDayBits(days):undefined}
 
 // ── Check if request is currently allowed ─────────────────
-function timeToMins(t){return typeof canonicalTimeToMins==='function'?canonicalTimeToMins(t):undefined}
 
 // ── Check monthly request count ───────────────────────────
 function getMonthlyReqCount(deptId){return canonicalMonthlyReqCount(deptId)}
-globalThis.canonicalGetMonthlyLimit = globalThis.getMonthlyLimit;
-function getMonthlyLimit(deptId){return typeof canonicalGetMonthlyLimit==='function'&&canonicalGetMonthlyLimit!==getMonthlyLimit?canonicalGetMonthlyLimit(deptId):0}
 
 // ── RENDER schedule page ──────────────────────────────────
 function renderSchedule(){
@@ -305,7 +274,6 @@ function applyBulkLimit(){return globalThis.applyBulkLimit()}
 
 
 // ── DEPT: Show window info + block if outside window ──────
-function getNextDispSlot(deptId){return typeof canonicalGetNextDispSlot==='function'?canonicalGetNextDispSlot(deptId):undefined}
 // Single global exit lifecycle: persist transient UI state, close public listeners, then warn on pending writes.
 window.addEventListener('beforeunload',function(e){
   if(typeof window.persistTransientUiState==='function')window.persistTransientUiState();
@@ -319,15 +287,6 @@ window.addEventListener('beforeunload',function(e){
 
 
 publishLegacy("07i-misc-features.js", {
-  renderShelfAlertSettings,
-  openAddExpiry,
-  openEditExpiry,
-  orderRetentionCutoff,
-  requestArchiveRecord,
-  cleanupOldOrders,
-  scheduleAutomaticOrderCleanup,
-  setPPP,
-  resetPrintPageState,
   checkPublicView,
   renderMobileRequest,
   getNotes,
@@ -347,25 +306,19 @@ publishLegacy("07i-misc-features.js", {
   clearInvSelection,
   getSelectedMedIds,
   bulkDelete,
-  getCatOptions,
   getReqWindows,
   setReqWindows,
   getDispSlots,
   setDispSlots,
   getMonthlyLimits,
   setMonthlyLimits,
-  fmt12,
-  dayBits,
-  timeToMins,
   getMonthlyReqCount,
-  getMonthlyLimit,
   renderSchedule,
   editReqWindow,
   addDispSlot,
   editDispSlot,
   openBulkLimits,
   applyBulkLimit,
-  getNextDispSlot,
 });
 
 export {};
