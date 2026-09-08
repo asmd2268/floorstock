@@ -844,6 +844,16 @@ window.ctlCmpPrint=function(){
       items.push(['pg-med-accountability','🧾 Medication documentation']);
     }
     // pg-classification-lists is a tab inside pg-inv — no nav button needed
+    /* Backup & Storage: the master-only page holding the local backups, the
+       System Health figures and the storage cleanup panel. It had no nav entry at
+       all — the page existed and the master was permitted to see it, but nothing
+       opened it, so the cleanup actions and the document-size gauge were
+       unreachable in the UI. removeMasterOnlyForNonMaster() in module 12 strips
+       any [data-pg="pg-backup-restore"] button for anyone who is not the actual
+       master, so this entry is protected by the same rule as the page. */
+    if(typeof isMasterActual==='function'&&isMasterActual()){
+      items.push(['pg-backup-restore','💾 Backup & Storage / النسخ والتخزين']);
+    }
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
     (window.__buildNavAfterExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('buildNav extension failed',e)}});
