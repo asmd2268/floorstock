@@ -741,6 +741,14 @@ function verifyStartup(){
 }
 window.__startAppExtensions=window.__startAppExtensions||[];
 window.__startAppExtensions.push(function(){
+  /* The Inventory Protection card is master-only, and whether it belongs on the
+     dashboard depends on the signed-in role alone — never on inventory data. It
+     used to be created inside captureBaseline(), which waits for
+     asdh:real-load-complete, so on a warm boot (the app opens instantly from the
+     local cache) the card appeared seconds after everything around it. Placing it
+     here puts it up with the rest of the shell; the fingerprint work below still
+     waits for real data, because that is what it actually needs. */
+  ensureSnapshotManager();
   function captureBaseline(){
     startFingerprint=totalAndHash();
     showSafety();

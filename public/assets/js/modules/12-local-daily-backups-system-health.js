@@ -24,11 +24,10 @@
      so it only helps if someone knows it is time. Surface the largest document
      against the cap and warn well before it becomes urgent. */
   var FIRESTORE_DOC_LIMIT = 1048576;
-  /* Keys measured against the 1 MiB per-document cap, plus the two that are no
-     longer capped at all. A collection-backed key (crash_cart_reports,
-     controlled_moves) is one document per row, so it has no ceiling to approach;
-     it is still listed, reported as uncapped, so the master can see the ledger is
-     safe rather than wonder why it vanished from the panel. */
+  /* Keys measured against the 1 MiB per-document cap. crash_cart_reports is one
+     document per report, so it has no ceiling to approach and is reported as
+     uncapped rather than vanishing from the panel. The Hijri-month ledgers are
+     added separately by ledgerRows() as one synthetic row each. */
   var SIZE_WATCHED_KEYS = ['requests','accountability_usage_v2','accountability_usage_summary_v1','controlled_moves','crash_cart_reports','request_analytics_summary_v1','request_analytics_archive','accountability_plan_usage_v1'];
   /* audit_log is measured as a family rather than a fixed key: it is one document
      per calendar month, so the key names follow the calendar and only the current
@@ -39,6 +38,35 @@
       return /^audit_log(_\d{4}-\d{2}(_p\d+)?)?$/.test(key);
     });
   }
+  /* A Hijri-month ledger is many documents, each capped separately, so measuring
+     them individually would fill the panel with one row per month and bury the
+     number that matters. One synthetic row per ledger reports the total it holds
+     and the fullest single month, which is the only one that can hit the cap. */
+  function ledgerRows(encoder){
+    if(!window.S||!window.S.cache||typeof window.monthPartitionedKeyNames!=='function')return [];
+    return window.monthPartitionedKeyNames().map(function(key){
+      var names=typeof window.partitionKeysInCache==='function'?window.partitionKeysInCache(key):[];
+      if(!names.length)return null;
+      var total=0,largest=0,records=0;
+      names.forEach(function(name){
+        var value=window.S.g(name);
+        if(!Array.isArray(value))return;
+        records+=value.length;
+        var bytes=0;
+        try{ bytes=encoder?encoder.encode(JSON.stringify(value)).length:JSON.stringify(value).length; }catch(e){ return; }
+        total+=bytes;
+        if(bytes>largest)largest=bytes;
+      });
+      return {
+        key:key+'_ledger',
+        bytes:total,
+        // The cap applies per month, so the warning tracks the fullest month.
+        pct:(largest/FIRESTORE_DOC_LIMIT)*100,
+        months:names.length,
+        rows:records
+      };
+    }).filter(Boolean);
+  }
   function isCollectionBacked(key){
     return typeof window.collectionBackedKeyNames==='function'
       && window.collectionBackedKeyNames().indexOf(key)>=0;
@@ -46,7 +74,7 @@
   function measureStateDocuments(){
     if(!window.S||typeof S.g!=='function')return [];
     var encoder = typeof TextEncoder==='function' ? new TextEncoder() : null;
-    return SIZE_WATCHED_KEYS.concat(auditLogKeys()).map(function(key){
+    var measured=SIZE_WATCHED_KEYS.concat(auditLogKeys()).map(function(key){
       var value;
       try{ value = S.g(key); }catch(e){ return null; }
       if(value==null)return null;
@@ -64,7 +92,8 @@
         uncapped: uncapped,
         rows: Array.isArray(value) ? value.length : null
       };
-    }).filter(Boolean).sort(function(a,b){return b.bytes-a.bytes});
+    }).filter(Boolean);
+    return measured.concat(ledgerRows(encoder)).sort(function(a,b){return b.bytes-a.bytes});
   }
   window.fsMeasureStateDocuments = measureStateDocuments;
 
@@ -147,6 +176,8 @@
        cannot disagree. */
     if(typeof window.installStorageCleanupPanel==='function')window.installStorageCleanupPanel();
     if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
+    if(typeof window.installLedgerExportPanel==='function')window.installLedgerExportPanel();
+    if(typeof window.renderLedgerExport==='function')window.renderLedgerExport();
   }catch(err){console.error(err)}};
   async function daily(){if(!masterOnly()||!window.FB_DB)return;var today=new Date().toISOString().slice(0,10),last=String(localStorage.getItem('abhealth_last_auto_backup')||'').slice(0,10);if(last!==today)await window.masterCreateLocalBackup(false);else await window.masterRefreshSystemHealth()}
   window.runDailyBackup=function(){return daily().catch(function(){})};
@@ -171,6 +202,8 @@ window.runSystemHealthDiagnostics=async function(){
   lines.push('','Departments: '+count('DEPTS'),'Requests: '+count('REQS'),'Crash carts: '+count('CRASH_CARTS'),'Controlled medicines: '+count('CONTROLLED_MEDS'),'','Browser: '+navigator.userAgent,'Completed in '+Math.round(performance.now()-start)+' ms');
   if(typeof window.installStorageCleanupPanel==='function')window.installStorageCleanupPanel();
   if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
+  if(typeof window.installLedgerExportPanel==='function')window.installLedgerExportPanel();
+  if(typeof window.renderLedgerExport==='function')window.renderLedgerExport();
   var report=document.getElementById('health-report');if(report)report.textContent=lines.join('\n');var last=document.getElementById('health-last-run');if(last)last.textContent='Last run: '+new Date().toLocaleString('en-GB',{calendar:'gregory'});
 };
 function initial(){setStatus('health-network',navigator.onLine?'Online':'Offline',navigator.onLine?'health-ok':'health-bad')}

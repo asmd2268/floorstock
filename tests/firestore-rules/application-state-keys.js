@@ -14,11 +14,13 @@ export const APPLICATION_STATE_KEYS = [
   'audit_log_2026-09',
   'controlled_alert_days',
   'controlled_catalog',
+  'controlled_export_grants_v1',
   'controlled_department_seed_v2',
   `controlled_dept_list_${DEPARTMENT_ID}`,
   `controlled_dept_shelves_${DEPARTMENT_ID}`,
   'controlled_global_settings',
   'controlled_moves',
+  'controlled_moves_h1448-03',
   'controlled_pdf_receipts',
   'controlled_pharmacy_stock',
   'controlled_pharmacy_storage_v1',
@@ -97,10 +99,16 @@ export function mayWriteState(role, key) {
     return /^(crash_carts|requests|notes|dept_notes|request_analytics_summary_v1|theme)$/.test(key);
   }
   if (role === 'controlled_pharmacy') {
+    // The export-grant record is master-only: a role that could write it could
+    // mint its own permission to export the ledger.
+    if (key === 'controlled_export_grants_v1') return false;
     return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme)$/.test(key);
   }
   if (role === 'warehouse') {
-    return /^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|theme)$/.test(key);
+    // The ledger is one document per Hijri month, and the warehouse records
+    // transfers into it, so the month partitions are writable exactly as the
+    // single controlled_moves document was.
+    return /^(controlled_warehouse|controlled_moves(_h\d{4}-\d{2}(_p\d+)?)?|controlled_pdf_receipts|theme)$/.test(key);
   }
   if (role === 'department' || role === 'custodian') {
     // crash_cart_reports intentionally excluded: departments submit via the

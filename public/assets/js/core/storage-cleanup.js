@@ -24,6 +24,12 @@ export const FIRESTORE_DOC_LIMIT = 1048576;
    canRun : optional () => boolean, gates the button (defaults to master-only) */
 export function registerStorageCleanup({ key, label, hint, run, canRun }) {
   if (!key || typeof run !== 'function') return;
+  /* One action per key, for the same reason publishLegacy allows one owner per
+     name: a second registration would silently replace the first and the panel
+     would offer an action nobody meant to put there. */
+  if (cleaners.has(String(key))) {
+    throw new Error(`A storage cleanup action is already registered for ${key}.`);
+  }
   cleaners.set(String(key), { key: String(key), label: label || 'Clean up', hint: hint || '', run, canRun });
 }
 

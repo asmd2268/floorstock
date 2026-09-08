@@ -342,11 +342,16 @@ service cloud.firestore {
             )
             || (
               r == 'controlled_pharmacy'
+              // controlled_export_grants_v1 is excluded deliberately: it is the
+              // record of who may export the ledger and for how long. A role that
+              // could write it could mint its own permission, which is the whole
+              // thing the grant exists to prevent. Master issues and revokes it.
+              && docId != 'controlled_export_grants_v1'
               && docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'warehouse'
-              && docId.matches('^(controlled_warehouse|controlled_moves|controlled_pdf_receipts|theme|user_activity_daily_v1)$')
+              && docId.matches('^(controlled_warehouse|controlled_moves(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|controlled_pdf_receipts|theme|user_activity_daily_v1)$')
             )
           )
         );
@@ -388,19 +393,6 @@ service cloud.firestore {
 
       // Individual crash cart report documents.  Pharmacy and master write
       // directly from the browser; Cloud Functions (admin SDK) also write here.
-      /* Narcotic and controlled movement ledger, one document per movement.
-         It was a single state document capped at 1 MiB, which cannot hold the
-         five years of individual movements the custody officer must retain.
-         Readable by the roles that already read the ledger; written by the
-         controlled-pharmacy officer, pharmacy director and master. Deletes are
-         master-only and exist for the post-five-year export path. */
-      match /controlled_moves/{moveId} {
-        allow get, list: if sameTenant(tenant);
-        allow create, update: if sameTenant(tenant) && tenantWritable(tenant)
-          && (masterUser() || pharmacyDirector() || role() == 'controlled_pharmacy' || role() == 'warehouse');
-        allow delete: if sameTenant(tenant) && tenantWritable(tenant) && masterUser();
-      }
-
       match /crash_cart_reports/{reportId} {
         allow get: if sameTenant(tenant);
         allow list: if sameTenant(tenant) && (
@@ -524,15 +516,6 @@ service cloud.firestore {
 
     // Legacy (non-tenant) crash cart report collection.  Pharmacy and master
     // write directly from the browser; Cloud Functions (admin SDK) also write.
-    // Legacy (non-tenant) controlled movement ledger. Same split as
-    // crash_cart_reports_v2 below; see the tenant block above for the rationale.
-    match /controlled_moves_v2/{moveId} {
-      allow get, list: if activeUser() && tenantId() == '';
-      allow create, update: if activeUser() && tenantId() == ''
-        && (masterUser() || pharmacyDirector() || role() == 'controlled_pharmacy' || role() == 'warehouse');
-      allow delete: if activeUser() && tenantId() == '' && masterUser();
-    }
-
     match /crash_cart_reports_v2/{reportId} {
       allow get: if activeUser() && tenantId() == '';
       allow list: if activeUser() && tenantId() == '';

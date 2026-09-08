@@ -405,3 +405,44 @@ body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
   opacity: .55;
 }
 .storage-row[data-sev="uncapped"] .storage-size { color: var(--ok, #2e9e5b); }
+
+/* Controlled ledger export — Hijri month picker, and the master's panel for
+   granting that ability temporarily. */
+.ledger-export {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  background: var(--c2, transparent);
+}
+.ledger-export-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+.ledger-export-field { display: flex; flex-direction: column; gap: 4px; min-width: 150px; flex: 1 1 150px; }
+.ledger-export-field > span { font-size: 11px; opacity: .7; }
+.ledger-export-field select,
+.ledger-export-field input { width: 100%; }
+.grant-panel { margin-top: 14px; padding-top: 12px; border-top: 1px dashed var(--bd); }
+.grant-panel-title { font-weight: 700; font-size: 13px; margin-bottom: 4px; }
+.grant-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+.grant-row {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) minmax(140px, 2fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--bd);
+  font-size: 12.5px;
+}
+.grant-row[data-state="live"] { border-color: var(--gn, #2e9e5b); }
+.grant-row[data-state="expired"],
+.grant-row[data-state="revoked"] { opacity: .6; }
+.grant-who { font-weight: 600; }
+.grant-when { font-variant-numeric: tabular-nums; opacity: .8; }
+@media (max-width: 620px) {
+  .grant-row { grid-template-columns: 1fr; gap: 4px; }
+}

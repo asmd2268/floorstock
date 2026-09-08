@@ -126,10 +126,15 @@ export function canWriteStateKey(profile, key) {
     return /^(crash_carts$|crash_cart_reports$|requests$|notes$|dept_notes$|request_analytics_summary_v1$|theme$)/.test(value);
   }
   if (role === 'controlled_pharmacy') {
+    // The export-grant record is master-only: a role that could write it could
+    // mint its own permission to export the controlled ledger.
+    if (value === 'controlled_export_grants_v1') return false;
     return /^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|theme$)/.test(value);
   }
   if (role === 'warehouse') {
-    return /^(controlled_warehouse$|controlled_moves$|controlled_pdf_receipts$|theme$)/.test(value);
+    // The ledger is one document per Hijri month; the warehouse records transfers
+    // into it, so the month partitions are writable as the single document was.
+    return /^(controlled_warehouse$|controlled_moves(_h\d{4}-\d{2}(_p\d+)?)?$|controlled_pdf_receipts$|theme$)/.test(value);
   }
   if (role === 'department') {
     const deptId = String(user.deptId || user.departmentId || '');

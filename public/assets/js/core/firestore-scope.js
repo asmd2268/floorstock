@@ -1,4 +1,4 @@
-import { collectionPathForSpec, collectionSpecFor } from './collection-backed-keys.js?v=15e4458489';
+import { collectionPathForSpec, collectionSpecFor } from './collection-backed-keys.js?v=9ed94061f1';
 
 export function tenantIdFromProfile(profile) {
   return String(profile && profile.tenantId || '').trim();

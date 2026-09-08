@@ -26,7 +26,10 @@ function ctlEnrichDeptList(list){
   });
 }
 async function ctlSetDeptList(dept,v){var out=await S.s('controlled_dept_list_'+dept,ctlEnrichDeptList(v||[]));try{if(window.FB_DB&&typeof ctlPublishDept==='function')await ctlPublishDept(dept)}catch(e){warnPublicSync('Controlled custody',e)}return out}
-function ctlMoves(){return S.g('controlled_moves')||[]}
+/* The ledger is one document per Hijri month now, so this concatenates the
+   partitions the session holds rather than reading a single key. Every caller
+   still gets the one sorted array it always got. */
+function ctlMoves(){return typeof window.controlledMoveRows==='function'?window.controlledMoveRows():[]}
 async function ctlSaveMovementLog(record,context){
   try{await ctlMove(record);return true}catch(e){console.error((context||'Controlled action')+' movement log failed',e);return false}
 }

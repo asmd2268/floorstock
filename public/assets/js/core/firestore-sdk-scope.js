@@ -1,5 +1,5 @@
-import { tenantIdFromProfile } from './firestore-scope.js?v=4fdac36d91';
-import { collectionSpecFor } from './collection-backed-keys.js?v=15e4458489';
+import { tenantIdFromProfile } from './firestore-scope.js?v=85dd92440a';
+import { collectionSpecFor } from './collection-backed-keys.js?v=9ed94061f1';
 
 export function stateCollectionRef(db, profile) {
   const tenantId = tenantIdFromProfile(profile);
@@ -22,11 +22,6 @@ export function crashReportsCollectionRef(db, profile) {
   return collectionRefForSpec(db, collectionSpecFor('crash_cart_reports'), profile);
 }
 
-export function controlledMovesCollectionRef(db, profile) {
-  return collectionRefForSpec(db, collectionSpecFor('controlled_moves'), profile);
-}
-
 globalThis.stateCollectionRef = stateCollectionRef;
 globalThis.collectionRefForSpec = collectionRefForSpec;
 globalThis.crashReportsCollectionRef = crashReportsCollectionRef;
-globalThis.controlledMovesCollectionRef = controlledMovesCollectionRef;

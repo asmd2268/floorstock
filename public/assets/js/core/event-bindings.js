@@ -1123,5 +1123,10 @@ export default [
     "id": "b224",
     "event": "click",
     "source": "renderStorageCleanup()"
+  },
+  {
+    "id": "b225",
+    "event": "click",
+    "source": "runLedgerExport()"
   }
 ];

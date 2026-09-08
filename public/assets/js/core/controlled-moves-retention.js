@@ -1,5 +1,5 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=46cb1ec8ee';
+import { registerStorageCleanup } from './storage-cleanup.js?v=a48006791d';
 
 /* Controlled/narcotic movement log retention.
 
@@ -131,9 +131,10 @@ window.archiveOldControlledMoves=async function(){
   var previousSummary=globalThis.S.g('controlled_moves_summary_v1')||[];
   await globalThis.S.s('controlled_moves_summary_v1',summary);
   try{
-    // Deletes only the archived movements' own documents. It used to rewrite the
-    // entire ledger array into one document, which is both the write pattern this
-    // conversion removed and the reason a failure here could lose live movements.
+    // Removes each archived movement from the Hijri-month record that holds it.
+    // It used to rewrite the entire ledger array into one document, which is both
+    // the write pattern this conversion removed and the reason a failure here
+    // could lose live movements.
     for(var i=0;i<old.length;i++)await globalThis.deleteControlledMove(old[i].id);
   }catch(trimError){
     try{await globalThis.S.s('controlled_moves_summary_v1',previousSummary)}
@@ -148,10 +149,12 @@ window.archiveOldControlledMoves=async function(){
 
 export {CONTROLLED_MOVES_MIN_RETENTION_YEARS,controlledMovesRetentionCutoff,buildControlledMovesAggregates};
 
-/* Registered so the action is reachable, but the panel reports this key as
-   collection-backed and therefore uncapped — archiving here is optional. */
+/* Registered under the ledger's synthetic panel row, not under the legacy
+   controlled_moves document: that document only exists until the Hijri-month
+   migration runs, and the migration owns that key's entry. Two actions on one key
+   would silently replace each other — registerStorageCleanup now refuses it. */
 registerStorageCleanup({
-  key:'controlled_moves',
+  key:'controlled_moves_ledger',
   label:'Export movements > 5 years / تصدير الحركات',
   hint:'Optional. The ledger has no size limit; this exports movements past the 5-year regulatory floor and keeps monthly totals for reports.',
   run:function(){return window.archiveOldControlledMoves()},

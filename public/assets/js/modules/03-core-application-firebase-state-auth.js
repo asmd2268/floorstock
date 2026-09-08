@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=482bf44052';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=675215c8d5';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
@@ -13,10 +13,10 @@ import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=f014fcad89'
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=7975fe045f';
-import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=4fdac36d91';
-import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=f33c609381';
+import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=85dd92440a';
+import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=5ba88cf083';
 import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=4510baaaca';
-import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=15e4458489';
+import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
 
 // ── FIREBASE / FIRESTORE ─────────────────────────────────
@@ -394,9 +394,13 @@ function fsStateKeysForProfile(profile){
   if(!profile)return null;
   if(profile.master===true)return null;
   if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.slice();
-  // The audit months are appended at read time so the list follows the calendar.
-  if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.concat(fsRecentAuditLogKeys(1));
-  if(String(profile.role||'')==='warehouse')return WAREHOUSE_STATE_KEYS.concat(fsRecentAuditLogKeys(1));
+  /* The audit months and the Hijri ledger months are appended at read time so the
+     lists follow the calendar instead of being frozen at deploy. A scoped role
+     cannot LIST the collection, so it has to name every document it reads; older
+     ledger months are fetched on demand by the export picker rather than being
+     loaded into every session. */
+  if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.concat(fsRecentAuditLogKeys(1),fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
+  if(String(profile.role||'')==='warehouse')return WAREHOUSE_STATE_KEYS.concat(fsRecentAuditLogKeys(1),fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
   if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
   var keys=DEPARTMENT_SHARED_STATE_KEYS.slice(),deptId=String(profile.deptId||profile.departmentId||'').trim();
   if(deptId){
@@ -481,6 +485,19 @@ function fsRecentAuditLogKeys(monthsBack){
   return keys;
 }
 globalThis.fsRecentAuditLogKeys=fsRecentAuditLogKeys;
+
+/* Thirteen Hijri months: the current one plus a full year back, which covers the
+   custody officer's working view and the year-to-date report without loading five
+   years into every session. Anything older is read on demand. */
+var LEDGER_MONTHS_IN_SESSION=12;
+function fsRecentLedgerKeys(monthsBack){
+  var keys=[];
+  monthPartitionedKeyNames().forEach(function(key){
+    keys=keys.concat(recentPartitionKeys(key,monthsBack));
+  });
+  return keys;
+}
+globalThis.fsRecentLedgerKeys=fsRecentLedgerKeys;
 globalThis.WAREHOUSE_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','theme',
   'controlled_warehouse','controlled_pdf_receipts','user_activity_daily_v1',

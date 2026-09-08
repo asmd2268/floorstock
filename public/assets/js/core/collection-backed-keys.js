@@ -9,10 +9,18 @@
 
    crash_cart_reports was converted first, by hand, which left ~90 lines of
    listener, REST-poll, scope-filter and teardown code in the state module that
-   named that one key throughout. Converting controlled_moves the same way would
-   have meant a second near-identical copy of all of it. Instead the shape is
-   described once here and the state module loops over this registry, so a third
-   key later is one entry rather than another copy.
+   named that one key throughout. The shape is described once here and the state
+   module loops over this registry, so another such key is one entry rather than
+   another copy.
+
+   Note which keys do NOT belong here. Firestore charges per DOCUMENT read, so
+   one document per row is the right shape only when the collection stays small.
+   A ledger retained for five years does not: controlled_moves would have reached
+   ~91,000 documents, and loading it once would have cost 1.8x the entire free
+   daily read allowance. Those keys are partitioned by Hijri month instead — see
+   core/month-partitioned-store.js — which is ~1,500x cheaper to read for the
+   same data. crash_cart_reports stays here because a report is written by a
+   Cloud Function, read individually, and the collection stays in the hundreds.
 
    Each spec:
      key         the floorstock_state key the rest of the app still reads via S.g()
@@ -28,18 +36,6 @@ export const COLLECTION_BACKED_KEYS = Object.freeze([
     tenantPath: 'crash_cart_reports',
     legacyPath: 'crash_cart_reports_v2',
     sortBy: ['openedAt', 'id'],
-    strip: ['updatedAt', '_migratedAt'],
-  }),
-  /* Narcotic and controlled movement ledger. Regulatory retention is at least
-     five years of individual movements — orders of magnitude more than a single
-     1 MiB document holds — so this cannot be a blob key with a retention window,
-     whatever that window is set to. As a collection it simply has no ceiling and
-     nothing has to be deleted to keep the ledger writable. */
-  Object.freeze({
-    key: 'controlled_moves',
-    tenantPath: 'controlled_moves',
-    legacyPath: 'controlled_moves_v2',
-    sortBy: ['at', 'id'],
     strip: ['updatedAt', '_migratedAt'],
   }),
 ]);

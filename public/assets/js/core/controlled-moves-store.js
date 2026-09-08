@@ -1,172 +1,150 @@
-/* Document-shaped writes for the controlled/narcotic movement ledger.
+import { hijriMonthLabelBilingual, hijriMonthKey } from './hijri-calendar.js?v=9e42fa0bb9';
+import {
+  registerMonthPartitionedKey,
+  monthPartitionRows,
+  appendMonthPartitionedRows,
+  saveMonthPartitionedRow,
+  deleteMonthPartitionedRow,
+  partitionKeysInCache,
+  partitionKey,
+} from './month-partitioned-store.js?v=5086548807';
+import { registerStorageCleanup } from './storage-cleanup.js?v=a48006791d';
 
-   controlled_moves used to be one array inside one floorstock_state document,
-   capped at 1 MiB. Regulatory retention for narcotic custody is at least five
-   years of individual movements, which no single document holds — so the ledger
-   was kept writable only by archiving movements out after a year and keeping
-   monthly totals, which is not a five-year ledger. It is now one document per
-   movement in the collection registered as `controlled_moves`, where the cap
-   applies per movement and the ledger simply has no ceiling.
+/* The controlled / narcotic movement ledger, one document per HIJRI month.
 
-   Every function here writes only the documents it changes. Reads still go
-   through S.g('controlled_moves'), which the collection listener keeps populated
-   with the same sorted array shape the blob key produced, so nothing that reads
-   the ledger had to change. */
+   Three shapes were considered and the choice is a cost decision, not a taste one:
 
-import { collectionSpecFor } from './collection-backed-keys.js?v=15e4458489';
-import { collectionRefForSpec } from './firestore-sdk-scope.js?v=f33c609381';
-import { registerStorageCleanup } from './storage-cleanup.js?v=46cb1ec8ee';
+     one array in one document  →  1 read, but the 1 MiB cap arrives in weeks and
+                                   five years of movements never fit
+     one document per movement  →  no cap, but ~91,000 documents after five years;
+                                   loading the ledger once costs 1.8x the entire
+                                   free daily read allowance, per client
+     one document per Hijri month → 60 documents for five years, each well under
+                                   the cap. ~1,500x cheaper to read than the
+                                   second, with no ceiling like the first.
 
-const SPEC = collectionSpecFor('controlled_moves');
-// Firestore refuses a batch over 500 operations; 400 leaves room for retries.
-const BATCH_LIMIT = 400;
+   Hijri because the pharmacy's controlled register is kept in Hijri months, so a
+   partition IS a month's register: exporting one month is a single document read
+   and the boundaries match what the custody officer reports against.
 
-function ledgerRef() {
-  if (!globalThis.FB_DB) throw new Error('Firestore is unavailable; the movement was not recorded.');
-  return collectionRefForSpec(globalThis.FB_DB, SPEC, globalThis.S && globalThis.S.scopeProfile);
+   Reads go through ctlMoves() -> monthPartitionRows(), which concatenates the
+   partitions the session holds into the one sorted array every caller already
+   expected. Writes touch only the month a movement belongs to, inside a
+   transaction, so two people recording in the same month cannot overwrite each
+   other — the previous whole-array shape had that race across the entire ledger. */
+
+export const CONTROLLED_MOVES_KEY = 'controlled_moves';
+
+registerMonthPartitionedKey({
+  key: CONTROLLED_MOVES_KEY,
+  dateField: ['at'],
+  sortField: 'at',
+});
+
+export function controlledMoveRows() {
+  return monthPartitionRows(CONTROLLED_MOVES_KEY);
 }
 
-function stamp() {
-  const firebase = globalThis.firebase;
-  return firebase && firebase.firestore && firebase.firestore.FieldValue
-    ? firebase.firestore.FieldValue.serverTimestamp()
-    : new Date().toISOString();
+/* Appends movements to the Hijri months their own dates select. One write per
+   month touched, regardless of how long the ledger already is. */
+export function appendControlledMoves(moves) {
+  return appendMonthPartitionedRows(CONTROLLED_MOVES_KEY, moves);
 }
 
-/* The listener is the source of truth, but it only fires after the round trip.
-   Applying the change to the cache first keeps a render that runs immediately
-   after an await from showing the pre-write ledger. */
-function applyLocally(rows, removedIds) {
-  if (!globalThis.S || !globalThis.S.cache) return;
-  const byId = {};
-  (globalThis.S.cache.controlled_moves || []).forEach(row => { if (row && row.id) byId[String(row.id)] = row; });
-  (rows || []).forEach(row => { if (row && row.id) byId[String(row.id)] = row; });
-  (removedIds || []).forEach(id => { delete byId[String(id)]; });
-  const next = Object.keys(byId).map(id => byId[id])
-    .sort((a, b) => String(a.at || '').localeCompare(String(b.at || '')) || String(a.id || '').localeCompare(String(b.id || '')));
-  globalThis.S.cache.controlled_moves = next;
-  const tracked = globalThis.S.__collectionRowsById && globalThis.S.__collectionRowsById.controlled_moves;
-  if (tracked) {
-    (rows || []).forEach(row => { if (row && row.id) tracked[String(row.id)] = row; });
-    (removedIds || []).forEach(id => { delete tracked[String(id)]; });
-  }
+export function saveControlledMove(move) {
+  return saveMonthPartitionedRow(CONTROLLED_MOVES_KEY, move);
 }
 
-async function commit(operations) {
-  if (!operations.length) return;
-  const collection = ledgerRef();
-  for (let index = 0; index < operations.length; index += BATCH_LIMIT) {
-    const batch = globalThis.FB_DB.batch();
-    operations.slice(index, index + BATCH_LIMIT).forEach(operation => {
-      if (operation.type === 'delete') batch.delete(collection.doc(operation.id));
-      else batch.set(collection.doc(operation.id), Object.assign({}, operation.data, { updatedAt: stamp() }), { merge: false });
-    });
-    await batch.commit();
-  }
+export function deleteControlledMove(moveId) {
+  return deleteMonthPartitionedRow(CONTROLLED_MOVES_KEY, moveId);
 }
 
-/* Appends one or more movements. Each becomes its own document, so recording a
-   movement costs exactly one write regardless of how long the ledger already is. */
-export async function appendControlledMoves(moves) {
-  const rows = (Array.isArray(moves) ? moves : [moves]).filter(Boolean);
-  if (!rows.length) return [];
-  await commit(rows.map(row => ({ type: 'set', id: String(row.id), data: row })));
-  applyLocally(rows, []);
-  return rows;
+/* Which Hijri months this session actually holds, newest first — the export
+   picker offers exactly these, so it can never offer a month it cannot read. */
+export function availableControlledMonths() {
+  const months = new Set();
+  partitionKeysInCache(CONTROLLED_MOVES_KEY).forEach((name) => {
+    const match = /_h(\d{4}-\d{2})(_p\d+)?$/.exec(name);
+    if (match) months.add(match[1]);
+  });
+  return [...months].sort().reverse();
 }
 
-/* Replaces one movement in place — a correction, an acceptance, a rejection.
-   Only that document is written; the rest of the ledger is untouched. */
-export async function saveControlledMove(move) {
-  if (!move || !move.id) throw new Error('A movement needs an id before it can be saved.');
-  await commit([{ type: 'set', id: String(move.id), data: move }]);
-  applyLocally([move], []);
-  return move;
+export function controlledMovesForMonths(monthKeys) {
+  const wanted = new Set(monthKeys || []);
+  return controlledMoveRows().filter((row) => wanted.has(hijriMonthKey(row && row.at)));
 }
 
-export async function deleteControlledMove(moveId) {
-  const id = String(moveId || '');
-  if (!id) return false;
-  await commit([{ type: 'delete', id }]);
-  applyLocally([], [id]);
-  return true;
-}
+/* One-time migration to the Hijri-month partitions.
 
-/* Reconciles the ledger against a complete desired array. Used only by the
-   blob-to-collection migration and by rollback paths that already hold the whole
-   previous ledger; ordinary edits must use the single-document functions above,
-   which is why this one says so in its name. */
-export async function replaceEntireControlledLedger(nextMoves) {
-  const rows = (nextMoves || []).filter(row => row && row.id);
-  const nextIds = new Set(rows.map(row => String(row.id)));
-  const removedIds = ((globalThis.S && globalThis.S.cache && globalThis.S.cache.controlled_moves) || [])
-    .map(row => String((row && row.id) || ''))
-    .filter(id => id && !nextIds.has(id));
-  await commit(rows.map(row => ({ type: 'set', id: String(row.id), data: row }))
-    .concat(removedIds.map(id => ({ type: 'delete', id }))));
-  applyLocally(rows, removedIds);
-  return rows;
-}
-
-/* One-time migration: floorstock_state/controlled_moves -> the collection.
-
-   The blob document is read, every movement is written as its own document, and
-   only then is the blob removed. Nothing is deleted until the copy is confirmed,
-   and the migration is safe to re-run: each movement is written under its own id,
-   so a second pass overwrites identical documents rather than duplicating them. */
-export async function migrateControlledMovesToCollection() {
-  const user = globalThis.CU;
-  if (!user || user.master !== true) {
+   Handles both earlier shapes: the original single floorstock_state document and
+   the short-lived one-document-per-movement collection. Rows are written into
+   their months first and the old home is removed only afterwards, so nothing is
+   deleted before it exists elsewhere; re-running is safe because a month's rows
+   are matched by id. */
+export async function migrateControlledMovesToMonths() {
+  if (!(globalThis.CU && globalThis.CU.master === true)) {
     globalThis.toast('Only Master can migrate the controlled movement ledger.', 'err');
     return;
   }
-  const blob = globalThis.S.g('controlled_moves');
-  if (!Array.isArray(blob) || !blob.length) {
-    if (blob !== null) {
-      await globalThis.S.rm('controlled_moves');
+  const legacyBlob = globalThis.S.g(CONTROLLED_MOVES_KEY);
+  const legacyRows = Array.isArray(legacyBlob) ? legacyBlob : [];
+  if (!legacyRows.length) {
+    if (legacyBlob !== null) {
+      await globalThis.S.rm(CONTROLLED_MOVES_KEY);
       globalThis.toast('The legacy movement record was already empty and has been removed.', 'succ');
     } else {
-      globalThis.toast('No legacy movement record found — the ledger is already a collection.', 'info');
+      globalThis.toast('No legacy movement record found — the ledger is already stored by Hijri month.', 'info');
     }
     return;
   }
 
-  const withIds = blob.map((move, index) => Object.assign({}, move, {
-    id: String((move && move.id) || `ctl_migrated_${index}_${Math.random().toString(36).slice(2, 9)}`),
+  const dated = legacyRows.map((row, index) => Object.assign({}, row, {
+    id: String((row && row.id) || `ctl_migrated_${index}_${Math.random().toString(36).slice(2, 9)}`),
+    at: (row && row.at) || new Date().toISOString(),
   }));
+  const months = [...new Set(dated.map((row) => hijriMonthKey(row.at)).filter(Boolean))].sort();
 
   const confirmed = await globalThis.uiConfirm(
-    `${withIds.length} controlled/narcotic movement(s) will be rewritten as individual records.\n\n` +
-    'This removes the 1 MiB ceiling on the ledger so it can hold the required five years of movements. ' +
-    'Nothing is deleted until every movement has been copied, and re-running is safe.\n\n' +
-    'Continue?',
-    { okText: 'Migrate the ledger' },
+    `${dated.length} controlled/narcotic movement(s) will be filed into ${months.length} Hijri month record(s), from `
+    + `${hijriMonthLabelBilingual(months[0])} to ${hijriMonthLabelBilingual(months[months.length - 1])}.\n\n`
+    + 'This removes the size limit that stopped the ledger holding five years, and makes reading a month cost one record instead of one per movement. '
+    + 'Nothing is deleted until every movement has been filed, and re-running is safe.\n\n'
+    + `سيتم توزيع ${dated.length} حركة على ${months.length} سجل شهري هجري. لن يُحذف القديم إلا بعد اكتمال النسخ.`,
+    { okText: 'Migrate the ledger / ترحيل السجل' },
   );
   if (!confirmed) { globalThis.toast('Migration cancelled; nothing changed.', 'info'); return; }
 
-  await appendControlledMoves(withIds);
-  // Only now that every movement exists as its own document.
-  await globalThis.S.rm('controlled_moves');
-  globalThis.toast(`${withIds.length} movement(s) migrated. The ledger no longer has a size limit.`, 'succ');
+  const undated = dated.filter((row) => !hijriMonthKey(row.at));
+  if (undated.length) {
+    globalThis.toast(`${undated.length} movement(s) have no readable date and cannot be filed. Fix them first.`, 'err');
+    return;
+  }
+
+  await appendControlledMoves(dated);
+  await globalThis.S.rm(CONTROLLED_MOVES_KEY);
+  globalThis.toast(`${dated.length} movement(s) filed into ${months.length} Hijri month record(s). The ledger no longer has a size limit. ✓`, 'succ');
 }
 
+/* Visible only while a legacy blob document still exists; once migrated the
+   document is gone and the entry disappears from the panel on its own. */
+registerStorageCleanup({
+  key: CONTROLLED_MOVES_KEY,
+  label: 'File ledger by Hijri month / ترحيل السجل للأشهر الهجرية',
+  hint: 'Files the movement ledger into one record per Hijri month, removing its size limit and making a month cost one read.',
+  run: () => migrateControlledMovesToMonths(),
+  canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
+    && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(CONTROLLED_MOVES_KEY)),
+});
+
 Object.assign(globalThis, {
+  CONTROLLED_MOVES_KEY,
+  controlledMoveRows,
   appendControlledMoves,
   saveControlledMove,
   deleteControlledMove,
-  replaceEntireControlledLedger,
-  migrateControlledMovesToCollection,
+  availableControlledMonths,
+  controlledMovesForMonths,
+  migrateControlledMovesToMonths,
+  controlledMovePartitionKey: (month, part) => partitionKey(CONTROLLED_MOVES_KEY, month, part),
 });
-
-/* Visible only while the legacy blob document still exists — once migrated, the
-   document is gone, the gauge stops listing the key as a state document, and the
-   entry disappears on its own. */
-registerStorageCleanup({
-  key: 'controlled_moves',
-  label: 'Convert ledger to records / تحويل السجل',
-  hint: 'Rewrites the movement ledger as individual records, removing its 1 MiB limit so it can hold five years of movements.',
-  run: () => migrateControlledMovesToCollection(),
-  canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
-    && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g('controlled_moves')),
-});
-

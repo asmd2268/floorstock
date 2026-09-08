@@ -1663,7 +1663,11 @@ function renderCrashSection() {
 
 /* ── NARCOTIC / CONTROLLED ANALYTICS ───────────────────────────────────── */
 function narcoticMoves() {
-  var live = typeof window.ctlMoves === 'function' ? (window.ctlMoves() || []) : (window.S && window.S.g ? window.S.g('controlled_moves') || [] : []);
+  // The fallback used to read a single controlled_moves document. That document
+  // no longer exists — the ledger is one record per Hijri month — so the fallback
+  // reads the partitions directly rather than silently returning nothing.
+  var live = typeof window.ctlMoves === 'function' ? (window.ctlMoves() || [])
+    : (typeof window.controlledMoveRows === 'function' ? window.controlledMoveRows() : []);
   var archived = window.S && window.S.g ? window.S.g('controlled_moves_summary_v1') || [] : [];
   return archived.length ? live.concat(archived) : live;
 }
