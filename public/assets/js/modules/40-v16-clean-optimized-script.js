@@ -661,11 +661,11 @@ function ensureSnapshotManager(){
     card.innerHTML='<div class="ch"><div><span class="ct">🛡 Inventory Safety Snapshots / لقطات حماية المخزون</span><div class="fhint">Firebase snapshots created automatically before each explicit inventory change. Last '+SNAPSHOT_LIMIT+' snapshots are retained per department.</div></div><button type="button" class="btn bp r663-open-snapshots">Open snapshots / فتح اللقطات</button></div>';
     backupPage.appendChild(card)
   }
-  if(dashboard&&!document.getElementById('r663-dashboard-snapshot-card')){
-    var dashCard=document.createElement('div');dashCard.className='card';dashCard.id='r663-dashboard-snapshot-card';
-    dashCard.innerHTML='<div class="ch"><div><span class="ct">🛡 Inventory Protection / حماية المخزون</span><div class="fhint">Master-only access to the last '+SNAPSHOT_LIMIT+' pre-change snapshots for every department.</div></div><button type="button" class="btn bp r663-open-snapshots">Inventory Safety Snapshots</button></div>';
-    dashboard.insertBefore(dashCard,dashboard.firstChild)
-  }
+  /* The Inventory Protection card is not put on the dashboard. The dashboard is
+     the first thing every master sees and it already leads with expiry warnings
+     that need acting on; a permanently-present master tool pushed those down.
+     The snapshots are reachable from Backup & Storage, which is where the other
+     master recovery tools live. */
   document.querySelectorAll('.r663-open-snapshots').forEach(function(button){button.onclick=window.openInventorySafetySnapshots})
 }
 function snapshotDepartments(){

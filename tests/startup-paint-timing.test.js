@@ -44,5 +44,24 @@ test('the cached context is per account and cannot leak between them', () => {
   // Keyed by uid, and every other account's entry is dropped on write, so a
   // shared device never shows a previous user's plan.
   assert.match(subscriptions, /function saasCacheKey\(uid\)\{return uid\?SAAS_CACHE_PREFIX\+uid:''\}/);
-  assert.match(subscriptions, /if\(name\.indexOf\(SAAS_CACHE_PREFIX\)===0&&name!==key\)localStorage\.removeItem\(name\)/);
+  assert.match(subscriptions, /if\(name\.indexOf\(SAAS_CACHE_PREFIX\)===0&&name!==key&&name!==tenantsCacheKey\(uid\)\)localStorage\.removeItem\(name\)/);
+});
+
+test('the customer list is shown from cache while the callable wakes up', () => {
+  // Opening Subscriptions blanked the list to "Loading…" and waited on
+  // listTenantSubscriptions — no warm instance, and us-central1 is a long way
+  // from where this is used, so a cold start is seconds of empty page.
+  assert.match(subscriptions, /function readCachedTenants\(uid\)/);
+  assert.match(subscriptions, /function writeCachedTenants\(uid,rows\)/);
+  const cachedRender = subscriptions.indexOf('if(cached&&cached.length)renderTenants(host,cached,true);');
+  const liveCall = subscriptions.indexOf("await callable('listTenantSubscriptions')");
+  assert.ok(cachedRender > -1 && liveCall > -1);
+  assert.ok(cachedRender < liveCall, 'the cached list must paint before the round trip');
+  // And it says it is provisional rather than passing stale data off as current.
+  assert.match(subscriptions, /Showing the last known list/);
+});
+
+test('a failed refresh keeps the cached list rather than blanking it', () => {
+  const loadTenants = subscriptions.slice(subscriptions.indexOf('async function loadTenants(){'));
+  assert.match(loadTenants, /catch\(e\)\{[\s\S]*if\(cached&&cached\.length\)renderTenants\(host,cached,true\)/);
 });

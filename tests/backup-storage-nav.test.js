@@ -15,10 +15,21 @@ const nav = await readFile(new URL('../public/assets/js/modules/80-controlled-ph
 const health = await readFile(new URL('../public/assets/js/modules/12-local-daily-backups-system-health.js', import.meta.url), 'utf8');
 const indexHtml = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
 
-test('the master has a way into the page that holds the cleanup panel', () => {
+test('Backup & Storage is a tab, not a main navigation icon', () => {
+  // The main bar is for the pages used every shift; this is an occasional master
+  // tool and sits beside Subscriptions and System Health instead.
   const buildNav = nav.slice(nav.indexOf('window.buildNav=function(){'), nav.indexOf('(window.__buildNavAfterExtensions||[])'));
-  assert.match(buildNav, /items\.push\(\['pg-backup-restore'/);
-  assert.match(buildNav, /isMasterActual\(\)/, 'the entry is master-only');
+  assert.ok(!/items\.push\(\['pg-backup-restore'/.test(buildNav), 'it must not be a main nav entry');
+  assert.match(nav, /\['pg-backup-restore','💾 Backup & Storage'\]/);
+  assert.match(nav, /id==='pg-backup-restore'\)\{/, 'the tab bar renders on that page too');
+});
+
+test('every master reaches those pages, platform admin or not', () => {
+  // Subscriptions exists only for a platform admin. The bar used to bail out
+  // when it was missing, which left System Health and Backup & Storage
+  // unreachable for a master who is not one.
+  assert.match(nav, /if\(document\.getElementById\('pg-platform-subscriptions'\)\)tabs\.push/);
+  assert.ok(!/if\(!subExists\)return;/.test(nav));
 });
 
 test('the entry is gated by the same rule as the page itself', () => {

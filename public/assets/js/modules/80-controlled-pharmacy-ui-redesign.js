@@ -844,16 +844,6 @@ window.ctlCmpPrint=function(){
       items.push(['pg-med-accountability','🧾 Medication documentation']);
     }
     // pg-classification-lists is a tab inside pg-inv — no nav button needed
-    /* Backup & Storage: the master-only page holding the local backups, the
-       System Health figures and the storage cleanup panel. It had no nav entry at
-       all — the page existed and the master was permitted to see it, but nothing
-       opened it, so the cleanup actions and the document-size gauge were
-       unreachable in the UI. removeMasterOnlyForNonMaster() in module 12 strips
-       any [data-pg="pg-backup-restore"] button for anyone who is not the actual
-       master, so this entry is protected by the same rule as the page. */
-    if(typeof isMasterActual==='function'&&isMasterActual()){
-      items.push(['pg-backup-restore','💾 Backup & Storage / النسخ والتخزين']);
-    }
     if(typeof isMasterActual==='function'&&isMasterActual()){var mb=document.createElement('button');mb.className='nb';mb.id='master-nav-switch';mb.innerHTML=window.MASTER_EFFECTIVE?'🧪 تغيير الدور الحالي':'🔄 الانتقال بين الأدوار';mb.onclick=openMasterRoleSwitch;nav.appendChild(mb)}
     items.forEach(function(x){var b=document.createElement('button');b.className='nb';b.innerHTML=x[1];b.dataset.pg=x[0];b.onclick=function(){showPg(this.dataset.pg)};nav.appendChild(b)});
     (window.__buildNavAfterExtensions||[]).forEach(function(fn){try{fn()}catch(e){console.error('buildNav extension failed',e)}});
@@ -868,14 +858,23 @@ window.ctlCmpPrint=function(){
   // Inject sub-tabs via showPg hook — runs after any page navigation
   window.__showPgAfterExtensions=window.__showPgAfterExtensions||[];
   window.__showPgAfterExtensions.push(function(id){
-    if(id==='pg-system-health'||id==='pg-platform-subscriptions'){
+    if(id==='pg-system-health'||id==='pg-platform-subscriptions'||id==='pg-backup-restore'){
       var pg=document.getElementById(id);
       if(!pg||pg.querySelector('.sys-tab-bar'))return;
-      var subExists=!!document.getElementById('pg-platform-subscriptions');
-      if(!subExists)return;
+      /* Subscriptions exists only for a platform admin. A master who is not one
+         still needs System Health and Backup & Storage, so the bar renders with
+         whichever of the three that master actually has — it used to bail out
+         entirely, which left both pages unreachable for them. */
+      var tabs=[];
+      if(document.getElementById('pg-platform-subscriptions'))tabs.push(['pg-platform-subscriptions','💳 Subscriptions']);
+      tabs.push(['pg-system-health','🩺 System Health']);
+      tabs.push(['pg-backup-restore','💾 Backup & Storage']);
       var bar=document.createElement('div');bar.className='sys-tab-bar';
       bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
-      [['pg-platform-subscriptions','💳 Subscriptions'],['pg-system-health','🩺 System Health']].forEach(function(t){
+      /* Backup & Storage joins these rather than taking a place in the main
+         navigation: it is an occasional master tool, and the main bar is for the
+         pages used every shift. */
+      tabs.forEach(function(t){
         var on=t[0]===id;
         var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';if(on)b.disabled=true;
         b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];

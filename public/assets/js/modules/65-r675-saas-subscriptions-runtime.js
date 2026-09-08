@@ -36,13 +36,34 @@ function readCachedContext(uid){
     return parsed&&typeof parsed==='object'?parsed:null;
   }catch(error){return null}
 }
+/* The customer list has the same problem the context had, one screen further in:
+   opening Subscriptions blanked the list to "Loading…" and waited on
+   listTenantSubscriptions — a callable with no warm instance, called from Saudi
+   Arabia to us-central1, so a cold start is seconds of an empty page. The list
+   barely changes between visits, so the last one is shown immediately and
+   replaced when the live answer lands. Cached per account like the context, and
+   read-only: every write still goes through the callable. */
+function tenantsCacheKey(uid){return uid?SAAS_CACHE_PREFIX+'tenants_'+uid:''}
+function readCachedTenants(uid){
+  var key=tenantsCacheKey(uid);if(!key)return null;
+  try{
+    var raw=localStorage.getItem(key);if(!raw)return null;
+    var parsed=JSON.parse(raw);
+    return Array.isArray(parsed)?parsed:null;
+  }catch(error){return null}
+}
+function writeCachedTenants(uid,rows){
+  var key=tenantsCacheKey(uid);if(!key)return;
+  try{localStorage.setItem(key,JSON.stringify(rows||[]))}catch(error){}
+}
+function currentUid(){return String(window.FB_AUTH&&FB_AUTH.currentUser&&FB_AUTH.currentUser.uid||'')}
 function writeCachedContext(uid,data){
   var key=saasCacheKey(uid);if(!key)return;
   try{
     // Drop every other account's cached context, so a shared device cannot show
     // a previous user's plan for the instant before the live call lands.
     Object.keys(localStorage).forEach(function(name){
-      if(name.indexOf(SAAS_CACHE_PREFIX)===0&&name!==key)localStorage.removeItem(name);
+      if(name.indexOf(SAAS_CACHE_PREFIX)===0&&name!==key&&name!==tenantsCacheKey(uid))localStorage.removeItem(name);
     });
     localStorage.setItem(key,JSON.stringify({platformAdmin:data.platformAdmin===true,subscription:data.subscription||null}));
   }catch(error){}
@@ -73,7 +94,28 @@ async function refreshContext(){var uid=String(window.FB_AUTH&&FB_AUTH.currentUs
 function platformHtml(){return '<div class="pg" id="pg-platform-subscriptions"><div class="stitle">إدارة الاشتراكات / Subscription Management</div><div class="ssub">إنشاء منشآت وتفعيل الخطط يدويًا</div><div class="card"><div class="ch"><span class="ct">+ عميل جديد / New customer</span></div><div class="cb fs-saas-grid"><div><label>اسم المنشأة</label><input id="fs-tenant-name"></div><div><label>رمز المنشأة</label><input id="fs-tenant-id" placeholder="hospital-name"></div><div><label>بريد المالك</label><input id="fs-owner-email" type="email"></div><div><label>كلمة المرور المؤقتة</label><input id="fs-owner-password" type="password"></div><div><label>الخطة</label><select id="fs-new-plan"><option value="starter">الأساسية / Starter</option><option value="professional">الاحترافية / Professional</option><option value="enterprise">الشاملة / Enterprise</option></select></div><div><label>أيام التجربة</label><input id="fs-trial-days" type="number" min="0" value="14"></div></div><div class="cb"><button class="btn bp" id="fs-create-tenant">إنشاء العميل / Create customer</button><span id="fs-platform-status"></span></div></div><div id="fs-tenant-list"></div></div>'}
 function installPlatformPage(){if(!E('pg-platform-subscriptions')){E('app').insertAdjacentHTML('beforeend',platformHtml());E('fs-create-tenant').onclick=createTenant}var nav=E('mnav');if(nav&&!nav.querySelector('[data-pg="pg-platform-subscriptions"]')){var b=document.createElement('button');b.className='nb';b.dataset.pg='pg-platform-subscriptions';b.textContent='💳 الاشتراكات';b.onclick=function(){if(typeof showPg==='function')showPg('pg-platform-subscriptions');loadTenants()};nav.appendChild(b)}}
 async function createTenant(){var button=E('fs-create-tenant'),status=E('fs-platform-status');button.disabled=true;status.textContent='جاري الإنشاء…';try{await callable('createTenantSubscription',{tenantId:E('fs-tenant-id').value,name:E('fs-tenant-name').value,ownerEmail:E('fs-owner-email').value,password:E('fs-owner-password').value,plan:E('fs-new-plan').value,trialDays:Number(E('fs-trial-days').value)});status.textContent='تم إنشاء العميل ✓';await loadTenants()}catch(e){status.textContent=String(e&&e.message||e)}finally{button.disabled=false}}
-async function loadTenants(){var host=E('fs-tenant-list');if(!host)return;host.innerHTML='<div class="card"><div class="cb">Loading…</div></div>';try{var data=await callable('listTenantSubscriptions'),rows=data.tenants||[];host.innerHTML=rows.map(function(t){return '<div class="card fs-tenant-card" data-tenant="'+esc(t.id)+'"><div><b>'+esc(t.name||t.id)+'</b><small>'+esc(t.ownerEmail||'')+'</small></div><select data-field="plan"><option value="starter" '+(t.plan==='starter'?'selected':'')+'>Starter</option><option value="professional" '+(t.plan==='professional'?'selected':'')+'>Professional</option><option value="enterprise" '+(t.plan==='enterprise'?'selected':'')+'>Enterprise</option></select><select data-field="status"><option value="trialing" '+(t.status==='trialing'?'selected':'')+'>Trial</option><option value="active" '+(t.status==='active'?'selected':'')+'>Active</option><option value="past_due" '+(t.status==='past_due'?'selected':'')+'>Past due</option><option value="canceled" '+(t.status==='canceled'?'selected':'')+'>Canceled</option></select><button class="btn bs bsm" data-save-subscription>حفظ / Save</button></div>'}).join('')||'<div class="card"><div class="cb">No customers yet.</div></div>';host.querySelectorAll('[data-save-subscription]').forEach(function(button){button.onclick=async function(){var card=button.closest('[data-tenant]');button.disabled=true;try{await callable('updateTenantSubscription',{tenantId:card.dataset.tenant,plan:card.querySelector('[data-field="plan"]').value,status:card.querySelector('[data-field="status"]').value});button.textContent='Saved ✓'}catch(e){if(typeof toast==='function')toast(String(e&&e.message||e),'err')}finally{button.disabled=false}}})}catch(e){host.textContent=String(e&&e.message||e)}}
+function renderTenants(host,rows,stale){
+  host.innerHTML=(stale?'<div class="fhint" style="margin-bottom:8px">Showing the last known list — refreshing… / تُعرض آخر قائمة معروفة، جارٍ التحديث…</div>':'')+rows.map(function(t){return '<div class="card fs-tenant-card" data-tenant="'+esc(t.id)+'"><div><b>'+esc(t.name||t.id)+'</b><small>'+esc(t.ownerEmail||'')+'</small></div><select data-field="plan"><option value="starter" '+(t.plan==='starter'?'selected':'')+'>Starter</option><option value="professional" '+(t.plan==='professional'?'selected':'')+'>Professional</option><option value="enterprise" '+(t.plan==='enterprise'?'selected':'')+'>Enterprise</option></select><select data-field="status"><option value="trialing" '+(t.status==='trialing'?'selected':'')+'>Trial</option><option value="active" '+(t.status==='active'?'selected':'')+'>Active</option><option value="past_due" '+(t.status==='past_due'?'selected':'')+'>Past due</option><option value="canceled" '+(t.status==='canceled'?'selected':'')+'>Canceled</option></select><button class="btn bs bsm" data-save-subscription>حفظ / Save</button></div>'}).join('')||'<div class="card"><div class="cb">No customers yet.</div></div>';host.querySelectorAll('[data-save-subscription]').forEach(function(button){button.onclick=async function(){var card=button.closest('[data-tenant]');button.disabled=true;try{await callable('updateTenantSubscription',{tenantId:card.dataset.tenant,plan:card.querySelector('[data-field="plan"]').value,status:card.querySelector('[data-field="status"]').value});button.textContent='Saved ✓';loadTenants()}catch(e){if(typeof toast==='function')toast(String(e&&e.message||e),'err')}finally{button.disabled=false}}});
+}
+
+async function loadTenants(){
+  var host=E('fs-tenant-list');if(!host)return;
+  var uid=currentUid(),cached=readCachedTenants(uid);
+  // Something to read while the callable wakes up, rather than an empty panel.
+  if(cached&&cached.length)renderTenants(host,cached,true);
+  else host.innerHTML='<div class="card"><div class="cb">Loading…</div></div>';
+  try{
+    var data=await callable('listTenantSubscriptions'),rows=data.tenants||[];
+    writeCachedTenants(uid,rows);
+    renderTenants(host,rows,false);
+  }catch(e){
+    // A cached list stays on screen and says why it may be out of date; without
+    // one there is nothing to keep, so the error is all there is to show.
+    if(cached&&cached.length)renderTenants(host,cached,true);
+    else host.textContent=String(e&&e.message||e);
+    if(typeof toast==='function')toast(String(e&&e.message||e),'err');
+  }
+}
 var style=document.createElement('style');style.textContent='.fs-subscription-banner{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 18px;background:rgba(46,160,67,.1);border-bottom:1px solid var(--gn)}.fs-subscription-banner small,.fs-tenant-card small{display:block;color:var(--tx2);font-size:11px}.fs-subscription-banner.expired{background:rgba(218,54,51,.12);border-color:var(--rd)}[data-subscription-locked="1"]{display:none!important}.fs-saas-grid{display:grid;grid-template-columns:repeat(3,minmax(180px,1fr));gap:10px}.fs-tenant-card{display:grid;grid-template-columns:minmax(220px,1fr) 180px 160px auto;gap:10px;align-items:center;padding:12px}.fs-tenant-card select{margin:0}@media(max-width:800px){.fs-saas-grid,.fs-tenant-card{grid-template-columns:1fr}}';document.head.appendChild(style);
 /* This ran every 1.2s for the life of the session. wrapWrites and wrapNavigation
    are one-time installs guarded by their own flags — they were polled only because
