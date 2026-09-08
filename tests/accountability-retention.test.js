@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import {
+  ACCOUNTABILITY_RETENTION_MONTHS,
   buildAccountabilityUsageAggregates,
   mergeAccountabilityAggregates,
   olderThanRetention,
@@ -91,4 +92,17 @@ test('the destructive purge is gone and the archive writes the summary first', a
   const module70 = await readFile(new URL('../public/assets/js/modules/70-r676-accountability-regimen-roster-and-log.js', import.meta.url), 'utf8');
   assert.ok(!/keptUsage/.test(module70), 'the inline delete-only purge must be gone');
   assert.match(module70, /window\.acc2PurgeHistoricalHistory=function\(\)\{return window\.archiveAccountabilityHistory\(\)\}/);
+});
+
+test('the retention window matches the controlled ledger floor and is owned in one place', async () => {
+  // Accountability custody covers controlled medicines, so it carries the same
+  // five-year regulatory floor as the movement ledger — not the six-month
+  // general-history default it used to inherit.
+  assert.equal(ACCOUNTABILITY_RETENTION_MONTHS, 60);
+
+  const panel = await readFile(new URL('../public/assets/js/modules/70-r676-accountability-regimen-roster-and-log.js', import.meta.url), 'utf8');
+  // The panel counts what the action would archive, so a second copy of the
+  // cutoff there would report a number the button cannot act on.
+  assert.ok(!/sixMonthCutoff|olderThanSixMonths/.test(panel), 'the panel must not carry its own cutoff');
+  assert.match(panel, /window\.ACCOUNTABILITY_RETENTION_MONTHS/);
 });

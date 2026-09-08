@@ -52,8 +52,15 @@ setTimeout(enhance,0);
 'use strict';
 function isActualMaster(){return !!((window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)||(window.CU&&window.CU.master===true))&&!window.MASTER_EFFECTIVE}
 function appState(key){return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[]}
-function sixMonthCutoff(){var date=new Date();date.setMonth(date.getMonth()-6);return date.getTime()}
-function olderThanSixMonths(value){var time=new Date(value||0).getTime();return Number.isFinite(time)&&time>0&&time<sixMonthCutoff()}
+/* The retention window is owned by core/accountability-retention.js — this panel
+   only counts what that action would archive, so it must not carry its own copy
+   of the cutoff. It was a hard-coded six months here while the action used five
+   years, which would have reported a count the button could not act on. */
+function retentionMonths(){return Number(window.ACCOUNTABILITY_RETENTION_MONTHS)||60}
+function retentionYearsLabel(){var months=retentionMonths();return months%12===0?(months/12)+' year(s)':months+' month(s)'}
+function olderThanRetentionWindow(value){
+  return typeof window.olderThanRetention==='function'?window.olderThanRetention(value):false;
+}
 function decorateReview(){
   var root=document.getElementById('r17-accountability-root');if(!root)return;
   var review=root.querySelector('#r17-acc-verify');if(!review||root.dataset.r676ReviewDefault==='1')return;
@@ -63,13 +70,19 @@ function decorateReview(){
 function retentionPanel(){
   var root=document.getElementById('r17-accountability-root');if(!root||!isActualMaster()||root.querySelector('#r676-accountability-retention'))return;
   var log=root.querySelector('#r676-accountability-handover-log, #r676-accountability-handover-log-view');if(!log)return;
-  var oldUsage=appState('accountability_usage_v2').filter(function(row){return olderThanSixMonths(row.submittedAt||row.consumptionDate)}).length;
-  var oldReceipts=appState('accountability_receipts_v2').filter(function(row){return olderThanSixMonths(row.receivedAt||row.createdAt||row.receivedDate)}).length;
-  var panel=document.createElement('div');panel.id='r676-accountability-retention';panel.className='alert-banner-y';panel.innerHTML='<b>Master retention controls / إدارة الاحتفاظ للماستر</b><br>Historical accountability activity older than six months: '+oldUsage+' usage record(s), '+oldReceipts+' receipt/handover record(s). Monthly totals per department and medicine stay in the system, so consumption reports keep the same figures at monthly resolution; the per-patient detail is downloaded as JSON+Excel and must be confirmed saved first. Active custody lines and regimens are never touched.<br><button class="btn bd2c bsm" type="button" data-acc2-purge-history style="margin-top:8px">Archive accountability history older than 6 months / أرشفة سجل العهد الأقدم من 6 أشهر</button>';
+  var oldUsage=appState('accountability_usage_v2').filter(function(row){return olderThanRetentionWindow(row.submittedAt||row.consumptionDate)}).length;
+  var oldReceipts=appState('accountability_receipts_v2').filter(function(row){return olderThanRetentionWindow(row.receivedAt||row.createdAt||row.receivedDate)}).length;
+  var panel=document.createElement('div');panel.id='r676-accountability-retention';panel.className='alert-banner-y';
+  var windowLabel=retentionYearsLabel();
+  panel.innerHTML='<b>Master retention controls / إدارة الاحتفاظ للماستر</b><br>'
+    +'Accountability custody covers controlled medicines, so nothing is removable until it is at least '+esc(windowLabel)+' old. '
+    +'Older than that right now: '+oldUsage+' usage record(s), '+oldReceipts+' receipt/handover record(s). '
+    +'Archiving is optional — monthly totals per department and medicine stay in the system, so consumption reports keep the same figures at monthly resolution, and the per-patient detail is downloaded as JSON+Excel and must be confirmed saved first. Active custody lines and regimens are never touched.'
+    +'<br><button class="btn bd2c bsm" type="button" data-acc2-purge-history style="margin-top:8px">Archive accountability history older than '+esc(windowLabel)+' / أرشفة سجل العهد الأقدم من '+esc(windowLabel)+'</button>';
   log.parentNode.insertBefore(panel,log);
 }
 /* The archive itself lives in core/accountability-retention.js. It used to be
-   inline here and it DELETED: rows older than six months were exported to a file
+   inline here and it DELETED: rows past the window were exported to a file
    and removed, leaving nothing behind, so every consumption figure computed from
    them dropped to zero the moment a master tidied up. It now writes monthly
    totals per department and medicine into accountability_usage_summary_v1 before

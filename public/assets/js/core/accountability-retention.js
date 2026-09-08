@@ -23,12 +23,13 @@ import { registerStorageCleanup } from './storage-cleanup.js?v=46cb1ec8ee';
    likewise only covers what is still live — the archive file is the record for
    older periods.
 
-   Note on the window: six months is what the existing purge used and is kept
-   here rather than changed unasked. If accountability custody covers controlled
-   or narcotic medicines, the five-year floor applied to the movement ledger is
-   the number to match — it is the one constant below. */
+   The window is five years, matching the controlled/narcotic movement ledger.
+   Accountability custody covers controlled medicines, so the same regulatory
+   floor applies: nothing here may be removed from Firestore until it is at least
+   five years old. It was six months before, which was the general-history
+   default rather than a decision about controlled custody. */
 
-const ACCOUNTABILITY_RETENTION_MONTHS = 6;
+const ACCOUNTABILITY_RETENTION_MONTHS = 60;
 const USAGE_KEY = 'accountability_usage_v2';
 const RECEIPTS_KEY = 'accountability_receipts_v2';
 const SUMMARY_KEY = 'accountability_usage_summary_v1';
@@ -38,6 +39,8 @@ function retentionCutoff() {
   date.setMonth(date.getMonth() - ACCOUNTABILITY_RETENTION_MONTHS);
   return date.getTime();
 }
+
+export { ACCOUNTABILITY_RETENTION_MONTHS };
 
 export function olderThanRetention(value, cutoff) {
   const time = new Date(value || 0).getTime();
@@ -246,8 +249,8 @@ export async function archiveAccountabilityHistory() {
 
 registerStorageCleanup({
   key: USAGE_KEY,
-  label: 'Archive history > 6 months / أرشفة سجل العهد',
-  hint: 'Downloads full detail as JSON + Excel, keeps monthly totals per department and medicine, then removes the old entries.',
+  label: 'Archive history > 5 years / أرشفة سجل العهد',
+  hint: 'Optional. Downloads full detail as JSON + Excel, keeps monthly totals per department and medicine, then removes entries past the 5-year regulatory floor.',
   run: () => archiveAccountabilityHistory(),
   canRun: () => isActualMaster(),
 });
