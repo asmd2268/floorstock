@@ -3,7 +3,7 @@ import { registerStorageCleanup } from './storage-cleanup.js?v=15650a41cb';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
-import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=fe76ca50ef';
+import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=cc6daa3c27';
 
 /* Accountability history retention.
 

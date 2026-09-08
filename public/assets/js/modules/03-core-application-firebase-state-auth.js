@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=675215c8d5';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=e398890785';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
@@ -490,10 +490,15 @@ globalThis.fsRecentAuditLogKeys=fsRecentAuditLogKeys;
    custody officer's working view and the year-to-date report without loading five
    years into every session. Anything older is read on demand. */
 var LEDGER_MONTHS_IN_SESSION=12;
+/* Orders are read far more often and by far more roles than the ledgers, and a
+   department's working view is the last few weeks — so a shorter window keeps the
+   read cost down. Older months are still reachable by a master, who lists the
+   whole collection rather than naming documents. */
+var ORDER_MONTHS_IN_SESSION=3;
 function fsRecentLedgerKeys(monthsBack){
   var keys=[];
   monthPartitionedKeyNames().forEach(function(key){
-    keys=keys.concat(recentPartitionKeys(key,monthsBack));
+    keys=keys.concat(recentPartitionKeys(key,key==='requests'?ORDER_MONTHS_IN_SESSION:monthsBack));
   });
   return keys;
 }
@@ -1222,8 +1227,29 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       if(document.visibilityState==='visible')refreshCurrentPage();
     },450);
   },
-  g:function(k){return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null},
+  /* A month-partitioned key has no single document: its rows live across
+     <key>_gYYYY-MM or <key>_hYYYY-MM. Reading and writing are routed here rather
+     than at each of the call sites, so everything that already said
+     S.g('requests') or S.s('requests', rows) keeps working untouched.
+
+     Routing only switches on once the legacy document is gone, which the
+     migration does as its last step — so there is never a half-migrated state
+     with some rows in the old document and some in the partitions. */
+  g:function(k){
+    if(partitionsAreLive(k))return monthPartitionRows(k);
+    return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null;
+  },
   s:function(k,v){
+    if(partitionsAreLive(k)){
+      // Writes only the months that actually changed, instead of rewriting every
+      // row the key has ever held.
+      var partitioned=applyPartitionedArray(k,v).catch(function(error){
+        console.error('Partitioned save failed for key:',k,error);
+        toast('Save failed — '+String(error&&error.message||error),'err');
+        throw error;
+      });
+      return _trackSave(partitioned,'floorstock_state/'+k+' (by month)');
+    }
     var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     S.cache[k]=v;
     var write=fsStateSetSmart(k,v).catch(function(error){

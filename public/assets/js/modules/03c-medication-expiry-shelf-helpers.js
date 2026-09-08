@@ -175,6 +175,10 @@ async function repairDeletedDepartments(){
   finally{_deletedDeptRepairBusy=false}
 }
 function gu(){return S.g('users')||[]}
+/* Orders are one document per Gregorian month once migrated, and a single
+   document before that. S.g() knows which and returns the right thing — reading
+   the partitions directly here would have returned nothing at all until the
+   migration ran, emptying every order screen in the app. */
 function gr(){return S.g('requests')||[]}
 
 publishLegacy("03c-medication-expiry-shelf-helpers.js", {

@@ -64,6 +64,7 @@ export const APPLICATION_STATE_KEYS = [
   'request_count_limits_v1',
   'request_hour_grids_v1',
   'requests',
+  'requests_g2026-09',
   `shelves_${DEPARTMENT_ID}`,
   'similar_medicine_separations_v1',
   'theme',
@@ -89,6 +90,9 @@ export function mayWriteState(role, key) {
   // Custody usage is one document per Hijri month. Writes stay denied for every
   // client role — submissions go through the accountabilityMutation callable,
   // which enforces the custody balance inside a transaction.
+  /* Orders are one document per Gregorian month. Every role that could write the
+     single requests document writes the month partitions the same way. */
+  if (/^requests_g\d{4}-\d{2}(_p\d+)?$/.test(key)) return mayWriteState(role, 'requests');
   if (/^accountability_usage_v2(_h\d{4}-\d{2}(_p\d+)?)?$/.test(key)) {
     return role === 'master' || role === 'pharmacy' || role === 'inpatient_supervisor'
       || role === 'pharmacy_staff' || role === 'controlled_pharmacy';

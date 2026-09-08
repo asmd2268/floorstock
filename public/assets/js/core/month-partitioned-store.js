@@ -38,10 +38,47 @@ const PARTITION_MAX_BYTES = 800 * 1024;
 const MAX_PARTS = 50;
 
 /* key        the logical key callers still use, e.g. 'controlled_moves'
+   calendar   'hijri' or 'gregorian' — which calendar's months partition it
    dateField  fields tried in order to decide which month a row belongs to
-   sortField  field the concatenated array is ordered by */
+   sortField  field the concatenated array is ordered by
+
+   Two calendars, on purpose. The controlled and custody registers are kept in
+   Hijri months because that is how the pharmacy reports them, so a partition is
+   the month's register. Orders are operational rather than regulatory and follow
+   the Gregorian calendar everyone schedules by. The marker in the document id
+   (`_h` or `_g`) says which, so a partition can never be read as the wrong
+   calendar's month — the two disagree by about eleven days a year. */
 export function registerMonthPartitionedKey(spec) {
-  registry.set(spec.key, Object.freeze(Object.assign({ maxBytes: PARTITION_MAX_BYTES }, spec)));
+  registry.set(spec.key, Object.freeze(Object.assign({ maxBytes: PARTITION_MAX_BYTES, calendar: 'hijri' }, spec)));
+}
+
+function marker(spec) {
+  return (spec && spec.calendar) === 'gregorian' ? 'g' : 'h';
+}
+
+function gregorianMonthKey(value) {
+  if (value == null || value === '') return null;
+  if (typeof value !== 'string' && typeof value !== 'number' && !(value instanceof Date)) return null;
+  const date = new Date(value);
+  if (isNaN(date.getTime())) return null;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function shiftGregorianMonth(monthKey, delta) {
+  const [year, month] = String(monthKey).split('-').map(Number);
+  if (!year || !month) return null;
+  const date = new Date(Date.UTC(year, month - 1 + delta, 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthKeyFor(spec, value) {
+  return (spec && spec.calendar) === 'gregorian' ? gregorianMonthKey(value) : hijriMonthKey(value);
+}
+
+function shiftMonthFor(spec, monthKey, delta) {
+  return (spec && spec.calendar) === 'gregorian'
+    ? shiftGregorianMonth(monthKey, delta)
+    : shiftHijriMonth(monthKey, delta);
 }
 
 export function monthPartitionSpec(key) {
@@ -57,25 +94,26 @@ export function isMonthPartitionDoc(docId) {
 }
 
 export function partitionPattern(key) {
-  return new RegExp(`^${key}_h\\d{4}-\\d{2}(_p\\d+)?$`);
+  return new RegExp(`^${key}_${marker(monthPartitionSpec(key))}\\d{4}-\\d{2}(_p\\d+)?$`);
 }
 
-/* The Hijri month a row belongs to, from the first of its date fields that
-   parses. A row whose date is missing or unreadable returns null and is refused
-   rather than filed under an arbitrary month. */
+/* The month a row belongs to, in that key's own calendar, from the first of its
+   date fields that parses. A row whose date is missing or unreadable returns null
+   and is refused rather than filed under an arbitrary month. */
 export function monthOf(row, spec) {
   const fields = spec.dateField || ['at'];
   for (const field of fields) {
     const value = row && row[field];
     if (value == null || value === '') continue;
-    const month = hijriMonthKey(value);
+    const month = monthKeyFor(spec, value);
     if (month) return month;
   }
   return null;
 }
 
 export function partitionKey(key, month, part) {
-  return (part || 1) <= 1 ? `${key}_h${month}` : `${key}_h${month}_p${part}`;
+  const mark = marker(monthPartitionSpec(key));
+  return (part || 1) <= 1 ? `${key}_${mark}${month}` : `${key}_${mark}${month}_p${part}`;
 }
 
 /* Every partition of `key` currently in the state cache, oldest month first.
@@ -104,11 +142,12 @@ export function monthPartitionRows(key) {
    `monthsBack`. Scoped roles cannot list the collection, so they name what they
    read; this is what fsStateKeysForProfile appends for them. */
 export function recentPartitionKeys(key, monthsBack) {
+  const spec = monthPartitionSpec(key);
   const keys = [];
-  let month = hijriMonthKey(new Date());
+  let month = monthKeyFor(spec, new Date());
   for (let index = 0; index <= (monthsBack || 0) && month; index += 1) {
-    keys.push(`${key}_h${month}`);
-    month = shiftHijriMonth(month, -1);
+    keys.push(partitionKey(key, month, 1));
+    month = shiftMonthFor(spec, month, -1);
   }
   return keys;
 }
@@ -217,6 +256,44 @@ export function deleteMonthPartitionedRow(key, rowId) {
   return mutateExistingRow(key, rowId, (rows, id) => rows.filter((item) => !item || String(item.id) !== id));
 }
 
+/* Applies a whole desired array to a partitioned key: writes what is new or
+   changed, removes what is gone, and touches only the months involved.
+
+   This is what lets the ten existing `S.s('requests', wholeArray)` call sites
+   keep working unchanged. They hand over the array they always did; the diff
+   turns that into a write per changed month instead of a rewrite of every order
+   ever placed. */
+export async function applyPartitionedArray(key, nextRows) {
+  const spec = monthPartitionSpec(key);
+  if (!spec) throw new Error(`${key} is not a month-partitioned key.`);
+  const next = (nextRows || []).filter((row) => row && row.id);
+  const current = monthPartitionRows(key);
+  const nextById = new Map(next.map((row) => [String(row.id), row]));
+  const currentById = new Map(current.map((row) => [String(row.id), row]));
+
+  const added = next.filter((row) => !currentById.has(String(row.id)));
+  const changed = next.filter((row) => {
+    const before = currentById.get(String(row.id));
+    return before && JSON.stringify(before) !== JSON.stringify(row);
+  });
+  const removed = current.filter((row) => !nextById.has(String(row.id)));
+
+  if (added.length) await appendMonthPartitionedRows(key, added);
+  for (const row of changed) await saveMonthPartitionedRow(key, row);
+  for (const row of removed) await deleteMonthPartitionedRow(key, row.id);
+  return { added: added.length, changed: changed.length, removed: removed.length };
+}
+
+/* True once a key has been migrated: the single legacy document is gone and the
+   partitions are the only home. Until then every read and write stays on the old
+   path, so there is never a half-migrated state where some orders live in one
+   place and some in another. */
+export function partitionsAreLive(key) {
+  if (!monthPartitionSpec(key)) return false;
+  const legacy = globalThis.S && globalThis.S.cache ? globalThis.S.cache[key] : undefined;
+  return !Array.isArray(legacy);
+}
+
 /* Mirrors a full set of rows back into the local cache, each into the partition
    its own date selects. Used after a Cloud Function commits a change: the callable
    writes server-side, so the cache would otherwise not move until the listener
@@ -239,7 +316,7 @@ export function mirrorMonthPartitionedRows(key, rows) {
   });
   const placed = new Set();
   partitionKeysInCache(key).forEach((name) => {
-    const match = /_h(\d{4}-\d{2})(_p\d+)?$/.exec(name);
+    const match = new RegExp(`_${marker(spec)}(\\d{4}-\\d{2})(_p\\d+)?$`).exec(name);
     const month = match && match[1];
     if (!month) return;
     if (match[2]) { globalThis.S.cache[name] = []; return; }
@@ -278,4 +355,6 @@ Object.assign(globalThis, {
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
   mirrorMonthPartitionedRows,
+  applyPartitionedArray,
+  partitionsAreLive,
 });

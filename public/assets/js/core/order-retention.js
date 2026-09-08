@@ -293,8 +293,11 @@ registerStorageCleanup({
   canRun:function(){return !!(globalThis.CU&&globalThis.CU.master===true)}
 });
 
+/* Registered under the partitioned ledger's synthetic panel row, not under the
+   legacy `requests` document: that document only exists until the monthly
+   migration runs, and the migration owns that key's entry. */
 registerStorageCleanup({
-  key:'requests',
+  key:'requests_ledger',
   label:'Archive orders > 6 months / أرشفة الطلبات',
   hint:'Downloads full detail as JSON, keeps monthly totals for reports, then removes the old rows.',
   run:function(){return cleanupOldOrders(false)},

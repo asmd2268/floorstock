@@ -109,7 +109,9 @@ service cloud.firestore {
         || docId.matches('^(meds_|expiry_|shelves_|alerts_|inventory_integrity_|inventory_snapshot_index_).*')
         // Custody usage is one document per Hijri month; the reader needs the
         // family, not the single document it replaced.
-        || docId.matches('^accountability_usage_v2_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?$');
+        || docId.matches('^accountability_usage_v2_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
+        // Orders are the same, by Gregorian month.
+        || docId.matches('^requests_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?$');
     }
 
     // Same narrowed pattern as role() above: isolated early-return, verified
@@ -179,7 +181,7 @@ service cloud.firestore {
         || (docId.matches('^(controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*)$') && tenantFeature(id, 'controlled'))
         || (docId.matches('^(requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$') && tenantFeature(id, 'requests'))
         || (
-          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|requests|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
+          !docId.matches('^(crash_.*|controlled_.*|accountability_.*|psychotropic_.*|narcotic_.*|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|request_.*|fulfillment_edit_settings_v1|req_windows|disp_slots|daily_limits_v2|weekly_limits_v2|monthly_limits|rate_limits_v2)$')
           && tenantFeature(id, 'inventory')
         );
     }
@@ -276,7 +278,9 @@ service cloud.firestore {
         // Custody usage is one document per Hijri month; a department reads the
         // family, exactly as it read the single document that preceded it. Writes
         // stay denied — submissions go through the accountabilityMutation callable.
-        || docId.matches('^accountability_usage_v2_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?$');
+        || docId.matches('^accountability_usage_v2_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
+        // Orders, by Gregorian month. Departments both read and write these.
+        || docId.matches('^requests_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?$');
     }
 
     function canWriteState(docId) {
@@ -320,6 +324,10 @@ service cloud.firestore {
               'inventory_integrity_' + dept,
               'inventory_snapshot_index_' + dept
             ]
+            // Orders are one document per Gregorian month now; a department
+            // writes the month its own order belongs to, exactly as it wrote the
+            // single requests document before.
+            || docId.matches('^requests_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
             || docId.matches('^inventory_snapshot_' + dept + '_.*$')
             || (
               p.get('controlledCustodian', false) == true
@@ -337,15 +345,15 @@ service cloud.firestore {
             r in ['pharmacy', 'pharmacy_director']
             || (
               r in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor']
-              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_.*|accountability_assignments_v2|accountability_usage_v2(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'outpatient_pharmacy_supervisor'
-              && docId.matches('^(crash_carts|requests|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'pharmacy_staff'
-              && docId.matches('^(crash_carts|accountability_assignments_v2|accountability_usage_v2(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
+              && docId.matches('^(crash_carts|accountability_assignments_v2|accountability_usage_v2(_h[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|accountability_receipts_v2|accountability_regimens_v2|accountability_regimens_v3|accountability_regimen_catalog_v1|accountability_expiry_batches_v1|accountability_plan_usage_v1|requests(_g[0-9]{4}-[0-9]{2}(_p[0-9]+)?)?|notes|dept_notes|request_analytics_summary_v1|theme|user_activity_daily_v1)$')
             )
             || (
               r == 'controlled_pharmacy'
