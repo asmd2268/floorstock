@@ -607,13 +607,8 @@ async function assignSelectedMedsToShelf(){
 // Crash Cart
 function crashCarts(){return S.g('crash_carts')||[]}
 function crashReports(){return S.g('crash_cart_reports')||[]}
-function _sanitizeReport(r){
-  if(!r||typeof r!=='object')return r;
-  var out={};Object.keys(r).forEach(function(k){var val=r[k];out[k]=val===undefined?null:val});
-  return out;
-}
 function setCrashReports(v){
-  var p=S.s('crash_cart_reports',(v||[]).map(_sanitizeReport));
+  var p=S.s('crash_cart_reports',v);
   // Every legacy direct-write path (close/respond, bulk open+replace, seal
   // correction) still only touches this state-doc array. Mirror the affected
   // reports into crash_cart_reports_v2 afterward, best-effort, so scoped
@@ -629,6 +624,25 @@ function setCrashReports(v){
 }
 function crashCart(id){return crashCarts().find(function(c){return c.id===id})}
 
+
+// One-time migration: fill missing fields in crash reports stored before schema additions.
+window.migrateCrashReports=async function(){
+  if(typeof isMaster==='function'&&!isMaster())return window.toast&&toast('Master permission required.','err');
+  var reports=crashReports();
+  if(!reports.length)return window.toast&&toast('No crash reports found.','info');
+  var defaults={noConsumptionNote:'',noConsumption:false,oldSeal:'',reason:'',consumed:[],replacements:[]};
+  var fixed=0;
+  var sanitized=reports.map(function(r){
+    if(!r||typeof r!=='object')return r;
+    var out={};
+    Object.keys(r).forEach(function(k){out[k]=r[k]===undefined?null:r[k]});
+    Object.keys(defaults).forEach(function(k){if(out[k]===undefined||out[k]===null){out[k]=defaults[k];fixed++}});
+    return out;
+  });
+  await setCrashReports(sanitized);
+  window.toast&&toast('Migration complete. Fixed '+fixed+' undefined field(s) across '+reports.length+' report(s). ✓','succ');
+  console.info('migrateCrashReports: done',{reports:reports.length,fixedFields:fixed});
+};
 
 // Controlled medicines: hospital, approved flag, barcode, separated narcotic/psychotropic.
 function ctlSettingsGlobal(){return S.g('controlled_global_settings')||{hospitalName:'',approved:false,expiryAlertDays:30}}
