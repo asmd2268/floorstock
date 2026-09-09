@@ -284,6 +284,42 @@ export async function applyPartitionedArray(key, nextRows) {
   return { added: added.length, changed: changed.length, removed: removed.length };
 }
 
+/* Removes rows whose id already appeared in an earlier partition of the same key.
+
+   A migration that ran twice appended the same rows a second time — the fix for
+   that is in legacy-state-doc.js, and this is the repair for what it already
+   wrote. Identical ids ARE duplicates: an id addresses one row, and every writer
+   here replaces a row in place rather than adding a second with the same id. The
+   first occurrence is kept, so the oldest partition keeps the row and the later
+   copy goes.
+
+   Reports untouched rather than pretending to work: a key with no duplicates
+   writes nothing at all. */
+export async function dedupeMonthPartitions(key) {
+  if (!monthPartitionSpec(key)) return null;
+  const seen = new Set();
+  let removed = 0;
+  for (const docId of partitionKeysInCache(key)) {
+    const rows = globalThis.S.cache[docId];
+    if (!Array.isArray(rows) || !rows.length) continue;
+    const kept = rows.filter((row) => {
+      const id = row && row.id != null ? String(row.id) : null;
+      if (!id) return true;
+      if (seen.has(id)) { removed += 1; return false; }
+      seen.add(id);
+      return true;
+    });
+    if (kept.length === rows.length) continue;
+    const ref = stateDocRef(docId);
+    if (!ref) throw new Error('Firestore is unavailable; nothing was changed.');
+    // eslint-disable-next-line no-await-in-loop
+    await ref.set({ value: kept, updatedAt: stateStamp() }, { merge: false });
+    globalThis.S.cache[docId] = kept;
+  }
+  if (removed) scheduleRefresh();
+  return removed ? { key, removed } : null;
+}
+
 /* True once a key has been migrated: the single legacy document is gone and the
    partitions are the only home. Until then every read and write stays on the old
    path, so there is never a half-migrated state where some orders live in one
@@ -357,4 +393,5 @@ Object.assign(globalThis, {
   mirrorMonthPartitionedRows,
   applyPartitionedArray,
   partitionsAreLive,
+  dedupeMonthPartitions,
 });

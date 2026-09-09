@@ -3,7 +3,7 @@ import {
   appendMonthPartitionedRows,
   monthPartitionRows,
   partitionKeysInCache,
-} from './month-partitioned-store.js?v=cc6daa3c27';
+} from './month-partitioned-store.js?v=e08ef71837';
 import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 

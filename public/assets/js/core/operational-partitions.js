@@ -3,8 +3,9 @@ import {
   appendMonthPartitionedRows,
   monthOf,
   monthPartitionSpec,
-} from './month-partitioned-store.js?v=cc6daa3c27';
+} from './month-partitioned-store.js?v=e08ef71837';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
+import { legacyStateDoc } from './legacy-state-doc.js?v=95b728cbfc';
 
 /* The remaining append-forever records, filed by month like the ledgers.
 
@@ -117,9 +118,10 @@ export function operationalPartitionSpecs() {
   return SPECS;
 }
 
+// The raw legacy document, never S.g: after a migration S.g returns the rows
+// joined from the partitions, which made a finished migration look pending.
 function legacyRows(key) {
-  const value = globalThis.S && typeof globalThis.S.g === 'function' ? globalThis.S.g(key) : null;
-  return Array.isArray(value) ? value : null;
+  return legacyStateDoc(key);
 }
 
 /* A row needs an id to be addressed inside its partition and a date to choose

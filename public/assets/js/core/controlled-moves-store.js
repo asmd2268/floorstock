@@ -1,4 +1,5 @@
 import { hijriMonthLabelBilingual, hijriMonthKey } from './hijri-calendar.js?v=7cb3fbc1ff';
+import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 import {
   registerMonthPartitionedKey,
   monthPartitionRows,
@@ -7,7 +8,7 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
   partitionKey,
-} from './month-partitioned-store.js?v=cc6daa3c27';
+} from './month-partitioned-store.js?v=e08ef71837';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.
@@ -87,8 +88,8 @@ export async function migrateControlledMovesToMonths(options) {
     globalThis.toast('Only Master can migrate the controlled movement ledger.', 'err');
     return;
   }
-  const legacyBlob = globalThis.S.g(CONTROLLED_MOVES_KEY);
-  const legacyRows = Array.isArray(legacyBlob) ? legacyBlob : [];
+  const legacyBlob = legacyStateDoc(CONTROLLED_MOVES_KEY);
+  const legacyRows = legacyBlob || [];
   if (!legacyRows.length) {
     if (legacyBlob !== null) {
       await globalThis.S.rm(CONTROLLED_MOVES_KEY);
@@ -135,7 +136,7 @@ registerStorageCleanup({
   hint: 'Files the movement ledger into one record per Hijri month, removing its size limit and making a month cost one read.',
   run: (options) => migrateControlledMovesToMonths(options),
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
-    && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(CONTROLLED_MOVES_KEY)),
+    && legacyStateDocExists(CONTROLLED_MOVES_KEY),
 });
 
 Object.assign(globalThis, {

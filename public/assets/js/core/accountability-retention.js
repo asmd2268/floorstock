@@ -1,9 +1,10 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
+import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
-import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=cc6daa3c27';
+import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=e08ef71837';
 
 /* Accountability history retention.
 
@@ -289,8 +290,8 @@ export async function migrateAccountabilityUsageToMonths(options) {
     globalThis.toast('Only Master can migrate the custody records.', 'err');
     return;
   }
-  const legacy = globalThis.S && typeof globalThis.S.g === 'function' ? globalThis.S.g(USAGE_KEY) : null;
-  const rows = Array.isArray(legacy) ? legacy : [];
+  const legacy = legacyStateDoc(USAGE_KEY);
+  const rows = legacy || [];
   if (!rows.length) {
     if (legacy !== null) {
       await globalThis.S.rm(USAGE_KEY);
@@ -331,7 +332,7 @@ registerStorageCleanup({
   label: 'File custody by Hijri month / ترحيل سجل العهد',
   hint: 'Files custody usage into one record per Hijri month, removing the size limit that stopped it holding five years.',
   run: (options) => migrateAccountabilityUsageToMonths(options),
-  canRun: () => isActualMaster() && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(USAGE_KEY)),
+  canRun: () => isActualMaster() && legacyStateDocExists(USAGE_KEY),
 });
 
 registerStorageCleanup({

@@ -5,8 +5,9 @@ import {
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
   partitionKeysInCache,
-} from './month-partitioned-store.js?v=cc6daa3c27';
+} from './month-partitioned-store.js?v=e08ef71837';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
+import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 
 /* Orders, one document per Gregorian month.
 
@@ -99,8 +100,8 @@ export async function migrateRequestsToMonths(options) {
     globalThis.toast('Only Master can migrate the orders record.', 'err');
     return;
   }
-  const legacy = globalThis.S.g(REQUESTS_KEY);
-  const rows = Array.isArray(legacy) ? legacy : [];
+  const legacy = legacyStateDoc(REQUESTS_KEY);
+  const rows = legacy || [];
   if (!rows.length) {
     if (legacy !== null) {
       await globalThis.S.rm(REQUESTS_KEY);
@@ -138,7 +139,7 @@ registerStorageCleanup({
   hint: 'Files orders into one record per month, removing the size limit that could stop departments submitting orders.',
   run: (options) => migrateRequestsToMonths(options),
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
-    && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(REQUESTS_KEY)),
+    && legacyStateDocExists(REQUESTS_KEY),
 });
 
 Object.assign(globalThis, {
