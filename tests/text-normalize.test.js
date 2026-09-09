@@ -34,11 +34,16 @@ test('trimming keeps a fallback, and a quantity is never NaN', () => {
   assert.equal(fsNum(Infinity), 0, 'a quantity must be finite');
 });
 
-test('module 51 keeps one set of helpers, not two', async () => {
-  const source = await readFile(new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url), 'utf8');
+test('the modules split out of 51 keep one set of helpers, not two', async () => {
+  const source = (await Promise.all([
+    'core/controlled-custody-print.js',
+    'core/controlled-custody-data.js',
+    'core/controlled-department-panel.js',
+    'core/orders-print.js',
+  ].map((file) => readFile(new URL(`../public/assets/js/${file}`, import.meta.url), 'utf8')))).join('\n');
   const code = source.replace(/\/\*[\s\S]*?\*\//g, '');
   for (const name of ['fsR5Norm', 'fsR6Norm', 'fsR5S', 'fsR6S', 'fsR5N', 'fsR6N']) {
-    assert.ok(!new RegExp(`function ${name}\\(`).test(code), `${name} is still defined in module 51`);
+    assert.ok(!new RegExp(`function ${name}\\(`).test(code), `${name} is defined again after the split`);
   }
   assert.match(source, /text-normalize\.js/);
 });

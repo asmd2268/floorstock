@@ -1,157 +1,32 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-import { buildTestSession, restoreActualSession } from '../core/master-test-mode.js?v=5c343a4df5';
-import { fsNorm, fsText, fsNum } from '../core/text-normalize.js?v=aa16ae9ac0';
-import { fsE, fsEsc } from '../core/dom-utils.js?v=b2909b7f46';
-import { uiToast, uiNow, uiActor, uiAudit, uiCloseModal, uiOpenModal, uiEnsureStyles } from '../core/module-ui-helpers.js?v=4dc31675ec';
-import { fsR5DepartmentRecords, fsR5DepartmentCandidates } from '../core/department-names.js?v=1809097eb2';
-import { fsR5DMY, fsR12DateOnly, fsR12PrintDate, fsR12ExpiryDays, fsR12HasNearExpiry, fsR12BatchSummaryHtml, fsR5BatchText, fsR5Class, fsR5ExpiryDays, fsR5NearDays } from '../core/controlled-expiry-format.js?v=4fe8aa218d';
-import { fsR5ControlledDept, fsR5ControlledMedicine, fsR5NormalizeControlled, fsR5ControlledRows } from '../core/controlled-custody-data.js?v=41ac59e5f7';
+/* The printed controlled-custody sheet: one department, one A4 page, signed.
 
-/* ASDHealth FloorStock — R6.32 canonical rules.
-   Direct top-level definitions only. No wrapper chaining. */
+   This is a document, not a screen. It is opened as a self-contained blob — its
+   own HTML, its own CSS, its own runtime — because it has to survive being
+   printed from a browser the hospital did not choose, and because a print
+   stylesheet inside the application could never guarantee that the whole custody
+   list lands on ONE page. That guarantee is the entire difficulty: a signed
+   custody sheet that silently continues onto a second page is a second document
+   nobody signed.
 
-/* My controlled list: department read-only view and one-page A4 print. */
+   So the document ships with a fitter. Both a landscape and a portrait layout
+   are written into the page; the runtime measures each against the paper,
+   shrinks type and padding within fixed bounds until one fits, keeps that one,
+   and removes the other. If neither fits even at the smallest step, the sheet
+   says so rather than printing a truncated custody list.
 
-window.ctlDeptFinalApply=function(){
-  var dept=fsR5ControlledDept(),input=fsE('ctl-dept-final-days'),days=Math.floor(fsNum(input&&input.value));
-  if(days<1)return uiToast('Enter a valid number of days / أدخل عدد أيام صحيحًا','err');
-  try{sessionStorage.setItem('asdhealth-controlled-near-days-'+dept,String(days))}catch(e){}
-  return Promise.resolve(window.renderDepartmentControlledPanel()).catch(function(e){console.error('Controlled department render failed',e);if(typeof toast==='function')toast('Unable to render controlled department panel.','err');throw e});
-};
-window.ctlDeptFinalToggle=function(){
-  window.CTL_DEPT_ONLY_SOON=!window.CTL_DEPT_ONLY_SOON;
-  return Promise.resolve(window.renderDepartmentControlledPanel()).catch(function(e){console.error('Controlled department render failed',e);if(typeof toast==='function')toast('Unable to render controlled department panel.','err');throw e});
-};
-window.renderDepartmentControlledPanel=async function(){
-  var effective=(typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():window.CU||{});
-  if(String(effective.role||'')!=='department')return false;
-  var outer=fsE('ctl-departments-view');
-  // Render into a dedicated child panel instead of overwriting ctl-departments-view's
-  // innerHTML directly: that container also holds the static custodian markup
-  // (#ctl-dept, #ctl-dept-table) that renderCtlDepartments() depends on for
-  // controlled_pharmacy/warehouse sessions. Clobbering it here permanently destroys
-  // those elements for the rest of the SPA session (no page reload between logins),
-  // leaving a stale department view visible after a later custodian sign-in.
-  var host=fsE('ctl-dept-only-panel');
-  if(!outer||!host)return false;
-  var custodianPanel=fsE('ctl-departments-custodian-panel');
-  if(custodianPanel)custodianPanel.style.display='none';
-  if(host.dataset.controlledLoading==='1')return false;
-  host.dataset.controlledLoading='1';
+   The QR code is the department's live list. It is required, not decorative — a
+   placeholder image is treated as a failure and stops the print, because a
+   signed sheet carrying a QR that leads nowhere is worse than no sheet.
 
-  window.CTL_VIEW='departments';
-  var overview=fsE('ctl-overview-view');
-  if(overview)overview.style.display='none';
-  outer.style.display='block';
-  host.style.display='block';
-  host.innerHTML='<div class="card"><div class="cb">Loading My controlled list… / جاري تحميل عهدتي…</div></div>';
+   Moved out of modules/51 as its own file: it shared nothing with the screens
+   around it except the data it prints. */
 
-  try{
-    var requested=fsR5ControlledDept();
-    var result=await fsLoginTimeout(
-      fsR5ControlledRows(requested),
-      18000,
-      'Controlled custody loading timed out.'
-    );
-    var dept=result.dept||requested;
-    var rows=result.rows||[];
-    var days=fsR5NearDays(dept);
+import { fsEsc } from './dom-utils.js?v=b2909b7f46';
+import { fsText } from './text-normalize.js?v=aa16ae9ac0';
+import { uiToast } from './module-ui-helpers.js?v=4dc31675ec';
+import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=41ac59e5f7';
+import { fsR12PrintDate, fsR12HasNearExpiry, fsR5BatchText, fsR5Class } from './controlled-expiry-format.js?v=4fe8aa218d';
 
-    var shown=window.CTL_DEPT_ONLY_SOON?rows.filter(function(row){
-      var remaining=fsR5ExpiryDays(row);
-      return remaining!==null&&remaining<=days;
-    }):rows;
-
-    var soon=rows.filter(function(row){
-      var remaining=fsR5ExpiryDays(row);
-      return remaining!==null&&remaining<=days&&remaining>0;
-    }).length;
-
-    var expired=rows.filter(function(row){
-      var remaining=fsR5ExpiryDays(row);
-      return remaining!==null&&remaining<=0;
-    }).length;
-
-    var body=shown.map(function(row,index){
-      return '<tr>'+
-        '<td>'+(index+1)+'</td>'+
-        '<td>'+fsEsc(row.moh||'—')+'</td>'+
-        '<td>'+fsEsc(row.nupco||'—')+'</td>'+
-        '<td><b>'+fsEsc(row.name)+'</b></td>'+
-        '<td>'+fsEsc(fsR5Class(row.classification))+'</td>'+
-        '<td>'+fsEsc(row.required)+'</td>'+
-        '<td>'+fsEsc(row.actual)+'</td>'+
-        '<td class="ctl-batch-number-cell">'+fsR12BatchSummaryHtml(row.batches)+'</td>'+
-      '</tr>';
-    }).join('');
-
-    if(!body){
-      body='<tr><td colspan="8" style="text-align:center;padding:24px">'+
-        'No medicines are assigned to this department custody / لا توجد أدوية مسندة لعهدة هذا القسم'+
-      '</td></tr>';
-    }
-
-    var deptName=effective.deptName||effective.departmentName||
-      window.floorstockDepartmentName({id:dept});
-
-    host.innerHTML=
-      '<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px">'+
-        '<div><div class="stitle">My controlled list / عهدتي</div>'+
-        '<div class="ssub" style="margin:0">Controlled Custody — '+
-          fsEsc(deptName)+' · Read-only</div></div>'+
-        '<span class="badge bbl">View only / للاطلاع</span>'+
-      '</div>'+
-      '<div class="card"><div class="cb"><div class="ctl-rulebar">'+
-        '<div class="fg"><label>Near-expiry rule (days)</label>'+
-          '<input id="ctl-dept-final-days" type="number" min="1" value="'+days+'"></div>'+
-        '<button class="btn bp" onclick="ctlDeptFinalApply()">Apply rule</button>'+
-        '<button class="btn bg" onclick="ctlDeptFinalToggle()">'+
-          (window.CTL_DEPT_ONLY_SOON?'Show all medicines':'Show near-expiry only')+
-        '</button>'+
-        '<button class="btn bp" id="ctl-dept-authoritative-print-btn" '+
-          'onclick="ctlConfirmDepartmentPrint(event)">🖨 Print My controlled list / طباعة عهدتي</button>'+
-      '</div>'+
-      '<div class="ctl-summary">'+
-        '<div class="sc"><div class="sl">Total medicines</div><div class="sv">'+rows.length+'</div></div>'+
-        '<div class="sc"><div class="sl">Near expiry ≤ '+days+' days</div><div class="sv">'+soon+'</div></div>'+
-        '<div class="sc"><div class="sl">Expired</div><div class="sv">'+expired+'</div></div>'+
-      '</div>'+
-      '<div class="fhint" style="margin-top:8px">Data source: '+
-        fsEsc(result.source||'unknown')+'</div></div></div>'+
-      '<div class="card">'+
-        '<div class="ch"><span class="ct">Controlled and Restricted Medicines List / قائمة الأدوية المخدرة والمقيدة</span></div>'+
-                '<div class="tw ctl-dept-custody-scroll">'+
-          '<table class="ctl-dept-custody-table">'+
-            '<colgroup>'+
-              '<col style="width:4%"><col style="width:9%"><col style="width:10%">'+
-              '<col style="width:24%"><col style="width:11%"><col style="width:8%">'+
-              '<col style="width:8%"><col style="width:26%">'+
-            '</colgroup>'+
-            '<thead><tr>'+
-              '<th>#</th><th>MOH Code</th><th>NUPCO Code</th><th>Medicine</th>'+
-              '<th>Class</th><th>Required</th><th>Actual</th>'+
-              '<th>Batches / الدفعات — Lot · Qty · Expiry</th>'+
-            '</tr></thead>'+
-            '<tbody>'+body+'</tbody>'+
-          '</table>'+
-        '</div>'+
-      '</div>';
-
-    host.style.display='block';
-    delete host.dataset.controlledLoading;
-    return true;
-  }catch(error){
-    console.error('Department controlled custody render failed.',error);
-    host.style.display='block';
-    host.innerHTML='<div class="card"><div class="cb">'+
-      '<div class="alert-banner">Controlled custody could not be loaded / تعذر تحميل عهدة القسم</div>'+
-      '<p style="margin-top:10px">'+fsEsc(error&&error.message||error)+'</p>'+
-      '<button class="btn bp" type="button" onclick="renderDepartmentControlledPanel()">'+
-        'Retry / إعادة المحاولة</button></div></div>';
-    delete host.dataset.controlledLoading;
-    return false;
-  }
-};
 function fsR5PublicUrl(dept){
   try{if(typeof window.ctlPublicUrl==='function')return window.ctlPublicUrl(dept)}catch(e){}
   var url=new URL(location.origin+location.pathname);url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var tenant=window.fsTenantId&&fsTenantId();if(tenant)url.searchParams.set('tenant',tenant);return url.toString();
@@ -611,40 +486,9 @@ window.printControlledCurrent=function(){return window.ctlConfirmDepartmentPrint
 window.finalControlledPrintRun=function(){return window.ctlConfirmDepartmentPrint()};
 window.ctlOpenDepartmentPrintOptions=function(){return window.ctlConfirmDepartmentPrint()};
 
-/* ASDHealth FloorStock — R6 crash-cart, master test mode, and master-only health.
-   Direct global definitions; no prior-function wrapping. */
-
-
-
-
-const __asdhLegacyApi = {
-  fsR5PublicUrl: fsR5PublicUrl,
-  fsR5Logo: fsR5Logo,
-  fsR5PrintSettings: fsR5PrintSettings,
-  fsR5ControlledPrintHtml: fsR5ControlledPrintHtml,
-};
-publishLegacy("51-asdhealth-canonical-r6-32-20260727.js", __asdhLegacyApi);
-export {
-  fsR5PublicUrl,
-  fsR5Logo,
-  fsR5PrintSettings,
+/* Bound in HTML and called by other modules under all four names. */
+Object.assign(globalThis,{
+  printDepartmentCustodyExact: globalThis.printDepartmentCustodyExact,
+  ctlConfirmDepartmentPrint: globalThis.ctlConfirmDepartmentPrint,
   fsR5ControlledPrintHtml
-};
-export const legacyVariableNames = Object.freeze(["FS_R5_DEPT_FALLBACKS", "FS_R5_DEPT_ALIASES", "FS_R6_CRASH_SELECTED", "FS_R6_CRASH_WORKFLOW", "FS_R6_CRASH_FILTER", "FS_R6_ORDER_NAMES"]);
-export default __asdhLegacyApi;
-
-// --- Merged from 32-aa-final-controlled-stability-script.js (Phase 6 consolidation) ---
-(function(){
-'use strict';
-const E=globalThis.E;
-function escA(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
-function numA(v){v=Number(v);return isFinite(v)?v:0}
-function roleA(){return window.fsEffectiveRole?window.fsEffectiveRole():String((window.CU&&CU.role)||'')}
-function canManageA(){try{return !!(window.CU&&(CU.master===true||['pharmacy','controlled_pharmacy'].indexOf(roleA())>=0)||(typeof isMasterActual==='function'&&isMasterActual()))}catch(e){return false}}
-function rulesA(){var s=(typeof ctlSettingsGlobal==='function'?ctlSettingsGlobal():{})||{};return {soon:Math.max(1,numA(s.expirySoonDays||60)),near:Math.max(0,numA(s.expiryUrgentDays||30)),critical:Math.max(0,numA(s.expiryCriticalDays||7))}}
-
-function ensureModalA(){if(E('aa-final-expiry-rules-modal'))return;document.body.insertAdjacentHTML('beforeend',
- '<div class="modal-bg" id="aa-final-expiry-rules-modal"><div class="modal" style="width:680px"><div class="mh"><span class="mt">Expiry tracking rules / قواعد تتبع انتهاء الصلاحية</span><button class="xbtn" onclick="CM(\'aa-final-expiry-rules-modal\')">✕</button></div><div class="aa-final-settings-grid"><div><label>Early warning days / التنبيه المبكر</label><input type="number" min="1" id="aa-final-rule-soon"></div><div><label>Near-expiry days / قريب الانتهاء</label><input type="number" min="0" id="aa-final-rule-near"></div><div><label>Critical days / الحالة الحرجة</label><input type="number" min="0" id="aa-final-rule-critical"></div></div><div class="alert-banner-y">Required order: Critical ≤ Near expiry ≤ Early warning.</div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM(\'aa-final-expiry-rules-modal\')">Cancel</button><button class="btn bp" onclick="aaFinalSaveExpiryRules()">Save rules / حفظ القواعد</button></div></div></div>');}
-window.aaFinalOpenExpiryRules=function(){if(!canManageA())return toast('No permission / لا توجد صلاحية','err');ensureModalA();var r=rulesA();E('aa-final-rule-soon').value=r.soon;E('aa-final-rule-near').value=r.near;E('aa-final-rule-critical').value=r.critical;OM('aa-final-expiry-rules-modal')};
-window.aaFinalSaveExpiryRules=async function(){if(!canManageA())return;var soon=Math.max(1,numA(E('aa-final-rule-soon').value)),near=Math.max(0,numA(E('aa-final-rule-near').value)),critical=Math.max(0,numA(E('aa-final-rule-critical').value));if(!(critical<=near&&near<=soon))return toast('Critical ≤ Near expiry ≤ Early warning','err');var s=(typeof ctlSettingsGlobal==='function'?ctlSettingsGlobal():{})||{};s.expirySoonDays=soon;s.expiryUrgentDays=near;s.expiryCriticalDays=critical;s.expiryAlertDays=soon;await S.s('controlled_global_settings',s);await S.s('controlled_alert_days',soon);CM('aa-final-expiry-rules-modal');toast('Expiry tracking rules saved ✓','succ');if(typeof renderControlled==='function')renderControlled()};
-})();
+});

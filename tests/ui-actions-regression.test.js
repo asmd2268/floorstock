@@ -64,10 +64,6 @@ const masterTestSource = fs.readFileSync(
    while both happened to share that file — one name for two unrelated things,
    which is how the print assertions started failing on a move that had nothing
    to do with printing. */
-const canonicalModuleSource = fs.readFileSync(
-  new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
-  'utf8',
-);
 const ordersPrintSource = fs.readFileSync(
   new URL('../public/assets/js/core/orders-print.js', import.meta.url),
   'utf8',
@@ -97,8 +93,14 @@ const crashBootSource = fs.readFileSync(
   new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url),
   'utf8',
 );
+/* modules/51 is gone: the custody screens and the printed sheet are separate
+   files now, and each assertion below names the one it is actually about. */
 const controlledCustodySource = fs.readFileSync(
-  new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
+  new URL('../public/assets/js/core/controlled-custody-print.js', import.meta.url),
+  'utf8',
+);
+const controlledPanelSource = fs.readFileSync(
+  new URL('../public/assets/js/core/controlled-department-panel.js', import.meta.url),
   'utf8',
 );
 const inventoryStatusSource = fs.readFileSync(
@@ -322,8 +324,8 @@ test('every legacy inline action name in the module set is covered by the CSP br
 test('Crash Cart boot is read-only and controlled custody loading is deduplicated', () => {
   assert.match(crashBootSource, /must never be changed merely by opening the page/);
   assert.doesNotMatch(crashBootSource, /fsReconcileCrashCartData\(\)/);
-  assert.match(controlledCustodySource, /if\(host\.dataset\.controlledLoading==='1'\)return false/);
-  assert.match(controlledCustodySource, /delete host\.dataset\.controlledLoading/);
+  assert.match(controlledPanelSource, /if\(host\.dataset\.controlledLoading==='1'\)return false/);
+  assert.match(controlledPanelSource, /delete host\.dataset\.controlledLoading/);
 });
 
 test('department Crash Cart view retains the authenticated department scope', () => {
@@ -503,7 +505,7 @@ test('Print Orders uses a CSP-safe external runtime and creates a PDF matching t
   assert.doesNotMatch(ordersPrintSource, /popup\.document\.write\(fsR5OrdersHtml\(orders\)\)/);
   assert.doesNotMatch(ordersPrintSource, /Preparing Landscape PDF/);
   /* Orders printing left modules/51 whole: the canonical module must not keep a copy. */
-  assert.doesNotMatch(canonicalModuleSource, /print-orders\.html/);
+  assert.match(ordersPrintSource, /doPrint/);
 
   assert.match(printOrdersPageSource, /src="\.\/assets\/js\/print-orders-runtime\.js\?v=R6\.75\.0"/);
   assert.doesNotMatch(printOrdersPageSource, /<script>(?!\s*<\/script>)/);

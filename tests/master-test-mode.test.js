@@ -91,6 +91,8 @@ test('the screen delegates to these rules instead of restating them', async () =
   assert.match(ui, /buildTestSession\(/);
   assert.match(ui, /restoreActualSession\(/);
   assert.ok(!/master:false,/.test(ui.replace(/\/\*[\s\S]*?\*\//g, '')), 'the session shape belongs to core/master-test-mode.js');
-  const module51 = await readFile(new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url), 'utf8');
-  assert.ok(!/masterApplyRole/.test(module51), 'the screen no longer lives in module 51');
+  // modules/51 itself is gone — split into core modules, one responsibility each.
+  const { existsSync } = await import('node:fs');
+  assert.ok(!existsSync(new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url)),
+    'modules/51 was split up and should no longer exist');
 });
