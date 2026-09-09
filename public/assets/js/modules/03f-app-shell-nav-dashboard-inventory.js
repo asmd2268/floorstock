@@ -1,6 +1,7 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { normalizeRole } from '../core/role-capabilities.js?v=ae15f94c34';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c8beef9722';
+import { fsNorm } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
 import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=7975fe045f';
@@ -224,8 +225,8 @@ async function doLogin(){
     var deptId=profile.deptId||profile.departmentId||null;
     var dept=deptId?gd().find(function(d){return String(d.id)===String(deptId)}):null;
     if(profile.role==='department'&&!dept){
-      var wanted=fsR5Norm(profile.deptName||profile.departmentName||deptId||'');
-      dept=gd().find(function(d){return fsR5Norm(d.name)===wanted;})||null;
+      var wanted=fsNorm(profile.deptName||profile.departmentName||deptId||'');
+      dept=gd().find(function(d){return fsNorm(d.name)===wanted;})||null;
       if(dept)deptId=dept.id;
     }
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
