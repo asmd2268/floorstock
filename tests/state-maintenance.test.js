@@ -68,3 +68,10 @@ test('moving rows between records may be automatic; writing a file may not', () 
   assert.ok(!/registerAutoMaintenance/.test(retention), 'custody retention must not run itself');
   assert.ok(!/registerAutoMaintenance/.test(requests), 'order archiving must not run itself');
 });
+
+test('upkeep keeps running in a session that stays open', () => {
+  /* A master often leaves the app open all day. Upkeep that only runs at login
+     does nothing for a session that started on Sunday. */
+  assert.match(maintenance, /const UPKEEP_INTERVAL_MS = 6 \* 60 \* 60 \* 1000;/);
+  assert.match(maintenance, /if \(document\.visibilityState === 'visible'\) runAutoMaintenance\(\);/);
+});

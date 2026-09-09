@@ -63,12 +63,24 @@ export async function runAutoMaintenance() {
   return done;
 }
 
+/* Six hours, because a master often leaves the app open all day and upkeep that
+   only ever runs at login does nothing for a session that started on Sunday.
+   Each job is a no-op when there is nothing to do — they read the session cache,
+   not Firestore — so a repeat costs nothing. */
+const UPKEEP_INTERVAL_MS = 6 * 60 * 60 * 1000;
+
 globalThis.__startAppExtensions = globalThis.__startAppExtensions || [];
 globalThis.__startAppExtensions.push(function () {
   /* Before the size check in module 12, which runs a few seconds later and
      measures what is left. A master should be warned about a record that needs a
      decision, never about one that was about to fix itself. */
   setTimeout(function () { runAutoMaintenance(); }, 3000);
+  if (globalThis.__upkeepTimer) clearInterval(globalThis.__upkeepTimer);
+  globalThis.__upkeepTimer = setInterval(function () {
+    // Not while the tab is in the background: a write nobody is watching cannot
+    // report its own failure, and there is no hurry.
+    if (document.visibilityState === 'visible') runAutoMaintenance();
+  }, UPKEEP_INTERVAL_MS);
 });
 
 Object.assign(globalThis, { registerAutoMaintenance, runAutoMaintenance, autoMaintenanceKeys });

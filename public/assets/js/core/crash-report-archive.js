@@ -4,8 +4,8 @@ import {
   monthPartitionRows,
   partitionKeysInCache,
 } from './month-partitioned-store.js?v=405d877017';
-import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
-import { registerStorageCleanup } from './storage-cleanup.js?v=48f4075c4b';
+import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
+import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 
 /* Crash Cart reports, kept affordable forever.
 

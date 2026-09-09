@@ -1,4 +1,4 @@
-import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
+import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
 import { estimateDocBytes } from './firestore-doc-size.js?v=ed46614d2f';
 
 /* Ceilings that enforce themselves: the newest rows are kept, the oldest give

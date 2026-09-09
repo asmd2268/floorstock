@@ -1,4 +1,4 @@
-import { registerStorageCleanup } from './storage-cleanup.js?v=48f4075c4b';
+import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 
 /* Documents left behind by features that no longer exist.
 
