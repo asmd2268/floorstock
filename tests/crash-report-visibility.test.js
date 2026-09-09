@@ -41,3 +41,30 @@ test('the roles that can answer a report are exactly four', () => {
   }
   assert.equal(hasCapability({ role: 'master', master: true }, 'crashCart.operate'), true);
 });
+
+test('the roles with no key list still get the collection-backed keys', () => {
+  /* THE bug: a collection-backed key does not live in the floorstock_state
+     collection, so listing that collection returns everything except it. Every
+     scoped role merged the collection separately; master and pharmacy — the two
+     roles with no key list at all — did not, and loaded zero Crash Cart reports
+     on this path. They reach it routinely, because a warm boot opens the cached
+     state with transport 'rest'. */
+  assert.match(stateModule, /if\(!keys\)return fsStateMergeCollectionKeys\(fsStateLoadFloorstockViaRest\(\),profile\)/);
+});
+
+test('the report listener is installed on the REST path as well', () => {
+  // Otherwise a warm-booted master waits up to 30s for the next poll to learn
+  // that a department is standing at the cart.
+  assert.match(stateModule, /if\(globalThis\.FB_DB&&!Array\.isArray\(S\.collectionUnsubs\)\)\{/);
+  assert.match(stateModule, /fsStateInstallCollectionListeners\(S\.scopeProfile,'rest-state'\)/);
+});
+
+test('an empty alert strip explains itself instead of looking like "no reports"', async () => {
+  const crashUi = await readFile(new URL('../public/assets/js/modules/44-ccx-inventory-redesign-script.js', import.meta.url), 'utf8');
+  assert.match(crashUi, /No Crash Cart reports have loaded in this session/);
+  assert.match(crashUi, /A test role is active/);
+  // Counted at each stage a report can be dropped, so the next report of
+  // "it does not show for me" is answerable from the page itself.
+  assert.match(crashUi, /ccxDrop=\{loaded:reports\.length,notActive:0,otherDept:0,noDeptAccess:0\}/);
+  assert.match(crashUi, /dataset\.crashReportsDropped/);
+});

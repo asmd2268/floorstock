@@ -641,7 +641,18 @@ function fsStateLoadFloorstockForProfileViaRest(profile){
   if(fsIsPharmacyScopedProfile(profile))return fsStateMergeCollectionKeys(fsStateLoadPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped'),profile);
   if(String(profile&&profile.role||'')==='controlled_pharmacy')return fsStateMergeCollectionKeys(fsStateLoadControlledPharmacyScoped(profile,fsStateLoadDocumentViaRest,'rest-scoped'),profile);
   var keys=fsStateKeysForProfile(profile);
-  if(!keys)return fsStateLoadFloorstockViaRest();
+  /* A collection-backed key is NOT in the floorstock_state collection, so
+     listing that collection returns everything except it. Every scoped role
+     merges the collection separately below; master and pharmacy — the roles with
+     no key list at all — did not, so on this path they loaded every state
+     document and no Crash Cart reports whatsoever.
+
+     They reach this path routinely: a warm boot opens the cached state with
+     transport 'rest', and the SDK collection listener is only installed on the
+     'sdk' branch. So a master with a warm cache saw an empty alert strip while a
+     pharmacy account, which merges here, saw the pending report — which is
+     exactly what was reported from the floor. */
+  if(!keys)return fsStateMergeCollectionKeys(fsStateLoadFloorstockViaRest(),profile);
   var scoped=fsStateLoadScoped(keys,fsStateLoadDocumentViaRest,'rest-scoped',profile);
   return ['department','outpatient_pharmacy_supervisor'].includes(String(profile&&profile.role||''))
     ? fsStateMergeCollectionKeys(scoped,profile)
@@ -1195,6 +1206,15 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       }
     }
 
+    /* Reached by a warm boot, which opens the cached state on 'rest' before any
+       SDK listener exists, and by an SDK listener that failed. The collection
+       listener does not depend on that choice — it is its own subscription — so
+       a pending Crash Cart report should not have to wait for the next 30s poll
+       just because the state documents are being polled. */
+    if(globalThis.FB_DB&&!Array.isArray(S.collectionUnsubs)){
+      try{S.collectionUnsubs=fsStateInstallCollectionListeners(S.scopeProfile,'rest-state');}
+      catch(error){console.warn('Collection listeners unavailable on the REST path.',error);}
+    }
     S.pollTimer=setInterval(function(){S.pollRest();},30000);
     return false;
   },

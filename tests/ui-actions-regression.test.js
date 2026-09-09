@@ -824,7 +824,11 @@ test('scoped-role realtime uses per-document listeners, never a collection query
   // plus the one on the per-document scoped listeners.
   assert.equal(fromCacheGuards.length >= 2, true);
   assert.match(requestSource, /function fsStateInstallCollectionListeners\(profile,label\)\{/);
-  // Both realtime paths must go through it rather than growing a second copy.
+  /* Every realtime path must go through the one installer rather than growing a
+     second copy of the listener. There are three call sites — the SDK state
+     listener, the scoped per-document listeners, and the REST state path, which
+     a warm boot always takes and which used to leave collection-backed keys with
+     no subscription at all. */
   const installerCalls = requestSource.match(/S\.collectionUnsubs=fsStateInstallCollectionListeners\(/g) || [];
-  assert.equal(installerCalls.length, 2);
+  assert.equal(installerCalls.length, 3);
 });
