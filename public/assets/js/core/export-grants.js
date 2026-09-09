@@ -98,15 +98,21 @@ export async function grantExportPermission({ userKey, fromMonth, toMonth, hours
     return null;
   }
   const validHours = Math.max(1, Math.min(720, Number(hours) || 24));
+  /* One clock reading for both ends. Granted-at and expires-at were taken from
+     two separate calls, so a grant was however many hours it says PLUS whatever
+     time passed between the two lines. Never enough to matter to a person, but
+     it means the record does not say exactly what was given — and a permission
+     to export the controlled register is a record. */
+  const issuedAt = Date.now();
   const grant = {
-    id: `xg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `xg_${issuedAt}_${Math.random().toString(36).slice(2, 8)}`,
     userKey: key,
     fromMonth: from,
     toMonth: to,
     note: String(note || '').trim().slice(0, 200),
-    grantedAt: nowIso(),
+    grantedAt: new Date(issuedAt).toISOString(),
     grantedBy: String((globalThis.CU && (globalThis.CU.username || globalThis.CU.email)) || 'Master'),
-    expiresAt: new Date(Date.now() + validHours * 3600 * 1000).toISOString(),
+    expiresAt: new Date(issuedAt + validHours * 3600 * 1000).toISOString(),
     revokedAt: '',
   };
   await globalThis.S.s(EXPORT_GRANTS_KEY, grants().concat([grant]));

@@ -1,10 +1,10 @@
 import { hijriMonthLabelBilingual, currentHijriMonthKey, shiftHijriMonth } from './hijri-calendar.js?v=7cb3fbc1ff';
 import { availableControlledMonths } from './controlled-moves-store.js?v=0d6d46def9';
-import { exportControlledLedger, describeExportRange } from './controlled-ledger-export.js?v=42717f18cd';
+import { exportControlledLedger, describeExportRange } from './controlled-ledger-export.js?v=ec4c4596b7';
 import {
   grantExportPermission, revokeExportPermission, grantsForDisplay,
   liveGrantsFor, mayExportMonths, defaultGrantRange, grantIsLive,
-} from './export-grants.js?v=a2240977d9';
+} from './export-grants.js?v=3405b578ca';
 
 /* The Hijri-month export picker, and the master's panel for handing that ability
    out temporarily.

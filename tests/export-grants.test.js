@@ -96,3 +96,16 @@ test('a malformed range is refused', async () => {
   assert.equal(await grants.grantExportPermission({ userKey: 'u', fromMonth: 'nope', toMonth: '1448-02', hours: 2 }), null, 'not a month');
   assert.equal(await grants.grantExportPermission({ userKey: '', fromMonth: '1448-01', toMonth: '1448-01', hours: 2 }), null, 'no user');
 });
+
+test('a grant lasts exactly as long as it says', async () => {
+  /* granted-at and expires-at were read from the clock separately, so a grant was
+     its stated hours plus however long the two lines took — never enough to
+     matter to a person, but a permission to export the controlled register is a
+     record, and it must say exactly what was given. */
+  asMaster();
+  for (const hours of [1, 24, 720, 99999]) {
+    const grant = await grants.grantExportPermission({ userKey: 'u', fromMonth: '1448-01', toMonth: '1448-01', hours });
+    const actual = (Date.parse(grant.expiresAt) - Date.parse(grant.grantedAt)) / 3600000;
+    assert.equal(actual, Math.max(1, Math.min(720, hours)), `${hours}h requested`);
+  }
+});

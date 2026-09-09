@@ -2,6 +2,8 @@
 
 const crypto = require('crypto');
 const { onCall, onRequest, HttpsError } = require('firebase-functions/v2/https');
+const { onSchedule } = require('firebase-functions/v2/scheduler');
+const upkeepCore = require('./upkeep-core');
 const accountabilityPartitions = require('./accountability-partitions-core');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
@@ -1465,4 +1467,230 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
   } catch (error) {
     publicError(response, error);
   }
+});
+
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Scheduled upkeep
+   ─────────────────────────────────────────────────────────────────────────
+   The same housekeeping the app does in a master's browser, run once a day
+   whether or not anybody signs in. Four jobs, and deliberately not a fifth: the
+   month migrations are NOT here. Those are the ones that duplicated production
+   data when they ran unattended, they have already run, and a migration is a
+   one-time move that should never be on a timer.
+
+   Everything here is idempotent — a second run changes nothing — bounded to the
+   rows its own declared policy names, and written down: every run records what
+   it did, because upkeep nobody can see is indistinguishable from upkeep that
+   never happened.
+
+   It starts in DRY RUN. The first days report what they would have done and
+   change nothing, so the numbers can be read before anything is deleted; a
+   master turns it on with setUpkeepSettings once those numbers look right. */
+
+const UPKEEP_SETTINGS_PATH = 'system/upkeep_settings';
+
+async function upkeepSettings() {
+  const snapshot = await db.doc(UPKEEP_SETTINGS_PATH).get();
+  const data = snapshot.exists ? snapshot.data() : {};
+  return {
+    // Both default to the cautious answer, so a fresh deployment reports and
+    // waits rather than acting.
+    enabled: data.enabled === true,
+    dryRun: data.dryRun !== false,
+  };
+}
+
+/* Every tenant, plus the legacy root installation, as {stateRef, reportsRef}. */
+async function upkeepScopes() {
+  const scopes = [{ tenantId: '', state: db.collection('floorstock_state'), reports: db.collection('crash_cart_reports_v2') }];
+  const tenants = await db.collection('tenants').select().get();
+  tenants.forEach((doc) => scopes.push({
+    tenantId: doc.id,
+    state: db.collection('tenants').doc(doc.id).collection('state'),
+    reports: db.collection('tenants').doc(doc.id).collection('crash_cart_reports'),
+  }));
+  return scopes;
+}
+
+function stateRows(snapshot) {
+  const value = snapshot.exists ? snapshot.data().value : null;
+  return Array.isArray(value) ? value : null;
+}
+
+async function upkeepRotate(scope, dryRun, now) {
+  const changes = [];
+  for (const policy of upkeepCore.ROTATIONS) {
+    // eslint-disable-next-line no-await-in-loop
+    const docs = await scope.state.get();
+    for (const doc of docs.docs) {
+      const expired = upkeepCore.partitionMonthIsExpired(doc.id, policy.key, policy, now);
+      if (expired === true) {
+        const rows = stateRows(doc) || [];
+        changes.push({ job: 'rotate', doc: doc.id, removed: rows.length, action: 'delete' });
+        // eslint-disable-next-line no-await-in-loop
+        if (!dryRun) await doc.ref.delete();
+        continue;
+      }
+      if (expired !== false && doc.id !== policy.key) continue;
+      const rows = stateRows(doc);
+      if (!rows) continue;
+      const result = upkeepCore.rotateRows(rows, policy, now);
+      if (!result.dropped) continue;
+      changes.push({ job: 'rotate', doc: doc.id, removed: result.dropped, action: 'trim' });
+      // eslint-disable-next-line no-await-in-loop
+      if (!dryRun) await doc.ref.set({ value: result.kept, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
+    }
+  }
+  return changes;
+}
+
+async function upkeepTrimMergeHistories(scope, dryRun) {
+  const changes = [];
+  for (const policy of upkeepCore.MERGE_HISTORIES) {
+    const ref = scope.state.doc(policy.key);
+    // eslint-disable-next-line no-await-in-loop
+    const snapshot = await ref.get();
+    const rows = stateRows(snapshot);
+    if (!rows || !rows.length) continue;
+    const result = upkeepCore.trimToBudget(rows, policy.maxBytes);
+    if (!result.dropped && result.kept.length === rows.length) continue;
+    changes.push({ job: 'trim', doc: policy.key, removed: result.dropped });
+    // eslint-disable-next-line no-await-in-loop
+    if (!dryRun) await ref.set({ value: result.kept, updatedAt: FieldValue.serverTimestamp() }, { merge: false });
+  }
+  return changes;
+}
+
+async function upkeepArchiveCrashReports(scope, dryRun, now) {
+  const snapshot = await scope.reports.get();
+  const reports = snapshot.docs.map((doc) => Object.assign({ id: doc.id }, doc.data()));
+  const due = upkeepCore.reportsToArchive(reports, now);
+  if (!due.length) return [];
+  const grouped = upkeepCore.groupByGregorianMonth(due, ['openedAt', 'closedAt', 'lastEditedAt']);
+  const changes = [];
+  for (const month of Object.keys(grouped)) {
+    const ref = scope.state.doc(`${upkeepCore.CRASH_REPORT_ARCHIVE_KEY}_g${month}`);
+    // eslint-disable-next-line no-await-in-loop
+    const existing = await ref.get();
+    const held = stateRows(existing) || [];
+    const heldIds = new Set(held.map((row) => String(row && row.id)));
+    const adding = grouped[month].filter((row) => !heldIds.has(String(row.id)));
+    changes.push({ job: 'archive', doc: ref.id, added: adding.length, removedFromCollection: grouped[month].length });
+    if (dryRun) continue;
+    /* The month is written FIRST and the collection documents removed only after
+       it succeeds, so a failure at any point leaves every report where it was. */
+    // eslint-disable-next-line no-await-in-loop
+    if (adding.length) await ref.set({ value: held.concat(adding), updatedAt: FieldValue.serverTimestamp() }, { merge: false });
+    for (const row of grouped[month]) {
+      // eslint-disable-next-line no-await-in-loop
+      await scope.reports.doc(String(row.id)).delete();
+    }
+  }
+  return changes;
+}
+
+async function upkeepDedupe(scope, dryRun) {
+  const docs = await scope.state.get();
+  const families = {};
+  docs.forEach((doc) => {
+    const match = /^(.*)_[gh]\d{4}-\d{2}(?:_p\d+)?$/.exec(doc.id);
+    if (!match) return;
+    const rows = stateRows(doc);
+    if (!rows) return;
+    (families[match[1]] = families[match[1]] || {})[doc.id] = rows;
+  });
+  const changes = [];
+  for (const key of Object.keys(families)) {
+    const plan = upkeepCore.planDedupe(families[key]);
+    if (!plan.removed) continue;
+    changes.push({ job: 'dedupe', doc: key, removed: plan.removed });
+    if (dryRun) continue;
+    for (const docId of Object.keys(plan.writes)) {
+      // eslint-disable-next-line no-await-in-loop
+      await scope.state.doc(docId).set({ value: plan.writes[docId], updatedAt: FieldValue.serverTimestamp() }, { merge: false });
+    }
+  }
+  return changes;
+}
+
+async function runScheduledUpkeep(trigger) {
+  const settings = await upkeepSettings();
+  const now = new Date();
+  const started = now.toISOString();
+  if (!settings.enabled) {
+    console.log('[upkeep] disabled; set system/upkeep_settings.enabled to run.');
+    return { skipped: true, reason: 'disabled', trigger };
+  }
+  const scopes = await upkeepScopes();
+  const changes = [];
+  const failures = [];
+  for (const scope of scopes) {
+    for (const job of [upkeepRotate, upkeepTrimMergeHistories, upkeepArchiveCrashReports, upkeepDedupe]) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        const result = await job(scope, settings.dryRun, now);
+        result.forEach((entry) => changes.push(Object.assign({ tenantId: scope.tenantId }, entry)));
+      } catch (error) {
+        /* One failing job must not stop the rest, and must not vanish: the run
+           record is the only place anybody would ever see it. */
+        console.error('[upkeep] job failed', scope.tenantId, job.name, error);
+        failures.push({ tenantId: scope.tenantId, job: job.name, error: String(error && error.message || error) });
+      }
+    }
+  }
+  const record = {
+    startedAt: started,
+    finishedAt: new Date().toISOString(),
+    trigger,
+    dryRun: settings.dryRun,
+    changes,
+    failures,
+    totals: changes.reduce((total, entry) => total + (entry.removed || entry.added || 0), 0),
+  };
+  await db.doc(UPKEEP_SETTINGS_PATH).set({ lastRun: record }, { merge: true });
+  await db.collection('audit_logs').add({
+    action: 'system.scheduled-upkeep',
+    actorUid: null,
+    actorEmail: null,
+    targetUid: null,
+    details: { dryRun: settings.dryRun, trigger, changeCount: changes.length, failureCount: failures.length, totals: record.totals },
+    createdAt: FieldValue.serverTimestamp(),
+  }).catch((error) => console.warn('[upkeep] audit write failed', error));
+  console.log('[upkeep]', settings.dryRun ? 'DRY RUN' : 'applied', JSON.stringify(record.totals), 'changes:', changes.length, 'failures:', failures.length);
+  return record;
+}
+
+exports.scheduledUpkeep = onSchedule(
+  { schedule: 'every day 03:15', timeZone: 'Asia/Riyadh', region: 'us-central1', memory: '512MiB', timeoutSeconds: 540 },
+  async () => { await runScheduledUpkeep('schedule'); },
+);
+
+/* A master reads the last run and turns it on, so neither the switch nor the
+   result needs the Firebase console. */
+exports.upkeepStatus = onCall(async (request) => {
+  const caller = await callerProfile(request);
+  requireMaster(caller);
+  const settings = await upkeepSettings();
+  const snapshot = await db.doc(UPKEEP_SETTINGS_PATH).get();
+  return { ok: true, settings, lastRun: (snapshot.exists && snapshot.data().lastRun) || null };
+});
+
+exports.setUpkeepSettings = onCall(async (request) => {
+  const caller = await callerProfile(request);
+  requireMaster(caller);
+  const update = {};
+  if (typeof request.data?.enabled === 'boolean') update.enabled = request.data.enabled;
+  if (typeof request.data?.dryRun === 'boolean') update.dryRun = request.data.dryRun;
+  if (!Object.keys(update).length) throw new HttpsError('invalid-argument', 'Nothing to change.');
+  await db.doc(UPKEEP_SETTINGS_PATH).set(update, { merge: true });
+  return { ok: true, settings: await upkeepSettings() };
+});
+
+/* Runs it now, for a master who wants to see what the schedule would do rather
+   than wait a day for it. Obeys the same dry-run setting. */
+exports.runUpkeepNow = onCall(async (request) => {
+  const caller = await callerProfile(request);
+  requireMaster(caller);
+  return { ok: true, run: await runScheduledUpkeep('manual') };
 });

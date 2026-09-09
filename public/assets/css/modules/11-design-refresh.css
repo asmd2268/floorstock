@@ -376,6 +376,15 @@ body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
 .storage-cleanup-title { font-weight: 700; font-size: 14px; }
 /* The migrations are the part a master does once. They sat as six buttons mixed
    among the archive actions, which is how they stayed undone. */
+.storage-upkeep { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--bd); }
+.storage-upkeep-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.upkeep-state { display: inline-block; margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 11px; font-weight: 700; }
+.upkeep-off { background: rgba(120,130,145,.18); color: var(--tx2); }
+.upkeep-dry { background: rgba(52,152,219,.16); color: var(--bl, #3498db); }
+.upkeep-on  { background: rgba(46,160,67,.16); color: var(--gnl, #3fb950); }
+.storage-upkeep-detail { margin-top: 8px; font-size: 11px; }
+.storage-upkeep-detail ul { margin: 6px 0 0; padding-inline-start: 18px; }
+.storage-upkeep-detail li { margin: 2px 0; color: var(--tx2); }
 .storage-migrate-all {
   display: flex; align-items: center; justify-content: space-between; gap: 14px;
   margin-bottom: 12px; padding: 12px 14px;

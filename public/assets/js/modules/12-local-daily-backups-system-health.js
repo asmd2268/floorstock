@@ -262,6 +262,8 @@
        cannot disagree. */
     if(typeof window.installStorageCleanupPanel==='function')window.installStorageCleanupPanel();
     if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
+    if(typeof window.installScheduledUpkeepPanel==='function')window.installScheduledUpkeepPanel();
+    if(typeof window.renderScheduledUpkeep==='function')window.renderScheduledUpkeep();
     if(typeof window.installLedgerExportPanel==='function')window.installLedgerExportPanel();
     if(typeof window.renderLedgerExport==='function')window.renderLedgerExport();
   }catch(err){console.error(err)}};
@@ -288,6 +290,8 @@ window.runSystemHealthDiagnostics=async function(){
   lines.push('','Departments: '+count('DEPTS'),'Requests: '+count('REQS'),'Crash carts: '+count('CRASH_CARTS'),'Controlled medicines: '+count('CONTROLLED_MEDS'),'','Browser: '+navigator.userAgent,'Completed in '+Math.round(performance.now()-start)+' ms');
   if(typeof window.installStorageCleanupPanel==='function')window.installStorageCleanupPanel();
   if(typeof window.renderStorageCleanup==='function')window.renderStorageCleanup();
+  if(typeof window.installScheduledUpkeepPanel==='function')window.installScheduledUpkeepPanel();
+  if(typeof window.renderScheduledUpkeep==='function')window.renderScheduledUpkeep();
   if(typeof window.installLedgerExportPanel==='function')window.installLedgerExportPanel();
   if(typeof window.renderLedgerExport==='function')window.renderLedgerExport();
   var report=document.getElementById('health-report');if(report)report.textContent=lines.join('\n');var last=document.getElementById('health-last-run');if(last)last.textContent='Last run: '+new Date().toLocaleString('en-GB',{calendar:'gregory'});
