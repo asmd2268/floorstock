@@ -6,6 +6,20 @@
    upkeep that never ran — and the reason it starts in dry run is so these
    numbers can be read for a few days before anything is actually removed. */
 
+/* The build this file was served as.
+
+   Three times today a screenshot showed behaviour that the deployed code no
+   longer had, and each time it cost a round trip to work out that the page was
+   simply running an older copy. Every module is served with a content hash in
+   its URL, so the file can state which one it is: one glance at the panel — or
+   at a screenshot of it — settles "is this the current build?" without asking
+   anybody to open developer tools. */
+const BUILD = (function () {
+  const match = /[?&]v=([0-9a-f]+)/.exec(String(import.meta.url || ''));
+  return match ? match[1] : 'unstamped';
+})();
+console.info('[floorstock] upkeep panel build', BUILD);
+
 function isMaster() {
   return !!(globalThis.CU && globalThis.CU.master === true);
 }
@@ -49,7 +63,7 @@ export async function renderScheduledUpkeep() {
   const host = document.getElementById('scheduled-upkeep');
   if (!host) return;
   if (!isMaster()) { host.innerHTML = ''; return; }
-  host.innerHTML = '<div class="fhint">Checking the nightly upkeep… / جارٍ فحص الصيانة الليلية…</div>';
+  host.innerHTML = `<div class="fhint">Checking the nightly upkeep… / جارٍ فحص الصيانة الليلية…<br/><span class="upkeep-build">build ${escapeText(BUILD)}</span></div>`;
   try {
     await drawScheduledUpkeep(host);
   } catch (error) {
@@ -58,7 +72,8 @@ export async function renderScheduledUpkeep() {
        rather than a fault. */
     console.error('Nightly upkeep panel failed to draw', error);
     host.innerHTML = `<div class="fhint">The nightly upkeep panel could not be drawn — ${escapeText(String(error && error.message || error))}. `
-      + '<button class="btn bg bsm" type="button" data-upkeep="retry">Try again / إعادة المحاولة</button></div>';
+      + '<button class="btn bg bsm" type="button" data-upkeep="retry">Try again / إعادة المحاولة</button>'
+      + `<br/><span class="upkeep-build">build ${escapeText(BUILD)}</span></div>`;
   }
 }
 
@@ -75,7 +90,7 @@ async function drawScheduledUpkeep(host) {
     console.warn('Nightly upkeep status unavailable', error);
     host.innerHTML = `<div class="fhint">The nightly upkeep could not be reached — ${escapeText(String(error && error.message || error))}. `
       + '<button class="btn bg bsm" type="button" data-upkeep="retry">Try again / إعادة المحاولة</button>'
-      + '<br/>تعذّر الوصول إلى الصيانة الليلية.</div>';
+      + `<br/>تعذّر الوصول إلى الصيانة الليلية.<br/><span class="upkeep-build">build ${escapeText(BUILD)}</span></div>`;
     return;
   }
 
@@ -101,6 +116,7 @@ async function drawScheduledUpkeep(host) {
         <span class="upkeep-state upkeep-${state.tone}">${escapeText(state.label)}</span>
         <div class="fhint">${escapeText(state.why)}</div>
         <div class="fhint">${lastLine}</div>
+        <div class="fhint upkeep-build">build ${escapeText(BUILD)}</div>
       </div>
       <div class="fl g8">
         <button class="btn bg bsm" type="button" data-upkeep="run">Run now / شغّلها الآن</button>

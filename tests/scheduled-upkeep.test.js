@@ -83,3 +83,16 @@ test('nothing waits forever: the library load and the call are both bounded', as
   assert.match(ui, /const CALL_TIMEOUT_MS = 20000;/);
   assert.match(ui, /the request timed out/);
 });
+
+test('the panel says which build it is running, in every state', async () => {
+  /* Three times in one session a screenshot showed behaviour the deployed code
+     no longer had, and each time it cost a round trip to establish that the page
+     was simply running an older copy. Every module is served with a content hash
+     in its URL, so the file can say which one it is. */
+  const panel = await readFile(new URL('../public/assets/js/core/scheduled-upkeep-ui.js', import.meta.url), 'utf8');
+  assert.match(panel, /const BUILD = \(function \(\) \{/);
+  assert.match(panel, /\[?\?&\]v=\(\[0-9a-f\]\+\)/);
+  // Checking, unreachable, failed-to-draw, and drawn — all four say it.
+  assert.equal((panel.match(/build \$\{escapeText\(BUILD\)\}/g) || []).length, 4);
+  assert.match(panel, /console\.info\('\[floorstock\] upkeep panel build', BUILD\)/);
+});

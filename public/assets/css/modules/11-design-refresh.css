@@ -382,6 +382,7 @@ body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
 .upkeep-off { background: rgba(120,130,145,.18); color: var(--tx2); }
 .upkeep-dry { background: rgba(52,152,219,.16); color: var(--bl, #3498db); }
 .upkeep-on  { background: rgba(46,160,67,.16); color: var(--gnl, #3fb950); }
+.upkeep-build { font-family: var(--mono, monospace); font-size: 10px; opacity: .55; }
 .storage-upkeep-detail { margin-top: 8px; font-size: 11px; }
 .storage-upkeep-detail ul { margin: 6px 0 0; padding-inline-start: 18px; }
 .storage-upkeep-detail li { margin: 2px 0; color: var(--tx2); }
