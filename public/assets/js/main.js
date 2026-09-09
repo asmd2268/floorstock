@@ -11,6 +11,7 @@ import './core/firestore-doc-size.js?v=ed46614d2f';
 import './core/overflow-parts-store.js?v=cdbb6f204a';
 import './core/state-maintenance.js?v=3b19eb92e8';
 import './core/merge-history-store.js?v=46854e58e2';
+import './core/retired-state-keys.js?v=6f2e923189';
 import './core/legacy-registry.js?v=003344116e';
 import './core/dom-utils.js?v=b2909b7f46';
 import './core/runtime-health.js?v=15adbf3472';
