@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { buildTestSession, restoreActualSession } from '../core/master-test-mode.js?v=5c343a4df5';
 
 /* ASDHealth FloorStock — R6.32 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
@@ -1829,20 +1830,17 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
   var role=fsR6S(profile.role,''),deptId=fsR6S(profile.deptId||profile.departmentId,'');
   var masterCrashSnapshot=null;
   if(window.S&&S.cache){var testDeptName=deptId&&window.floorstockDepartmentName?window.floorstockDepartmentName(deptId):'',testNorm=function(v){return String(v||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()},testAliases=[deptId,testDeptName].map(testNorm).filter(Boolean),belongsTest=function(row){return [row&&row.deptId,row&&row.departmentId,row&&row.deptName,row&&row.departmentName,row&&row.department,row&&row.deptCode,row&&row.departmentCode,row&&row.unit].map(testNorm).some(function(v){return v&&testAliases.indexOf(v)>-1})},testCarts=(Array.isArray(S.cache.crash_carts)?S.cache.crash_carts:[]).filter(belongsTest),testIds=new Set(testCarts.map(function(c){return String(c.id||'')}));masterCrashSnapshot={carts:testCarts,reports:(Array.isArray(S.cache.crash_cart_reports)?S.cache.crash_cart_reports:[]).filter(function(r){return belongsTest(r)||testIds.has(String(r.cartId||''))})};}
-  if((role==='department'||role==='outpatient_pharmacy_supervisor')&&!deptId)throw new Error('A department is required for this role.');
-  window.MASTER_EFFECTIVE={
-    mode:meta&&meta.mode||'user',testedUserId:profile.id||profile.uid||meta&&meta.testedUserId||'role:'+role,
-    email:profile.email||profile.username||profile.displayName||'',role:role,deptId:deptId||null,
+  /* The session's shape belongs to core/master-test-mode.js — who the user still
+     is, what they are acting as, and that master is false. It used to be written
+     out here, inside a DOM handler, where nothing could reach it to check. */
+  var session=buildTestSession({
+    actual:actual,
+    profile:Object.assign({},profile,{username:profile.username||profile.displayName||profile.email||fsR6RoleLabel(role)}),
+    meta:meta,
     deptName:deptId&&window.floorstockDepartmentName?window.floorstockDepartmentName(deptId):''
-  };
-  window.CU=Object.assign({},profile,{
-    id:actual.id||actual.uid,uid:actual.uid||actual.id,authUid:actual.uid||actual.id,
-    actualUserId:actual.id||actual.uid,actualEmail:actual.email||'',
-    testedUserId:MASTER_EFFECTIVE.testedUserId,role:role,master:false,
-    deptId:deptId||null,departmentId:deptId||null,
-    deptName:deptId&&window.floorstockDepartmentName?window.floorstockDepartmentName(deptId):'',
-    username:profile.username||profile.displayName||profile.email||fsR6RoleLabel(role)
   });
+  window.MASTER_EFFECTIVE=session.testMode;
+  window.CU=session.user;
   /* Master Test Mode changes the effective identity without a new auth event.
      Re-apply the same department scope used at login so scoped pages receive
      the selected department's Crash Cart records immediately. */
@@ -1886,7 +1884,7 @@ window.masterResetRole=function(){
     return fsR6Toast('Master profile is unavailable.','err');
   }
   var previous=window.MASTER_EFFECTIVE;
-  window.CU=Object.assign({},actual);window.MASTER_EFFECTIVE=null;
+  window.CU=restoreActualSession(actual);window.MASTER_EFFECTIVE=null;
   fsR6CloseModal('mmaster-role-r6');
   fsR6Audit('master_test_mode_exited',{previous:previous||null});
   if(typeof window.startApp==='function')window.startApp();
