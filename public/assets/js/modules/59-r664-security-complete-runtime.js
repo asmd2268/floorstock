@@ -1,4 +1,4 @@
-import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=e9e9d8dd77';
+import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=ae15f94c34';
 (function(){
 'use strict';
 

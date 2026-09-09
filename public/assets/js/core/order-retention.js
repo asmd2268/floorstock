@@ -1,5 +1,5 @@
 import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
+import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 
@@ -286,6 +286,7 @@ export {orderRetentionCutoff,requestArchiveRecord,buildMonthlyAggregates,mergeAg
    its own key: once the migration has run the document is gone, the gauge stops
    listing it, and the entry disappears on its own. */
 registerStorageCleanup({
+  kind: 'migration',
   key:'request_analytics_archive',
   label:'Migrate legacy archive / ترحيل الأرشيف القديم',
   hint:'Folds the retired second archive into the monthly summary. Report totals are unchanged.',

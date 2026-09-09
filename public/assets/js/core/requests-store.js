@@ -6,7 +6,7 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
 } from './month-partitioned-store.js?v=cc6daa3c27';
-import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
+import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
 
 /* Orders, one document per Gregorian month.
 
@@ -132,6 +132,7 @@ export async function migrateRequestsToMonths() {
 
 /* Shown only while the legacy document still exists; it disappears with it. */
 registerStorageCleanup({
+  kind: 'migration',
   key: REQUESTS_KEY,
   label: 'File orders by month / ترحيل الطلبات للأشهر',
   hint: 'Files orders into one record per month, removing the size limit that could stop departments submitting orders.',

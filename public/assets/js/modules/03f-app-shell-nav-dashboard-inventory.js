@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-import { normalizeRole } from '../core/role-capabilities.js?v=e9e9d8dd77';
+import { normalizeRole } from '../core/role-capabilities.js?v=ae15f94c34';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c8beef9722';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';

@@ -22,7 +22,7 @@ export const FIRESTORE_DOC_LIMIT = 1048576;
    hint   : what the action actually does, shown under the bar
    run    : async () => void — owns its own confirmation and permission check
    canRun : optional () => boolean, gates the button (defaults to master-only) */
-export function registerStorageCleanup({ key, label, hint, run, canRun }) {
+export function registerStorageCleanup({ key, label, hint, run, canRun, kind }) {
   if (!key || typeof run !== 'function') return;
   /* One action per key, for the same reason publishLegacy allows one owner per
      name: a second registration would silently replace the first and the panel
@@ -30,7 +30,7 @@ export function registerStorageCleanup({ key, label, hint, run, canRun }) {
   if (cleaners.has(String(key))) {
     throw new Error(`A storage cleanup action is already registered for ${key}.`);
   }
-  cleaners.set(String(key), { key: String(key), label: label || 'Clean up', hint: hint || '', run, canRun });
+  cleaners.set(String(key), { key: String(key), label: label || 'Clean up', hint: hint || '', run, canRun, kind: kind || 'archive' });
 }
 
 export function storageCleanupFor(key) {
@@ -39,6 +39,55 @@ export function storageCleanupFor(key) {
 
 export function storageCleanupKeys() {
   return [...cleaners.keys()];
+}
+
+/* The one-time moves that change where a record is STORED — orders into months,
+   the ledgers into Hijri months, the legacy archive into the single one. They
+   are safe to run one after another and none of them deletes anything until its
+   rows exist in their new home, so a master should not have to find and press
+   six buttons in the right order and know which are which. Archiving actions are
+   deliberately not included: those write a file to the master's device and each
+   needs its own decision. */
+export function pendingStorageMigrations() {
+  return [...cleaners.values()].filter((cleaner) => cleaner.kind === 'migration'
+    && (typeof cleaner.canRun === 'function' ? cleaner.canRun() : true));
+}
+
+export async function runPendingStorageMigrations() {
+  const pending = pendingStorageMigrations();
+  if (!pending.length) {
+    globalThis.toast('Every record is already stored by month — nothing to migrate. / كل السجلات مرحّلة بالفعل.', 'info');
+    return { ran: 0, failed: [] };
+  }
+  const names = pending.map((cleaner) => cleaner.key).join('\n• ');
+  const confirmed = await globalThis.uiConfirm(
+    `${pending.length} record(s) will be filed into monthly documents, one after another:\n\n• ${names}\n\n`
+    + 'Each one copies its rows into their months first and removes the old record only afterwards, and each asks you to confirm its own numbers. Re-running is safe.\n\n'
+    + `سيتم ترحيل ${pending.length} سجلاً إلى مستندات شهرية، واحداً تلو الآخر. لا يُحذف القديم إلا بعد اكتمال النسخ، وكل عملية ستعرض أرقامها للتأكيد.`,
+    { okText: 'Start / ابدأ' },
+  );
+  if (!confirmed) { globalThis.toast('Nothing was changed.', 'info'); return { ran: 0, failed: [] }; }
+
+  const failed = [];
+  let ran = 0;
+  for (const cleaner of pending) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      await cleaner.run();
+      ran += 1;
+    } catch (error) {
+      /* One failure must not strand the rest: each migration is independent and
+         leaves its own record untouched when it fails. */
+      console.error('Migration failed for', cleaner.key, error);
+      failed.push(`${cleaner.key}: ${String((error && (error.message || error.code)) || error)}`);
+    }
+  }
+  if (failed.length) {
+    globalThis.toast(`${ran} record(s) filed. ${failed.length} could not be:\n${failed.join('\n')}`, 'err');
+  } else {
+    globalThis.toast(`${ran} record(s) filed by month. ✓ / تم ترحيل ${ran} سجلاً. ✓`, 'succ');
+  }
+  return { ran, failed };
 }
 
 function isMaster() {
@@ -73,6 +122,17 @@ export function renderStorageCleanup() {
 
   const escape = globalThis.fsEsc || ((value) => String(value));
 
+  /* One button for the whole set, at the top, because the migrations are the
+     part a master has to do once and in no particular order — hunting for six
+     of them among the archive actions is how they stayed undone. */
+  const migrations = pendingStorageMigrations();
+  const migrateAll = migrations.length
+    ? `<div class="storage-migrate-all"><div><b>${migrations.length} record(s) not yet filed by month</b>`
+      + `<div class="fhint">Files each one into monthly documents so it can never fill up. Nothing is deleted until its rows exist in their new home.`
+      + `<br/>ترحيل السجلات إلى مستندات شهرية حتى لا تمتلئ. لا يُحذف القديم إلا بعد اكتمال النسخ.</div></div>`
+      + `<button class="btn bs" type="button" data-storage-migrate-all="1">Run all / نفّذ الكل</button></div>`
+    : '';
+
   /* Every state document is measured, which is dozens of them, and most are
      configuration a few hundred bytes long. Listing all of them would bury the
      handful under pressure. Anything worth acting on is shown in full — over 1%
@@ -84,7 +144,7 @@ export function renderStorageCleanup() {
   const rest = docs.filter((doc) => !notable(doc));
   const restLargest = rest.reduce((max, doc) => (doc.pct > (max ? max.pct : -1) ? doc : max), null);
 
-  host.innerHTML = shown.map((doc) => {
+  host.innerHTML = migrateAll + shown.map((doc) => {
     const cleaner = storageCleanupFor(doc.key);
     const pct = Math.min(100, doc.pct);
     const action = cleaner && (typeof cleaner.canRun === 'function' ? cleaner.canRun() : true)
@@ -139,6 +199,16 @@ export function installStorageCleanupPanel() {
   if (!host) return;
   installed = true;
   host.addEventListener('click', async (event) => {
+    const all = event.target.closest('[data-storage-migrate-all]');
+    if (all) {
+      all.disabled = true;
+      try { await runPendingStorageMigrations(); }
+      catch (error) {
+        console.error('Migrations failed', error);
+        if (typeof globalThis.toast === 'function') globalThis.toast(`Migration failed — ${String((error && error.message) || error)}`, 'err');
+      } finally { all.disabled = false; renderStorageCleanup(); }
+      return;
+    }
     const button = event.target.closest('[data-storage-cleanup]');
     if (!button) return;
     const cleaner = storageCleanupFor(button.getAttribute('data-storage-cleanup'));
@@ -167,4 +237,6 @@ globalThis.renderStorageCleanup = renderStorageCleanup;
 // The login-time size warning names the action registered for the document under
 // pressure rather than giving one piece of advice for every key.
 globalThis.storageCleanupFor = storageCleanupFor;
+globalThis.runPendingStorageMigrations = runPendingStorageMigrations;
+globalThis.pendingStorageMigrations = pendingStorageMigrations;
 globalThis.installStorageCleanupPanel = installStorageCleanupPanel;

@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 /* "Anything near the limit should trim or archive itself" — right instinct, but
@@ -52,4 +53,18 @@ test('the size warning measures what upkeep left behind', () => {
 
 test('one job per key, so a second registration cannot silently replace it', () => {
   assert.match(maintenance, /Automatic maintenance is already registered for/);
+});
+
+test('moving rows between records may be automatic; writing a file may not', () => {
+  /* The line stays where it was: archiving that downloads full detail to a
+     device cannot happen unattended, and nothing automatic deletes a record.
+     Filing closed Crash Cart reports into monthly documents is neither — it
+     moves rows inside the same database, keeps every field, and exists because
+     the read cost of the collection grows on its own. */
+  const archive = readFileSync(new URL('core/crash-report-archive.js', jsRoot), 'utf8');
+  assert.match(archive, /registerAutoMaintenance\(\{/);
+  assert.match(archive, /appendMonthPartitionedRows\(CRASH_REPORT_ARCHIVE_KEY, due\)/);
+  // Still never automatic: the retention archives that produce a file.
+  assert.ok(!/registerAutoMaintenance/.test(retention), 'custody retention must not run itself');
+  assert.ok(!/registerAutoMaintenance/.test(requests), 'order archiving must not run itself');
 });

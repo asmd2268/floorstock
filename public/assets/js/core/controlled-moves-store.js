@@ -8,7 +8,7 @@ import {
   partitionKeysInCache,
   partitionKey,
 } from './month-partitioned-store.js?v=cc6daa3c27';
-import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
+import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.
 
@@ -129,6 +129,7 @@ export async function migrateControlledMovesToMonths() {
 /* Visible only while a legacy blob document still exists; once migrated the
    document is gone and the entry disappears from the panel on its own. */
 registerStorageCleanup({
+  kind: 'migration',
   key: CONTROLLED_MOVES_KEY,
   label: 'File ledger by Hijri month / ترحيل السجل للأشهر الهجرية',
   hint: 'Files the movement ledger into one record per Hijri month, removing its size limit and making a month cost one read.',

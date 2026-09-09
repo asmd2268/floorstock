@@ -606,7 +606,14 @@ async function assignSelectedMedsToShelf(){
 
 // Crash Cart
 function crashCarts(){return S.g('crash_carts')||[]}
-function crashReports(){return S.g('crash_cart_reports')||[]}
+/* Live reports plus any archived months this session holds. Closed reports older
+   than the retention window live in one document per month rather than one
+   document each — see core/crash-report-archive.js — and every reader gets both,
+   so a yearly report still counts what was archived. */
+function crashReports(){
+  if(typeof globalThis.allCrashReports==='function')return globalThis.allCrashReports();
+  return S.g('crash_cart_reports')||[];
+}
 /* Crash cart reports are individual documents in the crash_cart_reports_v2
    collection (or its per-tenant equivalent). Writes below are document-shaped:
    editing one report costs one write, not one per report in the collection.

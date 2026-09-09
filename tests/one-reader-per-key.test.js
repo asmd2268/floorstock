@@ -32,10 +32,13 @@ test('a role loads exactly the keys it listens to', () => {
 test('only the state module decides where a partitioned key is read from', async () => {
   /* Exactly the bug that emptied every order screen once before, via gr(). S.g
      is the one place that knows; everywhere else asks S.g. */
+  /* The stores that OWN a partitioned key may read its partitions directly —
+     that is what owning it means. Everyone else asks S.g. */
   const allowed = new Set([
     'core/month-partitioned-store.js',
     'core/requests-store.js',
     'core/controlled-moves-store.js',
+    'core/crash-report-archive.js',
     'modules/03-core-application-firebase-state-auth.js',
   ]);
   for (const dir of ['core', 'modules']) {

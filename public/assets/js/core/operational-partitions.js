@@ -4,7 +4,7 @@ import {
   monthOf,
   monthPartitionSpec,
 } from './month-partitioned-store.js?v=cc6daa3c27';
-import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
+import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
 
 /* The remaining append-forever records, filed by month like the ledgers.
 
@@ -176,6 +176,7 @@ export async function migrateKeyToMonths(key) {
 /* One entry per key, registered against the key's own gauge row, so the action
    sits next to the bar it shrinks and disappears with the legacy document. */
 SPECS.forEach((spec) => registerStorageCleanup({
+  kind: 'migration',
   key: spec.key,
   label: spec.label,
   hint: spec.hint,

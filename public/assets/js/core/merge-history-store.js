@@ -1,4 +1,4 @@
-import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
+import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
 import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
 
 /* The undo history behind an inventory-name merge, kept under a byte budget

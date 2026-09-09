@@ -28,6 +28,7 @@ export const PARTITIONED_STATE_KEYS = Object.freeze([
   'deleted_request_audit_v4',
   'department_request_notifications_v1',
   'user_activity_daily_v1',
+  'crash_cart_report_archive',
 ]);
 
 const PARTITION_SUFFIX = /_[gh]\d{4}-\d{2}(_p\d+)?$/;

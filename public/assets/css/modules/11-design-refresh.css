@@ -374,6 +374,17 @@ body.light .tbtn:hover:not(.on) { background: rgba(0,0,0,.04); }
   flex-wrap: wrap;
 }
 .storage-cleanup-title { font-weight: 700; font-size: 14px; }
+/* The migrations are the part a master does once. They sat as six buttons mixed
+   among the archive actions, which is how they stayed undone. */
+.storage-migrate-all {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin-bottom: 12px; padding: 12px 14px;
+  border: 1.5px solid var(--bl, #3498db); border-radius: 10px;
+  background: rgba(52, 152, 219, .10);
+}
+.storage-migrate-all b { font-size: 13px; }
+.storage-migrate-all .fhint { margin-top: 3px; }
+.storage-migrate-all button { flex: 0 0 auto; }
 .storage-row { padding: 10px 0; border-top: 1px solid var(--bd); }
 .storage-row:first-child { border-top: 0; }
 .storage-row-head,

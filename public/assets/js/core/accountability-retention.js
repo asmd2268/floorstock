@@ -1,5 +1,5 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
+import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
@@ -326,6 +326,7 @@ export async function migrateAccountabilityUsageToMonths() {
    migration is offered under the legacy document's own key and disappears with it
    once it has run; the archive is offered under the ledger's synthetic row. */
 registerStorageCleanup({
+  kind: 'migration',
   key: USAGE_KEY,
   label: 'File custody by Hijri month / ترحيل سجل العهد',
   hint: 'Files custody usage into one record per Hijri month, removing the size limit that stopped it holding five years.',
