@@ -1124,7 +1124,13 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       var changed=deactivated
         || String(profile.role||'')!==String(window.CU.role||'')
         || String(deptId||'')!==String(window.CU.deptId||'')
-        || !!profile.master!==!!window.CU.master;
+        /* Compared against what the DOCUMENT said at login, not against the
+           effective Master flag, which now comes from the token claim. An
+           account whose document says Master while its claim has not caught up
+           runs with master:false on purpose — comparing the two here would read
+           that as "permissions changed" and sign the person out on every
+           snapshot, forever. A real change to the document still signs out. */
+        || !!profile.master!==!!(window.CU.documentMaster!==undefined?window.CU.documentMaster:window.CU.master);
       if(changed){
         S.forceSignOutForProfileChange(deactivated
           ? 'Your account was deactivated by an administrator. / تم إيقاف حسابك من قبل الإدارة، الرجاء التواصل معها.'

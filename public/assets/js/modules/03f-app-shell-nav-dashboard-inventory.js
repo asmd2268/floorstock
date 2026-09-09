@@ -1,5 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { normalizeRole } from '../core/role-capabilities.js?v=e9e9d8dd77';
+import { resolveMasterFromUser } from '../core/master-authority.js?v=c8beef9722';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
 import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=7975fe045f';
@@ -228,7 +229,17 @@ async function doLogin(){
       if(dept)deptId=dept.id;
     }
     if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.');
-    CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:(profile.deptName||profile.departmentName||''),controlledCustodian:!!profile.controlledCustodian,blockedDepts:Array.isArray(profile.blockedDepts)?profile.blockedDepts:[]};
+    /* Master comes from the token, the same source firestore.rules reads, with
+       the users document as the fallback for an account whose claims have never
+       been written. Reading it off the document alone handed out the Master
+       interface to a session the database would refuse every write from. */
+    var masterAuthority={master:profile.master===true,claims:null,stale:false};
+    try{
+      masterAuthority=await resolveMasterFromUser(credential.user,profile);
+    }catch(masterError){
+      console.warn('Could not read the Master claim; falling back to the profile document.',masterError);
+    }
+    CU={id:credential.user.uid,email:profile.email||credential.user.email,role:profile.role,master:masterAuthority.master===true,documentMaster:profile.master===true,username:profile.displayName||profile.email||credential.user.email,deptId:deptId,deptName:dept?dept.name:(profile.deptName||profile.departmentName||''),controlledCustodian:!!profile.controlledCustodian,blockedDepts:Array.isArray(profile.blockedDepts)?profile.blockedDepts:[]};
     var stateProfile=Object.assign({},profile,{uid:credential.user.uid,deptId:deptId});
     if(typeof window.startApp!=='function'){
       throw new Error('Application startup is unavailable. Reload the file and try again.');
@@ -248,6 +259,13 @@ async function doLogin(){
       // If token has no claims yet (user hasn't re-logged since CF set them),
       // fall back to the Firestore profile field written by setDeptRestrictions.
       globalThis.__fsBlockedDepts=Array.isArray(claimedBlocked)?claimedBlocked:(Array.isArray(profile.blockedDepts)?profile.blockedDepts:[]);
+      /* Said plainly rather than left to look like a broken app: the account is
+         marked Master, the token is not, and every Master write will be refused
+         until the claim catches up. resolveMasterFromUser already forced one
+         token refresh, so reaching here means it is the claim that is behind. */
+      if(masterAuthority.stale&&typeof window.toast==='function'){
+        window.toast('This account is marked Master, but its permissions have not finished syncing — Master actions will be refused until they do. Sign out and back in shortly.\nهذا الحساب مسجَّل كماستر، لكن صلاحياته لم تُزامَن بعد؛ ستُرفض إجراءات الماستر حتى تكتمل. سجّل خروجاً ودخولاً بعد قليل.','err');
+      }
     }catch(tokenErr){
       globalThis.__fsBlockedDepts=Array.isArray(profile.blockedDepts)?profile.blockedDepts:[];
       console.warn('Could not read dept restriction claims.',tokenErr);
