@@ -222,7 +222,23 @@ function collectCrashReport(){
       if(!item)throw new Error('A selected medicine no longer exists in the Crash Cart.');
       var quantity=numberValue((row.querySelector('.ccr-qty')||{}).value),available=(item.stockStatus==='out_of_stock'&&item.present==null)?0:numberValue(item.present==null?item.qty:item.present);
       if(!(quantity>0)||quantity>available)throw new Error(String(item.name||'Medicine')+': quantity exceeds available stock.');
-      consumed.push({itemId:String(item.id),qty:quantity,reportedExpiry:dateKey((row.querySelector('.ccr-expiry')||{}).value)});
+      /* The expiry is what the pharmacy deducts the reported quantity from. A
+         report without it left the pharmacist with no batch to take the quantity
+         off — the response screen refused to save and the only way out was
+         closing the cart with the quantity unreplaced. So it is required
+         whenever the cart actually holds dated batches for that medicine; when
+         it holds none there is nothing to choose and the report stays valid. */
+      var reportedExpiry=dateKey((row.querySelector('.ccr-expiry')||{}).value),
+          datedBatches=((item.batches||[]).filter(function(batch){return dateKey(batch&&batch.expiry)&&numberValue(batch&&batch.qty)>0}));
+      if(datedBatches.length&&!reportedExpiry){
+        throw new Error(String(item.name||'Medicine')+': choose the expiry date the quantity was taken from.\n'
+          +String(item.name||'الدواء')+': اختر تاريخ انتهاء الدفعة التي أُخذت منها الكمية.');
+      }
+      if(reportedExpiry&&datedBatches.length&&!datedBatches.some(function(batch){return dateKey(batch.expiry)===reportedExpiry})){
+        throw new Error(String(item.name||'Medicine')+': that expiry date is not one of the batches in this cart.\n'
+          +String(item.name||'الدواء')+': هذا التاريخ ليس من دفعات هذه العربة.');
+      }
+      consumed.push({itemId:String(item.id),qty:quantity,reportedExpiry:reportedExpiry});
     });
     if(!consumed.length)throw new Error('Select at least one medicine, or check "No medications consumed".\nاختر دواءً واحداً على الأقل، أو ضع علامة "لا يوجد استهلاك".');
   } else {

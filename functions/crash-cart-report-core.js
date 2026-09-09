@@ -176,7 +176,22 @@ function applyCrashCartReport({
     if (!(qty > 0)) throw new Error('Consumed quantity must be greater than zero.');
     const present = itemPresent(item);
     if (qty > present + 0.000001) throw new Error('Reported quantity exceeds the current cart quantity.');
+    /* The expiry is the batch the pharmacy deducts the reported quantity from.
+       Without it the response screen has nothing to take the quantity off, so
+       the pharmacist could only close the cart leaving it unreplaced. Required
+       whenever the cart holds dated batches for that medicine — and it must be
+       one of them, so a typed date cannot invent a batch that does not exist.
+       Enforced here rather than only in the browser, because this function is
+       what actually writes the report. */
     const reportedExpiry = dateKey(row.reportedExpiry);
+    const datedBatches = ((item.batches || []).filter((batch) => dateKey(batch && batch.expiry) && number(batch && batch.qty) > 0));
+    if (datedBatches.length && !reportedExpiry) {
+      throw new Error(`${item.name || 'Medicine'}: choose the expiry date the quantity was taken from.`);
+    }
+    if (reportedExpiry && datedBatches.length
+      && !datedBatches.some((batch) => dateKey(batch.expiry) === reportedExpiry)) {
+      throw new Error(`${item.name || 'Medicine'}: that expiry date is not one of the batches in this cart.`);
+    }
     return {
       itemId,
       name: String(item.name || item.genericName || ''),

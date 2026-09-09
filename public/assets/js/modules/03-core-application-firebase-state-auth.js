@@ -874,8 +874,41 @@ function fsStateScheduleManagedUserLoad(profileHint){
    These collections grant list/get to any active user regardless of role — they
    are not gated the way floorstock_state is — so the same listener works for
    every profile. */
+/* A one-off list of each collection-backed key, run alongside the listener.
+
+   A pending Crash Cart report reaches the app only through this listener, and a
+   listener that never delivers is indistinguishable from "no reports": its
+   failure went to the console, the page rendered an empty alert strip, and a
+   master had no way to tell that a department was waiting on them. The initial
+   snapshot can also be slow on a cold connection, which is the delay reported
+   from the floor.
+
+   So the rows are also fetched once, directly, when the listeners are installed.
+   It is one read of a small collection, it cannot make the page later than the
+   listener would, and it fills the gap when the listener is late — or never
+   arrives at all. */
+function fsStateSeedCollectionKeys(profile,force){
+  COLLECTION_BACKED_KEYS.forEach(function(spec){
+    fsStateLoadCollectionViaRest(spec,profile).then(function(rows){
+      if(!Array.isArray(rows)||stateValueEqual(S.cache[spec.key],rows))return;
+      var byId=S.__collectionRowsById[spec.key]||(S.__collectionRowsById[spec.key]={});
+      /* Once the listener has spoken it owns the rows, so a late seed must not
+         reorder or resurrect anything it has already applied. While the listener
+         is DOWN there is nothing to defer to, and `force` says so. */
+      if(!force&&Object.keys(byId).length)return;
+      S.__collectionRowsById[spec.key]=byId;
+      if(force)Object.keys(byId).forEach(function(id){delete byId[id]});
+      rows.forEach(function(row){if(row&&row.id!=null)byId[String(row.id)]=row});
+      S.cache[spec.key]=rows;
+      S.scheduleRefresh();
+    },function(error){
+      console.warn(spec.legacyPath+' initial list failed.',error);
+    });
+  });
+}
 function fsStateInstallCollectionListeners(profile,label){
   S.__collectionRowsById=S.__collectionRowsById||{};
+  fsStateSeedCollectionKeys(profile);
   return COLLECTION_BACKED_KEYS.map(function(spec){
     S.__collectionRowsById[spec.key]=S.__collectionRowsById[spec.key]||{};
     return collectionRefForSpec(FB_DB,spec,profile).onSnapshot(function(snapshot){
@@ -893,7 +926,29 @@ function fsStateInstallCollectionListeners(profile,label){
         S.cache[spec.key]=next;
         S.scheduleRefresh();
       }
-    },function(error){console.error(spec.legacyPath+' realtime error'+(label?' ('+label+')':'')+'.',error)});
+    },function(error){
+      /* Console-only was the whole problem: a pending report simply never
+         appeared and nothing said why. The rows are re-listed directly so the
+         page still shows them, and the failure is stated where the person who
+         needs to act will see it. */
+      console.error(spec.legacyPath+' realtime error'+(label?' ('+label+')':'')+'.',error);
+      fsStateLoadCollectionViaRest(spec,profile).then(function(rows){
+        if(!Array.isArray(rows)||stateValueEqual(S.cache[spec.key],rows))return;
+        S.__collectionRowsById[spec.key]={};
+        rows.forEach(function(row){if(row&&row.id!=null)S.__collectionRowsById[spec.key][String(row.id)]=row});
+        S.cache[spec.key]=rows;
+        S.scheduleRefresh();
+      }).catch(function(restError){
+        console.error(spec.legacyPath+' fallback list failed too.',restError);
+        if(typeof globalThis.toast==='function'){
+          globalThis.toast('Crash Cart reports could not be loaded — a pending report may not be shown. Refresh the page.\nتعذر تحميل بلاغات عربات الطوارئ؛ قد لا يظهر بلاغ منتظر. حدّث الصفحة.','err');
+        }
+      });
+      // Poll while the listener is down, so a report submitted meanwhile lands.
+      if(!S.__collectionRestFallbackTimer){
+        S.__collectionRestFallbackTimer=setInterval(function(){fsStateSeedCollectionKeys(profile,true)},30000);
+      }
+    });
   });
 }
 
@@ -1239,6 +1294,9 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     if(S.usersPollTimer){clearInterval(S.usersPollTimer);S.usersPollTimer=null;}
     if(S.refreshTimer){clearTimeout(S.refreshTimer);S.refreshTimer=null;}
     if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}
+    // The fallback poll only exists while a collection listener is down; a new
+    // session installs its own listeners and must not inherit the old one's.
+    if(S.__collectionRestFallbackTimer){clearInterval(S.__collectionRestFallbackTimer);S.__collectionRestFallbackTimer=null;}
     S.pollBusy=false;
   },
   scheduleRefresh:function(){
