@@ -1490,6 +1490,9 @@ exports.confirmAccountabilityHandover = onRequest(PUBLIC_HTTP_OPTIONS, async (re
 
 const UPKEEP_SETTINGS_PATH = 'system/upkeep_settings';
 
+// The same options every other callable in this file uses.
+const UPKEEP_CALLABLE_OPTIONS = CALLABLE_OPTIONS;
+
 async function upkeepSettings() {
   const snapshot = await db.doc(UPKEEP_SETTINGS_PATH).get();
   const data = snapshot.exists ? snapshot.data() : {};
@@ -1668,7 +1671,7 @@ exports.scheduledUpkeep = onSchedule(
 
 /* A master reads the last run and turns it on, so neither the switch nor the
    result needs the Firebase console. */
-exports.upkeepStatus = onCall(async (request) => {
+exports.upkeepStatus = onCall(UPKEEP_CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requireMaster(caller);
   const settings = await upkeepSettings();
@@ -1676,7 +1679,7 @@ exports.upkeepStatus = onCall(async (request) => {
   return { ok: true, settings, lastRun: (snapshot.exists && snapshot.data().lastRun) || null };
 });
 
-exports.setUpkeepSettings = onCall(async (request) => {
+exports.setUpkeepSettings = onCall(UPKEEP_CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requireMaster(caller);
   const update = {};
@@ -1689,7 +1692,7 @@ exports.setUpkeepSettings = onCall(async (request) => {
 
 /* Runs it now, for a master who wants to see what the schedule would do rather
    than wait a day for it. Obeys the same dry-run setting. */
-exports.runUpkeepNow = onCall(async (request) => {
+exports.runUpkeepNow = onCall(UPKEEP_CALLABLE_OPTIONS, async (request) => {
   const caller = await callerProfile(request);
   requireMaster(caller);
   return { ok: true, run: await runScheduledUpkeep('manual') };

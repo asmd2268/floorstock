@@ -49,6 +49,21 @@ test('the switch and the last run are visible in the app, not the console', () =
   // All three are master-only.
   const callables = functionsSource.split('exports.upkeepStatus')[1];
   assert.equal((callables.match(/requireMaster\(caller\)/g) || []).length, 3);
-  // And an unreachable service says so rather than rendering an empty panel.
+  // And an unreachable service says so rather than rendering an empty panel —
+  // with a way to try again, since a newly created function answers "internal"
+  // for the first seconds of its life, which is exactly when this panel is first
+  // opened.
   assert.match(ui, /The nightly upkeep could not be reached/);
+  assert.match(ui, /data-upkeep="retry"/);
+});
+
+test('a failure while drawing cannot leave "Checking…" on screen', async () => {
+  /* The panel writes "Checking…" and then draws. Anything thrown in between used
+     to leave that message there permanently, which reads as a hang rather than a
+     fault — and every escape went through a global that another module has to
+     have published first. */
+  assert.match(ui, /await drawScheduledUpkeep\(host\);/);
+  assert.match(ui, /The nightly upkeep panel could not be drawn/);
+  assert.match(ui, /function escapeText\(value\) \{/);
+  assert.ok(!/globalThis\.fsEsc\(/.test(ui), 'render through escapeText, which cannot be missing');
 });

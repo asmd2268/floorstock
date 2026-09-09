@@ -17,6 +17,12 @@ function callFunction(name, data) {
   return globalThis.fsCallFunction(name, data || {});
 }
 
+/* dom-utils publishes fsEsc, but a panel that renders before it would throw and
+   leave "Checking…" on screen for good. */
+function escapeText(value) {
+  return globalThis.fsEsc ? escapeText(value) : String(value == null ? '' : value);
+}
+
 function describeChange(change) {
   const where = change.tenantId ? `${change.tenantId}: ` : '';
   if (change.job === 'archive') return `${where}${change.doc} — ${change.added} report(s) filed`;
@@ -28,14 +34,31 @@ export async function renderScheduledUpkeep() {
   if (!host) return;
   if (!isMaster()) { host.innerHTML = ''; return; }
   host.innerHTML = '<div class="fhint">Checking the nightly upkeep… / جارٍ فحص الصيانة الليلية…</div>';
+  try {
+    await drawScheduledUpkeep(host);
+  } catch (error) {
+    /* The panel writes "Checking…" and then draws. Anything thrown in between
+       used to leave that message on screen permanently, which reads as a hang
+       rather than a fault. */
+    console.error('Nightly upkeep panel failed to draw', error);
+    host.innerHTML = `<div class="fhint">The nightly upkeep panel could not be drawn — ${escapeText(String(error && error.message || error))}. `
+      + '<button class="btn bg bsm" type="button" data-upkeep="retry">Try again / إعادة المحاولة</button></div>';
+  }
+}
+
+async function drawScheduledUpkeep(host) {
 
   let status;
   try {
     status = await callFunction('upkeepStatus');
   } catch (error) {
-    /* Said plainly: without this the panel would simply look empty, which reads
-       as "there is no such thing" rather than "it could not be reached". */
-    host.innerHTML = `<div class="fhint">The nightly upkeep could not be reached — ${globalThis.fsEsc(String(error && error.message || error))}`
+    /* Said plainly, and retryable. A freshly created Cloud Function answers
+       "internal" for the first seconds of its life while it starts, which is
+       exactly when a master opens this panel for the first time — so the message
+       has to offer the obvious next move rather than look like a verdict. */
+    console.warn('Nightly upkeep status unavailable', error);
+    host.innerHTML = `<div class="fhint">The nightly upkeep could not be reached — ${escapeText(String(error && error.message || error))}. `
+      + '<button class="btn bg bsm" type="button" data-upkeep="retry">Try again / إعادة المحاولة</button>'
       + '<br/>تعذّر الوصول إلى الصيانة الليلية.</div>';
     return;
   }
@@ -51,7 +74,7 @@ export async function renderScheduledUpkeep() {
   const changes = (last && last.changes) || [];
   const failures = (last && last.failures) || [];
   const lastLine = last
-    ? `Last run ${globalThis.fsEsc(new Date(last.finishedAt).toLocaleString())} · ${last.dryRun ? 'reported' : 'applied'} ${changes.length} change(s)`
+    ? `Last run ${escapeText(new Date(last.finishedAt).toLocaleString())} · ${last.dryRun ? 'reported' : 'applied'} ${changes.length} change(s)`
       + (failures.length ? ` · <b style="color:var(--rdl)">${failures.length} failed</b>` : '')
     : 'It has not run yet. / لم تعمل بعد.';
 
@@ -59,8 +82,8 @@ export async function renderScheduledUpkeep() {
     <div class="storage-upkeep-head">
       <div>
         <b>🌙 Nightly upkeep / الصيانة الليلية</b>
-        <span class="upkeep-state upkeep-${state.tone}">${globalThis.fsEsc(state.label)}</span>
-        <div class="fhint">${globalThis.fsEsc(state.why)}</div>
+        <span class="upkeep-state upkeep-${state.tone}">${escapeText(state.label)}</span>
+        <div class="fhint">${escapeText(state.why)}</div>
         <div class="fhint">${lastLine}</div>
       </div>
       <div class="fl g8">
@@ -70,9 +93,9 @@ export async function renderScheduledUpkeep() {
       </div>
     </div>
     ${changes.length ? `<details class="storage-upkeep-detail"><summary>What it ${last.dryRun ? 'would change' : 'changed'} / التفاصيل</summary><ul>`
-      + changes.slice(0, 40).map((change) => `<li>${globalThis.fsEsc(describeChange(change))}</li>`).join('')
+      + changes.slice(0, 40).map((change) => `<li>${escapeText(describeChange(change))}</li>`).join('')
       + (changes.length > 40 ? `<li>…${changes.length - 40} more</li>` : '') + '</ul></details>' : ''}
-    ${failures.length ? '<div class="fhint" style="color:var(--rdl)">' + failures.map((f) => globalThis.fsEsc(`${f.job}: ${f.error}`)).join('<br/>') + '</div>' : ''}`;
+    ${failures.length ? '<div class="fhint" style="color:var(--rdl)">' + failures.map((f) => escapeText(`${f.job}: ${f.error}`)).join('<br/>') + '</div>' : ''}`;
 }
 
 let installed = false;
@@ -87,6 +110,10 @@ export function installScheduledUpkeepPanel() {
     button.disabled = true;
     try {
       const action = button.getAttribute('data-upkeep');
+      if (action === 'retry') {
+        await renderScheduledUpkeep();
+        return;
+      }
       if (action === 'run') {
         const result = await callFunction('runUpkeepNow');
         const run = (result && result.run) || {};
