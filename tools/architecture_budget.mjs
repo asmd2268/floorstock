@@ -22,8 +22,18 @@ export async function measure() {
       if (!name.endsWith('.js')) continue;
       const path = `${dir}/${name}`;
       const text = await readFile(new URL(path, jsRoot), 'utf8');
+      /* Two ways this codebase publishes a global, and counting only the first
+         made the budget blind in the direction that matters: forty-five core
+         modules publish with Object.assign(globalThis, { … }), which is the
+         idiomatic form for new code — so a new module could add a dozen globals
+         and the ratchet would report no change at all. */
       for (const match of text.matchAll(/\b(?:window|globalThis)\.([A-Za-z_$][\w$]*)\s*=(?!=)/g)) {
         globals.add(match[1]);
+      }
+      for (const match of text.matchAll(/Object\.assign\(\s*(?:window|globalThis)\s*,\s*\{([\s\S]*?)\}\s*\)/g)) {
+        for (const name of match[1].matchAll(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*(?::|,|$)/g)) {
+          globals.add(name[1]);
+        }
       }
       const lines = text.split('\n').length;
       if (lines >= 700) modules[path] = lines;

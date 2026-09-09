@@ -27,6 +27,16 @@ const SHRINK_SLACK = 0.05;
 const budget = JSON.parse(await readFile(new URL('../architecture-budget.json', import.meta.url), 'utf8'));
 const current = await measure();
 
+test('both ways of publishing a global are counted', async () => {
+  /* The first version of this budget matched only `globalThis.name =`, while
+     forty-five core modules publish with Object.assign(globalThis, { … }) — the
+     idiomatic form for new code. A new module could have added a dozen globals
+     and the ratchet would have reported no change at all: a guard blind in
+     exactly the direction it exists to watch. */
+  const tool = await readFile(new URL('../tools/architecture_budget.mjs', import.meta.url), 'utf8');
+  assert.match(tool, /Object\\\.assign\\\(\\s\*\(\?:window\|globalThis\)/);
+});
+
 test('the global surface does not grow', () => {
   assert.ok(
     current.globals <= budget.globals,

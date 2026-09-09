@@ -2,6 +2,7 @@ import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { buildTestSession, restoreActualSession } from '../core/master-test-mode.js?v=5c343a4df5';
 import { fsNorm, fsText, fsNum } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { fsE, fsEsc } from '../core/dom-utils.js?v=b2909b7f46';
+import { uiToast, uiNow, uiActor, uiAudit, uiCloseModal, uiOpenModal, uiEnsureStyles } from '../core/module-ui-helpers.js?v=4dc31675ec';
 
 /* ASDHealth FloorStock — R6.32 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
@@ -1143,43 +1144,8 @@ window.ctlOpenDepartmentPrintOptions=function(){return window.ctlConfirmDepartme
 /* ASDHealth FloorStock — R6 crash-cart, master test mode, and master-only health.
    Direct global definitions; no prior-function wrapping. */
 
-function fsR6Toast(m,t){
-  if(typeof window.toast2==='function')return window.toast2(m,t||'info');
-  if(typeof window.toast==='function')return window.toast(m,t||'info');
-  if(t==='err')console.error(m);else console.log(m);
-}
-function fsR6Now(){return typeof window.nowISO==='function'?window.nowISO():new Date().toISOString()}
-function fsR6Actor(){
-  var u=(typeof window.actualUser==='function'?window.actualUser():(window.MASTER_ACTUAL||window.CU||{}))||{};
-  return {
-    name:u.name||u.fullName||u.displayName||u.username||u.email||'Unknown',
-    user:u.username||u.email||u.id||u.uid||'Unknown',
-    id:u.id||u.uid||'',
-    role:(window.CU&&CU.role)||''
-  };
-}
-function fsR6Audit(action,meta){
-  if(typeof window.auditAction==='function'){
-    try{return Promise.resolve(window.auditAction(action,meta||{})).catch(function(e){console.error(e)})}
-    catch(e){console.error(e)}
-  }
-  return Promise.resolve();
-}
-function fsR6CloseModal(id){
-  var m=fsE(id);
-  if(typeof window.CM==='function'){try{window.CM(id);return}catch(e){}}
-  if(m)m.classList.remove('on');
-}
-function fsR6OpenModal(id){
-  var m=fsE(id);
-  if(typeof window.OM==='function'){try{window.OM(id);return}catch(e){}}
-  if(m)m.classList.add('on');
-}
 function fsR6EnsureStyles(){
-  if(fsE('asdhealth-r6-canonical-style'))return;
-  var style=document.createElement('style');
-  style.id='asdhealth-r6-canonical-style';
-  style.textContent=
+  uiEnsureStyles('asdhealth-r6-canonical-style',
     '#pg-crashcart .fsr6-select-col{width:38px;text-align:center}'+
     '#pg-crashcart .fsr6-select-col input{width:16px;height:16px;margin:0}'+
     '#pg-crashcart tr.fsr6-selected td{box-shadow:inset 0 0 0 1px var(--ac);background:rgba(31,111,235,.10)!important}'+
@@ -1204,8 +1170,7 @@ function fsR6EnsureStyles(){
     '.fsr6-invalid{border-color:var(--rdl)!important;box-shadow:0 0 0 1px var(--rdl)}.fsr6-empty{padding:12px;border:1px dashed var(--bd);border-radius:9px;color:var(--tx2);font-size:12px}'+
     '.master-test-banner{font-size:10px;line-height:1.2;padding:4px 8px;border:1px solid var(--yl);border-radius:8px;color:var(--yll);white-space:nowrap}.master-test-exit{border-color:var(--rd)!important;color:var(--rdl)!important}'+
     '.fsr6-master-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.fsr6-master-preview{padding:10px;border:1px solid var(--bd);border-radius:8px;background:var(--s2);font-size:12px;line-height:1.7}'+
-    '@media(max-width:860px){.fsr6-plan-head,.fsr6-cart-plan-head,.fsr6-review-head,.fsr6-footer,.fsr6-master-grid{grid-template-columns:1fr}.fsr6-plan-actions,.fsr6-actions{justify-content:stretch}.fsr6-plan-actions .btn,.fsr6-actions .btn{flex:1}.fsr6-alloc-row{grid-template-columns:1fr 1fr}.fsr6-alloc-row .fsr6-remove-alloc{grid-column:1/-1}}';
-  document.head.appendChild(style);
+    '@media(max-width:860px){.fsr6-plan-head,.fsr6-cart-plan-head,.fsr6-review-head,.fsr6-footer,.fsr6-master-grid{grid-template-columns:1fr}.fsr6-plan-actions,.fsr6-actions{justify-content:stretch}.fsr6-plan-actions .btn,.fsr6-actions .btn{flex:1}.fsr6-alloc-row{grid-template-columns:1fr 1fr}.fsr6-alloc-row .fsr6-remove-alloc{grid-column:1/-1}}');
 }
 
 /* ---------- Crash Cart smart cross-cart replacement ---------- */
@@ -1329,7 +1294,7 @@ function fsR6CrashUpdateButton(){
 }
 function fsR6CrashSelectAllFiltered(){
   var filter=fsR6CrashFilter();
-  if(!fsR6CrashSelectionAllowed(filter))return fsR6Toast('Choose Expired, Urgent, or Near-expiry first.','info');
+  if(!fsR6CrashSelectionAllowed(filter))return uiToast('Choose Expired, Urgent, or Near-expiry first.','info');
   fsR6CrashCarts().forEach(function(cart){
     fsR6CrashVisibleItems(cart,filter).forEach(function(item){
       if((item.batches||[]).some(function(b){return fsR6CrashBatchLevel(b)===filter&&b.expiry}))FS_R6_CRASH_SELECTED.set(fsR6CrashKey(cart.id,item.id),true);
@@ -1646,7 +1611,7 @@ function fsR6ApplyExactReplacementAllocations(item,oldDate,removeQty,allocations
   return {itemId:item.id||'',name:fsR6CrashItemName(item),strength:item.strength||item.concentration||'',oldExpiry:oldDate,oldBatches:old,removedQty:removeQty,allocations:normalized};
 }
 function fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled){
-  var carts=fsR6CrashClone(originalCarts),reports=fsR6CrashClone(originalReports),actor=fsR6Actor(),stamp=fsR6Now(),bulkId='ccsmart_'+Date.now().toString(36),verification=[],createdReports=[];
+  var carts=fsR6CrashClone(originalCarts),reports=fsR6CrashClone(originalReports),actor=uiActor(),stamp=uiNow(),bulkId='ccsmart_'+Date.now().toString(36),verification=[],createdReports=[];
   compiled.carts.forEach(function(cartPlan,index){
     var cart=carts.find(function(c){return String(c.id)===String(cartPlan.cartId)});if(!cart)throw new Error('Crash Cart not found: '+cartPlan.cartId);
     if(reports.some(function(r){return String(r.cartId)===String(cart.id)&&(r.status==='open'||r.status==='pending')}))throw new Error((cart.name||'Crash Cart')+' has an open report. Close it first.');
@@ -1676,9 +1641,9 @@ function fsR6CrashVerifyPersisted(result,compiled){
 }
 window.openCrashCartSmartBulkReplacement=function(){
   if(!fsR6CrashCanBulk())return;
-  var level=fsR6CrashFilter();if(!fsR6CrashSelectionAllowed(level))return fsR6Toast('Choose Expired, Urgent, or Near-expiry filter first.','info');
-  var templates=fsR6CrashSeedTemplates();if(!templates.length)return fsR6Toast('Select one or more medicines with a dated batch.','err');
-  var groups=fsR6CrashEligibleGroups(templates);if(!groups.length)return fsR6Toast('No carts have the same selected medicine, strength, and expiry date.','err');
+  var level=fsR6CrashFilter();if(!fsR6CrashSelectionAllowed(level))return uiToast('Choose Expired, Urgent, or Near-expiry filter first.','info');
+  var templates=fsR6CrashSeedTemplates();if(!templates.length)return uiToast('Select one or more medicines with a dated batch.','err');
+  var groups=fsR6CrashEligibleGroups(templates);if(!groups.length)return uiToast('No carts have the same selected medicine, strength, and expiry date.','err');
   fsR6CrashCloseModal();FS_R6_CRASH_WORKFLOW=fsR6CrashCreateWorkflow(templates,groups);
   var seeds=templates.map(function(t){return '<span class="chip">'+fsEsc(t.name)+(t.strength?' · '+fsEsc(t.strength):'')+' · '+fsEsc(t.oldDate)+'</span>'}).join(' ');
   var html='<div class="modal-bg on" id="fsr6-crash-modal" role="dialog" aria-modal="true"><div class="modal fsr6-dialog">'+
@@ -1706,9 +1671,9 @@ window.saveCrashCartSmartBulkReplacement=async function(){
        document each — instead of rewriting every report in the collection. */
     if(typeof window.saveCrashReport==='function'){await window.saveCrashReport(result.createdReports||[]);reportsSaved=true}
     if(!fsR6CrashVerifyPersisted(result,compiled))throw new Error('Read-back verification failed. No completion was accepted.');
-    await Promise.all((result.createdReports||[]).map(function(r){return fsR6Audit('crash_cart_open_report',{reportId:r.id,cartId:r.cartId,deptId:r.deptId,oldSeal:r.oldSeal,newSeal:r.newSeal,reason:r.reason,bulk:true,bulkActionId:result.bulkId,openedAt:r.openedAt})}));
-    await fsR6Audit('crash_cart_smart_bulk_complete',{bulkActionId:result.bulkId,carts:compiled.carts.length,medicinePlans:(FS_R6_CRASH_WORKFLOW.plans||[]).filter(function(x){return x.enabled}).length,sourceSelection:FS_R6_CRASH_SELECTED.size,uniqueSeals:compiled.carts.map(function(x){return x.newSeal}),openingLogRecords:(result.createdReports||[]).length});
-    FS_R6_CRASH_SELECTED.clear();fsR6CrashCloseModal();if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();fsR6Toast(compiled.carts.length+' Crash Cart(s) replaced, reviewed and resealed ✓ · '+result.bulkId,'succ');
+    await Promise.all((result.createdReports||[]).map(function(r){return uiAudit('crash_cart_open_report',{reportId:r.id,cartId:r.cartId,deptId:r.deptId,oldSeal:r.oldSeal,newSeal:r.newSeal,reason:r.reason,bulk:true,bulkActionId:result.bulkId,openedAt:r.openedAt})}));
+    await uiAudit('crash_cart_smart_bulk_complete',{bulkActionId:result.bulkId,carts:compiled.carts.length,medicinePlans:(FS_R6_CRASH_WORKFLOW.plans||[]).filter(function(x){return x.enabled}).length,sourceSelection:FS_R6_CRASH_SELECTED.size,uniqueSeals:compiled.carts.map(function(x){return x.newSeal}),openingLogRecords:(result.createdReports||[]).length});
+    FS_R6_CRASH_SELECTED.clear();fsR6CrashCloseModal();if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();uiToast(compiled.carts.length+' Crash Cart(s) replaced, reviewed and resealed ✓ · '+result.bulkId,'succ');
   }catch(e){
     console.error(e);
     // Rollback removes exactly what this run created; the reports that existed
@@ -1753,7 +1718,7 @@ function fsR6EnsureMasterModal(){
     if(!button||!modal.contains(button))return;
     event.preventDefault();
     var action=button.dataset.masterTestAction;
-    if(action==='close')fsR6CloseModal('mmaster-role-r6');
+    if(action==='close')uiCloseModal('mmaster-role-r6');
     else if(action==='exit')window.masterResetRole();
     else if(action==='apply')window.masterApplyRole();
   });
@@ -1785,7 +1750,7 @@ window.masterPreviewUser=function(){
 };
 window.openMasterRoleSwitch=function(){
   var actual=fsR6ActualMaster();
-  if(!actual)return fsR6Toast('Only the actual signed-in Master can use test mode.','err');
+  if(!actual)return uiToast('Only the actual signed-in Master can use test mode.','err');
   fsR6EnsureMasterModal();
   var users=fsR6MasterUsers(),userSelect=fsE('fsr6-master-user'),deptSelect=fsE('fsr6-master-dept');
   userSelect.innerHTML=users.length?users.map(function(u){
@@ -1804,7 +1769,7 @@ window.openMasterRoleSwitch=function(){
   if(roleSelect&&!roleSelect.dataset.outpatientScopeBound){roleSelect.dataset.outpatientScopeBound='1';roleSelect.addEventListener('change',constrainOutpatientDepartment)}
   constrainOutpatientDepartment();
   fsE('fsr6-master-exit').style.display=window.MASTER_EFFECTIVE?'inline-flex':'none';
-  window.masterPreviewUser();fsR6OpenModal('mmaster-role-r6');
+  window.masterPreviewUser();uiOpenModal('mmaster-role-r6');
 };
 window.fsR6ApplyMasterTestProfile=function(profile,meta){
   var actual=fsR6ActualMaster();
@@ -1831,8 +1796,8 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
      Crash Cart renderer applies the selected test-department scope; mutating
      the Master's cache here made repeated role previews lose carts for the
      remainder of the session. */
-  fsR6Audit('master_test_mode_changed',{mode:MASTER_EFFECTIVE.mode,testedUserId:MASTER_EFFECTIVE.testedUserId,role:role,deptId:deptId||null,actualMasterId:actual.id||actual.uid});
-  fsR6CloseModal('mmaster-role-r6');
+  uiAudit('master_test_mode_changed',{mode:MASTER_EFFECTIVE.mode,testedUserId:MASTER_EFFECTIVE.testedUserId,role:role,deptId:deptId||null,actualMasterId:actual.id||actual.uid});
+  uiCloseModal('mmaster-role-r6');
   var restoreMasterCrash=function(){
     if(!window.MASTER_EFFECTIVE||!window.S||!S.cache)return;
     S.cache.crash_carts=masterCrashSnapshot.carts.slice();
@@ -1843,7 +1808,7 @@ window.fsR6ApplyMasterTestProfile=function(profile,meta){
   if(typeof window.startApp==='function')window.startApp();
   if(masterCrashSnapshot&&!window.FSArchitecture)setTimeout(restoreMasterCrash,10000);
   window.floorstockEnforceMasterSystemHealth();
-  fsR6Toast('Test mode: '+fsR6RoleLabel(role)+(CU.deptName?' · '+CU.deptName:''),'info');
+  uiToast('Test mode: '+fsR6RoleLabel(role)+(CU.deptName?' · '+CU.deptName:''),'info');
   return true;
 };
 window.masterApplyRole=function(){
@@ -1852,27 +1817,27 @@ window.masterApplyRole=function(){
   if(mode==='user'){
     var id=fsE('fsr6-master-user').value;
     profile=fsR6MasterUsers().find(function(u){return String(u.id||u.uid)===String(id)});
-    if(!profile)return fsR6Toast('Choose an active managed user.','err');
+    if(!profile)return uiToast('Choose an active managed user.','err');
   }else{
     var role=fsE('fsr6-master-role').value,dept=(role==='department'||role==='outpatient_pharmacy_supervisor')?fsE('fsr6-master-dept').value:'';
     profile={id:'role:'+role,role:role,deptId:dept,username:'Role preview — '+fsR6RoleLabel(role),email:''};
   }
   try{return window.fsR6ApplyMasterTestProfile(profile,{mode:mode})}
-  catch(e){return fsR6Toast(e&&e.message||String(e),'err')}
+  catch(e){return uiToast(e&&e.message||String(e),'err')}
 };
 window.masterResetRole=function(){
   var actual=window.MASTER_ACTUAL;
   if(!actual){
-    if(window.CU&&CU.master===true){window.MASTER_EFFECTIVE=null;fsR6CloseModal('mmaster-role-r6');window.floorstockEnforceMasterSystemHealth();return true}
-    return fsR6Toast('Master profile is unavailable.','err');
+    if(window.CU&&CU.master===true){window.MASTER_EFFECTIVE=null;uiCloseModal('mmaster-role-r6');window.floorstockEnforceMasterSystemHealth();return true}
+    return uiToast('Master profile is unavailable.','err');
   }
   var previous=window.MASTER_EFFECTIVE;
   window.CU=restoreActualSession(actual);window.MASTER_EFFECTIVE=null;
-  fsR6CloseModal('mmaster-role-r6');
-  fsR6Audit('master_test_mode_exited',{previous:previous||null});
+  uiCloseModal('mmaster-role-r6');
+  uiAudit('master_test_mode_exited',{previous:previous||null});
   if(typeof window.startApp==='function')window.startApp();
   window.floorstockEnforceMasterSystemHealth();
-  fsR6Toast('Exited test mode — Master permissions restored.','succ');
+  uiToast('Exited test mode — Master permissions restored.','succ');
   return true;
 };
 window.addMasterSwitchButton=function(){
@@ -2019,12 +1984,6 @@ const __asdhLegacyApi = {
   fsR5Logo: fsR5Logo,
   fsR5PrintSettings: fsR5PrintSettings,
   fsR5ControlledPrintHtml: fsR5ControlledPrintHtml,
-  fsR6Toast: fsR6Toast,
-  fsR6Now: fsR6Now,
-  fsR6Actor: fsR6Actor,
-  fsR6Audit: fsR6Audit,
-  fsR6CloseModal: fsR6CloseModal,
-  fsR6OpenModal: fsR6OpenModal,
   fsR6EnsureStyles: fsR6EnsureStyles,
   fsR6CrashCanBulk: fsR6CrashCanBulk,
   fsR6CrashCarts: fsR6CrashCarts,
@@ -2114,12 +2073,6 @@ export {
   fsR5Logo,
   fsR5PrintSettings,
   fsR5ControlledPrintHtml,
-  fsR6Toast,
-  fsR6Now,
-  fsR6Actor,
-  fsR6Audit,
-  fsR6CloseModal,
-  fsR6OpenModal,
   fsR6EnsureStyles,
   fsR6CrashCanBulk,
   fsR6CrashCarts,
