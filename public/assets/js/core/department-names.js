@@ -39,15 +39,15 @@ globalThis.FS_R5_DEPT_ALIASES = {
 function fsR5DepartmentRecords(){
   var pools=[],records=[],seen={};
   function addPool(x){if(Array.isArray(x))pools.push(x)}
-  try{if(typeof window.gd==='function')addPool(window.gd()||[])}catch(e){}
-  try{if(typeof window.getDepts==='function')addPool(window.getDepts()||[])}catch(e){}
-  try{if(window.S&&typeof S.g==='function')addPool(S.g('departments')||[])}catch(e){}
+  try{if(typeof globalThis.gd==='function')addPool(globalThis.gd()||[])}catch(e){}
+  try{if(typeof globalThis.getDepts==='function')addPool(globalThis.getDepts()||[])}catch(e){}
+  try{if(globalThis.S&&typeof S.g==='function')addPool(S.g('departments')||[])}catch(e){}
   try{
-    if(typeof window.gu==='function')addPool((window.gu()||[]).map(function(u){
+    if(typeof globalThis.gu==='function')addPool((globalThis.gu()||[]).map(function(u){
       return {id:u&&fsText(u.deptId||u.departmentId||u.department,''),name:u&&fsText(u.deptName||u.departmentName||u.departmentLabel,'')};
     }));
   }catch(e){}
-  if(window.CU)addPool([{id:CU.deptId||CU.departmentId||CU.department,name:CU.deptName||CU.departmentName||CU.departmentLabel}]);
+  if(globalThis.CU)addPool([{id:CU.deptId||CU.departmentId||CU.department,name:CU.deptName||CU.departmentName||CU.departmentLabel}]);
   pools.forEach(function(pool){
     pool.forEach(function(d){
       if(!d)return;
@@ -62,7 +62,7 @@ function fsR5DepartmentRecords(){
   });
   return records;
 }
-window.floorstockDepartmentName=function(ref){
+globalThis.floorstockDepartmentName=function(ref){
   var d=ref&&typeof ref==='object'?ref:{id:ref};
   var id=fsText(d.id||d.deptId||d.departmentId||d.department||d.code,'');
   var given=fsText(d.name||d.deptName||d.departmentName||d.departmentLabel||d.label,'');
@@ -81,17 +81,17 @@ function fsR5DepartmentCandidates(ref,name){
   fsR5DepartmentRecords().forEach(function(d){
     if(String(d.id)===String(ref)||fsNorm(d.name)===fsNorm(name)||fsNorm(d.name)===fsNorm(ref)||(alias&&String(d.id)===String(alias)))add(d.id);
   });
-  if(window.CU){
+  if(globalThis.CU){
     add(CU.deptId);add(CU.departmentId);add(CU.originalDeptId);
     add(FS_R5_DEPT_ALIASES[fsNorm(CU.deptName||CU.departmentName)]);
   }
   return out;
 }
-window.fsR5DepartmentCandidates=fsR5DepartmentCandidates;
+globalThis.fsR5DepartmentCandidates=fsR5DepartmentCandidates;
 
 /* Exported as well as published: the modules that were split out of 51 import
    these directly instead of hoping a global is in place by the time they run. */
 export { fsR5DepartmentRecords, fsR5DepartmentCandidates };
-export const floorstockDepartmentName = window.floorstockDepartmentName;
+export const floorstockDepartmentName = globalThis.floorstockDepartmentName;
 
 

@@ -14,7 +14,7 @@
 import { fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
 import { uiToast } from './module-ui-helpers.js?v=4dc31675ec';
-import { fsR5DepartmentRecords } from './department-names.js?v=5aa184ebd6';
+import { fsR5DepartmentRecords } from './department-names.js?v=1809097eb2';
 
 export function fsR5MedicineFlags(m){
   m=m||{};
