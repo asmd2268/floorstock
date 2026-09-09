@@ -1,4 +1,5 @@
 import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
+import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
 
 /* The undo history behind an inventory-name merge, kept under a byte budget
    rather than a row count.
@@ -102,6 +103,25 @@ async function trimNow(key, label) {
   await globalThis.S.s(key, trimmed);
   globalThis.toast(`${rows.length - trimmed.length} old undo point(s) removed; ${trimmed.length} kept. ✓`, 'succ');
 }
+
+/* Trimmed automatically, without asking. An undo stack is not a record: nothing
+   reads it but the Undo button, which only ever uses the newest entry, and it
+   carries no statistics and no retention obligation. Waiting for a master to
+   press a button meant the document sat at the cap until someone noticed the
+   gauge — and the button only existed because nobody had noticed in time. The
+   button stays for the master who wants to act now, and does the same thing. */
+Object.values(KEYS).forEach((key) => registerAutoMaintenance({
+  key,
+  describe: (result) => `${result.dropped} old undo point(s) removed from ${key}`,
+  run: async () => {
+    const rows = historyRows(key);
+    if (!rows.length) return null;
+    const trimmed = trimMergeHistory(rows);
+    if (trimmed.length === rows.length && byteLength(rows) === byteLength(trimmed)) return null;
+    await globalThis.S.s(key, trimmed);
+    return { kept: trimmed.length, dropped: rows.length - trimmed.length };
+  },
+}));
 
 registerStorageCleanup({
   key: KEYS.inventory,

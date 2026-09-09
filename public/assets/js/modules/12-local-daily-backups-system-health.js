@@ -174,7 +174,11 @@
   /* One check per login, not a timer: the numbers only move when orders are
      written, and a master who never opens System Health would otherwise meet
      the cap as a sudden write failure. Registered through the startApp registry
-     so it runs after state is loaded without wrapping window.startApp. */
+     so it runs after state is loaded without wrapping window.startApp.
+
+     Deliberately later than the automatic upkeep in state-maintenance.js, so
+     what is measured is what is left after the records that look after
+     themselves have done so. */
   window.__startAppExtensions = window.__startAppExtensions || [];
   window.__startAppExtensions.push(function(){
     if(!masterOnly())return;
@@ -197,7 +201,7 @@
         if(typeof window.toast==='function')window.toast(msg,critical?'err':'info');
         console.warn('[state-size]',biggest.key,biggest.bytes,'bytes',biggest.pct.toFixed(1)+'%');
       }catch(e){console.error('State size check failed',e)}
-    },4000);
+    },8000);
   });
   function sizeLabel(n){if(!n&&n!==0)return'—';if(n<1024)return n+' B';if(n<1048576)return(n/1024).toFixed(1)+' KB';return(n/1048576).toFixed(2)+' MB'}
   function ahClose(db){try{if(db)db.close()}catch(ignore){}}
