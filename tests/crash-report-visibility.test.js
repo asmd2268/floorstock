@@ -68,3 +68,19 @@ test('an empty alert strip explains itself instead of looking like "no reports"'
   assert.match(crashUi, /ccxDrop=\{loaded:reports\.length,notActive:0,otherDept:0,noDeptAccess:0\}/);
   assert.match(crashUi, /dataset\.crashReportsDropped/);
 });
+
+test('the direct list never writes over a live listener', () => {
+  /* REST and the SDK decode the same document differently — a timestamp is an
+     ISO string over REST and a Timestamp object through the SDK — so two views
+     of the identical report are not equal by value. With both writing the key,
+     each overwrote the other and every pass scheduled another render: a pharmacy
+     account watched the page redraw itself repeatedly. The listener owns the key
+     from its first server snapshot; the seed only covers the window before that,
+     and stands in while the listener is down. */
+  assert.match(stateModule, /S\.__collectionListenerLive\[spec\.key\]=true;/);
+  assert.match(stateModule, /if\(!force&&S\.__collectionListenerLive\[spec\.key\]\)return;/);
+  // A failed listener hands ownership back, or the fallback could never write.
+  assert.match(stateModule, /S\.__collectionListenerLive\[spec\.key\]=false;/);
+  // And a new session starts with no claim outstanding from the previous one.
+  assert.match(stateModule, /S\.__collectionListenerLive=\{\};/);
+});

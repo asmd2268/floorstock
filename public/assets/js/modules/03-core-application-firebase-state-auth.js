@@ -899,17 +899,26 @@ function fsStateScheduleManagedUserLoad(profileHint){
    listener would, and it fills the gap when the listener is late — or never
    arrives at all. */
 function fsStateSeedCollectionKeys(profile,force){
+  S.__collectionListenerLive=S.__collectionListenerLive||{};
   COLLECTION_BACKED_KEYS.forEach(function(spec){
     fsStateLoadCollectionViaRest(spec,profile).then(function(rows){
-      if(!Array.isArray(rows)||stateValueEqual(S.cache[spec.key],rows))return;
-      var byId=S.__collectionRowsById[spec.key]||(S.__collectionRowsById[spec.key]={});
-      /* Once the listener has spoken it owns the rows, so a late seed must not
-         reorder or resurrect anything it has already applied. While the listener
-         is DOWN there is nothing to defer to, and `force` says so. */
-      if(!force&&Object.keys(byId).length)return;
-      S.__collectionRowsById[spec.key]=byId;
-      if(force)Object.keys(byId).forEach(function(id){delete byId[id]});
+      if(!Array.isArray(rows))return;
+      /* The listener owns these rows the moment it has delivered any. The seed
+         exists only to cover the window before that, and to stand in while the
+         listener is down (`force`).
+
+         It must never write over a live listener, even with rows that look the
+         same: REST and the SDK decode a document differently — a timestamp comes
+         back as an ISO string over REST and as a Timestamp object through the
+         SDK — so two views of the identical report are not equal, and each
+         source kept overwriting the other. That is a re-render on every pass,
+         which is what a pharmacy account saw as the page redrawing itself over
+         and over. */
+      if(!force&&S.__collectionListenerLive[spec.key])return;
+      if(stateValueEqual(S.cache[spec.key],rows))return;
+      var byId={};
       rows.forEach(function(row){if(row&&row.id!=null)byId[String(row.id)]=row});
+      S.__collectionRowsById[spec.key]=byId;
       S.cache[spec.key]=rows;
       S.scheduleRefresh();
     },function(error){
@@ -919,6 +928,7 @@ function fsStateSeedCollectionKeys(profile,force){
 }
 function fsStateInstallCollectionListeners(profile,label){
   S.__collectionRowsById=S.__collectionRowsById||{};
+  S.__collectionListenerLive={};
   fsStateSeedCollectionKeys(profile);
   return COLLECTION_BACKED_KEYS.map(function(spec){
     S.__collectionRowsById[spec.key]=S.__collectionRowsById[spec.key]||{};
@@ -927,6 +937,10 @@ function fsStateInstallCollectionListeners(profile,label){
       // an initial near-empty snapshot before the server-confirmed one arrives.
       // Skip it rather than let it blank out rows the cold load already fetched.
       if(snapshot.metadata.fromCache)return;
+      // From here the listener is the single source for this key; the REST seed
+      // steps aside rather than writing a differently-decoded copy over it.
+      S.__collectionListenerLive=S.__collectionListenerLive||{};
+      S.__collectionListenerLive[spec.key]=true;
       var byId=S.__collectionRowsById[spec.key];
       snapshot.docChanges().forEach(function(change){
         if(change.type==='removed'){delete byId[change.doc.id];return;}
@@ -943,6 +957,8 @@ function fsStateInstallCollectionListeners(profile,label){
          page still shows them, and the failure is stated where the person who
          needs to act will see it. */
       console.error(spec.legacyPath+' realtime error'+(label?' ('+label+')':'')+'.',error);
+      S.__collectionListenerLive=S.__collectionListenerLive||{};
+      S.__collectionListenerLive[spec.key]=false;
       fsStateLoadCollectionViaRest(spec,profile).then(function(rows){
         if(!Array.isArray(rows)||stateValueEqual(S.cache[spec.key],rows))return;
         S.__collectionRowsById[spec.key]={};
