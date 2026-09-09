@@ -377,6 +377,14 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
 // readable. Keep this list aligned with canReadPharmacyState() in firestore.rules.
 globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','requests','dept_notes','notes',
+  /* Written when a supervisor deletes an order. They were absent here, so the
+     session held neither — and the writer saves the whole array it read, which
+     for an unloaded key is an array of one. A supervisor's deletion therefore
+     replaced the entire deletion audit and every pending department notice with
+     its own single row. Loading them is what makes that save a merge again, and
+     what lets the month-partition routing see whether the legacy document is
+     still the live record. */
+  'deleted_request_audit_v4','department_request_notifications_v1',
   'crash_carts','accountability_assignments_v2',
   'accountability_receipts_v2','accountability_regimens_v3','accountability_plan_usage_v1',
   'accountability_expiry_batches_v1','accountability_regimen_catalog_v1','department_print_names_v1',
@@ -505,13 +513,18 @@ function fsRecentLedgerKeys(monthsBack){
 globalThis.fsRecentLedgerKeys=fsRecentLedgerKeys;
 globalThis.WAREHOUSE_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','theme',
-  'controlled_warehouse','controlled_pdf_receipts','user_activity_daily_v1',
+  /* controlled_moves is the pre-migration single document. The warehouse appends
+     movements straight to the Hijri partitions, so without holding this the
+     session cannot tell whether the legacy document is still the live record —
+     and the ledger would read from one half while being written to the other
+     until a master runs the migration. */
+  'controlled_warehouse','controlled_moves','controlled_pdf_receipts','user_activity_daily_v1',
   'classification_lists_v1','page_visibility_overrides_v1'
 ]);
 globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','theme','facility_logo',
   'controlled_catalog','controlled_pharmacy_stock','controlled_warehouse',
-  'controlled_moves_summary_v1','controlled_pdf_receipts','controlled_pharmacy_storage_v1',
+  'controlled_moves','controlled_moves_summary_v1','controlled_pdf_receipts','controlled_pharmacy_storage_v1',
   'psychotropic_pharmacy_stock_import_r664_20260728_v2_safe_psych_only',
   'narcotic_restore_from_backup_20260728_v1',
   'controlled_dept_list_name_enrich_v1',

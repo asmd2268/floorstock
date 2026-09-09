@@ -64,3 +64,31 @@ test('the suffix is not spelled out again in either permission source', () => {
   const withoutHelper = rules.replace(/function stateKey\(docId\)[\s\S]*?\n    \}/, '');
   assert.ok(!/_\[gh\]\[0-9\]\{4\}/.test(withoutHelper), 'firestore.rules must not restate the partition suffix');
 });
+
+test('every partitioned key is actually loaded by the roles that write it', async () => {
+  /* partitionsAreLive() answers "is the legacy document still the live record?"
+     by looking for it in the session cache — so a session that never loads the
+     key answers yes to the partitions while the legacy document still holds the
+     history, and the two halves diverge. Worse, before partitioning, the writers
+     saved the whole array they had read: for an unloaded key that is an array of
+     one, so a supervisor's deletion replaced the entire deletion audit.
+     Every key a scoped role writes must therefore appear in that role's key
+     list. */
+  const stateModule = await readFile(new URL('modules/03-core-application-firebase-state-auth.js', jsRoot), 'utf8');
+  const pharmacyScoped = /PHARMACY_SCOPED_STATE_KEYS = Object\.freeze\(\[([\s\S]*?)\]\)/.exec(stateModule)[1];
+  for (const key of ['requests', 'dept_notes', 'deleted_request_audit_v4', 'department_request_notifications_v1', 'user_activity_daily_v1', 'accountability_receipts_v2']) {
+    assert.ok(pharmacyScoped.includes(`'${key}'`), `${key} must be loaded by pharmacy-scoped roles`);
+  }
+  const warehouse = /WAREHOUSE_STATE_KEYS = Object\.freeze\(\[([\s\S]*?)\]\)/.exec(stateModule)[1];
+  for (const key of ['controlled_moves', 'controlled_pdf_receipts', 'user_activity_daily_v1']) {
+    assert.ok(warehouse.includes(`'${key}'`), `${key} must be loaded by the warehouse role`);
+  }
+  const controlled = /CONTROLLED_PHARMACY_BASE_KEYS = Object\.freeze\(\[([\s\S]*?)\]\)/.exec(stateModule)[1];
+  for (const key of ['controlled_moves', 'controlled_pdf_receipts', 'user_activity_daily_v1']) {
+    assert.ok(controlled.includes(`'${key}'`), `${key} must be loaded by the controlled pharmacy role`);
+  }
+  const department = /DEPARTMENT_SHARED_STATE_KEYS = Object\.freeze\(\[([\s\S]*?)\]\)/.exec(stateModule)[1];
+  for (const key of ['requests', 'dept_notes', 'accountability_receipts_v2', 'user_activity_daily_v1']) {
+    assert.ok(department.includes(`'${key}'`), `${key} must be loaded by department sessions`);
+  }
+});
