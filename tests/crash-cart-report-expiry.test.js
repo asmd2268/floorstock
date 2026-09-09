@@ -91,3 +91,32 @@ test('a replacement below the cart standard is allowed, only above is refused', 
   assert.ok(!/result<standard[^\-]*error=/.test(response), 'below standard must not be an error');
   assert.match(page, /may be below the standard/);
 });
+
+test('each row group carries its own section colour, set on the cells', async () => {
+  /* The reported rows were a 5% red wash that read as plain black on the dark
+     surface, so the three groups in the table looked like one list. A background
+     on the row itself is painted over by the cells, which is why it never showed
+     — it is set on the cells now, matching each group's own header. */
+  const css = await readFile(new URL('../public/assets/css/modules/03-styles-13-18.css', import.meta.url), 'utf8');
+  const response = await readFile(new URL('modules/80-controlled-pharmacy-ui-redesign.js', jsRoot), 'utf8');
+  assert.match(css, /tr\.ccc-row-reported>td\{background:rgba\(180,40,40,\.20\)/);
+  assert.match(css, /tr\.ccc-row-below>td\{background:rgba\(200,100,20,/);
+  assert.match(css, /tr\.crash-response-error>td\{background:rgba\(218,54,51,/);
+  // No inline tints left to disagree with the stylesheet.
+  assert.ok(!/background:rgba\(180,40,40,\.05\)/.test(response));
+  assert.ok(!/rowStyle/.test(response), 'row colour belongs in one place');
+});
+
+test('the checkbox says what ticking it does', async () => {
+  /* "Not currently available" with a bare box next to it did not say what
+     happens if you tick it, and the cell stacked name, box and error text with
+     no order to them. */
+  const response = await readFile(new URL('modules/80-controlled-pharmacy-ui-redesign.js', jsRoot), 'utf8');
+  const css = await readFile(new URL('../public/assets/css/modules/03-styles-13-18.css', import.meta.url), 'utf8');
+  assert.match(response, /Out of pharmacy stock \/ غير متوفر بالصيدلية/);
+  assert.match(response, /Close with no replacement — the cart stays below standard/);
+  assert.match(response, /Leave as it is \/ اتركه كما هو/);
+  assert.match(css, /\.ccc-unavailable-note\{/);
+  // The outcome line is its own band, not more text under the medicine name.
+  assert.match(css, /\.ccc-row-result:empty\{display:none\}/);
+});

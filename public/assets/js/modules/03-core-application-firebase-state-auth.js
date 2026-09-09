@@ -885,36 +885,19 @@ function fsStateScheduleManagedUserLoad(profileHint){
    These collections grant list/get to any active user regardless of role — they
    are not gated the way floorstock_state is — so the same listener works for
    every profile. */
-/* A one-off list of each collection-backed key, run alongside the listener.
+/* The stand-in for a collection listener that has FAILED — and only then.
 
-   A pending Crash Cart report reaches the app only through this listener, and a
-   listener that never delivers is indistinguishable from "no reports": its
-   failure went to the console, the page rendered an empty alert strip, and a
-   master had no way to tell that a department was waiting on them. The initial
-   snapshot can also be slow on a cold connection, which is the delay reported
-   from the floor.
-
-   So the rows are also fetched once, directly, when the listeners are installed.
-   It is one read of a small collection, it cannot make the page later than the
-   listener would, and it fills the gap when the listener is late — or never
-   arrives at all. */
-function fsStateSeedCollectionKeys(profile,force){
-  S.__collectionListenerLive=S.__collectionListenerLive||{};
+   It briefly also ran alongside the listener, to cover the moment before the
+   first snapshot. That was a mistake: REST and the SDK decode the same document
+   differently (a timestamp is an ISO string over REST, a Timestamp object
+   through the SDK), so the two sources never agreed by value, each overwrote the
+   other, and the page drew itself again on every pass. One key, one source. The
+   listener is now installed on every transport, so the window it was covering is
+   the length of one snapshot round trip. */
+function fsStateListCollectionKeysOnce(profile){
   COLLECTION_BACKED_KEYS.forEach(function(spec){
     fsStateLoadCollectionViaRest(spec,profile).then(function(rows){
-      if(!Array.isArray(rows))return;
-      /* The listener owns these rows the moment it has delivered any. The seed
-         exists only to cover the window before that, and to stand in while the
-         listener is down (`force`).
-
-         It must never write over a live listener, even with rows that look the
-         same: REST and the SDK decode a document differently — a timestamp comes
-         back as an ISO string over REST and as a Timestamp object through the
-         SDK — so two views of the identical report are not equal, and each
-         source kept overwriting the other. That is a re-render on every pass,
-         which is what a pharmacy account saw as the page redrawing itself over
-         and over. */
-      if(!force&&S.__collectionListenerLive[spec.key])return;
+      if(!Array.isArray(rows)||S.__collectionListenerLive[spec.key])return;
       if(stateValueEqual(S.cache[spec.key],rows))return;
       var byId={};
       rows.forEach(function(row){if(row&&row.id!=null)byId[String(row.id)]=row});
@@ -922,14 +905,13 @@ function fsStateSeedCollectionKeys(profile,force){
       S.cache[spec.key]=rows;
       S.scheduleRefresh();
     },function(error){
-      console.warn(spec.legacyPath+' initial list failed.',error);
+      console.warn(spec.legacyPath+' fallback list failed.',error);
     });
   });
 }
 function fsStateInstallCollectionListeners(profile,label){
   S.__collectionRowsById=S.__collectionRowsById||{};
   S.__collectionListenerLive={};
-  fsStateSeedCollectionKeys(profile);
   return COLLECTION_BACKED_KEYS.map(function(spec){
     S.__collectionRowsById[spec.key]=S.__collectionRowsById[spec.key]||{};
     return collectionRefForSpec(FB_DB,spec,profile).onSnapshot(function(snapshot){
@@ -973,7 +955,7 @@ function fsStateInstallCollectionListeners(profile,label){
       });
       // Poll while the listener is down, so a report submitted meanwhile lands.
       if(!S.__collectionRestFallbackTimer){
-        S.__collectionRestFallbackTimer=setInterval(function(){fsStateSeedCollectionKeys(profile,true)},30000);
+        S.__collectionRestFallbackTimer=setInterval(function(){fsStateListCollectionKeysOnce(profile)},30000);
       }
     });
   });

@@ -11,11 +11,16 @@ import { hasCapability } from '../public/assets/js/core/role-capabilities.js';
 
 const stateModule = await readFile(new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url), 'utf8');
 
-test('reports are listed once directly, not only awaited from the listener', () => {
-  // Also removes the delay: the first server snapshot on a cold connection is
-  // what the floor experienced as "it takes a while to show up".
-  assert.match(stateModule, /function fsStateSeedCollectionKeys\(profile,force\)/);
-  assert.match(stateModule, /fsStateInstallCollectionListeners\(profile,label\)\{[\s\S]{0,200}fsStateSeedCollectionKeys\(profile\)/);
+test('one key has one source: nothing lists alongside a live listener', () => {
+  /* The parallel list was drawing the page a second time from a differently
+     decoded copy of the same rows. The listener is now installed on every
+     transport, so a direct list only runs where there is no listener to defer
+     to — after one has failed. */
+  assert.match(stateModule, /function fsStateListCollectionKeysOnce\(profile\)/);
+  assert.ok(!/fsStateSeedCollectionKeys/.test(stateModule), 'the parallel seed is gone');
+  const installer = /function fsStateInstallCollectionListeners\(profile,label\)\{[\s\S]{0,400}?return COLLECTION_BACKED_KEYS/.exec(stateModule);
+  assert.ok(installer, 'installer body not found');
+  assert.ok(!/fsStateListCollectionKeysOnce/.test(installer[0]), 'the installer must not list in parallel with its own listener');
 });
 
 test('a listener failure re-lists the rows and says so out loud', () => {
@@ -69,7 +74,7 @@ test('an empty alert strip explains itself instead of looking like "no reports"'
   assert.match(crashUi, /dataset\.crashReportsDropped/);
 });
 
-test('the direct list never writes over a live listener', () => {
+test('the fallback list never writes over a listener that recovered', () => {
   /* REST and the SDK decode the same document differently — a timestamp is an
      ISO string over REST and a Timestamp object through the SDK — so two views
      of the identical report are not equal by value. With both writing the key,
@@ -78,7 +83,7 @@ test('the direct list never writes over a live listener', () => {
      from its first server snapshot; the seed only covers the window before that,
      and stands in while the listener is down. */
   assert.match(stateModule, /S\.__collectionListenerLive\[spec\.key\]=true;/);
-  assert.match(stateModule, /if\(!force&&S\.__collectionListenerLive\[spec\.key\]\)return;/);
+  assert.match(stateModule, /if\(!Array\.isArray\(rows\)\|\|S\.__collectionListenerLive\[spec\.key\]\)return;/);
   // A failed listener hands ownership back, or the fallback could never write.
   assert.match(stateModule, /S\.__collectionListenerLive\[spec\.key\]=false;/);
   // And a new session starts with no claim outstanding from the previous one.
