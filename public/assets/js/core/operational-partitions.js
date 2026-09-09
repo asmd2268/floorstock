@@ -4,7 +4,7 @@ import {
   monthOf,
   monthPartitionSpec,
 } from './month-partitioned-store.js?v=cc6daa3c27';
-import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
+import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 
 /* The remaining append-forever records, filed by month like the ledgers.
 
@@ -139,7 +139,7 @@ function prepareRow(row, spec, index) {
   return prepared;
 }
 
-export async function migrateKeyToMonths(key) {
+export async function migrateKeyToMonths(key, options) {
   const spec = SPECS.find((item) => item.key === key);
   if (!spec) throw new Error(`${key} is not an operational month-partitioned key.`);
   if (!(globalThis.CU && globalThis.CU.master === true)) {
@@ -160,7 +160,7 @@ export async function migrateKeyToMonths(key) {
   const prepared = rows.map((row, index) => prepareRow(row, spec, index));
   const months = [...new Set(prepared.map((row) => monthOf(row, monthPartitionSpec(spec.key)) || ''))].filter(Boolean).sort();
   const calendarWord = spec.calendar === 'gregorian' ? 'monthly' : 'Hijri monthly';
-  const confirmed = await globalThis.uiConfirm(
+  const confirmed = (options && options.silent) || await globalThis.uiConfirm(
     `${prepared.length} ${spec.noun}(s) will be filed into ${months.length} ${calendarWord} record(s), from ${months[0]} to ${months[months.length - 1]}.\n\n`
     + 'Nothing is deleted until every row has been filed, and re-running is safe.\n\n'
     + `سيتم توزيع ${prepared.length} ${spec.nounAr} على ${months.length} سجل شهري. لن يُحذف القديم إلا بعد اكتمال النسخ.`,
@@ -180,7 +180,7 @@ SPECS.forEach((spec) => registerStorageCleanup({
   key: spec.key,
   label: spec.label,
   hint: spec.hint,
-  run: () => migrateKeyToMonths(spec.key),
+  run: (options) => migrateKeyToMonths(spec.key, options),
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true) && !!legacyRows(spec.key),
 }));
 

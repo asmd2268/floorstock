@@ -6,7 +6,7 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
 } from './month-partitioned-store.js?v=cc6daa3c27';
-import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
+import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 
 /* Orders, one document per Gregorian month.
 
@@ -94,7 +94,7 @@ export function availableRequestMonths() {
    Rows are filed into their months first and the old document removed only
    afterwards, so nothing is deleted before it exists elsewhere; re-running is
    safe because rows are matched by id within a month. */
-export async function migrateRequestsToMonths() {
+export async function migrateRequestsToMonths(options) {
   if (!(globalThis.CU && globalThis.CU.master === true)) {
     globalThis.toast('Only Master can migrate the orders record.', 'err');
     return;
@@ -117,7 +117,7 @@ export async function migrateRequestsToMonths() {
   }));
   const months = [...new Set(dated.map((row) => String(row.created).slice(0, 7)))].sort();
 
-  const confirmed = await globalThis.uiConfirm(
+  const confirmed = (options && options.silent) || await globalThis.uiConfirm(
     `${dated.length} order(s) will be filed into ${months.length} monthly record(s), from ${months[0]} to ${months[months.length - 1]}.\n\n`
     + 'This removes the size limit that could stop departments submitting orders. Nothing is deleted until every order has been filed, and re-running is safe.\n\n'
     + `سيتم توزيع ${dated.length} طلبًا على ${months.length} سجل شهري. لن يُحذف القديم إلا بعد اكتمال النسخ.`,
@@ -136,7 +136,7 @@ registerStorageCleanup({
   key: REQUESTS_KEY,
   label: 'File orders by month / ترحيل الطلبات للأشهر',
   hint: 'Files orders into one record per month, removing the size limit that could stop departments submitting orders.',
-  run: () => migrateRequestsToMonths(),
+  run: (options) => migrateRequestsToMonths(options),
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
     && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(REQUESTS_KEY)),
 });

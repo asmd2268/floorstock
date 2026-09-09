@@ -1,5 +1,5 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
+import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
@@ -284,7 +284,7 @@ export async function archiveAccountabilityHistory() {
    months. Rows are filed into their months first and the old document removed
    only afterwards, so nothing is deleted before it exists elsewhere; re-running
    is safe because rows are matched by id within a month. */
-export async function migrateAccountabilityUsageToMonths() {
+export async function migrateAccountabilityUsageToMonths(options) {
   if (!isActualMaster()) {
     globalThis.toast('Only Master can migrate the custody records.', 'err');
     return;
@@ -308,7 +308,7 @@ export async function migrateAccountabilityUsageToMonths() {
   }
   const months = [...new Set(rows.map((row) => hijriMonthKey(row.submittedAt || row.consumptionDate)))].sort();
 
-  const confirmed = await globalThis.uiConfirm(
+  const confirmed = (options && options.silent) || await globalThis.uiConfirm(
     `${rows.length} custody usage record(s) will be filed into ${months.length} Hijri month record(s), from `
     + `${hijriMonthLabelBilingual(months[0])} to ${hijriMonthLabelBilingual(months[months.length - 1])}.\n\n`
     + 'This removes the size limit that stopped custody records holding five years. Nothing is deleted until every record has been filed, and re-running is safe.\n\n'
@@ -330,7 +330,7 @@ registerStorageCleanup({
   key: USAGE_KEY,
   label: 'File custody by Hijri month / ترحيل سجل العهد',
   hint: 'Files custody usage into one record per Hijri month, removing the size limit that stopped it holding five years.',
-  run: () => migrateAccountabilityUsageToMonths(),
+  run: (options) => migrateAccountabilityUsageToMonths(options),
   canRun: () => isActualMaster() && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(USAGE_KEY)),
 });
 

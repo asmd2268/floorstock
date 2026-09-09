@@ -8,7 +8,7 @@ import {
   partitionKeysInCache,
   partitionKey,
 } from './month-partitioned-store.js?v=cc6daa3c27';
-import { registerStorageCleanup } from './storage-cleanup.js?v=109ed95049';
+import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.
 
@@ -82,7 +82,7 @@ export function controlledMovesForMonths(monthKeys) {
    their months first and the old home is removed only afterwards, so nothing is
    deleted before it exists elsewhere; re-running is safe because a month's rows
    are matched by id. */
-export async function migrateControlledMovesToMonths() {
+export async function migrateControlledMovesToMonths(options) {
   if (!(globalThis.CU && globalThis.CU.master === true)) {
     globalThis.toast('Only Master can migrate the controlled movement ledger.', 'err');
     return;
@@ -105,7 +105,7 @@ export async function migrateControlledMovesToMonths() {
   }));
   const months = [...new Set(dated.map((row) => hijriMonthKey(row.at)).filter(Boolean))].sort();
 
-  const confirmed = await globalThis.uiConfirm(
+  const confirmed = (options && options.silent) || await globalThis.uiConfirm(
     `${dated.length} controlled/narcotic movement(s) will be filed into ${months.length} Hijri month record(s), from `
     + `${hijriMonthLabelBilingual(months[0])} to ${hijriMonthLabelBilingual(months[months.length - 1])}.\n\n`
     + 'This removes the size limit that stopped the ledger holding five years, and makes reading a month cost one record instead of one per movement. '
@@ -133,7 +133,7 @@ registerStorageCleanup({
   key: CONTROLLED_MOVES_KEY,
   label: 'File ledger by Hijri month / ترحيل السجل للأشهر الهجرية',
   hint: 'Files the movement ledger into one record per Hijri month, removing its size limit and making a month cost one read.',
-  run: () => migrateControlledMovesToMonths(),
+  run: (options) => migrateControlledMovesToMonths(options),
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
     && Array.isArray(globalThis.S && globalThis.S.g && globalThis.S.g(CONTROLLED_MOVES_KEY)),
 });

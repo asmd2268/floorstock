@@ -1,3 +1,5 @@
+import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
+
 /* Storage cleanup registry — one owner, one registry, no wrappers.
 
    Every floorstock_state key is a single Firestore document capped at 1 MiB.
@@ -53,6 +55,40 @@ export function pendingStorageMigrations() {
     && (typeof cleaner.canRun === 'function' ? cleaner.canRun() : true));
 }
 
+/* Runs itself on a master session, so a record never sits in two shapes at once.
+
+   Until a migration ran, a key had a legacy document AND month partitions, and
+   which one a session read depended on what it happened to hold — two versions
+   of the same record, which is exactly what this project refuses to have. The
+   migration is not a deletion: it copies rows into their months and removes the
+   old container only afterwards. Left to a button, it stayed undone and the two
+   shapes stayed. So it is upkeep, and it happens.
+
+   Master only, one at a time, and silent — a migration that has already run
+   registers no action at all, so this does nothing on every session after the
+   first. */
+registerAutoMaintenance({
+  key: 'state_month_migrations',
+  describe: (result) => `${result.ran} record(s) filed by month`,
+  run: async () => {
+    const pending = pendingStorageMigrations();
+    if (!pending.length) return null;
+    let ran = 0;
+    for (const cleaner of pending) {
+      try {
+        // eslint-disable-next-line no-await-in-loop
+        await cleaner.run({ silent: true });
+        ran += 1;
+      } catch (error) {
+        /* Each migration leaves its own record untouched when it fails, so the
+           rest still run and the next session retries this one. */
+        console.error('Automatic migration failed for', cleaner.key, error);
+      }
+    }
+    return ran ? { ran } : null;
+  },
+});
+
 export async function runPendingStorageMigrations() {
   const pending = pendingStorageMigrations();
   if (!pending.length) {
@@ -73,7 +109,7 @@ export async function runPendingStorageMigrations() {
   for (const cleaner of pending) {
     try {
       // eslint-disable-next-line no-await-in-loop
-      await cleaner.run();
+      await cleaner.run({});
       ran += 1;
     } catch (error) {
       /* One failure must not strand the rest: each migration is independent and
