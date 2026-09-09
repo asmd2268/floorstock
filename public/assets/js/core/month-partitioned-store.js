@@ -1,4 +1,5 @@
 import { hijriMonthKey, shiftHijriMonth } from './hijri-calendar.js?v=7cb3fbc1ff';
+import { stableRowFingerprint, isSynthesizedMigrationId } from './row-fingerprint.js?v=9a446bb45d';
 
 /* State keys stored as one document per calendar month.
 
@@ -298,14 +299,28 @@ export async function applyPartitionedArray(key, nextRows) {
 export async function dedupeMonthPartitions(key) {
   if (!monthPartitionSpec(key)) return null;
   const seen = new Set();
+  const fingerprints = new Set();
   let removed = 0;
+  let before = 0;
   for (const docId of partitionKeysInCache(key)) {
     const rows = globalThis.S.cache[docId];
     if (!Array.isArray(rows) || !rows.length) continue;
+    before += rows.length;
     const kept = rows.filter((row) => {
       const id = row && row.id != null ? String(row.id) : null;
       if (!id) return true;
       if (seen.has(id)) { removed += 1; return false; }
+      /* A row that arrived without an id was given one — and it used to be
+         random, so the same row imported twice became two rows with different
+         ids that no id comparison can pair. Only those are matched by content;
+         a row that came with its own id keeps its identity whatever it holds. */
+      if (isSynthesizedMigrationId(id)) {
+        const print = stableRowFingerprint(row);
+        if (print) {
+          if (fingerprints.has(print)) { removed += 1; return false; }
+          fingerprints.add(print);
+        }
+      }
       seen.add(id);
       return true;
     });
@@ -317,7 +332,7 @@ export async function dedupeMonthPartitions(key) {
     globalThis.S.cache[docId] = kept;
   }
   if (removed) scheduleRefresh();
-  return removed ? { key, removed } : null;
+  return removed ? { key, removed, before, after: before - removed } : null;
 }
 
 /* True once a key has been migrated: the single legacy document is gone and the

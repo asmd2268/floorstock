@@ -1,4 +1,4 @@
-import { dedupeMonthPartitions, monthPartitionedKeyNames } from './month-partitioned-store.js?v=e08ef71837';
+import { dedupeMonthPartitions, monthPartitionedKeyNames } from './month-partitioned-store.js?v=405d877017';
 import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 
@@ -39,15 +39,20 @@ export async function repairDuplicatedPartitions({ silent } = {}) {
     return null;
   }
   const removed = repaired.reduce((total, entry) => total + entry.removed, 0);
+  /* Per key, before and after: a total alone cannot tell you whether a record is
+     actually back to its real size, which is the only question worth asking
+     after a repair like this. */
+  const detail = repaired.map((entry) => `${entry.key} ${entry.before}→${entry.after}`).join(' · ');
+  console.info('[partition-repair]', detail);
   if (!silent) {
-    globalThis.toast(`${removed} duplicated row(s) removed from ${repaired.length} record(s). ✓\nتمت إزالة ${removed} صفاً مكرراً.`, 'succ');
+    globalThis.toast(`${removed} duplicated row(s) removed.\n${detail}`, 'succ');
   }
-  return { removed, keys: repaired.map((entry) => entry.key) };
+  return { removed, detail, keys: repaired.map((entry) => entry.key) };
 }
 
 registerAutoMaintenance({
   key: 'partition_duplicate_repair',
-  describe: (result) => `${result.removed} duplicated row(s) removed from ${result.keys.join(', ')}`,
+  describe: (result) => result.detail,
   run: () => repairDuplicatedPartitions({ silent: true }),
 });
 

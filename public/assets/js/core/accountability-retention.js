@@ -4,7 +4,7 @@ import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
-import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=e08ef71837';
+import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=405d877017';
 
 /* Accountability history retention.
 

@@ -8,7 +8,7 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
   partitionKey,
-} from './month-partitioned-store.js?v=e08ef71837';
+} from './month-partitioned-store.js?v=405d877017';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.

@@ -53,3 +53,37 @@ test('the repair runs itself and is offered as a button', async () => {
   assert.match(repair, /registerStorageCleanup\(\{/);
   assert.match(repair, /function isMaster\(\)/);
 });
+
+test('a row that arrived without an id gets the same id every time', async () => {
+  /* Random ids are why 202 orders were still 830 after the id-matched duplicates
+     were removed: the same order imported twice became two rows that no id
+     comparison could pair. */
+  const { stableRowId, stableRowFingerprint, isSynthesizedMigrationId } = await import('../public/assets/js/core/row-fingerprint.js');
+  const row = { dept: 'icu', created: '2026-01-01T00:00:00.000Z', items: [{ med: 'a', qty: 2 }] };
+  const again = { created: '2026-01-01T00:00:00.000Z', items: [{ qty: 2, med: 'a' }], dept: 'icu' };
+  assert.equal(stableRowId('req', row), stableRowId('req', again), 'field order must not change identity');
+  assert.notEqual(stableRowId('req', row), stableRowId('req', { ...row, dept: 'er' }));
+  // The id and the migration flag are not part of what makes a row itself.
+  assert.equal(stableRowFingerprint({ ...row, id: 'x' }), stableRowFingerprint({ ...row, id: 'y', migratedWithoutDate: true }));
+  assert.equal(isSynthesizedMigrationId('req_migrated_1a2b3c'), true);
+  assert.equal(isSynthesizedMigrationId('req_1757000000000_ab12'), false);
+});
+
+test('no migration invents a random identity', async () => {
+  for (const name of ['requests-store.js', 'operational-partitions.js']) {
+    const source = await readFile(new URL(`core/${name}`, jsRoot), 'utf8');
+    assert.ok(!/_migrated_\$\{index\}_\$\{Math\.random/.test(source), `${name} still invents random ids`);
+    assert.match(source, /stableRowId\(/);
+  }
+});
+
+test('content matching applies only to ids this project invented', async () => {
+  /* A row that came with its own id keeps its identity whatever it holds — two
+     real orders may legitimately look alike. */
+  const store = await readFile(new URL('core/month-partitioned-store.js', jsRoot), 'utf8');
+  assert.match(store, /if \(isSynthesizedMigrationId\(id\)\) \{/);
+  // And the repair reports per key, before and after, since a total alone cannot
+  // say whether a record is back to its real size.
+  const repair = await readFile(new URL('core/partition-repair.js', jsRoot), 'utf8');
+  assert.match(repair, /\$\{entry\.key\} \$\{entry\.before\}→\$\{entry\.after\}/);
+});

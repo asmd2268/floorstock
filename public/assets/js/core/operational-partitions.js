@@ -3,7 +3,7 @@ import {
   appendMonthPartitionedRows,
   monthOf,
   monthPartitionSpec,
-} from './month-partitioned-store.js?v=e08ef71837';
+} from './month-partitioned-store.js?v=405d877017';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 import { legacyStateDoc } from './legacy-state-doc.js?v=95b728cbfc';
 
@@ -132,7 +132,8 @@ function legacyRows(key) {
    silently files it under 1970. */
 function prepareRow(row, spec, index) {
   const prepared = Object.assign({}, row);
-  if (!prepared.id) prepared.id = `${spec.key}_migrated_${index}_${Math.random().toString(36).slice(2, 9)}`;
+  // Content-derived, so the same row imported twice is the same row.
+  if (!prepared.id) prepared.id = stableRowId(spec.key, row);
   prepared.id = String(prepared.id);
   if (!monthOf(prepared, monthPartitionSpec(spec.key) || spec)) {
     prepared[spec.dateField[0]] = new Date().toISOString();

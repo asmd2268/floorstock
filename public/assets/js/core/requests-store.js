@@ -5,7 +5,7 @@ import {
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
   partitionKeysInCache,
-} from './month-partitioned-store.js?v=e08ef71837';
+} from './month-partitioned-store.js?v=405d877017';
 import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
 import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 
@@ -113,7 +113,9 @@ export async function migrateRequestsToMonths(options) {
   }
 
   const dated = rows.map((row, index) => Object.assign({}, row, {
-    id: String((row && row.id) || `req_migrated_${index}_${Math.random().toString(36).slice(2, 9)}`),
+    /* Derived from the row's own content, never random: importing the same
+       order twice must produce the same id and land on the row already there. */
+    id: String((row && row.id) || stableRowId('req', row)),
     created: (row && (row.created || row.fulfilledAt)) || new Date().toISOString(),
   }));
   const months = [...new Set(dated.map((row) => String(row.created).slice(0, 7)))].sort();
