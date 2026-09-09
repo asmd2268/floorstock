@@ -158,4 +158,7 @@ export function installStorageCleanupPanel() {
 }
 
 globalThis.renderStorageCleanup = renderStorageCleanup;
+// The login-time size warning names the action registered for the document under
+// pressure rather than giving one piece of advice for every key.
+globalThis.storageCleanupFor = storageCleanupFor;
 globalThis.installStorageCleanupPanel = installStorageCleanupPanel;

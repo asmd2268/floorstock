@@ -157,9 +157,17 @@
         var biggest=measureStateDocuments()[0];
         if(!biggest||biggest.pct<70)return;
         var critical=biggest.pct>=85;
+        /* The advice used to say "archive old orders from Requests" whatever the
+           document was, which is unactionable when the document under pressure is
+           a merge history or a note record — the master was sent to the wrong
+           screen. Each key registers the action that actually shrinks it, so the
+           warning names that one; a key with no action says where to look. */
+        var cleaner=typeof window.storageCleanupFor==='function'?window.storageCleanupFor(biggest.key.replace(/_ledger$/,'')):null;
+        var advice=cleaner?cleaner.label.split(' / ')[0]+' — in System Health.':'Open System Health to see what can be archived.';
+        var adviceAr=cleaner?(cleaner.label.split(' / ')[1]||cleaner.label)+' — من صفحة System Health.':'افتح System Health لمعرفة ما يمكن أرشفته.';
         var msg=(critical?'⚠ ':'')+biggest.key+' is at '+biggest.pct.toFixed(0)+'% of the 1 MiB document limit. '
-          +'Archive old orders from Requests to avoid write failures.\n'
-          +biggest.key+' وصل '+biggest.pct.toFixed(0)+'% من حد المستند. أرشف الطلبات القديمة لتفادي توقف الحفظ.';
+          +advice+'\n'
+          +biggest.key+' وصل '+biggest.pct.toFixed(0)+'% من حد المستند. '+adviceAr;
         if(typeof window.toast==='function')window.toast(msg,critical?'err':'info');
         console.warn('[state-size]',biggest.key,biggest.bytes,'bytes',biggest.pct.toFixed(1)+'%');
       }catch(e){console.error('State size check failed',e)}
