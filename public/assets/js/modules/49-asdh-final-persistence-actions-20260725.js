@@ -702,12 +702,11 @@ function reconcileCrashCartData(carts){
  });
  return {carts:output,changed:changed};
 }
-/* Merged, not overwritten. Every caller reads all the trolleys, changes one and
-   writes them all back, so two pharmacists on two different trolleys used to
-   overwrite each other in silence — the second save carried the first's cart as
-   it looked when that page loaded. saveRowsMerging applies only what THIS caller
-   changed onto whatever the document holds now. */
-window.setCrashCarts=async function(v){var repaired=reconcileCrashCartData(v),out=await saveRowsMerging('crash_carts',repaired.carts);try{await publishPublic(repaired.carts)}catch(e){warnPublicSync('Crash Cart data',e)}return out};
+/* Merged, not overwritten — S.s does that for every key in row-merged-keys.js.
+   Every caller here reads all the trolleys, changes one and writes them all
+   back, so two pharmacists on two different trolleys used to overwrite each
+   other in silence. */
+window.setCrashCarts=async function(v){var repaired=reconcileCrashCartData(v),out=await S.s('crash_carts',repaired.carts);try{await publishPublic(repaired.carts)}catch(e){warnPublicSync('Crash Cart data',e)}return out};
 window.fsReconcileCrashCartData=async function(){var current=typeof crashCarts==='function'?(crashCarts()||[]):[],fixed=reconcileCrashCartData(current);if(fixed.changed){await window.setCrashCarts(fixed.carts);if(typeof renderCrashCarts==='function')renderCrashCarts()}return fixed};
 
 function daysUntil(v){return window.fsDaysUntil?window.fsDaysUntil(v):null}

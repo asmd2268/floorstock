@@ -1007,6 +1007,37 @@ function fsStateInstallCollectionListeners(profile,label){
   });
 }
 
+function fsStatePlainSet(k,v){
+  var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
+  S.cache[k]=v;
+  var write=fsStateSetSmart(k,v).catch(function(error){
+    if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
+    console.error('Persistent save failed for key:',k,error);
+    /* Each key is one Firestore document, capped at 1MiB, and an array-shaped key
+       such as requests grows with use until a write is simply refused. The raw
+       rejection says nothing a pharmacist can act on, so a payload at or near the
+       cap is reported as what it is, with the action that fixes it. The write is
+       never blocked pre-emptively — Firestore decides, this only explains it. */
+    var hint='';
+    try{
+      var bytes=estimateDocBytes(v);
+      if(bytes>=0.9*1048576){
+        /* Reaching this now means the split above did not run — a value with no
+           seam to split on, such as a single oversized field. Naming the record
+           and its size is the actionable part; the old text sent every such
+           failure to the Requests page whatever the record was. */
+        hint=' The '+k+' record is '+(bytes/1048576).toFixed(2)+' MB and cannot be divided into smaller documents.'
+          +' Open System Health to see it and what can be archived.'
+          +'\nسجل '+k+' تجاوز حد المستند ولا يمكن تقسيمه. افتح System Health لمعرفة ما يمكن أرشفته.';
+      }
+    }catch(sizeError){}
+    toast('Save failed — Firebase rejected the update.'+hint,'err');
+    throw error;
+  });
+  return _trackSave(write,'floorstock_state/'+k);
+
+}
+
 globalThis.S = {
   cache:{},ready:false,stateUnsub:null,collectionUnsubs:null,__collectionRowsById:{},usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,cacheKey:'',
   persistLocalCache:function(){
@@ -1474,34 +1505,23 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       });
       return _trackSave(spread,'floorstock_state/'+k+' (split)');
     }
-    var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
-    S.cache[k]=v;
-    var write=fsStateSetSmart(k,v).catch(function(error){
-      if(prev===undefined)delete S.cache[k];else S.cache[k]=prev;
-      console.error('Persistent save failed for key:',k,error);
-      /* Each key is one Firestore document, capped at 1MiB, and an array-shaped key
-         such as requests grows with use until a write is simply refused. The raw
-         rejection says nothing a pharmacist can act on, so a payload at or near the
-         cap is reported as what it is, with the action that fixes it. The write is
-         never blocked pre-emptively — Firestore decides, this only explains it. */
-      var hint='';
-      try{
-        var bytes=estimateDocBytes(v);
-        if(bytes>=0.9*1048576){
-          /* Reaching this now means the split above did not run — a value with no
-             seam to split on, such as a single oversized field. Naming the record
-             and its size is the actionable part; the old text sent every such
-             failure to the Requests page whatever the record was. */
-          hint=' The '+k+' record is '+(bytes/1048576).toFixed(2)+' MB and cannot be divided into smaller documents.'
-            +' Open System Health to see it and what can be archived.'
-            +'\nسجل '+k+' تجاوز حد المستند ولا يمكن تقسيمه. افتح System Health لمعرفة ما يمكن أرشفته.';
-        }
-      }catch(sizeError){}
-      toast('Save failed — Firebase rejected the update.'+hint,'err');
-      throw error;
-    });
-    return _trackSave(write,'floorstock_state/'+k);
+    /* A key that holds a list several people edit at once is written as a diff
+       — what THIS caller changed, applied to whatever the document holds now —
+       so two people working on two different rows stop overwriting each other.
+       Everything else keeps the plain whole-value write. */
+    if(Array.isArray(v)&&isRowMergedKey(k)){
+      var merged=saveRowsMerging(k,v,{fallback:function(){return fsStatePlainSet(k,v)}}).catch(function(error){
+        console.error('Merged save failed for key:',k,error);
+        toast('Save failed — '+String(error&&error.message||error),'err');
+        throw error;
+      });
+      return _trackSave(merged,'floorstock_state/'+k+' (merged)');
+    }
+    return fsStatePlainSet(k,v);
   },
+  /* The plain whole-value write, and the only place the cache is rolled back
+     when Firestore refuses one. */
+  __plainSet:function(k,v){return fsStatePlainSet(k,v)},
   rm:function(k){
     var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     delete S.cache[k];

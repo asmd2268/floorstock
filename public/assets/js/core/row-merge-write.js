@@ -63,7 +63,11 @@ export function applyIntent(serverRows, intent) {
 /* Saves `nextRows` for `key`, merging with whatever the document holds now.
    `baseline` is what the caller had read — the cached value by default, which is
    exactly what every caller in this app reads before editing. */
-export async function saveRowsMerging(key, nextRows, baseline) {
+/* `fallback` performs the plain whole-value write and is required: this is
+   called from S.s, so falling back through S.s would call straight back into
+   here. */
+export async function saveRowsMerging(key, nextRows, { baseline, fallback } = {}) {
+  if (typeof fallback !== 'function') throw new Error('saveRowsMerging needs a fallback writer.');
   const previous = Array.isArray(baseline)
     ? baseline
     : (globalThis.S && Array.isArray(globalThis.S.cache[key]) ? globalThis.S.cache[key] : []);
@@ -74,7 +78,7 @@ export async function saveRowsMerging(key, nextRows, baseline) {
   /* No transaction available (REST transport, or Firestore not ready): fall back
      to the plain whole-array write rather than refusing to save. The race is
      narrower than losing the edit outright. */
-  if (!ref || !globalThis.FB_DB.runTransaction) return globalThis.S.s(key, nextRows);
+  if (!ref || !globalThis.FB_DB.runTransaction) return fallback();
 
   const merged = await globalThis.FB_DB.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);

@@ -46,10 +46,28 @@ test('adding and removing carry across too, without duplicating', () => {
   assert.deepEqual(applyIntent([cart('b', '2')], readd).map((row) => row.id), ['b']);
 });
 
-test('the crash carts go through it, and a missing transaction still saves', async () => {
+test('the merge lives in the one writer, not at the call sites', async () => {
+  /* S.s decides, from one list of keys, whether a save is a diff or a plain
+     write — so no caller has to know, and none can forget. */
+  const stateModule = await readFile(new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url), 'utf8');
+  assert.match(stateModule, /if\(Array\.isArray\(v\)&&isRowMergedKey\(k\)\)\{/);
+  assert.match(stateModule, /saveRowsMerging\(k,v,\{fallback:function\(\)\{return fsStatePlainSet\(k,v\)\}\}\)/);
   const persistence = await readFile(new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url), 'utf8');
-  assert.match(persistence, /saveRowsMerging\('crash_carts',repaired\.carts\)/);
+  assert.match(persistence, /S\.s\('crash_carts',repaired\.carts\)/);
+});
+
+test('the keys that merge are the shared lists, and the fallback cannot recurse', async () => {
+  const { isRowMergedKey } = await import('../public/assets/js/core/row-merged-keys.js');
+  for (const key of ['crash_carts', 'departments', 'controlled_catalog', 'meds_icu', 'expiry_icu', 'shelves_icu']) {
+    assert.equal(isRowMergedKey(key), true, key);
+  }
+  // A settings map or a single object nobody edits in parallel keeps the plain write.
+  for (const key of ['theme', 'req_windows', 'controlled_warehouse', 'facility_logo']) {
+    assert.equal(isRowMergedKey(key), false, key);
+  }
   const merge = await readFile(new URL('../public/assets/js/core/row-merge-write.js', import.meta.url), 'utf8');
-  // Refusing to save would be worse than the race it prevents.
-  assert.match(merge, /if \(!ref \|\| !globalThis\.FB_DB\.runTransaction\) return globalThis\.S\.s\(key, nextRows\);/);
+  // Refusing to save would be worse than the race it prevents — but the fallback
+  // must be the plain write, not S.s, which would come straight back here.
+  assert.match(merge, /if \(!ref \|\| !globalThis\.FB_DB\.runTransaction\) return fallback\(\);/);
+  assert.match(merge, /if \(typeof fallback !== 'function'\) throw new Error/);
 });
