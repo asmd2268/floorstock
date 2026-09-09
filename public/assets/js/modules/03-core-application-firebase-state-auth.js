@@ -398,7 +398,21 @@ globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
 function fsIsPharmacyScopedProfile(profile){
   return !!profile&&['inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor','pharmacy_staff'].includes(String(profile.role||''));
 }
+/* Every role's key list ends here, so a key named twice — once in the role's
+   static list and once as a partitioned base key — is read once. */
+function fsUniqueKeys(keys){
+  var seen={};
+  return (keys||[]).filter(function(key){
+    if(seen[key])return false;
+    seen[key]=true;
+    return true;
+  });
+}
 function fsStateKeysForProfile(profile){
+  var keys=fsStateKeysForProfileRaw(profile);
+  return keys?fsUniqueKeys(keys):keys;
+}
+function fsStateKeysForProfileRaw(profile){
   if(!profile)return null;
   if(profile.master===true)return null;
   if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.concat(fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
@@ -525,6 +539,19 @@ function fsRecentLedgerKeys(monthsBack){
   var keys=[];
   monthPartitionedKeyNames().forEach(function(key){
     var spec=monthPartitionSpec(key),months=spec&&spec.sessionMonths!=null?spec.sessionMonths:monthsBack;
+    /* The legacy single document comes too, for every role.
+
+       S.g decides where a key's rows live by asking whether that document is
+       still in the session cache — and until this line, whether it was depended
+       on WHO was asking. Master lists the whole collection and therefore held
+       it, so master read the legacy record; a scoped role never requested it, so
+       the same key resolved to the month partitions. Two roles, one key, two
+       different sets of rows — which is exactly why a badge read 2 for master
+       and something else for the pharmacy account.
+
+       Once migrated the document does not exist and every role agrees the
+       partitions are live. Until then every role agrees they are not. */
+    keys.push(key);
     keys=keys.concat(recentPartitionKeys(key,months));
   });
   return keys;
@@ -920,6 +947,14 @@ function fsStateListCollectionKeysOnce(profile){
     });
   });
 }
+/* A refresh that respects the opening wave: while a scoped session is still
+   receiving its first snapshots, the cache is filled but nothing is drawn, so
+   the page is never rendered from a half-arrived state. Outside that window it
+   is an ordinary scheduleRefresh. */
+function fsRefreshWhenSettled(){
+  if(typeof S.__scopedWaveComplete==='function'&&!S.__scopedWaveComplete())return;
+  S.scheduleRefresh();
+}
 function fsStateInstallCollectionListeners(profile,label){
   S.__collectionRowsById=S.__collectionRowsById||{};
   S.__collectionListenerLive={};
@@ -942,7 +977,7 @@ function fsStateInstallCollectionListeners(profile,label){
       var next=sortCollectionRows(spec,Object.keys(byId).map(function(id){return byId[id]}));
       if(!stateValueEqual(S.cache[spec.key],next)){
         S.cache[spec.key]=next;
-        S.scheduleRefresh();
+        fsRefreshWhenSettled();
       }
     },function(error){
       /* Console-only was the whole problem: a pending report simply never
@@ -1260,7 +1295,36 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       S.pollRest();
       S.pollTimer=setInterval(function(){S.pollRest();},30000);
     }
+    /* A scoped role reads ~40 individual documents, and each listener delivers
+       its first snapshot on its own schedule. Every one of them asked for a
+       render, so the page was drawn again and again over the first seconds of a
+       session, each time from a DIFFERENT partially-arrived state: a badge
+       counting pending custody rows showed 2, then 0, then 2, depending on
+       whether that key's document had landed yet.
+
+       Master never saw it, because master reads the whole collection in one
+       snapshot and therefore has only ever had one state to draw.
+
+       So the opening wave is treated as one arrival: snapshots are applied to
+       the cache as they come, and the first render waits until every listener
+       has spoken — or until the deadline, so one slow or denied document cannot
+       hold the page back. After that, each change refreshes as it always did. */
+    var openingWave=keys.length,waveSettled=false;
+    var waveDeadline=setTimeout(function(){finishWave()},2500);
+    function finishWave(){
+      if(waveSettled)return;
+      waveSettled=true;
+      clearTimeout(waveDeadline);
+      S.scheduleRefresh();
+    }
+    function waveArrived(){
+      if(waveSettled)return;
+      openingWave-=1;
+      if(openingWave<=0)finishWave();
+    }
+    S.__scopedWaveComplete=function(){return waveSettled};
     S.scopedUnsubs=keys.map(function(key){
+      var first=true;
       return fsStateSdkCollection().doc(key).onSnapshot(function(snapshot){
         // A document Firestore has never cached locally can fire an initial
         // "exists: false" snapshot straight from the empty local cache,
@@ -1271,11 +1335,16 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
         // snapshot instead. A genuine deletion still lands right after.
         if(snapshot.metadata.fromCache&&!snapshot.exists&&Object.prototype.hasOwnProperty.call(S.cache,key))return;
         var next=snapshot.exists?snapshot.data().value:null;
-        if(!stateValueEqual(S.cache[key],next)){
-          S.cache[key]=next;
-          S.scheduleRefresh();
-        }
-      },fallBackToRest);
+        var changed=!stateValueEqual(S.cache[key],next);
+        if(changed)S.cache[key]=next;
+        if(first){first=false;waveArrived();}
+        // During the opening wave the cache is filled quietly; finishWave draws
+        // it once, whole.
+        if(changed&&waveSettled)S.scheduleRefresh();
+      },function(error){
+        if(first){first=false;waveArrived();}
+        fallBackToRest(error);
+      });
     });
     S.collectionUnsubs=fsStateInstallCollectionListeners(profile,'scoped');
   },
@@ -1332,6 +1401,9 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     // The fallback poll only exists while a collection listener is down; a new
     // session installs its own listeners and must not inherit the old one's.
     if(S.__collectionRestFallbackTimer){clearInterval(S.__collectionRestFallbackTimer);S.__collectionRestFallbackTimer=null;}
+    // The opening-wave gate belongs to the listeners that were just torn down;
+    // leaving it behind would hold the next session's first render forever.
+    S.__scopedWaveComplete=null;
     S.pollBusy=false;
   },
   scheduleRefresh:function(){

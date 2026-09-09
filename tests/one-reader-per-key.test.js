@@ -57,3 +57,34 @@ test('the pending-custody badge and the page it counts read the same way', async
   assert.match(badges, /S\.g\('accountability_usage_v2'\)/);
   assert.match(page, /function acc2Array\(key\)\{[\s\S]{0,400}?var value=S\.g\(key\)/);
 });
+
+test('a key resolves to the same place for every role', () => {
+  /* S.g decides where a key's rows live by asking whether the legacy document is
+     in the session cache — so the answer used to depend on WHO was asking.
+     Master lists the whole collection and held it, and read the legacy record; a
+     scoped role never requested it and read the month partitions instead. One
+     key, two roles, two different sets of rows: a badge showed 2 for master and
+     something else for the pharmacy account, permanently. Every role now holds
+     the legacy document, so every role reaches the same answer. */
+  assert.match(stateModule, /keys\.push\(key\);\s*\n\s*keys=keys\.concat\(recentPartitionKeys\(key,months\)\)/);
+  // Named twice — in a role's static list and as a partitioned base key — must
+  // still be read once.
+  assert.match(stateModule, /function fsUniqueKeys\(keys\)/);
+  assert.match(stateModule, /return keys\?fsUniqueKeys\(keys\):keys/);
+});
+
+test('a scoped session draws once its opening snapshots have landed', () => {
+  /* ~40 per-document listeners each delivering on their own schedule, each
+     asking for a render, meant the page was drawn repeatedly from different
+     half-arrived states. Master reads one collection snapshot and never saw it. */
+  assert.match(stateModule, /var openingWave=keys\.length,waveSettled=false/);
+  assert.match(stateModule, /if\(changed&&waveSettled\)S\.scheduleRefresh\(\)/);
+  // A slow or denied document must not hold the page back forever.
+  assert.match(stateModule, /waveDeadline=setTimeout\(function\(\)\{finishWave\(\)\},2500\)/);
+  // A listener that errors still counts as having spoken.
+  assert.match(stateModule, /\},function\(error\)\{\s*\n\s*if\(first\)\{first=false;waveArrived\(\);\}/);
+  // The collection listener waits for the same wave.
+  assert.match(stateModule, /function fsRefreshWhenSettled\(\)/);
+  // And the gate is dropped with the listeners it belongs to.
+  assert.match(stateModule, /S\.__scopedWaveComplete=null;/);
+});
