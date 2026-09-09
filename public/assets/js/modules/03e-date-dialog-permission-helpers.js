@@ -134,7 +134,22 @@ window.fsPrepareImageDataUrl=async function(file,options){
   }
   throw new Error('The processed logo is still larger than 500 KB. Choose a smaller image.');
 };
-window.fsEffectiveUser=function(){return (window.MASTER_EFFECTIVE&&Object.assign({},window.CU||{},window.MASTER_EFFECTIVE))||(window.CU||{})};
+/* Who the app is acting as — one answer, from one place.
+
+   There were three. window.CU, which test mode already rewrites into the tested
+   user; this function, which merged MASTER_EFFECTIVE over it; and four call
+   sites that wrote `MASTER_EFFECTIVE||CU` by hand. The third is the dangerous
+   one: MASTER_EFFECTIVE is not a user, it is a four-field note about test mode
+   (mode, testedUserId, email, role, deptId), so those sites saw a user with no
+   id, no username and no master flag whenever test mode was on — and read
+   role and deptId off it only because it happens to carry them.
+
+   CU IS the effective user: entering test mode substitutes it wholesale, with
+   master:false, and leaving restores it. So this returns CU, and test-mode
+   metadata is fetched through fsTestMode() by the banner that displays it —
+   never as an identity. */
+window.fsEffectiveUser=function(){return window.CU||{}};
+window.fsTestMode=function(){return window.MASTER_EFFECTIVE||null};
 window.fsEffectiveRole=function(){var u=window.fsEffectiveUser();return normalizeRole(u.role)};
 window.fsActualUser=function(){return (window.MASTER_ACTUAL||window.CU||{})};
 window.fsActor=function(){var u=window.fsActualUser(),name=(typeof window.actualActorName==='function'?window.actualActorName():(u.name||u.fullName||u.displayName||u.username||u.email||'Unknown'));return {name:name,user:u.email||u.username||u.id||u.uid||'Unknown',id:u.id||u.uid||''}};

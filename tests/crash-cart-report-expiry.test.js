@@ -113,9 +113,9 @@ test('the checkbox says what ticking it does', async () => {
      no order to them. */
   const response = await readFile(new URL('modules/80-controlled-pharmacy-ui-redesign.js', jsRoot), 'utf8');
   const css = await readFile(new URL('../public/assets/css/modules/03-styles-13-18.css', import.meta.url), 'utf8');
-  assert.match(response, /Out of pharmacy stock \/ غير متوفر بالصيدلية/);
-  assert.match(response, /Close with no replacement — the cart stays below standard/);
-  assert.match(response, /Leave as it is \/ اتركه كما هو/);
+  assert.match(response, /ما عندي هذا الدواء الآن \/ I have none of this medicine/);
+  assert.match(response, /the quantity becomes 0, the report closes, and the cart stays short/);
+  assert.match(response, /لا تغيير على هذا الصنف \/ Do not touch this medicine/);
   assert.match(css, /\.ccc-unavailable-note\{/);
   // The outcome line is its own band, not more text under the medicine name.
   assert.match(css, /\.ccc-row-result:empty\{display:none\}/);

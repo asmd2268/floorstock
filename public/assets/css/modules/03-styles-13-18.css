@@ -23,7 +23,11 @@
 .ccc-unavailable-label input{margin:2px 0 0;flex:0 0 auto}
 .ccc-unavailable-label>span{display:flex;flex-direction:column;gap:1px}
 .ccc-unavailable-title{font-size:10px;font-weight:700;color:var(--yll)}
-.ccc-unavailable-note{font-size:9.5px;font-weight:500;line-height:1.35;color:var(--tx2)}
+.ccc-unavailable-note{font-size:10px;font-weight:500;line-height:1.45;color:var(--tx2)}
+/* Ticked, the choice has to be unmistakable — this is the control that closes a
+   cart short of a medicine, and it is used by people who do not know the system. */
+.ccc-unavailable-label:has(input:checked){border-color:var(--yl,#e0a800);background:rgba(224,168,0,.14)}
+.ccc-unavailable-label input{width:15px;height:15px;accent-color:var(--yl,#e0a800)}
 .crash-response-table tr.crash-response-error>td{background:rgba(218,54,51,.22)!important}
 .crash-response-error .ccc-row-result{background:rgba(218,54,51,.16);color:var(--rdl)}.crash-response-validation{margin:10px;padding:9px 11px;border-radius:8px;font-size:12px;font-weight:700}.crash-response-validation.ok{border:1px solid var(--gn);background:rgba(46,160,67,.1);color:var(--gnl)}.crash-response-validation.err{border:1px solid var(--rd);background:rgba(218,54,51,.1);color:var(--rdl)}
 /* Medication Accountability v2 */

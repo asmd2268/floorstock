@@ -33,7 +33,7 @@ function openStockX(id,scope){ensureModalsX();var m=medX(id)||{},data={},title='
 window.openControlledDepartmentStockEditor=function(id){openStockX(id,'department');return true};
 window.ctlEditPharmacyStock=function(id){if(!officerX())return toastX('No permission','err');openStockX(id,'pharmacy');if(typeof window.markControlledStockOptional==='function')window.markControlledStockOptional()};
 
-function resolveDeptX(){var id=(window.CU&&CU.deptId)||(window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.deptId)||'';var ds=typeof window.gd==='function'?(gd()||[]):[];return ds.find(function(d){return String(d.id)===String(id)})||null}
+function resolveDeptX(){var user=typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():(window.CU||{});var id=user.deptId||user.departmentId||'';var ds=typeof window.gd==='function'?(gd()||[]):[];return ds.find(function(d){return String(d.id)===String(id)})||null}
 /* The New Request table is rebuilt by refreshCurrentPage() on every state
    refresh, and a department session watches ~35 documents that each arrive
    separately after login. Keys this page never reads (theme, crash_carts,

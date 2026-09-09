@@ -136,7 +136,7 @@ function ensureDeptToolsC(){if(window.CTL_VIEW!=='departments'||!E('ctl-departme
 // logic of its own outside the 'analytics' CTL_VIEW branch.)
 window.renderControlled=function(){
   if(!window.CU)return;
-  var effective=window.MASTER_EFFECTIVE||window.CU||{};
+  var effective=(typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():window.CU||{});
   var effectiveRole=String(effective.role||'');
   var overview=E('ctl-overview-view');
   var departments=E('ctl-departments-view');

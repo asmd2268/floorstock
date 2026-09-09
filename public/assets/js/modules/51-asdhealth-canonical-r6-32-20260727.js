@@ -247,7 +247,7 @@ window.doPrint=function(){
 /* My controlled list: department read-only view and one-page A4 print. */
 
 function fsR5ControlledDept(){
-  var effective=window.MASTER_EFFECTIVE||window.CU||{},value='';
+  var effective=(typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():window.CU||{}),value='';
   try{if(typeof window.ctlCurrentDept==='function')value=window.ctlCurrentDept()||''}catch(e){}
   if(!value)value=effective.deptId||effective.departmentId||effective.department||'';
   var selector=fsR5E('ctl-dept');
@@ -559,7 +559,7 @@ window.ctlDeptFinalToggle=function(){
   return Promise.resolve(window.renderDepartmentControlledPanel()).catch(function(e){console.error('Controlled department render failed',e);if(typeof toast==='function')toast('Unable to render controlled department panel.','err');throw e});
 };
 window.renderDepartmentControlledPanel=async function(){
-  var effective=window.MASTER_EFFECTIVE||window.CU||{};
+  var effective=(typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():window.CU||{});
   if(String(effective.role||'')!=='department')return false;
   var outer=fsR5E('ctl-departments-view');
   // Render into a dedicated child panel instead of overwriting ctl-departments-view's
@@ -707,7 +707,7 @@ function fsDeptNameAr(deptId,englishName){
 }
 
 function fsR5ControlledPrintHtml(dept,rows){
-  var effective=window.MASTER_EFFECTIVE||window.CU||{};
+  var effective=(typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():window.CU||{});
   var name=window.floorstockDepartmentName({
     id:dept,
     name:effective.deptName||effective.departmentName

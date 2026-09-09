@@ -278,7 +278,10 @@ function showPgCore(id){
   var targetPage = E(id);
   if(targetPage) targetPage.style.removeProperty('display');
 
-  if(id==='pg-controlled'&&((window.MASTER_EFFECTIVE&&MASTER_EFFECTIVE.role==='department')||(window.CU&&CU.role==='department')))window.CTL_VIEW='departments';
+  // The role comes from the one effective-identity accessor; test mode already
+  // substitutes CU, so asking the test-mode note for a role is asking a second
+  // source the same question.
+  if(id==='pg-controlled'&&(typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String((window.CU||{}).role||''))==='department')window.CTL_VIEW='departments';
   var res = runBaseShowPg(id);
 
   var activePage = document.querySelector('.pg.on');
