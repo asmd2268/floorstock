@@ -54,7 +54,17 @@ const noteSchemaSource = fs.readFileSync(
   new URL('../public/assets/js/core/department-note-schema.js', import.meta.url),
   'utf8',
 );
+/* Master Test Mode moved out of modules/51 into its own core module; the screen
+   and its rules are unchanged, so these assertions follow it. */
 const masterTestSource = fs.readFileSync(
+  new URL('../public/assets/js/core/master-test-mode-ui.js', import.meta.url),
+  'utf8',
+);
+/* Printing still lives in modules/51. It was read through masterTestSource
+   while both happened to share that file — one name for two unrelated things,
+   which is how the print assertions started failing on a move that had nothing
+   to do with printing. */
+const canonicalModuleSource = fs.readFileSync(
   new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
   'utf8',
 );
@@ -483,11 +493,11 @@ test('request limits freeze New Request, drafts never expire, and session filter
 
 
 test('Print Orders uses a CSP-safe external runtime and creates a PDF matching the selected orientation', () => {
-  assert.match(masterTestSource, /new URL\('\.\/print-orders\.html',window\.location\.href\)/);
-  assert.match(masterTestSource, /localStorage\.setItem\(storageKey,JSON\.stringify\(payload\)\)/);
-  assert.match(masterTestSource, /__ASDH_PRINT_ORDER_JOBS__/);
-  assert.doesNotMatch(masterTestSource, /popup\.document\.write\(fsR5OrdersHtml\(orders\)\)/);
-  assert.doesNotMatch(masterTestSource, /Preparing Landscape PDF/);
+  assert.match(canonicalModuleSource, /new URL\('\.\/print-orders\.html',window\.location\.href\)/);
+  assert.match(canonicalModuleSource, /localStorage\.setItem\(storageKey,JSON\.stringify\(payload\)\)/);
+  assert.match(canonicalModuleSource, /__ASDH_PRINT_ORDER_JOBS__/);
+  assert.doesNotMatch(canonicalModuleSource, /popup\.document\.write\(fsR5OrdersHtml\(orders\)\)/);
+  assert.doesNotMatch(canonicalModuleSource, /Preparing Landscape PDF/);
 
   assert.match(printOrdersPageSource, /src="\.\/assets\/js\/print-orders-runtime\.js\?v=R6\.75\.0"/);
   assert.doesNotMatch(printOrdersPageSource, /<script>(?!\s*<\/script>)/);

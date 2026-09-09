@@ -84,10 +84,13 @@ test('leaving test mode returns the Master exactly as they signed in', () => {
   assert.equal(isTestingAnotherRole({ role: 'department' }), true);
 });
 
-test('the module that owned this now delegates to it', async () => {
+test('the screen delegates to these rules instead of restating them', async () => {
+  /* The screen moved out of modules/51 into core/master-test-mode-ui.js; the
+     rules stayed here, which is the point of the split. */
+  const ui = await readFile(new URL('../public/assets/js/core/master-test-mode-ui.js', import.meta.url), 'utf8');
+  assert.match(ui, /buildTestSession\(/);
+  assert.match(ui, /restoreActualSession\(/);
+  assert.ok(!/master:false,/.test(ui.replace(/\/\*[\s\S]*?\*\//g, '')), 'the session shape belongs to core/master-test-mode.js');
   const module51 = await readFile(new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url), 'utf8');
-  assert.match(module51, /buildTestSession\(/);
-  assert.match(module51, /restoreActualSession\(/);
-  // The rules must live in one place, not be restated in the handler.
-  assert.ok(!/master:false,/.test(module51.replace(/\/\*[\s\S]*?\*\//g, '')), 'the session shape belongs to core/master-test-mode.js');
+  assert.ok(!/masterApplyRole/.test(module51), 'the screen no longer lives in module 51');
 });

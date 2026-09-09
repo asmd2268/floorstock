@@ -35,8 +35,10 @@ test('nothing reads a user field off the test-mode note', async () => {
      that made it a second identity source. Asking whether test mode is ON is
      fine — that is what the note is for. */
   for (const { path, text } of await sources()) {
-    // The module that owns the note may read its own fields.
-    if (path.includes('51-asdhealth-canonical') || path.includes('07-expiry-requests')) continue;
+    /* The modules that OWN the note may read its own fields: the test-mode
+       screen that writes it, and the header that displays which role is being
+       tested. Everywhere else asks fsEffectiveUser(). */
+    if (path.includes('master-test-mode-ui') || path.includes('51-asdhealth-canonical') || path.includes('07-expiry-requests')) continue;
     // Strip comments: the accessor's own docblock names the shapes it replaced.
     const code = text.replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
     const identityReads = code.match(/MASTER_EFFECTIVE\s*(\.\s*(role|deptId|departmentId|email|username|id|master)|\|\|\s*(window\.)?CU)/g) || [];
