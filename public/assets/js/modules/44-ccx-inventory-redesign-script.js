@@ -60,6 +60,10 @@ function itemLevel(item){var bs=(item&&item.batches)||[];if(!bs.length)return'mi
 function cartLevel(cart){var xs=(cart&&cart.items)||[];if(!xs.length)return'missing';var level='normal';xs.forEach(function(it){var l=itemLevel(it);if(RANK[l]>RANK[level])level=l});return level}
 function levelLabel(l){return {expired:'Expired / منتهي',urgent:'Urgent / عاجل',near:'Near expiry / قريب',normal:'Normal / طبيعي',missing:'Missing expiry / بدون تاريخ'}[l]||l}
 function fmt(v){try{return typeof fmtDate==='function'?fmtDate(v):String(v||'—')}catch(e){return String(v||'—')}}
+/* When something HAPPENED, as opposed to the day a batch expires. A department
+   opens a Crash Cart at a moment — the pharmacy needs the hour, not just the
+   date, to know whether a report is from this shift or the last one. */
+function fmtWhen(v){try{return typeof fmtDateTime==='function'?fmtDateTime(v):fmt(v)}catch(e){return fmt(v)}}
 function canManage(){return window.fsCanManageCrashCart?window.fsCanManageCrashCart():(typeof canManageCrashCart==='function'&&canManageCrashCart())}
 function canEditContents(){return typeof window.isMaster==='function'&&window.isMaster()}
 function isDepartmentRole(){return !!window.CU&&(['department','department_employee'].indexOf(String(CU.role||''))>=0||typeof window.fsEffectiveRole==='function'&&window.fsEffectiveRole()==='department')}
@@ -110,7 +114,7 @@ function reportCard(r,c){
     ?'<div style="margin-top:8px"><button class="btn bs bsm" onclick="ccxOpenReport(\''+escx(r.id)+'\')">↻ Respond to report / الرد على البلاغ</button></div>'
     :(!canOperate)?'':'<div style="margin-top:8px"><span class="btn bd2c bsm" onclick="ccxOpenReport(\''+escx(r.id)+'\')">Open and respond / فتح والرد</span></div>';
   var ncBadge=r.noConsumption?'<span dir="ltr" style="background:var(--bl,#3498db);color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:6px">🔵 No Consumption · لا يوجد استهلاك</span>':'';
-  return '<div class="ccx-alert-card"><div class="ccx-alert-title">⚠ '+escx(deptName(r.deptId))+' — '+escx((c&&c.name)||'Crash Cart')+badge+ncBadge+'</div><div class="fhint">'+escx(r.reason||'Opening report')+'</div><div class="fhint">'+escx(r.openedBy||'')+' · '+escx(fmt(r.openedAt))+'</div>'+actions+'</div>'
+  return '<div class="ccx-alert-card"><div class="ccx-alert-title">⚠ '+escx(deptName(r.deptId))+' — '+escx((c&&c.name)||'Crash Cart')+badge+ncBadge+'</div><div class="fhint">'+escx(r.reason||'Opening report')+'</div><div class="fhint">'+escx(r.openedBy||'')+' · '+escx(fmtWhen(r.openedAt))+'</div>'+actions+'</div>'
 }
 window.ccxOpenReport=function(reportId){var r=(typeof crashReports==='function'?crashReports():[]).find(function(x){return String(x.id)===String(reportId)});if(!r)return;var c=typeof crashCart==='function'?crashCart(r.cartId):null;if(E('ccx-dept')&&!isDepartment())E('ccx-dept').value=r.deptId||'';if(E('ccx-state'))E('ccx-state').value='open';if(E('ccx-search'))E('ccx-search').value='';window.renderCrashCarts();var card=E('ccx-cart-'+r.cartId);if(card)card.scrollIntoView({behavior:'smooth',block:'start'});if(canManage()&&(r.status==='open'||r.status==='pending')&&typeof crashCloseReport==='function')crashCloseReport(r.id);};
 function latestClosedReport(cartId){return (typeof crashReports==='function'?crashReports():[]).filter(function(r){return String(r.cartId)===String(cartId)&&r.status==='closed'}).sort(function(a,b){return String(b.closedAt||b.lastEditedAt||'').localeCompare(String(a.closedAt||a.lastEditedAt||''))})[0]||null}

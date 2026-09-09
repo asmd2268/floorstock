@@ -1,3 +1,10 @@
+/* A note is raised at a moment. The pharmacy answers "when did they write
+   this?" from this line, and a date alone cannot tell yesterday evening from
+   this morning. */
+function noteWhen(value){
+  try{ return typeof globalThis.fmtDateTime==='function' ? globalThis.fmtDateTime(value) : globalThis.fmtDate(value); }
+  catch(error){ return globalThis.fmtDate ? globalThis.fmtDate(value) : String(value||''); }
+}
 function renderDeptNotes(){
   var user=globalThis.CU;
   if(!user||user.role!=='department')return;
@@ -8,7 +15,7 @@ function renderDeptNotes(){
   list.innerHTML=notes.map(function(n){
     var safeType=globalThis.asdhDepartmentNoteUtils.noteType(n.type),safeStatus=globalThis.asdhDepartmentNoteUtils.noteStatus(n.status),label=globalThis.NOTE_TYPE_LABELS[safeType]||safeType;
     var cls=safeStatus==='resolved'?'note-resolved':safeStatus==='urgent'?'note-urgent':'note-open';
-    return '<div class="note-card '+cls+'"><div class="fl jb ic" style="flex-wrap:wrap;gap:6px"><div style="font-weight:600">'+globalThis.asdhDepartmentNoteUtils.noteEsc(n.medName)+(n.medName?' — ':'')+globalThis.asdhDepartmentNoteUtils.noteEsc(label)+'</div><span class="badge note-badge-'+safeStatus+'">'+globalThis.asdhDepartmentNoteUtils.noteEsc(safeStatus)+'</span></div><div style="margin-top:6px;color:var(--tx)">'+globalThis.asdhDepartmentNoteUtils.noteEsc(n.body)+'</div>'+(n.reply?'<div style="margin-top:8px;padding:8px 10px;background:rgba(46,160,67,.08);border-left:2px solid var(--gn);border-radius:4px;font-size:12px"><b>Pharmacy reply:</b> '+globalThis.asdhDepartmentNoteUtils.noteEsc(n.reply)+'</div>':'')+'<div class="note-meta"><span>'+globalThis.asdhDepartmentNoteUtils.noteEsc(globalThis.fmtDate(n.created))+'</span><span class="note-tag ntag-'+safeType+'">'+globalThis.asdhDepartmentNoteUtils.noteEsc(label)+'</span>'+(n.priority==='urgent'?'<span class="badge brd">🚨 Urgent</span>':'')+'</div></div>';
+    return '<div class="note-card '+cls+'"><div class="fl jb ic" style="flex-wrap:wrap;gap:6px"><div style="font-weight:600">'+globalThis.asdhDepartmentNoteUtils.noteEsc(n.medName)+(n.medName?' — ':'')+globalThis.asdhDepartmentNoteUtils.noteEsc(label)+'</div><span class="badge note-badge-'+safeStatus+'">'+globalThis.asdhDepartmentNoteUtils.noteEsc(safeStatus)+'</span></div><div style="margin-top:6px;color:var(--tx)">'+globalThis.asdhDepartmentNoteUtils.noteEsc(n.body)+'</div>'+(n.reply?'<div style="margin-top:8px;padding:8px 10px;background:rgba(46,160,67,.08);border-left:2px solid var(--gn);border-radius:4px;font-size:12px"><b>Pharmacy reply:</b> '+globalThis.asdhDepartmentNoteUtils.noteEsc(n.reply)+'</div>':'')+'<div class="note-meta"><span>'+globalThis.asdhDepartmentNoteUtils.noteEsc(noteWhen(n.created))+'</span><span class="note-tag ntag-'+safeType+'">'+globalThis.asdhDepartmentNoteUtils.noteEsc(label)+'</span>'+(n.priority==='urgent'?'<span class="badge brd">🚨 Urgent</span>':'')+'</div></div>';
   }).join('');
 }
 globalThis.asdhRenderDeptNotes=renderDeptNotes;
