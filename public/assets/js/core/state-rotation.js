@@ -1,5 +1,6 @@
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
 import { estimateDocBytes } from './firestore-doc-size.js?v=ed46614d2f';
+import { ROTATION_POLICIES } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* Ceilings that enforce themselves: the newest rows are kept, the oldest give
    way, and no record can grow without end.
@@ -100,30 +101,12 @@ async function enforce(policy) {
   return { key: policy.key, dropped: plan.dropped };
 }
 
-/* Instrumentation. One row per user per day, forever, each carrying a map of
-   per-icon tap counts. A year is the reporting horizon anybody uses; older rows
-   answer no question the app asks. */
-registerRotation({
-  key: 'user_activity_daily_v1',
-  dateField: ['date'],
-  maxAgeDays: 400,
-  maxBytes: 400 * 1024,
-  label: 'Staff activity / نشاط الموظفين',
-  why: 'Older than 400 days, and no report reads that far back.',
-  run: enforce,
-});
-
-/* Delivered notices. A department was told its order was deleted; six months
-   later the notice is not a record of anything — the deletion audit is. */
-registerRotation({
-  key: 'department_request_notifications_v1',
-  dateField: ['createdAt'],
-  maxAgeDays: 180,
-  maxBytes: 300 * 1024,
-  label: 'Department notifications / إشعارات الأقسام',
-  why: 'Delivered notices older than 180 days; the deletion audit keeps the record itself.',
-  run: enforce,
-});
+/* Registered from upkeep-policy.json, which the scheduled Cloud Function reads
+   too. The two used to carry their own copies of these numbers — 400 days here,
+   400 days there — and a policy that decides what gets deleted cannot be written
+   in two places: the first edit to one of them starts removing rows the other
+   still expects to find, and nothing errors. */
+ROTATION_POLICIES.forEach((policy) => registerRotation(Object.assign({}, policy, { run: enforce })));
 
 rotationPolicies().forEach((policy) => registerAutoMaintenance({
   key: `rotate:${policy.key}`,

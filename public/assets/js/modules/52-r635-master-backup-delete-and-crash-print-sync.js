@@ -194,6 +194,11 @@ function crashItems(){return typeof window.crashCarts==='function'?(window.crash
 function crashReportsList(){return typeof window.crashReports==='function'?(window.crashReports()||[]):[]}
 function errorMessage(error){return String(error&&error.message||error||'Unknown error').replace(/^FirebaseError:\s*/,'')}
 function callToast(ar,en,type){if(typeof window.toast==='function')window.toast(String(ar||'')+'\n'+String(en||''),type||'info')}
+/* Published because every callable-driven Crash Cart flow needs it: the server
+   commits, and the cache has to show the committed state before the listener
+   echoes back, or the page renders the pre-write trolley for a moment. Module 80
+   closes reports through the same route. */
+window.replaceCachedCrashState=replaceCachedCrashState;
 function replaceCachedCrashState(cart,report){
   if(!window.S||!S.cache)throw new Error('Crash Cart state cache is unavailable.');
   var carts=crashItems().map(function(entry){return String(entry&&entry.id||'')===String(cart&&cart.id||'')?cart:entry});

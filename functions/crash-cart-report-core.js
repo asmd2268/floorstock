@@ -358,6 +358,12 @@ function publicCrashCartPayload(cart) {
 }
 
 module.exports = {
+  // Shared with crash-cart-close-core.js: one definition of what a quantity, a
+  // date key and a cart item's count mean, for both halves of a report's life.
+  number,
+  dateKey,
+  itemPresent,
+  itemStandard,
   applyCrashCartReport,
   acceptCrashCartReport,
   rejectCrashCartReport,

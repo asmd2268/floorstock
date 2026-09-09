@@ -1,0 +1,14 @@
+{
+  "_comment": "Who may answer a Crash Cart report. Three places need this list and none of them can import the others: core/role-capabilities.js (ES modules, crashCart.operate), firestore.rules (its own language, crashCartOperator), and the Cloud Functions (CommonJS). They drifted — the rules omitted three roles until a pharmacy staff member was refused on save, and the functions still omitted the outpatient supervisor. This file is the authority; tests/crash-cart-operator-roles.test.js fails the build if any of the three disagrees with it.",
+  "roles": [
+    "master",
+    "pharmacy",
+    "pharmacy_director",
+    "pharmacy_supervisor",
+    "inpatient_supervisor",
+    "inpatient_pharmacy_supervisor",
+    "inpatient pharmacy supervisor",
+    "pharmacy_staff",
+    "outpatient_pharmacy_supervisor"
+  ]
+}

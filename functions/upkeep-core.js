@@ -15,21 +15,20 @@
      reportable — every run returns what it did, and the caller writes that down.
                   Silent upkeep is indistinguishable from upkeep that never ran. */
 
-/* Only these two rotate, and only these two may ever be added to without a
-   deliberate decision: instrumentation, and notices that were delivered long
-   ago. Records, statistics and anything a regulator may ask for are absent on
-   purpose — see core/state-rotation.js for the same list on the client. */
-const ROTATIONS = Object.freeze([
-  Object.freeze({ key: 'user_activity_daily_v1', dateFields: ['date'], maxAgeDays: 400 }),
-  Object.freeze({ key: 'department_request_notifications_v1', dateFields: ['createdAt'], maxAgeDays: 180 }),
-]);
+/* One policy, one file. It used to be written out here AND in the browser's
+   core/state-rotation.js, with the same numbers — until somebody changed one.
+   Since this policy decides what gets DELETED, that disagreement would surface
+   as missing rows months later rather than as an error, so the numbers now live
+   in upkeep-policy.json, which this reads and from which the browser's copy is
+   generated.
 
-const MERGE_HISTORIES = Object.freeze([
-  Object.freeze({ key: 'inventory_name_merge_history', maxBytes: 300 * 1024 }),
-  Object.freeze({ key: 'manual_medicine_merge_history_v1', maxBytes: 300 * 1024 }),
-]);
+   Only instrumentation and delivered notices rotate. Records, statistics and
+   anything a regulator may ask for are absent on purpose. */
+const POLICY = require('./upkeep-policy.json');
 
-const CRASH_REPORT_LIVE_MONTHS = 6;
+const ROTATIONS = Object.freeze(POLICY.rotations.map((entry) => Object.freeze(Object.assign({}, entry))));
+const MERGE_HISTORIES = Object.freeze(POLICY.mergeHistories.map((entry) => Object.freeze(Object.assign({}, entry))));
+const CRASH_REPORT_LIVE_MONTHS = POLICY.crashReportLiveMonths;
 const CRASH_REPORT_ARCHIVE_KEY = 'crash_cart_report_archive';
 
 function isoDaysAgo(days, now) {

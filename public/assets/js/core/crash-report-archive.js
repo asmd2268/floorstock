@@ -6,6 +6,7 @@ import {
 } from './month-partitioned-store.js?v=405d877017';
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
+import { CRASH_REPORT_LIVE_MONTHS as POLICY_LIVE_MONTHS } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* Crash Cart reports, kept affordable forever.
 
@@ -29,7 +30,9 @@ import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
    succeeded, so a failure at any point leaves the report exactly where it was. */
 
 export const CRASH_REPORT_ARCHIVE_KEY = 'crash_cart_report_archive';
-export const CRASH_REPORT_LIVE_MONTHS = 6;
+/* From upkeep-policy.json: the scheduled job archives the same reports on the
+   same schedule, and one window written twice is one window that drifts. */
+export const CRASH_REPORT_LIVE_MONTHS = POLICY_LIVE_MONTHS;
 
 registerMonthPartitionedKey({
   key: CRASH_REPORT_ARCHIVE_KEY,

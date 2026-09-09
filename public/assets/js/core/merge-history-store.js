@@ -1,5 +1,6 @@
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
+import { MERGE_HISTORY_POLICIES } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* The undo history behind an inventory-name merge, kept under a byte budget
    rather than a row count.
@@ -21,9 +22,12 @@ import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
    with undoUnavailable. A merge that cannot be undone is worth recording; a
    merge that cannot be SAVED stops the whole feature. */
 
-// Roughly a third of the document cap: room for several ordinary entries with
-// margin for the write that crosses the threshold.
-export const MERGE_HISTORY_BUDGET_BYTES = 300 * 1024;
+/* Roughly a third of the document cap: room for several ordinary entries with
+   margin for the write that crosses the threshold. The number lives in
+   upkeep-policy.json, which the scheduled Cloud Function reads too — it trims
+   these same records on a timer, and a budget written in two places is a budget
+   that eventually disagrees with itself. */
+export const MERGE_HISTORY_BUDGET_BYTES = MERGE_HISTORY_POLICIES[0].maxBytes;
 
 const KEYS = Object.freeze({
   inventory: 'inventory_name_merge_history',

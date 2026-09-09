@@ -1082,7 +1082,27 @@ window.ctlCmpPrint=function(){
     var replacements=[],alreadyDeducted=!!r.inventoryDeductedAtReport;
     try{document.querySelectorAll('#ccc-items tr[data-id]').forEach(function(row){var p=ccResponseRowPlan(row),it=(c.items||[]).find(function(x){return String(x.id)===String(p.itemId)});if(!it)throw new Error('A reported medicine no longer exists in the cart.');var current=ccItemPresent(it),standard=ccItemStandard(it),removed=0;if(!alreadyDeducted&&p.removeQty>0){if(!p.sourceExpiry)throw new Error(it.name+': source expiry date is required for this deduction.');removed=p.removeQty;ccRemoveFromExpiry(it,p.sourceExpiry,removed)}if(p.qty>0){if(!p.expiry)throw new Error(it.name+': replacement expiry is required.');ccAddDatedQuantity(it,p.expiry,p.qty,id)}var result=current-removed+p.qty;if(result<0||result>standard+0.000001)throw new Error(it.name+': final quantity '+result+' exceeds the allowed range 0–'+standard+'.');it.present=result;it.stockStatus=result<=0?'out_of_stock':result<standard?'partial':'available';it.updatedAt=nowISO();it.updatedBy=actualActorName();replacements.push({itemId:p.itemId,name:it.name||'',action:alreadyDeducted?'replace_after_report_deduction':p.action,unavailable:p.unavailable,sourceExpiry:alreadyDeducted?'':p.sourceExpiry,reportedQty:p.reportedQty,removedQty:removed,qty:p.qty,expiry:p.expiry,resultingPresent:result,standardQty:standard})});
       var actorUser=window.CU||{},actorName=actualActorName(),actorLogin=actorUser.username||actorUser.email||actorUser.id||'Unknown',actorId=actorUser.id||actorUser.uid||'',stamp=nowISO();c.seal=seal;c.updatedAt=stamp;c.updatedBy=actorName;c.lastClosedByName=actorName;c.lastClosedByUser=actorLogin;c.lastClosedAt=stamp;r.status='closed';r.closedAt=stamp;r.closedBy=actorName;r.closedByName=actorName;r.closedByUser=actorLogin;r.closedById=actorId;r.newSeal=seal;r.pharmacyNote=val('ccc-note').trim();r.replacements=replacements;r.lastEditedAt=stamp;r.lastEditedBy=actorName;r.lastEditedByName=actorName;r.lastEditedByUser=actorLogin;
-      await setCrashCarts(carts);try{await saveCrashReport(r)}catch(reportError){await setCrashCarts(originalCarts);throw reportError}auditAction('crash_cart_report_closed_exact_dated_replacement',{reportId:id,newSeal:seal,replacements:replacements,inventoryAlreadyDeducted:alreadyDeducted});if(q('ccx-state'))q('ccx-state').value='';CM('mcc-close');renderCrashCarts();ccUpdateBadges();toast(alreadyDeducted?'Replacement saved; reported deductions were not deducted twice ✓':'Pharmacy response saved; old dated quantities were deducted exactly ✓','succ');
+      /* One call, one transaction. This used to be two writes from here — every
+         trolley, then the report — with a hand-written rollback if the second
+         failed, and the quantities worked out on this page. A browser closed
+         between them left a sealed trolley recorded as holding what it does
+         not. The server is told what the pharmacist DECIDED and does the
+         arithmetic itself; the rows above are still computed here so the screen
+         can show the outcome before anything is sent. */
+      if(typeof window.fsCallFunction!=='function')throw new Error('The secure Crash Cart service is still loading. Please retry.');
+      var closed=await window.fsCallFunction('closeCrashCartReport',{
+        reportId:id,newSeal:seal,pharmacyNote:val('ccc-note').trim(),
+        rows:document.querySelectorAll('#ccc-items tr[data-id]').length
+          ? Array.from(document.querySelectorAll('#ccc-items tr[data-id]')).map(function(row){
+              var plan=ccResponseRowPlan(row);
+              return {itemId:plan.itemId,unavailable:!!plan.unavailable,sourceExpiry:plan.sourceExpiry||'',
+                removeQty:n(plan.removeQty),qty:n(plan.qty),expiry:plan.expiry||''};
+            })
+          : [],
+      })||{};
+      if(!closed.ok||!closed.cart||!closed.report)throw new Error('The server did not confirm the response.');
+      if(typeof window.replaceCachedCrashState==='function')window.replaceCachedCrashState(closed.cart,closed.report);
+      auditAction('crash_cart_report_closed_exact_dated_replacement',{reportId:id,newSeal:seal,replacements:replacements,inventoryAlreadyDeducted:alreadyDeducted});if(q('ccx-state'))q('ccx-state').value='';CM('mcc-close');renderCrashCarts();ccUpdateBadges();toast(alreadyDeducted?'Replacement saved; reported deductions were not deducted twice ✓':'Pharmacy response saved; old dated quantities were deducted exactly ✓','succ');
     }catch(e){console.error(e);toast('Pharmacy response was not saved: '+String(e&&e.message||e),'err')}
   };
 

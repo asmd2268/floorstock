@@ -1,6 +1,7 @@
 'use strict';
 
 const { onCall, HttpsError } = require('firebase-functions/v2/https');
+const { closeCrashCartReport } = require('./crash-cart-close-core');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const {
   applyCrashCartReport,
@@ -33,15 +34,16 @@ async function callerDepartmentProfile(db, request) {
   return { ...profile, departmentId };
 }
 
+const OPERATOR_ROLES = require('./crash-cart-operator-roles.json').roles;
+
 async function callerPharmacyProfile(db, request) {
   const profile = await callerProfile(db, request);
   const role = String(profile.role || '');
-  // crashCart.operate roles: pharmacy, inpatient_supervisor, pharmacy_staff (+ legacy aliases)
-  const allowed = [
-    'master', 'pharmacy', 'pharmacy_supervisor',
-    'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor',
-    'pharmacy_staff',
-  ];
+  /* From crash-cart-operator-roles.json, which firestore.rules and the browser's
+     capability table are held to as well. This list was written out here and had
+     already fallen behind: an outpatient supervisor could open a response in the
+     app and be refused by the function. */
+  const allowed = OPERATOR_ROLES;
   if (!allowed.includes(role)) {
     throw new HttpsError('permission-denied', 'Only pharmacy staff can accept or reject crash cart reports.');
   }
@@ -274,6 +276,78 @@ exports.acceptCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
     cart: result.cart,
     report: result.report,
   };
+});
+
+/* The pharmacy's answer: replacements applied and the cart resealed, in one
+   transaction with the report.
+
+   This was two writes from the browser — every trolley, then the report — with
+   a hand-written rollback if the second failed, and the quantities worked out on
+   the page. So the arithmetic was never checked by anything, and a browser
+   closed between the two writes left a sealed emergency trolley recorded as
+   holding something it does not. The client now sends what the pharmacist
+   DECIDED — which batch each deduction comes off, what is being put back, and
+   what is unavailable — and the quantities are computed here. */
+exports.closeCrashCartReport = onCall(CALLABLE_OPTIONS, async (request) => {
+  const db = getFirestore();
+  const profile = await callerPharmacyProfile(db, request);
+  const tenantId = await assertWritableTenant(db, profile);
+  const data = request.data || {};
+  const reportId = String(data.reportId || '').trim();
+  if (!reportId) throw new HttpsError('invalid-argument', 'Report ID is required.');
+  const rows = Array.isArray(data.rows) ? data.rows : [];
+  if (rows.length > 200) throw new HttpsError('invalid-argument', 'Too many response lines.');
+
+  const actorName = String(profile.displayName || profile.name || profile.email || profile.username || profile.uid);
+  const actor = { name: actorName, login: String(profile.username || profile.email || profile.uid || ''), id: String(profile.uid || '') };
+  const stamp = new Date().toISOString();
+  const refs = stateRefs(db, tenantId);
+  let result;
+
+  try {
+    await db.runTransaction(async (transaction) => {
+      const reportDoc = refs.reportsCollection.doc(reportId);
+      const [cartSnapshot, reportSnapshot] = await Promise.all([
+        transaction.get(refs.carts),
+        transaction.get(reportDoc),
+      ]);
+      const carts = cartSnapshot.exists && Array.isArray(cartSnapshot.data().value) ? cartSnapshot.data().value : [];
+      if (!reportSnapshot.exists) throw new HttpsError('not-found', 'Report not found.');
+      const reportData = reportSnapshot.data() || {};
+      delete reportData.updatedAt; delete reportData._migratedAt;
+      result = closeCrashCartReport({
+        carts,
+        reports: [{ id: reportSnapshot.id, ...reportData }],
+        reportId,
+        seal: data.newSeal,
+        note: data.pharmacyNote,
+        rows,
+        actor,
+        stamp,
+      });
+      const updatedAt = FieldValue.serverTimestamp();
+      transaction.set(refs.carts, { value: result.carts, updatedAt }, { merge: false });
+      transaction.set(refs.reportsCollection.doc(result.report.id), { ...result.report, updatedAt }, { merge: false });
+      transaction.set(
+        refs.publicCollection.doc(`crash_${result.cart.id}`),
+        { ...publicCrashCartPayload(result.cart), updatedAt },
+        { merge: false },
+      );
+    });
+  } catch (error) {
+    wrapError(error);
+  }
+
+  db.collection('audit_logs').add({
+    action: 'crash_cart_report_closed',
+    actorUid: profile.uid,
+    actorEmail: profile.email || null,
+    targetUid: null,
+    details: { reportId, cartId: result.cart.id, newSeal: result.report.newSeal, lines: result.replacements.length },
+    createdAt: FieldValue.serverTimestamp(),
+  }).catch((error) => console.warn('Crash Cart close audit could not be saved.', error));
+
+  return { ok: true, cart: result.cart, report: result.report, replacements: result.replacements };
 });
 
 // Pharmacy rejects a pending report — no inventory change.
