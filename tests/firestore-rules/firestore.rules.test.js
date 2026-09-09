@@ -261,6 +261,30 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     await assertFails(setDoc(doc(warehouse, 'floorstock_state', 'dept_notes_p2'), statePayload([])));
   });
 
+  /* The app offers "Respond to report" to every role with crashCart.operate, and
+     the rules allowed only pharmacyDirector to write a report document. A
+     pharmacy staff member could open the response, fill it in, and be refused on
+     save — reported from the floor as "missing or insufficient permissions". */
+  test('every role that may answer a Crash Cart report can save one', async () => {
+    const report = { id: 'ccr_rules_1', cartId: 'cart-1', deptId: DEPARTMENT_ID, status: 'closed', openedAt: '2026-09-09T00:00:00.000Z' };
+    for (const role of ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']) {
+      const db = dbFor(role);
+      // eslint-disable-next-line no-await-in-loop
+      await assertSucceeds(setDoc(doc(db, 'crash_cart_reports_v2', `ccr_${role}`), Object.assign({}, report)));
+    }
+  });
+
+  test('a department still cannot write a report document directly', async () => {
+    /* Departments submit through the submitCrashCartReport callable, which seals
+       the cart and deducts atomically; a direct write bypasses both. */
+    await assertFails(setDoc(doc(dbFor('department'), 'crash_cart_reports_v2', 'ccr_dept'),
+      { id: 'ccr_dept', cartId: 'cart-1', deptId: DEPARTMENT_ID, status: 'open' }));
+    await assertFails(setDoc(doc(dbFor('warehouse'), 'crash_cart_reports_v2', 'ccr_wh'),
+      { id: 'ccr_wh', cartId: 'cart-1', status: 'open' }));
+    // Deleting one stays master-only whoever may answer it.
+    await assertFails(deleteDoc(doc(dbFor('pharmacy_staff'), 'crash_cart_reports_v2', 'ccr_pharmacy_staff')));
+  });
+
   test('legacy accounts with tenantId null can still save to legacy state', async () => {
     const db = dbFor('legacy_null_master');
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'requests'), statePayload([])));

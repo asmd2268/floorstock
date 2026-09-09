@@ -62,6 +62,23 @@ service cloud.firestore {
         && role() in ['master', 'pharmacy', 'pharmacy_director'];
     }
 
+    /* The roles the app lets answer a Crash Cart report — the same set as the
+       crashCart.operate capability in core/role-capabilities.js.
+
+       These rules allowed only pharmacyDirector to write a report document,
+       while the app offered "Respond" to a pharmacy staff member, an inpatient
+       supervisor and an outpatient supervisor as well. They could open the
+       response, fill it in, and were refused on save with "missing or
+       insufficient permissions" — the button was there and the database said no,
+       which reads as a broken app rather than a missing permission. */
+    function crashCartOperator() {
+      return activeUser() && role() in [
+        'master', 'pharmacy', 'pharmacy_director',
+        'inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor',
+        'pharmacy_staff', 'outpatient_pharmacy_supervisor'
+      ];
+    }
+
     function pharmacyDirector() {
       return activeUser() && role() in ['master', 'pharmacy', 'pharmacy_director'];
     }
@@ -418,7 +435,7 @@ service cloud.firestore {
           || departmentUser()
           || role() in ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']
         );
-        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && pharmacyDirector();
+        allow create, update: if sameTenant(tenant) && tenantWritable(tenant) && crashCartOperator();
         allow delete: if sameTenant(tenant) && tenantWritable(tenant) && masterUser();
       }
 
@@ -537,7 +554,7 @@ service cloud.firestore {
     match /crash_cart_reports_v2/{reportId} {
       allow get: if activeUser() && tenantId() == '';
       allow list: if activeUser() && tenantId() == '';
-      allow create, update: if activeUser() && tenantId() == '' && pharmacyDirector();
+      allow create, update: if activeUser() && tenantId() == '' && crashCartOperator();
       allow delete: if activeUser() && tenantId() == '' && masterUser();
     }
 
