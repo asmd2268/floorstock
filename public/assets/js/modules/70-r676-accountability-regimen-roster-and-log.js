@@ -7,7 +7,8 @@ function norm(value){return String(value||'').trim().toLowerCase().replace(/[^a-
 /* Usage is one document per Hijri month, so it is read by concatenating the
    partitions the session holds; every other key is still a single document. */
 function state(key){
-  if(key==='accountability_usage_v2'&&typeof window.monthPartitionRows==='function')return window.monthPartitionRows(key);
+  // S.g owns the partitioned-or-legacy decision; naming the key here made a
+  // second copy of it that reads nothing until the migration has run.
   return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[];
 }
 function depts(){return state('departments')}
@@ -57,7 +58,8 @@ setTimeout(enhance,0);
 'use strict';
 function isActualMaster(){return !!((window.MASTER_ACTUAL&&window.MASTER_ACTUAL.master===true)||(window.CU&&window.CU.master===true))&&!window.MASTER_EFFECTIVE}
 function appState(key){
-  if(key==='accountability_usage_v2'&&typeof window.monthPartitionRows==='function')return window.monthPartitionRows(key);
+  // S.g owns the partitioned-or-legacy decision; naming the key here made a
+  // second copy of it that reads nothing until the migration has run.
   return window.S&&typeof window.S.g==='function'&&Array.isArray(window.S.g(key))?window.S.g(key):[];
 }
 /* The retention window is owned by core/accountability-retention.js — this panel

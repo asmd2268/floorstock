@@ -3,7 +3,7 @@ import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
-import { registerMonthPartitionedKey, monthPartitionRows, appendMonthPartitionedRows } from './month-partitioned-store.js?v=cc6daa3c27';
+import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=cc6daa3c27';
 
 /* Accountability history retention.
 
@@ -48,7 +48,12 @@ registerMonthPartitionedKey({
 });
 
 export function usageRows() {
-  return monthPartitionRows(USAGE_KEY);
+  /* Through S.g, like every other reader: it is what knows whether this key's
+     rows are in month partitions yet or still in the single legacy document.
+     monthPartitionRows here was a second copy of that decision, and returned
+     nothing while the legacy record still held everything. */
+  const rows = globalThis.S && typeof globalThis.S.g === 'function' ? globalThis.S.g(USAGE_KEY) : null;
+  return Array.isArray(rows) ? rows : [];
 }
 const RECEIPTS_KEY = 'accountability_receipts_v2';
 const SUMMARY_KEY = 'accountability_usage_summary_v1';

@@ -568,7 +568,9 @@ function fsControlledPharmacyDeptKeys(cache){
   return keys;
 }
 async function fsStateLoadControlledPharmacyScoped(profile,loader,source){
-  var initial=await fsStateLoadScoped(CONTROLLED_PHARMACY_BASE_KEYS,loader,source,profile);
+  // Same one list the listeners use: the ledger and audit months are part of
+  // this role's state, and a poll that omitted them deleted them from the cache.
+  var initial=await fsStateLoadScoped(fsStateKeysForProfile(profile)||CONTROLLED_PHARMACY_BASE_KEYS,loader,source,profile);
   var deptKeys=fsControlledPharmacyDeptKeys(initial.cache);
   if(!deptKeys.length)return initial;
   var dynamic=await fsStateLoadScoped(deptKeys,loader,source,profile);
@@ -600,7 +602,16 @@ async function fsStateLoadPharmacyScoped(profile,loader,source){
   // login. Fetch `departments` alone first (one small document), then fire
   // the rest of the static wave and the department wave together.
   var deptOnly=await fsStateLoadScoped(['departments'],loader,source,profile);
-  var restKeys=PHARMACY_SCOPED_STATE_KEYS.filter(function(k){return k!=='departments'});
+  /* The list comes from fsStateKeysForProfile, which is also what the realtime
+     listeners subscribe to — one list, not two.
+
+     They used to differ: the listeners subscribed to
+     PHARMACY_SCOPED_STATE_KEYS *plus the month partitions*, while this loader
+     fetched only PHARMACY_SCOPED_STATE_KEYS. And a poll applies its result with
+     fsStateApplyCache, which DELETES any key the poll did not return — so every
+     poll wiped the partitions the listeners had just delivered, and the badge
+     counting pending custody rows went 2, 0, 2, 0 in front of the pharmacist. */
+  var restKeys=(fsStateKeysForProfile(profile)||PHARMACY_SCOPED_STATE_KEYS).filter(function(k){return k!=='departments'});
   var dynamicKeys=fsPharmacyDepartmentStateKeys(deptOnly.cache,profile);
   var pair=await Promise.all([
     fsStateLoadScoped(restKeys,loader,source,profile),

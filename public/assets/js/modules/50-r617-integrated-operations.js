@@ -263,7 +263,11 @@ window.acc2MedSearch=function(val){ACC2_UI.medSearch=val;clearTimeout(window._ac
    the partitions the session holds. Every other accountability key is still a
    single document, and reads exactly as before. */
 function acc2Array(key){
-  if(key===ACC2_USAGE_KEY&&typeof window.monthPartitionRows==='function')return window.monthPartitionRows(key);
+  /* S.g already knows whether a key's rows live in month partitions or still in
+     the single legacy document, and routes accordingly. Calling
+     monthPartitionRows here was a second copy of that decision — and the wrong
+     one before the migration runs, when it returns nothing while the record is
+     full. */
   var value=S.g(key);return Array.isArray(value)?value:[];
 }
 function acc2ScopeDept(){return role()==='outpatient_pharmacy_supervisor'?(window.fsOutpatientDeptId?window.fsOutpatientDeptId():String(CU&&CU.deptId||'')):''}
