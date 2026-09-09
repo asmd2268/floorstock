@@ -459,7 +459,19 @@ async function moveStateKeyF(prefix,fromId,toId,kind){
   }else if(typeof from==='object')merged=Object.assign({},from,to||{});
   else if(to==null)merged=from;
   if(merged!=null)await S.s(toKey,merged);
-  try{await S.rm(fromKey)}catch(e){}
+  /* The merged copy is written, then the source is removed. A silent failure
+     here leaves BOTH documents holding the same medicines, and the duplicate
+     department reappears on every screen with no hint of why — the merge looked
+     like it worked. Reported rather than swallowed: the data is safe (nothing
+     was lost), but somebody has to finish the job. */
+  try{await S.rm(fromKey)}
+  catch(error){
+    console.error('Department merge could not remove the source record',fromKey,error);
+    if(typeof window.toast==='function'){
+      window.toast('The departments were merged, but the old record ('+fromKey+') could not be removed, so it will still appear. Nothing was lost — retry the merge.\n'
+        +'تم الدمج لكن تعذّر حذف السجل القديم، وسيظل ظاهراً. لم يُفقد شيء — أعد المحاولة.','err');
+    }
+  }
 }
 async function repairImportedDepartmentAliasesF(){
   if(!window.S||!S.ready||typeof window.gd!=='function')return false;

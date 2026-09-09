@@ -150,7 +150,17 @@ async function saveSealCorrection(){
     if(typeof renderCrashCarts==='function')renderCrashCarts();
     toast('Seal corrected and verified without opening the Crash Cart ✓','succ');
   }catch(error){
-    try{await setCrashCarts(original)}catch(ignore){}
+    /* The correction failed and the cart is being put back as it was. If THAT
+       write fails too, the cart is left half-changed — and it used to be left
+       that way in silence, which for a sealed emergency trolley is the one
+       outcome nobody may be unaware of. */
+    try{await setCrashCarts(original)}
+    catch(rollbackError){
+      console.error('Crash Cart rollback failed after a seal correction error',rollbackError);
+      fail('The seal correction failed AND the cart could not be put back. Check this cart before relying on it.\n'
+        +'فشل تصحيح القفل وتعذّر إرجاع العربة كما كانت. تحقّق من هذه العربة قبل الاعتماد عليها.');
+      return;
+    }
     fail(String(error&&error.message||error));
   }finally{button.disabled=false;button.textContent='Save correction / حفظ التصحيح'}
 }

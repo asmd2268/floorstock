@@ -177,7 +177,10 @@ async function startScanner(){
     video.play();
     el('scan-status').textContent='🟢 Scanning — hold barcode steady...';
     // Load ZXing only when the scanner is opened
-    try{await ensureZXing()}catch(e){}
+    // Reported, not swallowed: the fallback below says "loading…", which is a
+    // lie once the load has actually failed — and the reason only ever appears here.
+    var zxingError=null;
+    try{await ensureZXing()}catch(error){zxingError=error;console.warn('Barcode decoder could not be loaded.',error)}
     if(typeof ZXing!=='undefined'){
       var hints=new Map();
       var fmts=[
@@ -196,7 +199,10 @@ async function startScanner(){
       });
     } else {
       // Fallback: ZXing not loaded, do manual capture
-      el('scan-status').innerHTML='⚠ ZXing library loading... <button class="btn bg bxs" onclick="captureFrame()">📸 Capture Frame</button>';
+      el('scan-status').innerHTML=(zxingError
+        ? '⚠ Automatic decoding is unavailable — capture the frame or type the barcode. / تعذّر تحميل القارئ التلقائي؛ التقط الصورة أو أدخل الباركود يدوياً. '
+        : '⚠ ZXing library loading... ')
+        +'<button class="btn bg bxs" onclick="captureFrame()">📸 Capture Frame</button>';
     }
   }).catch(function(err){
     el('scan-status').textContent='❌ Camera error: '+err.message+' — use "Type Barcode" tab instead';
