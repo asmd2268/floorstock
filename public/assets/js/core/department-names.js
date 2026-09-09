@@ -89,5 +89,9 @@ function fsR5DepartmentCandidates(ref,name){
 }
 window.fsR5DepartmentCandidates=fsR5DepartmentCandidates;
 
-/* Print Orders: one A4 landscape page, dispensed positive quantities only. */
+/* Exported as well as published: the modules that were split out of 51 import
+   these directly instead of hoping a global is in place by the time they run. */
+export { fsR5DepartmentRecords, fsR5DepartmentCandidates };
+export const floorstockDepartmentName = window.floorstockDepartmentName;
+
 

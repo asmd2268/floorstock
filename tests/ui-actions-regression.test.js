@@ -68,6 +68,10 @@ const canonicalModuleSource = fs.readFileSync(
   new URL('../public/assets/js/modules/51-asdhealth-canonical-r6-32-20260727.js', import.meta.url),
   'utf8',
 );
+const ordersPrintSource = fs.readFileSync(
+  new URL('../public/assets/js/core/orders-print.js', import.meta.url),
+  'utf8',
+);
 const inventorySafetySource = fs.readFileSync(
   new URL('../public/assets/js/modules/40-v16-clean-optimized-script.js', import.meta.url),
   'utf8',
@@ -493,11 +497,13 @@ test('request limits freeze New Request, drafts never expire, and session filter
 
 
 test('Print Orders uses a CSP-safe external runtime and creates a PDF matching the selected orientation', () => {
-  assert.match(canonicalModuleSource, /new URL\('\.\/print-orders\.html',window\.location\.href\)/);
-  assert.match(canonicalModuleSource, /localStorage\.setItem\(storageKey,JSON\.stringify\(payload\)\)/);
-  assert.match(canonicalModuleSource, /__ASDH_PRINT_ORDER_JOBS__/);
-  assert.doesNotMatch(canonicalModuleSource, /popup\.document\.write\(fsR5OrdersHtml\(orders\)\)/);
-  assert.doesNotMatch(canonicalModuleSource, /Preparing Landscape PDF/);
+  assert.match(ordersPrintSource, /new URL\('\.\/print-orders\.html',window\.location\.href\)/);
+  assert.match(ordersPrintSource, /localStorage\.setItem\(storageKey,JSON\.stringify\(payload\)\)/);
+  assert.match(ordersPrintSource, /__ASDH_PRINT_ORDER_JOBS__/);
+  assert.doesNotMatch(ordersPrintSource, /popup\.document\.write\(fsR5OrdersHtml\(orders\)\)/);
+  assert.doesNotMatch(ordersPrintSource, /Preparing Landscape PDF/);
+  /* Orders printing left modules/51 whole: the canonical module must not keep a copy. */
+  assert.doesNotMatch(canonicalModuleSource, /print-orders\.html/);
 
   assert.match(printOrdersPageSource, /src="\.\/assets\/js\/print-orders-runtime\.js\?v=R6\.75\.0"/);
   assert.doesNotMatch(printOrdersPageSource, /<script>(?!\s*<\/script>)/);
