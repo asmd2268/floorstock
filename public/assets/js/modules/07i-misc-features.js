@@ -103,7 +103,7 @@ function legacyRenderPharmNotes(){
   var openCount=allScoped.filter(function(n){return n.status==='open'||n.status==='urgent'}).length;
   var urgentCount=allScoped.filter(function(n){return n.status==='urgent'}).length;
   var smEl=el('notes-summary');
-  if(smEl)smEl.innerHTML='Total: <b>'+all.length+'</b> &nbsp;|&nbsp; Open: <b style="color:var(--yll)">'+openCount+'</b>&nbsp;|&nbsp; Urgent: <b style="color:var(--rdl)">'+urgentCount+'</b>';
+  if(smEl)smEl.innerHTML='Total: <b>'+allScoped.length+'</b> &nbsp;|&nbsp; Open: <b style="color:var(--yll)">'+openCount+'</b>&nbsp;|&nbsp; Urgent: <b style="color:var(--rdl)">'+urgentCount+'</b>';
 
   var list=el('pharm-notes-list');
   if(!notes.length){

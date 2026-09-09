@@ -14,17 +14,6 @@ import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 // globalThis by its owning module.
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, alerts, flags and seeded department lists ──
 
-function ctlIsMaster(){
-  var profile=window.fsPermissionProfile?window.fsPermissionProfile():(window.CU||{});
-  return !!(profile&&profile.master===true);
-}
-function ctlCanManage(){
-  if(window.fsHasCapability)return window.fsHasCapability('controlled.manage');
-  return ctlIsMaster()||ctlIsOfficer();
-}
-function ctlCanEditCatalog(){return ctlCanManage()}
-function ctlCanAddCatalog(){return ctlCanManage()||ctlIsWarehouse()}
-function ctlCanEditDept(){return ctlCanManage()}
 function ctlAlertDays(){return Math.max(1,Number(S.g('controlled_alert_days')||60))}
 
 function ctlFridgeIcon(m){
@@ -724,11 +713,6 @@ function ctlSettingsGlobal(){return S.g('controlled_global_settings')||{hospital
 
 
 publishLegacy("07j-controlled-module-enhancements.js", {
-  ctlIsMaster,
-  ctlCanManage,
-  ctlCanEditCatalog,
-  ctlCanAddCatalog,
-  ctlCanEditDept,
   ctlAlertDays,
   ctlFridgeIcon,
   ctlFlags,

@@ -4,6 +4,7 @@ import { fsNorm, fsText, fsNum } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { fsE, fsEsc } from '../core/dom-utils.js?v=b2909b7f46';
 import { uiToast, uiNow, uiActor, uiAudit, uiCloseModal, uiOpenModal, uiEnsureStyles } from '../core/module-ui-helpers.js?v=4dc31675ec';
 import { fsR5DepartmentRecords, fsR5DepartmentCandidates } from '../core/department-names.js?v=5aa184ebd6';
+import { fsR5DMY, fsR12DateOnly, fsR12PrintDate, fsR12ExpiryDays, fsR12HasNearExpiry, fsR12BatchSummaryHtml, fsR5BatchText, fsR5Class, fsR5ExpiryDays, fsR5NearDays } from '../core/controlled-expiry-format.js?v=4fe8aa218d';
 
 /* ASDHealth FloorStock — R6.32 canonical rules.
    Direct top-level definitions only. No wrapper chaining. */
@@ -201,116 +202,6 @@ async function fsR5ControlledRows(dept){
 
   if(errors.length)console.warn('Controlled custody lookup completed without rows.',errors);
   return {dept:candidates[0]||dept,rows:[],source:'not-found',candidates:candidates};
-}
-function fsR5DMY(v){
-  if(!v)return '—';
-  try{if(typeof window.ctlFmtDMY==='function')return window.ctlFmtDMY(v)}catch(e){}
-  var d=new Date(v);if(isNaN(d))return String(v);
-  return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
-}
-function fsR12DateOnly(value){
-  if(!value)return null;
-  if(value instanceof Date){
-    if(isNaN(value.getTime()))return null;
-    return Date.UTC(value.getFullYear(),value.getMonth(),value.getDate());
-  }
-
-  var text=String(value).trim();
-  var match=text.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if(match)return Date.UTC(Number(match[1]),Number(match[2])-1,Number(match[3]));
-
-  var date=new Date(value);
-  if(isNaN(date.getTime()))return null;
-  return Date.UTC(date.getFullYear(),date.getMonth(),date.getDate());
-}
-
-function fsR12PrintDate(){
-  var now=new Date();
-  return {
-    date:now,
-    dayUtc:Date.UTC(now.getFullYear(),now.getMonth(),now.getDate()),
-    text:String(now.getDate()).padStart(2,'0')+'/'+
-      String(now.getMonth()+1).padStart(2,'0')+'/'+
-      now.getFullYear()
-  };
-}
-
-function fsR12ExpiryDays(value,printDayUtc){
-  var expiryDay=fsR12DateOnly(value);
-  if(expiryDay===null)return null;
-  return Math.round((expiryDay-printDayUtc)/86400000);
-}
-
-function fsR12HasNearExpiry(batches,days,printDayUtc){
-  return (Array.isArray(batches)?batches:[]).some(function(batch){
-    var remaining=fsR12ExpiryDays(batch&&batch.expiry,printDayUtc);
-    return remaining!==null&&remaining>=0&&remaining<=days;
-  });
-}
-
-/* A batch is one (lot, quantity, expiry) fact, but it used to be split across two
-   columns that together needed a third of a 1180px-wide table, so the expiry
-   column sat off the right edge behind a horizontal scrollbar and a department
-   reading the list saw only the quantity chip - and with no lot recorded, that
-   bare number sat under a "Batch No." heading. Rendering the three parts on one
-   line per batch keeps them together and lets the table fit without scrolling. */
-function fsR12BatchSummaryHtml(batches){
-  if(!Array.isArray(batches)||!batches.length)return '—';
-  return batches.map(function(batch){
-    var lot=fsText(batch&&batch.lot,'');
-    var qty=batch&&batch.qty!==''&&batch.qty!=null?fsNum(batch.qty):'';
-    var expiry=fsR5DMY(batch&&batch.expiry);
-    var parts='';
-    if(lot)parts+='<b>'+fsEsc(lot)+'</b> ';
-    if(qty!=='')parts+='<span class="chip">'+fsEsc(qty)+'</span> ';
-    parts+='<span class="ctl-batch-expiry">'+fsEsc(expiry||'—')+'</span>';
-    return '<div class="ctl-batch-line">'+parts+'</div>';
-  }).join('');
-}
-
-function fsR5BatchText(batches,html,actualTotal){
-  if(!Array.isArray(batches)||!batches.length)return '—';
-  // Resolve qty per batch; batch.qty may be 0/missing while actualTotal is correct.
-  var batchQtys=batches.map(function(b){return b&&b.qty!=null&&b.qty!==''?fsNum(b.qty):0});
-  var batchSum=batchQtys.reduce(function(a,b){return a+b},0);
-  var total=actualTotal!=null?fsNum(actualTotal):null;
-  // If all batch qtys are zero but we have an actual total, distribute across batches.
-  // Single batch: assign the full actual total.
-  // Multiple batches: distribute equally (floor each; last batch absorbs remainder).
-  if(batchSum===0&&total!=null&&total>0){
-    if(batches.length===1){
-      batchQtys=[total];
-    }else{
-      var base=Math.floor(total/batches.length);
-      batchQtys=batches.map(function(){return base;});
-      batchQtys[batches.length-1]=total-base*(batches.length-1);
-    }
-    batchSum=total;
-  }
-  // If sum of stored batch qtys exceeds actual total, cap proportionally.
-  if(total!=null&&batchSum>total&&batchSum>0){
-    batchQtys=batchQtys.map(function(q){return Math.round(q/batchSum*total);});
-  }
-  return batches.map(function(batch,i){
-    var expiry=fsR5DMY(batch&&batch.expiry);
-    var qty=batchQtys[i];
-    var parts=[];
-    if(qty>0||batchSum>0)parts.push(String(qty));
-    parts.push('Exp '+expiry);
-    if(!html)return parts.join(' · ');
-    return '<div class="ctl-batch-print-line">'+parts.map(fsR5Esc).join(' · ')+'</div>';
-  }).join(html?'':' ; ');
-}
-function fsR5Class(v){return String(v||'').toLowerCase()==='psychotropic'?'Psychotropic / نفسي':'Narcotic / مخدر'}
-function fsR5ExpiryDays(row){
-  var a=(row.batches||[]).map(function(b){return b&&b.expiry}).filter(Boolean).map(function(v){
-    var d=new Date(v);return isNaN(d)?null:Math.floor((d.getTime()-Date.now())/86400000);
-  }).filter(function(v){return v!==null});
-  return a.length?Math.min.apply(Math,a):null;
-}
-function fsR5NearDays(dept){
-  var v='';try{v=sessionStorage.getItem('asdhealth-controlled-near-days-'+dept)||''}catch(e){}
-  return Math.max(1,Math.floor(fsNum(v||30)));
 }
 window.ctlDeptFinalApply=function(){
   var dept=fsR5ControlledDept(),input=fsE('ctl-dept-final-days'),days=Math.floor(fsNum(input&&input.value));
@@ -922,16 +813,6 @@ const __asdhLegacyApi = {
   fsR5ControlledMedicine: fsR5ControlledMedicine,
   fsR5NormalizeControlled: fsR5NormalizeControlled,
   fsR5ControlledRows: fsR5ControlledRows,
-  fsR5DMY: fsR5DMY,
-  fsR12DateOnly: fsR12DateOnly,
-  fsR12PrintDate: fsR12PrintDate,
-  fsR12ExpiryDays: fsR12ExpiryDays,
-  fsR12HasNearExpiry: fsR12HasNearExpiry,
-  fsR12BatchSummaryHtml: fsR12BatchSummaryHtml,
-  fsR5BatchText: fsR5BatchText,
-  fsR5Class: fsR5Class,
-  fsR5ExpiryDays: fsR5ExpiryDays,
-  fsR5NearDays: fsR5NearDays,
   fsR5PublicUrl: fsR5PublicUrl,
   fsR5Logo: fsR5Logo,
   fsR5PrintSettings: fsR5PrintSettings,
@@ -943,16 +824,6 @@ export {
   fsR5ControlledMedicine,
   fsR5NormalizeControlled,
   fsR5ControlledRows,
-  fsR5DMY,
-  fsR12DateOnly,
-  fsR12PrintDate,
-  fsR12ExpiryDays,
-  fsR12HasNearExpiry,
-  fsR12BatchSummaryHtml,
-  fsR5BatchText,
-  fsR5Class,
-  fsR5ExpiryDays,
-  fsR5NearDays,
   fsR5PublicUrl,
   fsR5Logo,
   fsR5PrintSettings,

@@ -33,8 +33,6 @@ function ctlMoves(){return typeof window.controlledMoveRows==='function'?window.
 async function ctlSaveMovementLog(record,context){
   try{await ctlMove(record);return true}catch(e){console.error((context||'Controlled action')+' movement log failed',e);return false}
 }
-function ctlIsOfficer(){return CU&&CU.role==='controlled_pharmacy'}
-function ctlIsWarehouse(){return CU&&CU.role==='warehouse'}
 function ctlDate(v){
   if(!v)return '';
   if(v instanceof Date&&!isNaN(v))return v.toISOString().slice(0,10);
@@ -262,8 +260,6 @@ publishLegacy("03b-controlled-psychotropic-medicines.js", {
   ctlSetDeptList,
   ctlMoves,
   ctlSaveMovementLog,
-  ctlIsOfficer,
-  ctlIsWarehouse,
   ctlDate,
   ctlNum,
   ctlKey,

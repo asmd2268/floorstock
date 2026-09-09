@@ -792,9 +792,15 @@ test('controlled inpatient-department editing is restricted to controlled office
   }
   assert.equal(hasCapability({ role: 'pharmacy_staff' }, 'controlled.manage'), false);
   assert.equal(hasCapability({ role: 'inpatient_supervisor' }, 'controlled.manage'), false);
-  assert.match(usersSource, /function ctlCanManage\(\)/);
-  assert.match(usersSource, /fsHasCapability\('controlled\.manage'\)/);
-  assert.match(usersSource, /function ctlCanEditDept\(\)\{return ctlCanManage\(\)\}/);
+  /* The controlled permissions have one owner now — core/controlled-permissions.js
+     — instead of being split between the roles in 03b and the rules in 07j. */
+  const permissionsSource = fs.readFileSync(
+    new URL('../public/assets/js/core/controlled-permissions.js', import.meta.url),
+    'utf8',
+  );
+  assert.match(permissionsSource, /function ctlCanManage\(\)/);
+  assert.match(permissionsSource, /fsHasCapability\('controlled\.manage'\)/);
+  assert.match(permissionsSource, /function ctlCanEditDept\(\)\{return ctlCanManage\(\)\}/);
   assert.match(controlledRuntimeSource, /effectiveRole==='controlled_pharmacy'/);
 });
 

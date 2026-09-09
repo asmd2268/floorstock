@@ -605,64 +605,6 @@ window.acc2UpdateDoseCalc=function(assignmentId,unitSize){var input=document.que
    receipt path is the temporary dual-QR handover (Cloud Function, admin
    SDK, transactional). */
 
-function acc2AnalyticsTab_REMOVED(){
-  var usage=acc2Array(ACC2_USAGE_KEY),assign=acc2Assignments(),regimens=(window.S&&typeof S.g==='function'?S.g('accountability_regimens_v3'):[])||[];
-  var activeAssign=assign.filter(function(a){return a.active!==false});
-  var totalQuota=activeAssign.reduce(function(s,a){return s+acc2Number(a.quota)},0);
-  var totalBalance=activeAssign.reduce(function(s,a){return s+acc2Number(a.balance)},0);
-  var totalUsed=totalQuota-totalBalance;
-  var ym=new Date().toISOString().slice(0,7);
-  var monthUnits=usage.filter(function(u){return (u.consumptionDate||'').slice(0,7)===ym}).reduce(function(s,u){return s+acc2Number(u.units)},0);
-  var pending=usage.filter(function(u){return u.status==='pending_pharmacy'}).length;
-  var waitReceipt=usage.filter(function(u){return u.status==='approved_waiting_receipt'}).length;
-  var approved=usage.filter(function(u){return u.status==='approved_waiting_receipt'||u.status==='received'}).length;
-  var rejected=usage.filter(function(u){return u.status==='rejected'}).length;
-  var activeRegimens=regimens.filter(function(r){return !r.paused});
-  function kpi(label,val,sub,color){return '<div style="background:var(--card,#fff);border:1px solid var(--br,#e2e8f0);border-top:4px solid '+color+';border-radius:8px;padding:14px 16px;min-width:120px"><div style="font-size:11px;opacity:.6;margin-bottom:6px">'+label+'</div><div style="font-size:28px;font-weight:800;line-height:1">'+val+'</div><div style="font-size:12px;opacity:.55;margin-top:4px">'+sub+'</div></div>'}
-  var medMap={},deptMap={};
-  usage.forEach(function(u){medMap[u.medName]=(medMap[u.medName]||0)+acc2Number(u.units);deptMap[u.deptId]=(deptMap[u.deptId]||0)+acc2Number(u.units)});
-  var topMeds=Object.keys(medMap).map(function(k){return[k,medMap[k]]}).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
-  var topDepts=Object.keys(deptMap).map(function(k){return[k,deptMap[k]]}).sort(function(a,b){return b[1]-a[1]}).slice(0,8);
-  var maxMed=topMeds[0]?topMeds[0][1]:1,maxDept=topDepts[0]?topDepts[0][1]:1;
-  var palette=['#3b82f6','#10b981','#f59e0b','#8b5cf6','#ef4444','#06b6d4','#f97316','#ec4899'];
-  var months=[];for(var mi=5;mi>=0;mi--){var d=new Date();d.setMonth(d.getMonth()-mi);var mym=d.toISOString().slice(0,7),mlabel=d.toLocaleDateString('en',{month:'short',year:'2-digit'}),mtotal=usage.filter(function(u){return(u.consumptionDate||'').slice(0,7)===mym}).reduce(function(s,u){return s+acc2Number(u.units)},0);months.push({label:mlabel,total:mtotal})}
-  var maxMonth=Math.max.apply(null,months.map(function(m){return m.total}))||1;
-  var barCols=months.map(function(m,i){return palette[i%palette.length]});
-  var html='<div id="acc2-analytics-print">'+
-    '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><h2 style="margin:0;font-size:17px">Accountability Analytics / إحصاء العهدة والخطط</h2><button class="btn bp bsm" type="button" onclick="acc2PrintAnalytics()">Print / طباعة</button></div>'+
-    '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:20px">'+
-      kpi('Approved custody / إجمالي العهدة',totalQuota,'across '+activeAssign.length+' medicines','#3b82f6')+
-      kpi('Current balance / الرصيد الحالي',totalBalance,Math.round(totalBalance/(totalQuota||1)*100)+'% remaining',totalBalance>0?'#10b981':'#ef4444')+
-      kpi('Total consumed / إجمالي الاستهلاك',totalUsed,Math.round(totalUsed/(totalQuota||1)*100)+'% of custody','#f59e0b')+
-      kpi('This month / هذا الشهر',monthUnits,'units consumed','#8b5cf6')+
-      kpi('Pending review / بانتظار المراجعة',pending,'requests','#ef4444')+
-      kpi('Waiting receipt / بانتظار الاستلام',waitReceipt,'approved requests','#f97316')+
-      kpi('Active treatment plans / الخطط الفعالة',activeRegimens.length,'of '+regimens.length+' total','#10b981')+
-      kpi('Rejected requests / مرفوضة',rejected,'out of '+usage.length+' total',rejected>0?'#ef4444':'#10b981')+
-    '</div>'+
-    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">'+
-      '<div style="background:var(--card,#fff);border:1px solid var(--br,#e2e8f0);border-radius:8px;padding:16px">'+
-        '<div style="font-weight:700;font-size:13px;border-left:4px solid #3b82f6;padding-left:10px;margin-bottom:14px">Top medicines by consumption / أكثر الأدوية استهلاكًا</div>'+
-        (topMeds.length?topMeds.map(function(m,i){return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><b>'+esc(m[0])+'</b><span style="opacity:.6">'+m[1]+' units</span></div>'+acc2Bar(m[1]/maxMed*100,palette[i%palette.length])+'</div>'}).join(''):'<div style="opacity:.5;text-align:center;padding:20px">No usage data yet</div>')+
-      '</div>'+
-      '<div style="background:var(--card,#fff);border:1px solid var(--br,#e2e8f0);border-radius:8px;padding:16px">'+
-        '<div style="font-weight:700;font-size:13px;border-left:4px solid #10b981;padding-left:10px;margin-bottom:14px">Top departments / الأقسام الأعلى استهلاكًا</div>'+
-        (topDepts.length?topDepts.map(function(d,i){return '<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:13px"><b>'+esc(deptName(d[0]))+'</b><span style="opacity:.6">'+d[1]+' units</span></div>'+acc2Bar(d[1]/maxDept*100,palette[(i+2)%palette.length])+'</div>'}).join(''):'<div style="opacity:.5;text-align:center;padding:20px">No usage data yet</div>')+
-      '</div>'+
-    '</div>'+
-    '<div style="background:var(--card,#fff);border:1px solid var(--br,#e2e8f0);border-radius:8px;padding:16px;margin-bottom:20px">'+
-      '<div style="font-weight:700;font-size:13px;border-left:4px solid #8b5cf6;padding-left:10px;margin-bottom:14px">Monthly usage trend / الاستهلاك الشهري (last 6 months)</div>'+
-      '<div style="display:flex;align-items:flex-end;gap:8px;height:100px">'+
-        months.map(function(m,i){var h=maxMonth>0?Math.max(4,Math.round(m.total/maxMonth*88)):4;return '<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px"><div style="font-size:11px;font-weight:700">'+m.total+'</div><div style="width:100%;height:'+h+'px;background:'+barCols[i]+';border-radius:4px 4px 0 0"></div><div style="font-size:10px;opacity:.55">'+esc(m.label)+'</div></div>'}).join('')+
-      '</div>'+
-    '</div>'+
-    (activeRegimens.length?'<div style="background:var(--card,#fff);border:1px solid var(--br,#e2e8f0);border-radius:8px;padding:16px">'+
-      '<div style="font-weight:700;font-size:13px;border-left:4px solid #f59e0b;padding-left:10px;margin-bottom:14px">Active treatment plans / الخطط العلاجية الفعالة</div>'+
-      '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">'+
-        activeRegimens.slice(0,12).map(function(r){var v=(r.versions||[]).find(function(x){return x.id===r.activeVersionId})||{};var sev=v.severity||'';return '<div style="border:1px solid var(--br,#e2e8f0);border-radius:8px;padding:10px;border-top:3px solid '+(/^(high|critical)/i.test(sev)?'#ef4444':sev==='low'?'#10b981':'#f59e0b')+'"><div style="font-weight:700;font-size:13px">'+esc(r.name)+'</div><div style="font-size:11px;opacity:.6;margin-top:2px">'+esc(deptName(r.deptId))+' · '+esc(r.infectionSource||'—')+'</div><div style="margin-top:6px"><span class="badge '+(/^(high|critical)/i.test(sev)?'brd':'bbl')+'">'+esc(sev||'—')+'</span> <span style="font-size:11px;opacity:.55">'+esc(({first_line:'1st line',second_line:'2nd line',third_line:'3rd line'})[v.lineType]||v.lineType||'—')+'</span></div></div>'}).join('')+
-      '</div></div>':'')+'</div>';
-  return html
-}
 window.acc2PrintAnalytics=function(){
   var el=document.getElementById('acc2-analytics-print');if(!el)return;
   var html=el.innerHTML;

@@ -10,6 +10,9 @@
 
    Run with --update to record the current numbers (after a real reduction).   */
 import { readdir, readFile, writeFile } from 'node:fs/promises';
+import { parse } from 'acorn';
+
+import { collectPublishedGlobals } from './lib/published-globals.mjs';
 
 const jsRoot = new URL('../public/assets/js/', import.meta.url);
 const budgetPath = new URL('../architecture-budget.json', import.meta.url);
@@ -22,19 +25,13 @@ export async function measure() {
       if (!name.endsWith('.js')) continue;
       const path = `${dir}/${name}`;
       const text = await readFile(new URL(path, jsRoot), 'utf8');
-      /* Two ways this codebase publishes a global, and counting only the first
-         made the budget blind in the direction that matters: forty-five core
-         modules publish with Object.assign(globalThis, { … }), which is the
-         idiomatic form for new code — so a new module could add a dozen globals
-         and the ratchet would report no change at all. */
-      for (const match of text.matchAll(/\b(?:window|globalThis)\.([A-Za-z_$][\w$]*)\s*=(?!=)/g)) {
-        globals.add(match[1]);
-      }
-      for (const match of text.matchAll(/Object\.assign\(\s*(?:window|globalThis)\s*,\s*\{([\s\S]*?)\}\s*\)/g)) {
-        for (const name of match[1].matchAll(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*(?::|,|$)/g)) {
-          globals.add(name[1]);
-        }
-      }
+      /* Three ways this codebase publishes a global, and counting a subset is
+         how this number lied twice: first it saw only `window.x =` while forty-five
+         core modules used Object.assign(globalThis, { … }), and then it still
+         missed publishLegacy, which assigns every key of a legacy module's api
+         object. One collector now knows all three — see tools/lib. */
+      try { collectPublishedGlobals(parse(text, { ecmaVersion: 'latest', sourceType: 'module' }), globals); }
+      catch { /* A file acorn cannot parse is reported by verify_modules, not here. */ }
       const lines = text.split('\n').length;
       if (lines >= 700) modules[path] = lines;
     }

@@ -27,14 +27,18 @@ const SHRINK_SLACK = 0.05;
 const budget = JSON.parse(await readFile(new URL('../architecture-budget.json', import.meta.url), 'utf8'));
 const current = await measure();
 
-test('both ways of publishing a global are counted', async () => {
-  /* The first version of this budget matched only `globalThis.name =`, while
-     forty-five core modules publish with Object.assign(globalThis, { … }) — the
-     idiomatic form for new code. A new module could have added a dozen globals
-     and the ratchet would have reported no change at all: a guard blind in
-     exactly the direction it exists to watch. */
+test('every way of publishing a global is counted', async () => {
+  /* This number has lied twice, both times by measuring a subset. First it
+     matched only `globalThis.name =` while forty-five core modules publish with
+     Object.assign(globalThis, { … }). Then, with that fixed, it still missed
+     publishLegacy — which assigns every key of a legacy module's api object, and
+     is how most of the surface is published: 818 counted against 1,235 real.
+     One collector now knows all three forms, and both the budget and the
+     unresolved-name check use it. */
+  const collector = await readFile(new URL('../tools/lib/published-globals.mjs', import.meta.url), 'utf8');
+  for (const form of ['publishLegacy', 'Object.assign', 'globalThis']) assert.ok(collector.includes(form), form);
   const tool = await readFile(new URL('../tools/architecture_budget.mjs', import.meta.url), 'utf8');
-  assert.match(tool, /Object\\\.assign\\\(\\s\*\(\?:window\|globalThis\)/);
+  assert.match(tool, /collectPublishedGlobals/);
 });
 
 test('the global surface does not grow', () => {
