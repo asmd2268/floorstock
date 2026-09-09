@@ -1037,6 +1037,14 @@ globalThis.S = {
         var parsed=JSON.parse(cached),allowed=fsStateKeysForProfile(profileHint);
         if(allowed){
           if(fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(fsPharmacyDepartmentStateKeys(parsed,profileHint));
+          /* A collection-backed key is not in any role's key list — it is read
+             from its own collection, not named document by document — so the warm
+             boot was dropping it from the restored cache. The Crash Cart badge
+             therefore started every session empty and only appeared once the
+             collection listener had spoken, seconds later, with a pending report
+             invisible until then. The listener still corrects it immediately; it
+             just no longer starts from nothing. */
+          allowed=allowed.concat(collectionBackedKeyNames());
           var allowedSet=new Set(allowed),scoped={};
           Object.keys(parsed||{}).forEach(function(key){if(allowedSet.has(key))scoped[key]=parsed[key]});
           parsed=scoped;

@@ -89,3 +89,11 @@ test('the fallback list never writes over a listener that recovered', () => {
   // And a new session starts with no claim outstanding from the previous one.
   assert.match(stateModule, /S\.__collectionListenerLive=\{\};/);
 });
+
+test('a warm boot keeps the reports it already had, so the badge is not late', () => {
+  /* A collection-backed key is in no role's key list — it is read from its own
+     collection rather than named document by document — so the warm-boot restore
+     filtered it out and every session started with an empty Crash Cart badge. A
+     pending report was invisible until the listener spoke, seconds later. */
+  assert.match(stateModule, /allowed=allowed\.concat\(collectionBackedKeyNames\(\)\);/);
+});
