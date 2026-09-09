@@ -247,31 +247,41 @@
 /* ══════════════════════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════════════════════ */
-/* Print patch: only needs window.doDeptPrint (openBlobPrint is a closure-private local) */
-var _printAttempts=0;
-function tryPatchPrint(){
-  if(window.doDeptPrint){patchPrintFunctions();return;}
-  if(++_printAttempts<120)setTimeout(tryPatchPrint,250);
-}
-tryPatchPrint();
+/* Installed at import, not polled for.
 
-var _attempts=0;
-function tryPatch(){
-  if(!window.ctlTabs||!window.renderControlled){if(++_attempts<80)setTimeout(tryPatch,250);return;}
+   These three used to wait on timers — up to 20 seconds of retries — for globals
+   that other modules define. That made sense when scripts were concatenated and
+   ran in whatever order they arrived. They are ES modules now: main.js imports
+   07e, 07j and 40 before this file, so every one of these globals is already
+   there when this line runs, and the module system guarantees it rather than a
+   timer hoping for it.
+
+   The polling also failed in silence. After its retry budget it simply stopped,
+   leaving the controlled page without its redesign and nothing anywhere saying
+   why. A dependency that is genuinely missing is now stated once, loudly, which
+   is the only way anybody would ever find out. */
+function installOnce(label, needed, install) {
+  var missing = Object.keys(needed).filter(function (name) { return typeof needed[name] !== 'function'; });
+  if (missing.length) {
+    console.error('[controlled-redesign] ' + label + ' was not installed; missing: ' + missing.join(', ')
+      + '. Check the import order in main.js.');
+    return false;
+  }
+  install();
+  return true;
+}
+
+installOnce('print patch', { doDeptPrint: window.doDeptPrint }, patchPrintFunctions);
+installOnce('controlled page', { ctlTabs: window.ctlTabs, renderControlled: window.renderControlled }, function () {
   injectHero();
   patchCtlTabs();
   patchRenderControlled();
   ensureAnalyticsDiv();
-}
-tryPatch();
-/* Dept patch needs renderCtlDepartments from module 07 — retry separately */
-var _deptAttempts=0;
-function tryDeptPatch(){
-  if(typeof window.renderCtlDepartments!=='function'||window.renderCtlDepartments.__r688Wrapped){
-    if(!window.renderCtlDepartments&&++_deptAttempts<80)setTimeout(tryDeptPatch,400);return;}
+});
+installOnce('department list', { renderCtlDepartments: window.renderCtlDepartments }, function () {
+  if (window.renderCtlDepartments.__r688Wrapped) return;
   patchRenderCtlDepartments();
-}
-setTimeout(tryDeptPatch,600);
+});
 
 /* ══════════════════════════════════════════════════════════
    HERO
@@ -465,25 +475,31 @@ function _sc(icon,label,val,cls){
 /* ══════════════════════════════════════════════════════════
    PATCH renderControlled
 ══════════════════════════════════════════════════════════ */
+/* Registered on the controlled page's own extension contract rather than
+   reassigning renderControlled around module 40's. The analytics view is a
+   BEFORE extension that returns true — it draws the page itself and the standard
+   render is skipped, which is exactly what the old wrapper did by not calling
+   through. Everything after the render is an AFTER extension. */
 function patchRenderControlled(){
-  var _orig=window.renderControlled;
-  window.renderControlled=function(){
-    if(window.CTL_VIEW==='analytics'){
-      ['ctl-overview-view','ctl-departments-view','ctl-storage-view'].forEach(function(id){
-        var el=document.getElementById(id);if(el)el.style.display='none';
-      });
-      ['ctl-pdf-receipt-card','ctl-permission-note','ctl-main-print-btn'].forEach(function(id){
-        var el=document.getElementById(id);if(el)el.style.display='none';
-      });
-      window.ctlTabs();
-      ensureAnalyticsDiv();
-      var av=document.getElementById('ctl-analytics-view');
-      if(av){av.style.display='block';renderAnalyticsInline(av);}
-      return;
-    }
+  window.__renderControlledBeforeExtensions=window.__renderControlledBeforeExtensions||[];
+  window.__renderControlledAfterExtensions=window.__renderControlledAfterExtensions||[];
+  window.__renderControlledBeforeExtensions.push(function(){
+    if(window.CTL_VIEW!=='analytics')return false;
+    ['ctl-overview-view','ctl-departments-view','ctl-storage-view'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.style.display='none';
+    });
+    ['ctl-pdf-receipt-card','ctl-permission-note','ctl-main-print-btn'].forEach(function(id){
+      var el=document.getElementById(id);if(el)el.style.display='none';
+    });
+    window.ctlTabs();
+    ensureAnalyticsDiv();
+    var av=document.getElementById('ctl-analytics-view');
+    if(av){av.style.display='block';renderAnalyticsInline(av);}
+    return true;
+  });
+  window.__renderControlledAfterExtensions.push(function(){
     var av=document.getElementById('ctl-analytics-view');
     if(av)av.style.display='none';
-    var result=_orig.apply(this,arguments);
     var old=document.getElementById('ctl-overview-stat-cards');if(old)old.remove();
     if(window.CTL_VIEW==='overview'||!window.CTL_VIEW){
       setTimeout(function(){
@@ -498,8 +514,7 @@ function patchRenderControlled(){
       },0);
     }
     syncHeroBtns();
-    return result;
-  };
+  });
 }
 
 /* ══════════════════════════════════════════════════════════

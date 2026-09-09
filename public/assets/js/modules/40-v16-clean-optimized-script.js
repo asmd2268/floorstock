@@ -59,43 +59,11 @@ document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(E('v16
 
 /* ── One controlled-stock page. Separate Shared Catalogue page is removed. ── */
 window.ctlOwnerSource=function(){return ctlCanDispense()?'pharmacy':''};
-// ctlTabs: module 80 fully replaces this (no _orig call-through) so this
-// definition itself is not the active one — BUT module 80's patch routine
-// polls `if(!window.ctlTabs||!window.renderControlled)` as a readiness gate
-// before it will install ITS OWN ctlTabs/renderControlled patches at all.
-// Deleting this stalled that gate forever (confirmed live: window.ctlTabs
-// stayed undefined and module 80's tryPatch() never ran). Must stay as the
-// early placeholder module 80 waits for.
-window.ctlTabs=function(){
-  var root=E('ctl-tabs');
-  if(!root||!window.CU)return;
-  var currentRole=roleC();
-  var tabs;
-  if(currentRole==='department'){
-    tabs=[['departments','My controlled list / عهدتي']];
-  }else if(currentRole==='warehouse'){
-    tabs=[['overview','Controlled stock / المخزون المقيد']];
-  }else{
-    tabs=[['overview','Controlled stock / المخزون المقيد']];
-    if(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage()){
-      tabs.push(['storage','Cabinets & Shelves / الدواليب والأرفف']);
-    }
-    tabs.push(['departments','Inpatient departments / أقسام التنويم']);
-  }
-  window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);
-  if(!tabs.some(function(item){return item[0]===window.CTL_VIEW;})){
-    window.CTL_VIEW=tabs[0][0];
-  }
-  root.innerHTML=tabs.map(function(item){
-    return '<button type="button" class="tbtn '+
-      (window.CTL_VIEW===item[0]?'on':'')+
-      '" data-view="'+item[0]+'">'+item[1]+'</button>';
-  }).join('');
-  root.querySelectorAll('button').forEach(function(button){
-    button.onclick=function(){window.ctlSetView(button.dataset.view);};
-  });
-};
-window.ctlSetView=function(v){window.CTL_VIEW=normalizeViewC(v);return window.renderControlled()};
+/* ctlTabs and ctlSetView belong to module 80, which builds the tab set this
+   page actually shows. They used to be defined here as well — dead code that
+   module 80 overwrote — and worse, module 80 POLLED for them on a timer as a
+   sign that this module had loaded. ES modules make that unnecessary: main.js
+   imports this file first, so module 80 simply installs at import. */
 function cleanImportCardC(){if(!canCatalogC())return '';return '<details class="card ctl-clean-import"><summary>Import or paste shared catalogue / استيراد القائمة المشتركة</summary><div class="cb"><div class="g2"><div><label>Excel file (.xlsx, .xls, .csv)</label><input type="file" id="ctl-import-file" accept=".xlsx,.xls,.csv" onchange="ctlImportMasterFile(this.files[0])"><div class="fhint">Imports medicine codes, balances and expiry dates.</div></div><div><label>Paste tab-separated text</label><textarea id="ctl-import-text" rows="4" placeholder="MOH Code    NUPCO Code    Medication ..."></textarea><button type="button" class="btn bp bsm" onclick="ctlImportMasterText()">Import text</button></div></div></div></details>'}
 function overviewActionsC(m){var a=[];if(canWarehouseC()){a.push('<button type="button" class="btn bg bxs" data-id="'+escC(m.id)+'" onclick="ctlEditWarehouseStock(this.dataset.id)">Edit warehouse</button>');if(roleC()==='warehouse')a.push('<button type="button" class="btn bs bxs" data-id="'+escC(m.id)+'" onclick="ctlSendToPharmacy(this.dataset.id)">Send to pharmacy</button>')}if(canPharmacyC())a.push('<button type="button" class="btn bp bxs" data-id="'+escC(m.id)+'" onclick="ctlEditPharmacyStock(this.dataset.id)">Edit pharmacy</button>');if(canDispenseC())a.push('<button type="button" class="btn bs bxs" data-id="'+escC(m.id)+'" onclick="ctlOpenDispense(this.dataset.id)">Dispense / صرف</button>');if(canCatalogC())a.push('<button type="button" class="btn bg bxs" data-id="'+escC(m.id)+'" onclick="ctlEditCatalogMedicine(this.dataset.id)">Edit medicine</button>');return a.join(' ')||'<span class="chip">Read only</span>'}
 window.renderCtlOverview=function(){
@@ -134,7 +102,7 @@ function ensureDeptToolsC(){if(window.CTL_VIEW!=='departments'||!E('ctl-departme
 // implementation and must stay. (Confirmed by a test failure after an earlier,
 // incorrect deletion attempt: module 80's own renderControlled has no rendering
 // logic of its own outside the 'analytics' CTL_VIEW branch.)
-window.renderControlled=function(){
+function renderControlledBody(){
   if(!window.CU)return;
   var effective=(typeof window.fsEffectiveUser==='function'?window.fsEffectiveUser():window.CU||{});
   var effectiveRole=String(effective.role||'');
@@ -247,7 +215,33 @@ window.renderControlled=function(){
       }
     });
   }
+}
+
+/* One owner for the controlled page, with a published extension contract instead
+   of another module reassigning this name around it.
+
+   Module 80 used to take this function, keep a reference, and install its own in
+   its place — so `renderControlled` meant different things depending on which
+   module had run last, and a failure inside the outer one took the whole render
+   with it. It registers here now, like every other page hook in the app: a
+   before-extension that returns true has handled the render itself (the
+   analytics view does exactly that), and after-extensions run once the page is
+   drawn. Each runs in its own try/catch, so one broken extension cannot leave
+   the controlled page blank. */
+window.__renderControlledBeforeExtensions=window.__renderControlledBeforeExtensions||[];
+window.__renderControlledAfterExtensions=window.__renderControlledAfterExtensions||[];
+window.renderControlled=function(){
+  var before=window.__renderControlledBeforeExtensions;
+  for(var index=0;index<before.length;index+=1){
+    try{ if(before[index]()===true)return; }
+    catch(error){ console.error('renderControlled before-extension failed',error); }
+  }
+  renderControlledBody();
+  window.__renderControlledAfterExtensions.forEach(function(fn){
+    try{ fn(); }catch(error){ console.error('renderControlled after-extension failed',error); }
+  });
 };
+
 
 /* ── Department controlled custody: batch/lot optional; zero quantity needs no expiry. ── */
 function markOptionalC(){var modal=E('v13x-stock-modal');if(!modal)return;modal.querySelectorAll('.v13x-batch-row input,.batch-editor-row input').forEach(function(x){x.required=false});var note=E('v13aq-expiry-summary');if(!note){var host=E('v13x-stock-batches');if(host){note=document.createElement('div');note.id='v13aq-expiry-summary';note.className='alert-banner-y';host.parentNode.insertBefore(note,host)}}if(note)note.innerHTML='<b>Lot/Batch is optional.</b> Expiry rows are required only when actual quantity is greater than zero. When actual quantity is 0, expiry rows are cleared automatically.'}

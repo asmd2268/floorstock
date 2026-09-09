@@ -1432,13 +1432,15 @@ window.acc2ResetClassColors=async function(){
 
 /* ========== showPg hook for pg-class-colors ========== */
 (function(){
-  function hookShowPg(){
-    if(window.__acc2ColorsHooked||typeof window.showPg!=='function')return;
-    window.__acc2ColorsHooked=true;
-    var orig=window.showPg;
-    window.showPg=function(id){orig.apply(this,arguments);if(id==='pg-class-colors'&&typeof window.renderClassColorSettings==='function')window.renderClassColorSettings()};
-  }
-  if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',hookShowPg);else hookShowPg();
+  /* Through the registry module 38 already runs after every page change, not by
+     replacing showPg with a wrapper around it. Eight other modules use the
+     registry; this one wrapped instead, so showPg's identity depended on which
+     module happened to run last and a failure inside it took the page change
+     with it. */
+  window.__showPgAfterExtensions=window.__showPgAfterExtensions||[];
+  window.__showPgAfterExtensions.push(function(id){
+    if(id==='pg-class-colors'&&typeof window.renderClassColorSettings==='function')window.renderClassColorSettings();
+  });
 })();
 
 /* Show no-consumption settings panel for master in crash ops */
