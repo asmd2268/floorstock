@@ -242,6 +242,25 @@ describe('floorstock_state reads, shapes, keys, and deletes', () => {
     await assertFails(setDoc(doc(dbFor('department'), 'floorstock_state', 'controlled_catalog_g2026-09'), statePayload([])));
   });
 
+  /* A value too large for one document is continued into <key>_p2, <key>_p3, …
+     so no record can reach the cap and stop the app. A continuation is the same
+     record as the key it continues and must carry the same permissions — proved
+     against the emulator rather than trusted, because stateKey() does it with a
+     regex split inside the rules language. */
+  test('a continuation document is written exactly where its key is', async () => {
+    const department = dbFor('department');
+    for (const key of ['dept_notes_p2', 'requests_p3', 'requests_g2026-09_p2']) {
+      await assertSucceeds(setDoc(doc(department, 'floorstock_state', key), statePayload([])));
+    }
+    // And nowhere the key itself is refused.
+    await assertFails(setDoc(doc(department, 'floorstock_state', 'controlled_catalog_p2'), statePayload([])));
+    await assertFails(setDoc(doc(department, 'floorstock_state', 'audit_log_p2'), statePayload([])));
+
+    const warehouse = dbFor('warehouse');
+    await assertSucceeds(setDoc(doc(warehouse, 'floorstock_state', 'controlled_warehouse_p2'), statePayload({})));
+    await assertFails(setDoc(doc(warehouse, 'floorstock_state', 'dept_notes_p2'), statePayload([])));
+  });
+
   test('legacy accounts with tenantId null can still save to legacy state', async () => {
     const db = dbFor('legacy_null_master');
     await assertSucceeds(setDoc(doc(db, 'floorstock_state', 'requests'), statePayload([])));

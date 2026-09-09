@@ -31,6 +31,11 @@ export const PARTITIONED_STATE_KEYS = Object.freeze([
 ]);
 
 const PARTITION_SUFFIX = /_[gh]\d{4}-\d{2}(_p\d+)?$/;
+/* A value too large for one document continues into <key>_p2, <key>_p3, … Those
+   are the same record as <key> and carry the same permissions, for the same
+   reason a month partition does — so the suffix is stripped here as well and
+   every rule stays written about the key itself. */
+const OVERFLOW_SUFFIX = /_p\d+$/;
 
 /* The logical key a state document belongs to: the id itself for a plain
    document, the base key for one of the partitions above. An id that merely
@@ -38,8 +43,10 @@ const PARTITION_SUFFIX = /_[gh]\d{4}-\d{2}(_p\d+)?$/;
    is returned untouched, so nothing inherits permissions by accident. */
 export function baseStateKey(docId) {
   const id = String(docId || '');
-  const base = id.replace(PARTITION_SUFFIX, '');
-  return base !== id && PARTITIONED_STATE_KEYS.includes(base) ? base : id;
+  const partitioned = id.replace(PARTITION_SUFFIX, '');
+  if (partitioned !== id && PARTITIONED_STATE_KEYS.includes(partitioned)) return partitioned;
+  const spread = id.replace(OVERFLOW_SUFFIX, '');
+  return spread !== id ? spread : id;
 }
 
 export function isPartitionedStateKey(key) {

@@ -6,7 +6,7 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
 } from './month-partitioned-store.js?v=cc6daa3c27';
-import { registerStorageCleanup } from './storage-cleanup.js?v=94cce5b569';
+import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
 
 /* Orders, one document per Gregorian month.
 

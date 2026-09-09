@@ -24,6 +24,11 @@
      so it only helps if someone knows it is time. Surface the largest document
      against the cap and warn well before it becomes urgent. */
   var FIRESTORE_DOC_LIMIT = 1048576;
+  function docBytes(value){
+    return typeof window.estimateDocBytes==='function'
+      ? window.estimateDocBytes(value)
+      : (function(){ try{ return new TextEncoder().encode(JSON.stringify(value)).length; }catch(e){ return 0; } })();
+  }
   /* Every state document is measured, not a hand-kept list.
 
      The gauge used to watch eight named keys while the application has more than
@@ -47,6 +52,14 @@
   function foldedKeys(){
     var folded={};
     auditLogKeys().forEach(function(name){folded[name]=true});
+    /* A value too large for one document continues into <key>_p2, <key>_p3, …
+       Those are one record, so they are measured as one row against the cap that
+       actually applies — the fullest single part. */
+    if(window.S&&window.S.cache&&typeof window.overflowBaseKey==='function'){
+      Object.keys(window.S.cache).forEach(function(name){
+        if(typeof window.isOverflowPartKey==='function'&&window.isOverflowPartKey(name))folded[name]=true;
+      });
+    }
     if(typeof window.monthPartitionedKeyNames==='function'&&typeof window.partitionKeysInCache==='function'){
       window.monthPartitionedKeyNames().forEach(function(key){
         window.partitionKeysInCache(key).forEach(function(name){folded[name]=true});
@@ -58,7 +71,7 @@
      them individually would fill the panel with one row per month and bury the
      number that matters. One synthetic row per ledger reports the total it holds
      and the fullest single month, which is the only one that can hit the cap. */
-  function ledgerRows(encoder){
+  function ledgerRows(){
     if(!window.S||!window.S.cache||typeof window.monthPartitionedKeyNames!=='function')return [];
     return window.monthPartitionedKeyNames().map(function(key){
       var names=typeof window.partitionKeysInCache==='function'?window.partitionKeysInCache(key):[];
@@ -68,8 +81,7 @@
         var value=window.S.g(name);
         if(!Array.isArray(value))return;
         records+=value.length;
-        var bytes=0;
-        try{ bytes=encoder?encoder.encode(JSON.stringify(value)).length:JSON.stringify(value).length; }catch(e){ return; }
+        var bytes=docBytes(value);
         total+=bytes;
         if(bytes>largest)largest=bytes;
       });
@@ -93,7 +105,6 @@
   }
   function measureStateDocuments(){
     if(!window.S||typeof S.g!=='function'||!window.S.cache)return [];
-    var encoder = typeof TextEncoder==='function' ? new TextEncoder() : null;
     var folded=foldedKeys();
     var measured=Object.keys(window.S.cache).filter(function(key){
       return !NEVER_MEASURED[key] && !folded[key];
@@ -101,33 +112,48 @@
       var value;
       try{ value = S.cache[key]; }catch(e){ return null; }
       if(value==null)return null;
-      var json;
-      try{ json = JSON.stringify(value); }catch(e){ return null; }
-      // Arabic text is multi-byte, so count encoded bytes rather than characters.
-      var bytes = encoder ? encoder.encode(json).length : json.length;
+      /* Measured the way Firestore measures, not with JSON.stringify. JSON pays
+         for quotes, colons, commas and braces that never reach the database, so
+         it overstated object-heavy records by 20-30% — which is how a document
+         came to be reported at "120.4% of 1 MiB", a number that cannot exist,
+         since Firestore would have refused the write that created it. A gauge
+         that cries wolf teaches a master to ignore it. */
+      var bytes = docBytes(value);
       var uncapped = isCollectionBacked(key);
+      /* A value spread across <key>, <key>_p2, … is one record in many documents.
+         Each document is capped on its own, so the pressure is the fullest part,
+         while the size worth reporting is the whole. */
+      var parts = typeof window.overflowPartKeysInCache==='function' ? window.overflowPartKeysInCache(key) : [];
+      var largest = bytes, rows = Array.isArray(value) ? value.length : null;
+      parts.forEach(function(name){
+        var part = window.S.cache[name], partBytes = docBytes(part);
+        bytes += partBytes;
+        if(partBytes>largest)largest=partBytes;
+        if(rows!=null&&Array.isArray(part))rows+=part.length;
+      });
       return {
         key:key,
         bytes:bytes,
         // pct drives the warning colour and the login-time alert. A collection has
         // no cap, so it must never register as pressure however large it grows.
-        pct: uncapped ? 0 : (bytes/FIRESTORE_DOC_LIMIT)*100,
+        pct: uncapped ? 0 : (largest/FIRESTORE_DOC_LIMIT)*100,
         uncapped: uncapped,
-        rows: Array.isArray(value) ? value.length : null
+        documents: parts.length ? parts.length + 1 : 1,
+        rows: rows
       };
     }).filter(Boolean);
-    var audit=auditLogFamilyRow(encoder);
+    var audit=auditLogFamilyRow();
     /* Ordered by how close each is to the cap, not by size. A ledger's bytes are
        a total across months while a plain document's are one document, so sorting
        on bytes compares different things — and the login-time warning reads the
        first row, so a byte sort could put a 30%-full ledger above the record
        actually at 90% and miss it. Ties fall back to size. */
-    return measured.concat(ledgerRows(encoder),audit?[audit]:[])
+    return measured.concat(ledgerRows(),audit?[audit]:[])
       .sort(function(a,b){return (b.pct-a.pct)||(b.bytes-a.bytes)});
   }
   /* The audit trail, folded like a ledger: one row per calendar month, so only
      the fullest month can reach the cap. */
-  function auditLogFamilyRow(encoder){
+  function auditLogFamilyRow(){
     var names=auditLogKeys();
     if(!names.length)return null;
     var total=0,largest=0,records=0;
@@ -136,7 +162,7 @@
       if(!Array.isArray(value))return;
       records+=value.length;
       var bytes=0;
-      try{ bytes=encoder?encoder.encode(JSON.stringify(value)).length:JSON.stringify(value).length; }catch(e){ return; }
+      bytes=docBytes(value);
       total+=bytes;
       if(bytes>largest)largest=bytes;
     });

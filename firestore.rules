@@ -101,7 +101,7 @@ service cloud.firestore {
     function stateKey(docId) {
       return docId.matches('^(requests|controlled_moves|accountability_usage_v2|controlled_pdf_receipts|accountability_receipts_v2|dept_notes|deleted_request_audit_v4|department_request_notifications_v1|user_activity_daily_v1)_[gh][0-9]{4}-[0-9]{2}(_p[0-9]+)?$')
         ? docId.split('_[gh][0-9]{4}-[0-9]{2}(_p[0-9]+)?$')[0]
-        : docId;
+        : (docId.matches('^.*_p[0-9]+$') ? docId.split('_p[0-9]+$')[0] : docId);
     }
 
     function canReadScopedState(docId) {

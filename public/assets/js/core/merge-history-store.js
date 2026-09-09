@@ -1,4 +1,4 @@
-import { registerStorageCleanup } from './storage-cleanup.js?v=94cce5b569';
+import { registerStorageCleanup } from './storage-cleanup.js?v=efb839c9e4';
 
 /* The undo history behind an inventory-name merge, kept under a byte budget
    rather than a row count.

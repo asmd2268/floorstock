@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=792128cbfc';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=e9e9d8dd77';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
@@ -464,6 +464,9 @@ function fsStateScopeCacheForProfile(cache,profile){
   return cache;
 }
 window.fsStateScopeCacheForProfile=fsStateScopeCacheForProfile;
+// Enough rounds for a value spread over dozens of documents; each round is one
+// batch of reads and stops as soon as a probe comes back empty.
+var OVERFLOW_PROBE_ROUNDS=8;
 async function fsStateLoadScoped(keys,loader,source,profile){
   // A scoped session may legitimately be denied one optional document. Do not
   // discard every permitted document (especially crash_carts) because of it.
@@ -475,6 +478,22 @@ async function fsStateLoadScoped(keys,loader,source,profile){
       console.warn('Scoped state document was unavailable:',keys[index],result.reason);
     }
   });
+  /* A value too large for one document continues into <key>_p2, <key>_p3, …
+     A scoped session cannot list the collection, so it has to name what it
+     reads — but it only has to ask when a document it just read is large enough
+     to have been continued. A session holding nothing large asks for nothing,
+     which is the ordinary case and costs no extra read. */
+  for(var round=0;round<OVERFLOW_PROBE_ROUNDS;round++){
+    var probes=overflowProbeKeys(cache);
+    if(!probes.length)break;
+    // eslint-disable-next-line no-await-in-loop
+    var extra=await Promise.allSettled(probes.map(function(key){return loader(key)}));
+    var found=false;
+    extra.forEach(function(result,index){
+      if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined){cache[probes[index]]=result.value;found=true;}
+    });
+    if(!found)break;
+  }
   if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
   return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
 }
@@ -1250,6 +1269,9 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
      with some rows in the old document and some in the partitions. */
   g:function(k){
     if(partitionsAreLive(k))return monthPartitionRows(k);
+    /* A value too large for one document is written across <key>, <key>_p2, …
+       and rejoined here, so no reader knows or cares that it was split. */
+    if(hasOverflowParts(k))return joinOverflowParts(k);
     return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null;
   },
   s:function(k,v){
@@ -1263,6 +1285,22 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       });
       return _trackSave(partitioned,'floorstock_state/'+k+' (by month)');
     }
+    /* Anything that would not fit in one document is written across numbered
+       parts instead of being refused. This is the general form of what month
+       partitioning does for dated records: no state key has a ceiling, so
+       "the record filled up and everything stopped" cannot happen to a key
+       nobody thought to handle in advance. */
+    if(v!==null&&typeof v==='object'&&(hasOverflowParts(k)||estimateDocBytes(v)>OVERFLOW_SPLIT_BYTES)){
+      var spread=writeWithOverflow(k,v,function(docId,chunk){
+        S.cache[docId]=chunk;
+        return fsStateSetSmart(docId,chunk);
+      }).catch(function(error){
+        console.error('Overflow save failed for key:',k,error);
+        toast('Save failed — '+String(error&&error.message||error),'err');
+        throw error;
+      });
+      return _trackSave(spread,'floorstock_state/'+k+' (split)');
+    }
     var prev=Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:undefined;
     S.cache[k]=v;
     var write=fsStateSetSmart(k,v).catch(function(error){
@@ -1275,11 +1313,15 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
          never blocked pre-emptively — Firestore decides, this only explains it. */
       var hint='';
       try{
-        var bytes=new TextEncoder().encode(JSON.stringify(v)).length;
+        var bytes=estimateDocBytes(v);
         if(bytes>=0.9*1048576){
-          hint=' The '+k+' record is '+(bytes/1048576).toFixed(2)+' MB, at the 1 MB limit for a single record.'
-            +' Ask the Master to archive old orders from the Requests page.'
-            +'\nسجل '+k+' بلغ الحد الأقصى. اطلب من الماستر أرشفة الطلبات القديمة من صفحة الطلبات.';
+          /* Reaching this now means the split above did not run — a value with no
+             seam to split on, such as a single oversized field. Naming the record
+             and its size is the actionable part; the old text sent every such
+             failure to the Requests page whatever the record was. */
+          hint=' The '+k+' record is '+(bytes/1048576).toFixed(2)+' MB and cannot be divided into smaller documents.'
+            +' Open System Health to see it and what can be archived.'
+            +'\nسجل '+k+' تجاوز حد المستند ولا يمكن تقسيمه. افتح System Health لمعرفة ما يمكن أرشفته.';
         }
       }catch(sizeError){}
       toast('Save failed — Firebase rejected the update.'+hint,'err');

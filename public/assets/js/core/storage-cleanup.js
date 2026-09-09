@@ -99,6 +99,12 @@ export function renderStorageCleanup() {
        but only the fullest single month can actually hit the cap. */
     const scale = doc.uncapped
       ? `${escape(sizeLabel(doc.bytes))}${doc.rows == null ? '' : ` · ${doc.rows} records`} · no size limit`
+      : doc.documents > 1
+        /* A record that outgrew one document was continued into numbered ones
+           rather than refused. Each is capped separately, so the pressure shown
+           is the fullest of them, not the total. */
+        ? `${escape(sizeLabel(doc.bytes))} across ${doc.documents} documents`
+          + `${doc.rows == null ? '' : ` · ${doc.rows} records`} · fullest ${doc.pct.toFixed(1)}% of 1 MiB`
       : doc.months
         ? `${escape(sizeLabel(doc.bytes))} across ${doc.months} ${doc.calendar === 'gregorian' ? '' : 'Hijri '}month${doc.months === 1 ? '' : 's'}`
           + `${doc.rows == null ? '' : ` · ${doc.rows} records`} · fullest month ${doc.pct.toFixed(1)}% of 1 MiB`
