@@ -67,3 +67,19 @@ test('a failure while drawing cannot leave "Checking…" on screen', async () =>
   assert.match(ui, /function escapeText\(value\) \{/);
   assert.ok(!/globalThis\.fsEsc\(/.test(ui), 'render through escapeText, which cannot be missing');
 });
+
+test('nothing waits forever: the library load and the call are both bounded', async () => {
+  /* script.onerror fires when a request FAILS, not when it never finishes — a
+     stalled proxy or a captive portal leaves it pending. fsCallFunction awaits
+     the Functions library before EVERY callable, so that stall meant submitting
+     a Crash Cart report, a custody mutation or a handover would hang with no
+     error, no toast and no failed request to see. */
+  const loader = await readFile(new URL('../public/assets/js/core/script-loader.js', import.meta.url), 'utf8');
+  assert.match(loader, /const DEFAULT_TIMEOUT_MS = 15000;/);
+  assert.match(loader, /did not load within/);
+  // And a failed attempt is dropped, so the next one is a fresh request rather
+  // than a wait on the promise that already failed.
+  assert.match(loader, /if \(error\) pendingScripts\.delete\(key\);/);
+  assert.match(ui, /const CALL_TIMEOUT_MS = 20000;/);
+  assert.match(ui, /the request timed out/);
+});

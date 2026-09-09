@@ -10,11 +10,27 @@ function isMaster() {
   return !!(globalThis.CU && globalThis.CU.master === true);
 }
 
+/* Bounded on this side too. A panel must never be able to sit on "Checking…"
+   because something below it never answered — whatever the reason, after this
+   long the honest thing to show is a message and a way to try again. */
+const CALL_TIMEOUT_MS = 20000;
+
 function callFunction(name, data) {
   if (typeof globalThis.fsCallFunction !== 'function') {
     return Promise.reject(new Error('The secure function service is still loading.'));
   }
-  return globalThis.fsCallFunction(name, data || {});
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('the request timed out / انتهت مهلة الطلب'));
+    }, CALL_TIMEOUT_MS);
+    globalThis.fsCallFunction(name, data || {}).then(
+      (value) => { if (!settled) { settled = true; clearTimeout(timer); resolve(value); } },
+      (error) => { if (!settled) { settled = true; clearTimeout(timer); reject(error); } },
+    );
+  });
 }
 
 /* dom-utils publishes fsEsc, but a panel that renders before it would throw and

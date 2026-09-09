@@ -7,9 +7,9 @@ import {
   canEditFulfillment,
   fulfillmentEditReason,
 } from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
-import { loadScriptOnce } from '../core/script-loader.js?v=f15babaf45';
+import { loadScriptOnce } from '../core/script-loader.js?v=5e8c0b2d04';
 import { debounce } from '../core/timing.js?v=6b9368dd75';
-import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=f014fcad89';
+import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=e6374b4039';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=7975fe045f';
