@@ -24,7 +24,7 @@ export const FIRESTORE_DOC_LIMIT = 1048576;
    hint   : what the action actually does, shown under the bar
    run    : async () => void — owns its own confirmation and permission check
    canRun : optional () => boolean, gates the button (defaults to master-only) */
-export function registerStorageCleanup({ key, label, hint, run, canRun, kind }) {
+export function registerStorageCleanup({ key, label, hint, run, canRun, kind, interactive }) {
   if (!key || typeof run !== 'function') return;
   /* One action per key, for the same reason publishLegacy allows one owner per
      name: a second registration would silently replace the first and the panel
@@ -32,7 +32,7 @@ export function registerStorageCleanup({ key, label, hint, run, canRun, kind }) 
   if (cleaners.has(String(key))) {
     throw new Error(`A storage cleanup action is already registered for ${key}.`);
   }
-  cleaners.set(String(key), { key: String(key), label: label || 'Clean up', hint: hint || '', run, canRun, kind: kind || 'archive' });
+  cleaners.set(String(key), { key: String(key), label: label || 'Clean up', hint: hint || '', run, canRun, kind: kind || 'archive', interactive: interactive === true });
 }
 
 export function storageCleanupFor(key) {
@@ -71,7 +71,10 @@ registerAutoMaintenance({
   key: 'state_month_migrations',
   describe: (result) => `${result.ran} record(s) filed by month`,
   run: async () => {
-    const pending = pendingStorageMigrations();
+    /* Anything that downloads a file or asks a question is left to the button:
+       upkeep must never put a dialog or a download in front of someone who was
+       only signing in. */
+    const pending = pendingStorageMigrations().filter((cleaner) => !cleaner.interactive);
     if (!pending.length) return null;
     let ran = 0;
     for (const cleaner of pending) {

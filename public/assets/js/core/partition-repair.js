@@ -1,6 +1,6 @@
 import { dedupeMonthPartitions, monthPartitionedKeyNames } from './month-partitioned-store.js?v=405d877017';
 import { registerAutoMaintenance } from './state-maintenance.js?v=3b19eb92e8';
-import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
+import { registerStorageCleanup } from './storage-cleanup.js?v=48f4075c4b';
 
 /* Repairs rows a re-run migration duplicated.
 

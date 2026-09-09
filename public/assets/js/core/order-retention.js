@@ -1,5 +1,6 @@
 import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
+import { legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
+import { registerStorageCleanup } from './storage-cleanup.js?v=48f4075c4b';
 import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
 import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
 
@@ -219,14 +220,17 @@ async function cleanupOldOrders(autoMode){
    and analytics-engine weighs each aggregate by rowWeight(), so a month reads
    with the same totals afterwards at coarser resolution. The legacy rows are
    downloaded first regardless, because they are full detail and this deletes them. */
-async function migrateLegacyRequestArchive(){
+async function migrateLegacyRequestArchive(options){
   var user=globalThis.CU;
   if(!user||user.master!==true)return globalThis.toast('Only Master can run the archive migration.','err');
+  // A file has to be downloaded and confirmed, so this is never done for someone.
+  if(options&&options.silent)return null;
 
-  var legacy=globalThis.S.g('request_analytics_archive')||[];
+  var legacyDoc=globalThis.legacyStateDoc?globalThis.legacyStateDoc('request_analytics_archive'):globalThis.S.g('request_analytics_archive');
+  var legacy=legacyDoc||[];
   if(!legacy.length){
     // Present but empty: still remove the key so the document stops existing.
-    if(globalThis.S.g('request_analytics_archive')!==null){
+    if(legacyDoc!==null){
       await globalThis.S.rm('request_analytics_archive');
       globalThis.toast('Legacy order archive was already empty and has been removed.','succ');
     }else{
@@ -290,8 +294,16 @@ registerStorageCleanup({
   key:'request_analytics_archive',
   label:'Migrate legacy archive / ترحيل الأرشيف القديم',
   hint:'Folds the retired second archive into the monthly summary. Report totals are unchanged.',
-  run:function(){return migrateLegacyRequestArchive()},
-  canRun:function(){return !!(globalThis.CU&&globalThis.CU.master===true)}
+  /* Downloads the full detail before folding the rows into the summary, so it
+     can never run unattended — the file has to reach someone's device and be
+     confirmed. The automatic pass skips anything marked interactive. */
+  interactive:true,
+  run:function(options){return migrateLegacyRequestArchive(options)},
+  /* Pending only while the legacy document is actually there. It used to say
+     "master" and nothing else, so it reported itself pending forever: every
+     "Run all" ran it, found nothing to do, and still counted as a record filed —
+     which is why the banner never reached zero. */
+  canRun:function(){return !!(globalThis.CU&&globalThis.CU.master===true)&&legacyStateDocExists('request_analytics_archive')}
 });
 
 /* Registered under the partitioned ledger's synthetic panel row, not under the

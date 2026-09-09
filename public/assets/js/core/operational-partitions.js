@@ -4,7 +4,7 @@ import {
   monthOf,
   monthPartitionSpec,
 } from './month-partitioned-store.js?v=405d877017';
-import { registerStorageCleanup } from './storage-cleanup.js?v=b360482df7';
+import { registerStorageCleanup } from './storage-cleanup.js?v=48f4075c4b';
 import { legacyStateDoc } from './legacy-state-doc.js?v=95b728cbfc';
 
 /* The remaining append-forever records, filed by month like the ledgers.

@@ -87,3 +87,22 @@ test('content matching applies only to ids this project invented', async () => {
   const repair = await readFile(new URL('core/partition-repair.js', jsRoot), 'utf8');
   assert.match(repair, /\$\{entry\.key\} \$\{entry\.before\}→\$\{entry\.after\}/);
 });
+
+test('a migration is pending only while its legacy document exists', async () => {
+  /* The legacy-archive migration said "master" and nothing else, so it reported
+     itself pending forever: every Run all ran it, found nothing to do, and still
+     counted as a record filed — which is why the banner never reached zero. */
+  const retention = await readFile(new URL('core/order-retention.js', jsRoot), 'utf8');
+  assert.match(retention, /canRun:function\(\)\{return !!\(globalThis\.CU&&globalThis\.CU\.master===true\)&&legacyStateDocExists\('request_analytics_archive'\)\}/);
+});
+
+test('upkeep never downloads a file or asks a question', async () => {
+  /* Someone signing in must not meet a save dialog. The legacy-archive migration
+     writes the full detail to a device before folding the rows away, so it stays
+     a button. */
+  const retention = await readFile(new URL('core/order-retention.js', jsRoot), 'utf8');
+  assert.match(retention, /interactive:true/);
+  assert.match(retention, /if\(options&&options\.silent\)return null;/);
+  const cleanup = await readFile(new URL('core/storage-cleanup.js', jsRoot), 'utf8');
+  assert.match(cleanup, /pendingStorageMigrations\(\)\.filter\(\(cleaner\) => !cleaner\.interactive\)/);
+});
