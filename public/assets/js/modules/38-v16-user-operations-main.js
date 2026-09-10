@@ -1,3 +1,4 @@
+import { selectedPrintIds, restorePrintSelection } from '../core/print-order-selection.js?v=42a613d169';
 (function(){
 'use strict';
 var E=window.fsE;
@@ -99,7 +100,6 @@ function afterRender(){
 }
 var afterRenderScheduled=false;
 function scheduleAfterRender(){if(afterRenderScheduled)return;afterRenderScheduled=true;var run=function(){afterRenderScheduled=false;afterRender()};Promise.resolve().then(run)}
-
 
 window.schedulePagePostRender=scheduleAfterRender;
 window.enhanceRequests=enhanceRequests;
@@ -738,8 +738,8 @@ window.injectPrintTabBar=function(activePg){
   pg.insertBefore(bar,pg.firstChild);
 };
 
-window.renderPrint=function(){
-  /* أصل renderPrint */
+window.renderPrint=function(){ /* selection carried across the rebuild: core/print-order-selection.js */ var kept=selectedPrintIds();renderPrintTable();restorePrintSelection(kept)};
+function renderPrintTable(){
   var purgeBtn=E('purge-old-orders-btn');
   if(purgeBtn)purgeBtn.style.display=(window.CU&&CU.master===true)?'inline-flex':'none';
 
