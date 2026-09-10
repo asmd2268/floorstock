@@ -19,6 +19,7 @@ import {
   drugComparisonStats as comparisonStats, deptDrugTrendStats as trendStats
 } from '../core/analytics-drug-trends.js?v=ce84bf0b15';
 import { crashCartStats } from '../core/analytics-crash-carts.js?v=33105767c7';
+import { narcoticStats } from '../core/analytics-narcotics.js?v=684e55b66c';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -1359,53 +1360,7 @@ function narcoticCatalog() {
   return cat;
 }
 
-function narcoticStatsForYear(y) {
-  const moves = narcoticMoves().filter(m => {
-    if (m.type !== 'dispense') return false;
-    const d = new Date(m.at || 0);
-    return d.getFullYear() === y;
-  });
-
-  const catalog = narcoticCatalog();
-  const uniqueMeds = new Set(moves.map(m => m.medId).filter(Boolean));
-  const totalUnits = moves.reduce((s, m) => s + (Number(m.qty) || 0), 0);
-
-  // Inpatient vs outpatient
-  const inpatientUnits = moves.filter(m => m.dispenseType === 'inpatient' || m.dispenseType === 'internal').reduce((s, m) => s + (Number(m.qty) || 0), 0);
-  const outpatientUnits = totalUnits - inpatientUnits;
-
-  // Monthly breakdown
-  const monthly = Array(12).fill(0).map((_, i) => ({
-    month: i,
-    units: moves.filter(m => new Date(m.at || 0).getMonth() === i).reduce((s, m) => s + (Number(m.qty) || 0), 0),
-    events: moves.filter(m => new Date(m.at || 0).getMonth() === i).length,
-  }));
-
-  // Quarterly
-  const quarterly = [1,2,3,4].map(q => ({
-    q,
-    units: moves.filter(m => Math.floor(new Date(m.at || 0).getMonth() / 3) + 1 === q).reduce((s, m) => s + (Number(m.qty) || 0), 0),
-    events: moves.filter(m => Math.floor(new Date(m.at || 0).getMonth() / 3) + 1 === q).length,
-  }));
-
-  // Top medicines
-  const medTotals = {};
-  moves.forEach(m => {
-    if (!m.medId) return;
-    const med = catalog.find(c => String(c.id) === String(m.medId));
-    const name = (med && med.name) || m.medId;
-    const cls = (med && med.classification) || 'narcotic';
-    if (!medTotals[name]) medTotals[name] = { units: 0, events: 0, cls };
-    medTotals[name].units += Number(m.qty) || 0;
-    medTotals[name].events++;
-  });
-  const topMeds = Object.entries(medTotals)
-    .map(([name, d]) => ({ name, ...d }))
-    .sort((a, b) => b.units - a.units)
-    .slice(0, 10);
-
-  return { moves: moves.length, uniqueMeds: uniqueMeds.size, totalUnits, inpatientUnits, outpatientUnits, monthly, quarterly, topMeds, catalog };
-}
+function narcoticStatsForYear(y) { return narcoticStats(narcoticMoves(), narcoticCatalog(), y); }
 
 function renderNarcoticSection() {
   const y = reportYear();
