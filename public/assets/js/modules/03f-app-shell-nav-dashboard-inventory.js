@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import { normalizeRole } from '../core/role-capabilities.js?v=ae15f94c34';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c8beef9722';
 import { fsNorm } from '../core/text-normalize.js?v=aa16ae9ac0';
@@ -385,6 +386,7 @@ function populateInvDeptSel(){
 
 // ── DASHBOARD ────────────────────────────────────────────
 function renderDash(){
+  f03InstallActions(document.body);
   var allDs=gd(),ds=typeof window.fsRoleScopedDepts==='function'?window.fsRoleScopedDepts(allDs):allDs;
   if(typeof window.fsCanAccessDepartment==='function')ds=ds.filter(function(d){return window.fsCanAccessDepartment(d.id)});
   var allowedDash={};ds.forEach(function(d){allowedDash[String(d.id)]=true});
@@ -437,8 +439,8 @@ function renderDash(){
 var openNotes=getNotes().filter(function(n){return (n.status==='open'||n.status==='urgent')&&(!n.deptId||allowedDash[String(n.deptId)]);});
 var urgentNotes=getNotes().filter(function(n){return n.status==='urgent'&&(!n.deptId||allowedDash[String(n.deptId)]);});
 var notesHtml='';
-if(urgentNotes.length)notesHtml+='<div class="alert-banner" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">🚨 <b>'+urgentNotes.length+' urgent note(s)</b> from departments — click to review</div>';
-else if(openNotes.length)notesHtml+='<div class="alert-banner-y" style="cursor:pointer" onclick="showPg(&#x27;pg-notes-ph&#x27;)">📝 <b>'+openNotes.length+' open note(s)</b> from departments — click to review</div>';
+if(urgentNotes.length)notesHtml+='<div class="alert-banner" style="cursor:pointer" data-clickact="showPg" data-a1="pg-notes-ph">🚨 <b>'+urgentNotes.length+' urgent note(s)</b> from departments — click to review</div>';
+else if(openNotes.length)notesHtml+='<div class="alert-banner-y" style="cursor:pointer" data-clickact="showPg" data-a1="pg-notes-ph">📝 <b>'+openNotes.length+' open note(s)</b> from departments — click to review</div>';
 el('exp-alerts').innerHTML=alertHtml+notesHtml;
 el('dact').innerHTML=rs.slice().reverse().slice(0,20).map(function(r){
     var d=ds.find(function(x){return x.id===r.deptId});
@@ -451,6 +453,7 @@ el('dact').innerHTML=rs.slice().reverse().slice(0,20).map(function(r){
 
 // ── INVENTORY (per dept) ──────────────────────────────────
 function renderInv(){
+  f03InstallActions(document.body);
   var specialControl=el('inv-special-filter'),zeroDaysControl=el('inv-zero-days');if(specialControl&&!specialControl.dataset.bound){specialControl.dataset.bound='1';specialControl.addEventListener('change',renderInv)}if(zeroDaysControl&&!zeroDaysControl.dataset.bound){zeroDaysControl.dataset.bound='1';zeroDaysControl.addEventListener('input',renderInv)}if(zeroDaysControl)zeroDaysControl.style.display=specialControl&&specialControl.value==='__zero_duration__'?'inline-block':'none';
   populateInvDeptSel();
   // Auto-select first valid dept
@@ -503,7 +506,7 @@ function renderInv(){
   if(!deptId){
     var ds=gd();
     el('itbl').innerHTML=!ds.length
-      ?'<tr><td colspan="9" style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">🏢</div><div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div><button class="btn bp" onclick="showPg(&#x27;pg-users&#x27;)">&#x2B; Add Department</button></td></tr>'
+      ?'<tr><td colspan="9" style="text-align:center;padding:32px"><div style="font-size:32px;margin-bottom:12px">🏢</div><div style="font-weight:600;color:var(--tx);margin-bottom:8px">No departments yet</div><button class="btn bp" data-clickact="showPg" data-a1="pg-users">&#x2B; Add Department</button></td></tr>'
       :'<tr><td colspan="9" style="text-align:center;color:var(--tx2);padding:24px">← Select a department</td></tr>';
     el('dup-banner').style.display='none';
     el('bulk-bar').style.display='none';
@@ -550,8 +553,8 @@ function renderInv(){
         +'<td style="text-align:center;font-family:var(--mono)">'+m.max+'</td>'
         +'<td style="text-align:center;font-family:var(--mono)">'+(m.monthly||'&mdash;')+'</td>'
         +'<td style="white-space:nowrap">'
-          +'<button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="moveDrugOrder(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-dept&#x27;),-1)">↑</button> <button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="moveDrugOrder(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-dept&#x27;),1)">↓</button> <button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="openEditDrug(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-dept&#x27;))">Edit</button> '
-          +'<button class="btn bd2c bxs" data-id="'+m.id+'" data-dept="'+deptId+'" onclick="delDrug(this.getAttribute(&#x27;data-id&#x27;),this.getAttribute(&#x27;data-dept&#x27;))">Del</button>'
+          +'<button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" data-clickact="moveDrugOrderUp">↑</button> <button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" data-clickact="moveDrugOrderDown">↓</button> <button class="btn bg bxs" data-id="'+m.id+'" data-dept="'+deptId+'" data-clickact="openEditDrug">Edit</button> '
+          +'<button class="btn bd2c bxs" data-id="'+m.id+'" data-dept="'+deptId+'" data-clickact="delDrug">Del</button>'
         +'</td></tr>';
     });
   });
@@ -582,7 +585,7 @@ function injectInvTabBar(activePg){
     var on=t[0]===activePg;
     var b=document.createElement('button');b.className='btn '+(on?'bp':'bg')+' bsm';if(on)b.disabled=true;
     b.innerHTML=on?'<b>'+t[1]+'</b>':t[1];
-    if(!on)b.onclick=function(){showPg(t[0])};
+    if(!on){b.dataset.clickact='showPg';b.dataset.a1=t[0];}
     bar.appendChild(b);
   });
   pg.insertBefore(bar,pg.firstChild);
@@ -659,6 +662,8 @@ async function deleteSelected(){
 }
 
 
+function f03InstallActions(root){if(!root)return;installActions(root,{showPg:function(el){if(typeof showPg==='function')showPg(el.dataset.a1)},moveDrugOrderUp:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,-1)},moveDrugOrderDown:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,1)},openEditDrug:function(el){openEditDrug(el.dataset.id,el.dataset.dept)},delDrug:function(el){delDrug(el.dataset.id,el.dataset.dept)}},{event:'click',attribute:'clickact'});}
+
 publishLegacy("03f-app-shell-nav-dashboard-inventory.js", {
   getAppUrl,
   getPublicExpiryUrl,
@@ -679,8 +684,6 @@ publishLegacy("03f-app-shell-nav-dashboard-inventory.js", {
   renderDash,
   renderInv,
   openAddDrug,
-  openEditDrug,
-  delDrug,
   showDupPanel,
   toggleDupAll,
   deleteSelected,

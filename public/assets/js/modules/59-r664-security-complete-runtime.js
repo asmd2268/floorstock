@@ -322,8 +322,8 @@ window.__startAppExtensions.push(function(){setTimeout(boot,900)});
 var ALLOWED=new Set((
   'CM OM showPg captureFrame restartScanner openManageCats openAnnouncementEditor '+
   'moveManagedCategory removeManagedCategory renameManagedCategory openEditShelf removeShelf openNoteReply quickResolve '+
-  'editReqWindow toggleWindow delWindow editDispSlot delSlot setRequestGridDay saveRequestCountLimits '+
-  'openEditDrug moveDrugOrder delDrug onInvCheck openEditExpiry delBatch openAddExpiryForMed '+
+  'setRequestGridDay saveRequestCountLimits '+
+  'onInvCheck openEditExpiry delBatch openAddExpiryForMed '+
   'impToggleRow impEdit ctlConfirmDispense ctlEditDeptMedicine ctlRemoveDeptMedicine '+
   'ctlAddCatalogMedicine ctlEditCatalogMedicine ctlEditWarehouseStock ctlSendToPharmacy ctlEditPharmacyStock ctlOpenDispense ctlReceiveDelivery ctlImportMasterFile ctlImportMasterText '+
   'ctlDeptFinalApply ctlDeptFinalToggle ctlConfirmDepartmentPrint ctlOpenDepartmentPrintOptions renderDepartmentControlledPanel '+

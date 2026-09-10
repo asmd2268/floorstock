@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js?v=005b407b10';
 import { getNotes, setNotes } from '../core/department-note-store.js?v=5f9e2d95ff';
 
@@ -234,8 +235,11 @@ function setMonthlyLimits(o){return globalThis.scheduleSetMonthlyLimits(o)}
 // ── Check monthly request count ───────────────────────────
 function getMonthlyReqCount(deptId){return canonicalMonthlyReqCount(deptId)}
 
+function schedInstallActions(root){if(!root)return;installActions(root,{editReqWindow:function(el){if(typeof window.editReqWindow==='function')window.editReqWindow(Number(el.dataset.i))},toggleWindow:function(el){if(typeof window.toggleWindow==='function')window.toggleWindow(Number(el.dataset.i))},delWindow:function(el){if(typeof window.delWindow==='function')window.delWindow(Number(el.dataset.i))},editDispSlot:function(el){if(typeof window.editDispSlot==='function')window.editDispSlot(Number(el.dataset.i))},delSlot:function(el){if(typeof window.delSlot==='function')window.delSlot(Number(el.dataset.i))}},{event:'click',attribute:'clickact'});}
+
 // ── RENDER schedule page ──────────────────────────────────
 function renderSchedule(){
+  schedInstallActions(document.body);
   // Populate dept dropdowns in modals
   var deptOpts=globalThis.scheduleDepartmentOptions();
   var rwDept=el('rwin-dept');if(rwDept)rwDept.innerHTML=deptOpts;
