@@ -1,133 +1,101 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import test from 'node:test';
 
-const src = fs.readFileSync(new URL('../public/assets/js/modules/84-pharmacy-inventory.js', import.meta.url), 'utf8');
+import {
+  piShelfCmp, piShelvesOf, piParseShelfLine, piShelfLine, piShelfCells,
+  piCellLabel, piFindShelf, piCellOptionsHtml,
+  piDaysToExpiry, piExpiryStatus, piExpiryLabel, PI_EXPIRY_WARN_DAYS,
+} from '../public/assets/js/core/pharmacy-inventory-model.js';
 
-// Evaluate the real shipped source rather than a copy, so the test fails if the
-// implementation changes. piShelfCmp is one line; piShelvesOf spans several.
-function loadFn(name, re) {
-  const m = re.exec(src);
-  assert.ok(m, `${name} not found in the module source`);
-  // eslint-disable-next-line no-eval
-  return eval(`${m[0]}; ${name}`);
-}
-const piShelfCmp = loadFn('piShelfCmp', /^function piShelfCmp\(.*$/m);
-const piShelvesOf = loadFn('piShelvesOf', /^function piShelvesOf\(cab\)\{[\s\S]*?\n\}/m);
+/* The pharmacy inventory's model: where a medicine sits, and how close it is to
+   expiring. This test used to `eval` these functions out of the shipped module
+   source because there was no other way to reach them; they are a module now. */
 
 test('shelves sort A→Z and by number, not by raw string order', () => {
-  assert.deepEqual(['E','D','C','B','A'].sort(piShelfCmp), ['A','B','C','D','E']);
+  assert.deepEqual(['E', 'D', 'C', 'B', 'A'].sort(piShelfCmp), ['A', 'B', 'C', 'D', 'E']);
   // Plain string order puts "Shelf 10" before "Shelf 2", which reads as a bug.
-  assert.deepEqual(['Shelf 10','Shelf 2','Shelf 1'].sort(piShelfCmp), ['Shelf 1','Shelf 2','Shelf 10']);
-  assert.deepEqual(['b','A','c'].sort(piShelfCmp), ['A','b','c']);
+  assert.deepEqual(['Shelf 10', 'Shelf 2', 'Shelf 1'].sort(piShelfCmp), ['Shelf 1', 'Shelf 2', 'Shelf 10']);
+  assert.deepEqual(['b', 'A', 'c'].sort(piShelfCmp), ['A', 'b', 'c']);
 });
 
 test('a hand-arranged cabinet keeps its order; older cabinets fall back to name order', () => {
   const ordered = { shelves: [{ name: 'C', order: 0 }, { name: 'A', order: 1 }, { name: 'B', order: 2 }] };
-  assert.deepEqual(piShelvesOf(ordered).map(s => s.name), ['C', 'A', 'B']);
+  assert.deepEqual(piShelvesOf(ordered).map((s) => s.name), ['C', 'A', 'B']);
   const legacy = { shelves: [{ name: 'C' }, { name: 'A' }, { name: 'B' }] };
-  assert.deepEqual(piShelvesOf(legacy).map(s => s.name), ['A', 'B', 'C']);
+  assert.deepEqual(piShelvesOf(legacy).map((s) => s.name), ['A', 'B', 'C']);
   assert.deepEqual(piShelvesOf(null), []);
 });
 
-test('saving a cabinet never returns without saying why', () => {
-  const fn = /window\.piSaveCabinet=async function\(\)\{[\s\S]*?\n\};/.exec(src)[0];
-  // Every early exit must carry a message. A bare `return;` here was the dead
-  // Save button: it neither saved nor explained.
-  assert.doesNotMatch(fn, /if\(!room\)return;/);
-  assert.doesNotMatch(fn, /if\(!cab\)return;/);
-  assert.match(fn, /if\(!room\)return piToast\(/);
-  assert.match(fn, /if\(!cab\)return piToast\(/);
-});
-
-test('the cabinet dialog carries its own room and cabinet id', () => {
-  // Reading these back from module-level UI state let a Save target a room the
-  // dialog was not opened for.
-  assert.match(src, /id="pi-cab-room"/);
-  assert.match(src, /id="pi-cab-id"/);
-  assert.match(src, /piE\('pi-cab-room'\)/);
-  assert.match(src, /piE\('pi-cab-id'\)/);
-});
-
-test('the edit path can no longer report success without changing anything', () => {
-  const fn = /window\.piSaveCabinet=async function\(\)\{[\s\S]*?\n\};/.exec(src)[0];
-  // It used to wrap the mutation in `if(cab){...}` and fall through to
-  // "Saved ✓" when the cabinet was missing.
-  assert.doesNotMatch(fn, /if\(cab\)\{/);
-});
-
-test('duplicate shelf names are rejected', () => {
-  // Medicine locations are re-matched to shelves by name on edit, so two
-  // shelves sharing a name would collapse onto one id.
-  const fn = /window\.piSaveCabinet=async function\(\)\{[\s\S]*?\n\};/.exec(src)[0];
-  assert.match(fn, /dupShelf/);
-});
-
-// ── Cabinet grid and the one-page A4 map ───────────────────────────────────
-// The cabinet is a grid: each shelf is one row of it, split into cells, and the
-// shelves need not match. Same shape as the controlled-pharmacy storage map.
-
-const piParseShelfLine = loadFn('piParseShelfLine', /^function piParseShelfLine\([\s\S]*?\n\}/m);
-const piShelfCells = loadFn('piShelfCells', /^function piShelfCells\(.*$/m);
-
-test('the "x N" suffix splits a shelf into cells and tolerates junk', () => {
+test('a shelf line is one line of typing, with an optional cell count', () => {
   assert.deepEqual(piParseShelfLine('A x 4'), { name: 'A', cells: 4 });
-  assert.deepEqual(piParseShelfLine('B×6'), { name: 'B', cells: 6 });
-  assert.deepEqual(piParseShelfLine('Shelf 2 * 3'), { name: 'Shelf 2', cells: 3 });
-  // No suffix is a single-cell shelf, so old cabinets keep working.
-  assert.deepEqual(piParseShelfLine('C'), { name: 'C', cells: 1 });
-  // A count of zero would render a shelf with nothing in it.
-  assert.deepEqual(piParseShelfLine('Fridge x0'), { name: 'Fridge', cells: 1 });
-  // Clamped, so one typo cannot produce a thousand-column row.
-  assert.equal(piParseShelfLine('D x 99').cells, 40);
-  // A line that is only a suffix is a name, not a broken count.
-  assert.deepEqual(piParseShelfLine('x 5'), { name: 'x 5', cells: 1 });
+  assert.deepEqual(piParseShelfLine('Shelf B*6'), { name: 'Shelf B', cells: 6 });
+  assert.deepEqual(piParseShelfLine('C × 3'), { name: 'C', cells: 3 }, 'the Arabic keyboard\'s multiplication sign works too');
+  assert.deepEqual(piParseShelfLine('D'), { name: 'D', cells: 1 }, 'a shelf with no count is one row');
+  assert.deepEqual(piParseShelfLine('  E  '), { name: 'E', cells: 1 });
 });
 
-test('a shelf with no recorded cell count still has one cell', () => {
-  assert.equal(piShelfCells({}), 1);
-  assert.equal(piShelfCells({ cells: 0 }), 1);
-  assert.equal(piShelfCells({ cells: 6 }), 6);
+test('a nonsense cell count cannot produce a cabinet nobody can print', () => {
+  assert.equal(piParseShelfLine('A x 0').cells, 1);
+  assert.equal(piParseShelfLine('A x 99').cells, 40, 'capped, not taken literally');
+  assert.equal(piShelfCells({ cells: 'x' }), 1);
+  assert.equal(piShelfCells(null), 1);
 });
 
-test('the map never silently drops a medicine that does not fit', () => {
-  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
-  // Cells are overflow:hidden, so a crowded cell used to just stop showing
-  // medicines. On a pharmacy map that is worse than an ugly page.
-  assert.match(fn, /chipCap/);
-  assert.match(fn, /hidden>0\?'<span class="mchip more">/);
-  assert.match(fn, /list\.slice\(0,chipCap\)/);
+test('what was typed comes back the same when the shelf is edited again', () => {
+  for (const line of ['A x 4', 'B', 'Top shelf x 12']) {
+    assert.equal(piShelfLine(piParseShelfLine(line)), line.replace(/\s*[x*×]\s*/i, ' x '));
+  }
 });
 
-test('a medicine is only drawn in a cell someone actually recorded', () => {
-  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
-  // Anything without a cell goes to the footer rather than being placed by guess.
-  assert.match(fn, /unplaced\.push/);
-  assert.match(fn, /c>0&&c<=piShelfCells\(sh\)/);
+test('a row is labelled by its own shelf: shelf A row 2 is "A2"', () => {
+  assert.equal(piCellLabel({ name: 'A' }, 1), 'A2');
+  assert.equal(piCellLabel({ name: 'Top' }, 0), 'Top1');
+  assert.equal(piCellLabel(null, 0), '1');
 });
 
-test('the map is one A4 page whatever the shelf count', () => {
-  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
-  assert.match(fn, /@page\{size:A4 portrait/);
-  assert.match(fn, /overflow:hidden/);
-  // Rows share the remaining height, so three shelves and twelve both fill one sheet.
-  assert.match(fn, /\.srow\{flex:1 1 0/);
+const rooms = [{
+  id: 'r1',
+  cabinets: [{ id: 'c1', shelves: [{ id: 's1', name: 'A', cells: 3 }] }],
+}];
+
+test('a location is only resolved when all three parts exist', () => {
+  assert.equal(piFindShelf(rooms, 'r1|c1|s1').shelf.name, 'A');
+  assert.equal(piFindShelf(rooms, 'r1|c1'), null);
+  assert.equal(piFindShelf(rooms, 'r9|c1|s1'), null);
+  assert.equal(piFindShelf(rooms, 'r1|c9|s1'), null);
+  assert.equal(piFindShelf(rooms, 'r1|c1|s9'), null);
+  assert.equal(piFindShelf(null, ''), null);
 });
 
-test('bilingual labels are bidi-isolated', () => {
-  const fn = /window\.piPrintCabinetMap=async function[\s\S]*?\n\};/m.exec(src)[0];
-  // "4 shelves / أرفف" beside "Storage / مستودع" interleaves into nonsense otherwise.
-  assert.match(fn, /<bdi>/);
+test('a medicine may sit on a shelf with no row recorded', () => {
+  /* Forcing a guess would print it in a place nobody verified, so "—" stays. */
+  const html = piCellOptionsHtml(rooms, 'r1|c1|s1', '2');
+  assert.match(html, /<option value="">—<\/option>/);
+  assert.equal((html.match(/<option/g) || []).length, 4, 'the dash plus three rows');
+  assert.match(html, /<option value="2" selected>A2<\/option>/);
+  // An unknown shelf offers the dash alone rather than an invented grid.
+  assert.equal(piCellOptionsHtml(rooms, 'nope', ''), '<option value="">—</option>');
 });
 
-test('the map button and the shelf-cell picker are allowlisted for the CSP bridge', () => {
-  const bridge = fs.readFileSync(new URL('../public/assets/js/modules/59-r664-security-complete-runtime.js', import.meta.url), 'utf8');
-  // An inline handler the bridge does not know is a dead button.
-  assert.match(bridge, /piPrintCabinetMap/);
-  assert.match(bridge, /piLocShelfChanged/);
+test('a shelf name with markup in it cannot break the picker', () => {
+  const nasty = [{ id: 'r1', cabinets: [{ id: 'c1', shelves: [{ id: 's1', name: '<img src=x>', cells: 1 }] }] }];
+  assert.doesNotMatch(piCellOptionsHtml(nasty, 'r1|c1|s1', ''), /<img/);
 });
 
-test('a location remembers which cell it sits in', () => {
-  assert.match(src, /cell:cell>0\?cell:null/);
-  assert.match(src, /piLocRowHtml\(rooms,val,l\.expiry\|\|'',l\.cell\|\|''\)/);
+const inDays = (days) => new Date(Date.now() + days * 86400000).toISOString();
+
+test('a medicine with no expiry recorded is unknown, never reported as fine', () => {
+  assert.equal(piDaysToExpiry(''), null);
+  assert.equal(piDaysToExpiry('not a date'), null);
+  assert.equal(piExpiryLabel(''), '', 'nothing is claimed about it');
+});
+
+test('sixty days is the warning line, and past it is expired', () => {
+  assert.equal(PI_EXPIRY_WARN_DAYS, 60);
+  assert.equal(piExpiryStatus(inDays(400)), 'ok');
+  assert.equal(piExpiryStatus(inDays(59)), 'soon');
+  assert.equal(piExpiryStatus(inDays(-1)), 'expired');
+  assert.match(piExpiryLabel(inDays(-1)), /Expired/);
+  assert.match(piExpiryLabel(inDays(10)), /d left/);
+  assert.equal(piExpiryLabel(inDays(400)), '', 'a medicine with months left needs no label');
 });

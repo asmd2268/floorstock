@@ -1,6 +1,12 @@
 /* Pharmacy Inventory — rooms → cabinets → shelves → medicines */
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
+import {
+  piParseShelfLine, piShelfLine, piShelfCells, piCellLabel, piFindShelf,
+  piCellOptionsHtml, piShelfCmp, piShelvesOf,
+  piDaysToExpiry, piExpiryStatus, piExpiryLabel, PI_EXPIRY_WARN_DAYS
+} from '../core/pharmacy-inventory-model.js?v=37e70b3537';
+import { buildTxnRecords, applyNewLocations } from '../core/pharmacy-inventory-transactions.js?v=e2389f9994';
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -16,57 +22,6 @@ function piEsc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;'
 function piUid(p){return (p||'pi')+'_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,7)}
 function piNow(){return new Date().toISOString()}
 function piClone(x){try{return JSON.parse(JSON.stringify(x))}catch(e){return x}}
-/* Shelves read as a row of labels, so their order is the whole point. localeCompare
-   with numeric:true puts A before B and "Shelf 2" before "Shelf 10" -- plain string
-   order puts "Shelf 10" first, which looks like a bug to anyone reading the row. */
-/* The cabinet is a grid: each shelf is one row of it, divided into cells, and
-   cabinets are not uniform -- one shelf may hold four cells and the next six.
-   Mirrors the controlled-pharmacy storage model (rows[] of cells[]). The editor stays a plain textarea, with an
-   optional "x N" suffix per line, so adding a shelf is still one line of typing.
-     A x 4
-     B x 6
-     C          -> one row */
-function piParseShelfLine(line){
-  var m=/^(.*?)\s*[x*\u00d7]\s*(\d{1,2})\s*$/i.exec(String(line||''));
-  if(m&&m[1].trim())return {name:m[1].trim(),cells:Math.max(1,Math.min(40,parseInt(m[2],10)||1))};
-  return {name:String(line||'').trim(),cells:1};
-}
-function piShelfLine(sh){
-  var n=piShelfCells(sh);
-  return n>1?(sh.name+' x '+n):sh.name;
-}
-function piShelfCells(sh){var n=parseInt(sh&&sh.cells,10);return n>0?n:1}
-/* Row labels are what staff read off the printed map, so they follow the shelf's
-   own name: shelf A row 2 is "A2". */
-function piCellLabel(sh,idx){return String(sh&&sh.name||'')+(idx+1)}
-function piFindShelf(rooms,triple){
-  var parts=String(triple||'').split('|');if(parts.length<3)return null;
-  var room=(rooms||[]).find(function(r){return r.id===parts[0]});if(!room)return null;
-  var cab=(room.cabinets||[]).find(function(c){return c.id===parts[1]});if(!cab)return null;
-  var sh=(cab.shelves||[]).find(function(x){return x.id===parts[2]});
-  return sh?{room:room,cab:cab,shelf:sh}:null;
-}
-/* Row options belong to the chosen shelf, so they are rebuilt whenever it changes.
-   "—" stays available: a medicine may sit on a shelf without a recorded row, and
-   forcing a guess would print it in a place nobody verified. */
-function piCellOptionsHtml(rooms,triple,cellVal){
-  var found=piFindShelf(rooms,triple);
-  var n=found?piShelfCells(found.shelf):0;
-  var out='<option value="">—</option>';
-  for(var i=0;i<n;i++){
-    var v=String(i+1);
-    out+='<option value="'+v+'"'+(String(cellVal||'')===v?' selected':'')+'>'+piEsc(piCellLabel(found.shelf,i))+'</option>';
-  }
-  return out;
-}
-function piShelfCmp(a,b){return String(a==null?'':a).localeCompare(String(b==null?'':b),undefined,{numeric:true,sensitivity:'base'})}
-/* Saved order wins where it exists so a hand-arranged cabinet stays arranged;
-   name order is the fallback for cabinets saved before order was recorded. */
-function piShelvesOf(cab){
-  var list=(cab&&cab.shelves||[]).slice();
-  var ordered=list.every(function(sh){return typeof sh.order==='number'});
-  return ordered?list.sort(function(a,b){return a.order-b.order}):list.sort(function(a,b){return piShelfCmp(a.name,b.name)});
-}
 function piToast(msg,kind){if(typeof toast==='function')toast(msg,kind||'info')}
 
 function piRooms(){
@@ -243,22 +198,6 @@ function piRenderRoomsTab(host){
     html+='</div></div>';
   });
   host.innerHTML=html;
-}
-
-// ── Expiry helpers ─────────────────────────────────────────────────────────
-var PI_EXPIRY_WARN_DAYS=60; // configurable
-function piDaysToExpiry(expiryStr){
-  if(!expiryStr)return null;
-  var d=new Date(expiryStr);if(isNaN(d))return null;
-  return Math.floor((d-Date.now())/(1000*60*60*24));
-}
-function piExpiryStatus(expiryStr){
-  var d=piDaysToExpiry(expiryStr);if(d===null)return 'ok';
-  if(d<0)return 'expired';if(d<=PI_EXPIRY_WARN_DAYS)return 'soon';return 'ok';
-}
-function piExpiryLabel(expiryStr){
-  var d=piDaysToExpiry(expiryStr);if(d===null)return '';
-  if(d<0)return '⛔ Expired';if(d<=PI_EXPIRY_WARN_DAYS)return '⚠ '+d+'d left';return '';
 }
 
 function piMedsInShelf(roomId,cabId,shelfId){
@@ -1430,7 +1369,6 @@ window.piAddTxnRow=function(type){
 
 window.piSubmitTxnRows=async function(type){
   var tbody=document.getElementById('pi-txn-body-'+type);if(!tbody)return;
-  var isReceipt=type==='receipt';
   var rows=Array.from(tbody.querySelectorAll('tr'));
   if(!rows.length)return piToast('No rows to save / لا توجد صفوف','err');
   // One date for the whole entry, read once from the field above the grid.
@@ -1438,62 +1376,34 @@ window.piSubmitTxnRows=async function(type){
   var sharedDate=String((dateEl||{}).value||'').trim();
   if(!sharedDate){
     if(dateEl)dateEl.focus();
-    return piToast(isReceipt?'Enter the receipt date / أدخل تاريخ الاستلام':'Enter the dispense date / أدخل تاريخ الصرف','err');
+    return piToast(type==='receipt'?'Enter the receipt date / أدخل تاريخ الاستلام':'Enter the dispense date / أدخل تاريخ الصرف','err');
   }
-  var records=[];var errs=[];
-  rows.forEach(function(tr,i){
-    var med=String((tr.querySelector('.pi-txn-med')||{}).value||'').trim();
-    var date=sharedDate;
-    var qty=parseFloat((tr.querySelector('.pi-txn-qty')||{}).value)||0;
-    var locRaw=String((tr.querySelector('.pi-txn-loc')||{}).value||'').trim();
-    /* Only the medicine and where it sits are required. Quantity, batch, expiry,
-       supplier and note are all recorded when known and left blank when not —
-       refusing an entry over a batch number nobody has to hand just means the
-       movement goes unrecorded, which is worse than an incomplete record. */
-    if(!med)return errs.push('Row '+(i+1)+': medicine name required / اسم الدواء مطلوب');
-    if(!locRaw)return errs.push('Row '+(i+1)+': location required / الموقع مطلوب');
-    if(qty<0)return errs.push('Row '+(i+1)+': quantity cannot be negative / الكمية لا تكون سالبة');
-    var rec={id:piTxnId(),type:type,medName:med,qty:qty,date:date,createdAt:piNow(),createdBy:window.CU&&(CU.name||CU.email)||'',purgeAfter:new Date(Date.now()+piTxnSettings().purgeDays*864e5).toISOString()};
-    rec.expiry=String((tr.querySelector('.pi-txn-expiry')||{}).value||'').trim();
-    if(isReceipt){
-      rec.batchNo=String((tr.querySelector('.pi-txn-batch')||{}).value||'').trim();
-      rec.supplier=String((tr.querySelector('.pi-txn-supplier')||{}).value||'').trim();
-    }
-    if(locRaw){
-      var lp=locRaw.split('|');
-      rec.roomId=lp[0]||'';rec.cabId=lp[1]||'';rec.shelfId=lp[2]||'';
-    }
-    rec.note=String((tr.querySelector('.pi-txn-note')||{}).value||'').trim();
-    records.push(rec);
+  function cell(tr,cls){return String((tr.querySelector(cls)||{}).value||'')}
+  var built=buildTxnRecords({
+    type:type,
+    sharedDate:sharedDate,
+    rows:rows.map(function(tr){return {
+      med:cell(tr,'.pi-txn-med'), qty:cell(tr,'.pi-txn-qty'), location:cell(tr,'.pi-txn-loc'),
+      expiry:cell(tr,'.pi-txn-expiry'), batchNo:cell(tr,'.pi-txn-batch'),
+      supplier:cell(tr,'.pi-txn-supplier'), note:cell(tr,'.pi-txn-note')
+    }}),
+    actor:(window.CU&&(CU.name||CU.email))||'',
+    purgeDays:piTxnSettings().purgeDays,
+    newId:piTxnId
   });
-  if(errs.length)return piToast(errs[0],'err');
+  if(built.errors.length)return piToast(built.errors[0],'err');
   try{
-    var all=piTxns().concat(records);
-    await piSaveTxns(all);
-    /* Choosing a shelf the medicine was not assigned to is how a new location gets
-       created — the point of offering them. Recording it on the medicine as well
-       means the next entry lists it under "assigned" instead of asking again.
-       Saved after the transactions so a failure here cannot lose the entry itself;
+    await piSaveTxns(piTxns().concat(built.records));
+    /* Saved after the movements so a failure here cannot lose the entry itself;
        the assignment is a convenience and is reported separately if it fails. */
     try{
-      var addedLoc=0;
-      var meds=piClone(piMeds());
-      records.forEach(function(rec){
-        if(!rec.shelfId)return;
-        var med=meds.find(function(m){return String(m.name||'').trim().toLowerCase()===String(rec.medName||'').trim().toLowerCase()});
-        if(!med)return;
-        med.locations=med.locations||[];
-        var exists=med.locations.some(function(l){
-          return l.roomId===rec.roomId&&l.cabId===rec.cabId&&l.shelfId===rec.shelfId;
-        });
-        if(!exists){med.locations.push({roomId:rec.roomId,cabId:rec.cabId,shelfId:rec.shelfId,expiry:''});addedLoc++}
-      });
-      if(addedLoc)await piSaveMeds(meds);
+      var applied=applyNewLocations(piClone(piMeds()),built.records);
+      if(applied.added)await piSaveMeds(applied.meds);
     }catch(locError){
       console.error('Could not record the new location on the medicine.',locError);
       piToast('Entry saved, but the new location was not added to the medicine. / حُفظ الإدخال دون إضافة الموقع للدواء.','err');
     }
-    piToast('Saved '+records.length+' record(s) ✓ / تم الحفظ ✓','succ');
+    piToast('Saved '+built.records.length+' record(s) ✓ / تم الحفظ ✓','succ');
     window.renderPharmInv();
   }catch(e){piToast(String(e&&e.message||e),'err')}
 };
