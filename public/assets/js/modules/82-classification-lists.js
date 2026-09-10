@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-import { installActions } from '../core/delegated-actions.js?v=779ca10b8c';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── CLASSIFICATION LISTS (High Alert / Hazard / LASA) ────────────────────
 // Master builds one authoritative, printable list per classification by

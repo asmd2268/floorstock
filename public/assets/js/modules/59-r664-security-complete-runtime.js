@@ -320,23 +320,23 @@ window.__startAppExtensions.push(function(){setTimeout(boot,900)});
  * grammar without eval, Function, or unsafe-inline.
  */
 var ALLOWED=new Set((
-  'CM OM showPg captureFrame restartScanner openManageCats openAnnouncementEditor toggleAnnouncement deleteAnnouncement saveAnnouncement toggleAnnouncementDepartments '+
+  'CM OM showPg captureFrame restartScanner openManageCats openAnnouncementEditor '+
   'moveManagedCategory removeManagedCategory renameManagedCategory openEditShelf removeShelf openNoteReply quickResolve '+
   'editReqWindow toggleWindow delWindow editDispSlot delSlot setRequestGridDay saveRequestCountLimits '+
-  'openEditDrug moveDrugOrder delDrug onInvCheck openEditExpiry delBatch openAddExpiryForMed toggleShelfMedication '+
-  'impToggleRow impEdit ctlPdfSetField ctlSavePendingPdfExpiry ctlAddBatchEditorRow ctlSaveBatchEditor ctlDispTypeChanged ctlConfirmDispense ctlSavePrintLogo ctlToggleDeptMed ctlEditDeptMedicine ctlRemoveDeptMedicine '+
+  'openEditDrug moveDrugOrder delDrug onInvCheck openEditExpiry delBatch openAddExpiryForMed '+
+  'impToggleRow impEdit ctlConfirmDispense ctlEditDeptMedicine ctlRemoveDeptMedicine '+
   'ctlAddCatalogMedicine ctlEditCatalogMedicine ctlEditWarehouseStock ctlSendToPharmacy ctlEditPharmacyStock ctlOpenDispense ctlReceiveDelivery ctlImportMasterFile ctlImportMasterText '+
   'ctlDeptFinalApply ctlDeptFinalToggle ctlConfirmDepartmentPrint ctlOpenDepartmentPrintOptions renderDepartmentControlledPanel '+
   'crashPrint crashAddItem crashReportOpen ccxOpenReport v13asViewReport setCrashSealPolicy ccAcceptReport ccRejectReport ccToggleNoConsumption ccSaveNCSettings ccApplyExtraBatches '+
   ' r17CrashRenderMatrix '+
   'acc2SetAdminTab acc2SaveAssignment acc2SetFilter acc2Decision acc2SaveGrace mrSetPeriod mrSetSearch acc2RegimenDeptChanged acc2SaveRegimenVersion acc2SubmitUsage '+
-  'acc3SetDept acc3AddMedicine acc3ToggleMedicine acc3SaveRegimen acc3CancelEdit acc3EditRegimen acc3PrintRegimen acc3ToggleRegimen acc3AddItemRow acc3RemoveItemRow anlPrintAccountability acc3UpdateDoseRate acc3SubmitPlanUsage acc3ApprovePlanUsage acc3RejectPlanUsage acc3RecordPlanReceipt '+
+  'acc3AddMedicine acc3ToggleMedicine anlPrintAccountability '+
   ' '+
   'ctlOpenHijriLedger ctlEditLedgerMove ctlOpenCustodyHandover ctlReprintHandover '+
   ' _r676PrintDept '+
-  'bulkReplacementToggleLimits runBulkReplacement aaFinalSaveExpiryRules '+
-  ' updateAllInventoryMergeCount v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge v13ApplyControlledClassification v13BulkReplacementClassOnly '+
-  'v13XClose v13XAddBatch v13XSaveCatalogMed v13XSaveStock valQ v16ToggleMultiApplicable v16ApplyMultiClean '+
+  'aaFinalSaveExpiryRules '+
+  ' updateAllInventoryMergeCount v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge '+
+  'v13XSaveStock valQ v16ToggleMultiApplicable v16ApplyMultiClean '+
   'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
   'clToggleRole clTogglePerDeptFilter plToggle plPharmFeatToggle plRoomAssignToggle '+
   ' '+
@@ -349,7 +349,7 @@ var ALLOWED=new Set((
   ''+
   'ccTabCarts ccTabOps usrTabPerms '+
   'saveDeptPrintNames setSelectedMedsOutOfStock renderPharmInv '+
-  ' acc3CancelPlanUsage acc3SavePlanExpiry dispSlotAllToggle '+
+  ' acc3CancelPlanUsage dispSlotAllToggle '+
   'parseFloat isNaN'
 ).split(/\s+/).filter(Boolean));
 

@@ -1,6 +1,6 @@
 import { selectedPrintIds, restorePrintSelection } from '../core/print-order-selection.js?v=42a613d169';
 import { openReceiveExpiryDialog } from '../core/receive-expiry-dialog.js?v=ef6827a3ad';
-import { installActions } from '../core/delegated-actions.js?v=779ca10b8c';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 (function(){
 'use strict';
 var E=window.fsE;

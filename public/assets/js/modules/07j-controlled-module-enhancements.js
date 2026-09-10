@@ -1,6 +1,7 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { earliestDays, controlledStatus } from '../core/controlled-stock-status.js?v=4caae09948';
 import { normalizeCode, rowsFromTextItems, dedupeRows, findMedicineByCode } from '../core/receipt-pdf-rows.js?v=cbbd054b27';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, PDF receipt import,
 // batch editor v6, dispensing, analytics, print suite, department shelf
@@ -68,12 +69,12 @@ async function ctlParseReceiptPdf(file){
     if(!CTL_PDF_REVIEW.length)toast('لم يتم العثور على صفوف صنف وكمية قابلة للقراءة.\nNo readable Item / Quantity rows were found.','err');
   }catch(err){console.error(err);if(pr)pr.textContent='';toast(err.message||'تعذر قراءة ملف PDF.\nThe PDF file could not be read.','err')}
 }
-function ctlRenderPdfReview(){
+function ctlRenderPdfReview(){ctlEnhInstallActions(document.body);
   var wrap=el('ctl-pdf-review-wrap'),body=el('ctl-pdf-review-body');if(!wrap||!body)return;
   wrap.style.display=CTL_PDF_REVIEW.length?'block':'none';
   var matched=CTL_PDF_REVIEW.filter(function(r){return r.matched}).length,miss=CTL_PDF_REVIEW.length-matched,total=CTL_PDF_REVIEW.reduce(function(a,r){return a+ctlNum(r.pdfQty)},0);
   el('ctl-pdf-summary').innerHTML='<span class="chip">Rows: <b>'+CTL_PDF_REVIEW.length+'</b></span><span class="chip">Matched: <b>'+matched+'</b></span><span class="chip">Unmatched: <b>'+miss+'</b></span><span class="chip">Total PDF Qty: <b>'+total+'</b></span>';
-  body.innerHTML=CTL_PDF_REVIEW.map(function(r,i){return '<tr class="'+(r.matched?'ctl-pdf-match-ok':'ctl-pdf-match-miss')+'"><td><input type="checkbox" '+(r.selected?'checked':'')+' '+(r.matched?'':'disabled')+' onchange="ctlPdfSetField('+i+',\'selected\',this.checked)"></td><td>'+(i+1)+'</td><td><b>'+esc(r.code)+'</b><div class="fhint">Page '+r.page+'</div></td><td><b>'+esc(r.medName||r.description||'Unknown')+'</b>'+(r.medName&&r.description?'<div class="fhint">PDF: '+esc(r.description)+'</div>':'')+'</td><td>'+ctlNum(r.pdfQty)+'</td><td><input type="number" min="0" step="1" value="'+ctlNum(r.approvedQty)+'" '+(r.matched?'':'disabled')+' onchange="ctlPdfSetField('+i+',\'approvedQty\',this.value)"></td><td><input type="date" value="'+esc(r.expiry||'')+'" '+(r.matched?'':'disabled')+' onchange="ctlPdfSetField('+i+',\'expiry\',this.value)"></td><td><span class="ctl-pdf-status '+(r.matched?'ok':'miss')+'">'+(r.matched?'Matched':'Not found')+'</span></td></tr>'}).join('');
+  body.innerHTML=CTL_PDF_REVIEW.map(function(r,i){return '<tr class="'+(r.matched?'ctl-pdf-match-ok':'ctl-pdf-match-miss')+'"><td><input type="checkbox" '+(r.selected?'checked':'')+' '+(r.matched?'':'disabled')+' data-changeact="ctlPdfSetField" data-a1="'+i+'" data-a2="selected"></td><td>'+(i+1)+'</td><td><b>'+esc(r.code)+'</b><div class="fhint">Page '+r.page+'</div></td><td><b>'+esc(r.medName||r.description||'Unknown')+'</b>'+(r.medName&&r.description?'<div class="fhint">PDF: '+esc(r.description)+'</div>':'')+'</td><td>'+ctlNum(r.pdfQty)+'</td><td><input type="number" min="0" step="1" value="'+ctlNum(r.approvedQty)+'" '+(r.matched?'':'disabled')+' data-changeact="ctlPdfSetField" data-a1="'+i+'" data-a2="approvedQty"></td><td><input type="date" value="'+esc(r.expiry||'')+'" '+(r.matched?'':'disabled')+' data-changeact="ctlPdfSetField" data-a1="'+i+'" data-a2="expiry"></td><td><span class="ctl-pdf-status '+(r.matched?'ok':'miss')+'">'+(r.matched?'Matched':'Not found')+'</span></td></tr>'}).join('');
   var all=el('ctl-pdf-select-all');if(all){var ok=CTL_PDF_REVIEW.filter(function(r){return r.matched});all.checked=!!ok.length&&ok.every(function(r){return r.selected})}
 }
 function ctlPdfSetField(i,k,v){var r=CTL_PDF_REVIEW[i];if(!r)return;if(k==='approvedQty')v=Math.max(0,ctlNum(v));r[k]=v;if(k==='selected'&&v&&ctlNum(r.approvedQty)<=0)r.approvedQty=r.pdfQty}
@@ -95,11 +96,11 @@ async function ctlApprovePdfReceipt(allMatched){
   toast(movementSaved?'تم اعتماد '+chosen.length+' صنف وإضافة الكميات للمستودع ✓\nApproved '+chosen.length+' item(s) and added the quantities to warehouse stock.':'تم اعتماد الأصناف، لكن تعذر حفظ سجل الحركة.\nThe items were approved, but the movement log could not be saved.',movementSaved?'succ':'info');ctlPdfClearReview();renderControlled();return true
 }
 function ctlPendingPdfExpiryRows(){var out=[];ctlPdfReceipts().forEach(function(rec){(rec.rows||[]).forEach(function(r){var allocated=ctlNum(r.expiryAllocatedQty);if(!allocated&&(r.expiryBatches||[]).length)allocated=(r.expiryBatches||[]).reduce(function(a,b){return a+ctlNum(b.qty)},0);var remaining=Math.max(ctlNum(r.qty)-allocated,0);r.expiryAllocatedQty=allocated;r.expiryPending=remaining>0;if(remaining>0)out.push({receipt:rec,row:r,remaining:remaining})})});return out}
-function renderCtlPdfReceiptPanel(){
+function renderCtlPdfReceiptPanel(){ctlEnhInstallActions(document.body);
   var card=el('ctl-pdf-receipt-card');if(!card)return;card.style.display=ctlPdfCanUse()?'block':'none';if(!ctlPdfCanUse())return;
   var rows=ctlPendingPdfExpiryRows(),wrap=el('ctl-pdf-pending-expiry-wrap'),box=el('ctl-pdf-pending-expiry');if(!wrap||!box)return;
   wrap.style.display=rows.length?'block':'none';if(el('ctl-pdf-pending-count'))el('ctl-pdf-pending-count').textContent=rows.length;
-  box.innerHTML=rows.map(function(x,i){return '<div class="ctl-pdf-pending-row"><div><b>'+esc(x.row.medName||x.row.code)+'</b><div class="fhint">Total '+ctlNum(x.row.qty)+' · Remaining '+ctlNum(x.remaining)+' · '+esc(x.receipt.fileName||'PDF')+'</div></div><input type="number" min="1" max="'+ctlNum(x.remaining)+'" value="'+ctlNum(x.remaining)+'" id="ctl-pdf-expqty-'+i+'"><input type="date" id="ctl-pdf-exp-'+i+'"><button class="btn bp bxs" onclick="ctlSavePendingPdfExpiry(\''+esc(x.receipt.id)+'\',\''+esc(x.row.id)+'\','+i+')">حفظ الدفعة</button></div>'}).join('');
+  box.innerHTML=rows.map(function(x,i){return '<div class="ctl-pdf-pending-row"><div><b>'+esc(x.row.medName||x.row.code)+'</b><div class="fhint">Total '+ctlNum(x.row.qty)+' · Remaining '+ctlNum(x.remaining)+' · '+esc(x.receipt.fileName||'PDF')+'</div></div><input type="number" min="1" max="'+ctlNum(x.remaining)+'" value="'+ctlNum(x.remaining)+'" id="ctl-pdf-expqty-'+i+'"><input type="date" id="ctl-pdf-exp-'+i+'"><button class="btn bp bxs" data-clickact="ctlSavePendingPdfExpiry" data-a1="'+esc(x.receipt.id)+'" data-a2="'+esc(x.row.id)+'" data-a3="'+i+'">حفظ الدفعة</button></div>'}).join('');
 }
 async function ctlSavePendingPdfExpiry(receiptId,rowId,index){
   var inp=el('ctl-pdf-exp-'+index),date=inp&&inp.value,qty=ctlNum(el('ctl-pdf-expqty-'+index)&&el('ctl-pdf-expqty-'+index).value);if(!date)return toast('اختر تاريخ الانتهاء.\nSelect the expiry date.','err');
@@ -142,11 +143,12 @@ async function ctlAddCatalogMedicine(){
 function ctlFmtDMY(v){if(!v)return '—';var d=new Date(v);if(isNaN(d))return esc(v);return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear()}
 function ctlCanDispense(){return typeof window.canControlledDispense==='function'&&window.canControlledDispense()}
 
-function ctlEnsureV6UI(){
+function ctlEnhInstallActions(root){if(!root)return; /* one listener per event: core/delegated-actions.js */installActions(root,{ctlPdfSetField:function(el,event){ctlPdfSetField(el.dataset.a1,el.dataset.a2,el.value)},ctlDispTypeChanged:function(el,event){ctlDispTypeChanged()},ctlSavePrintLogo:function(el,event){ctlSavePrintLogo(el.files[0])},ctlToggleDeptMed:function(el,event){ctlToggleDeptMed(el)},toggleShelfMedication:function(el,event){toggleShelfMedication(el.dataset.mid,el.checked)}},{event:'change',attribute:'changeact'});installActions(root,{ctlSavePendingPdfExpiry:function(el,event){ctlSavePendingPdfExpiry(el.dataset.a1,el.dataset.a2,el.dataset.a3)},CM:function(el,event){CM(el.dataset.a1)},ctlAddBatchEditorRow:function(el,event){ctlAddBatchEditorRow()},ctlSaveBatchEditor:function(el,event){ctlSaveBatchEditor()},ctlConfirmDispense:function(el,event){ctlConfirmDispense()},ctlEditDeptMedicine:function(el,event){ctlEditDeptMedicine(el.dataset.id)},ctlRemoveDeptMedicine:function(el,event){ctlRemoveDeptMedicine(el.dataset.id)},openEditExpiry:function(el,event){openEditExpiry(el)},delBatch:function(el,event){delBatch(el.dataset.bid,el)},openAddExpiryForMed:function(el,event){openAddExpiryForMed(el.dataset.mid)}},{event:'click',attribute:'clickact'});}
+function ctlEnsureV6UI(){ctlEnhInstallActions(document.body);
   if(el('mctlbatches'))return;
-  document.body.insertAdjacentHTML('beforeend',`<div class="modal-bg" id="mctlbatches"><div class="modal"><div class="mh"><span class="mt" id="mctlb-title">Expiry batches</span><button class="xbtn" onclick="CM('mctlbatches')">✕</button></div><div id="mctlb-list"></div><button class="btn bg bsm" onclick="ctlAddBatchEditorRow()">+ Add expiry batch</button><div class="fl g8" style="justify-content:flex-end;margin-top:18px"><button class="btn bg" onclick="CM('mctlbatches')">Cancel</button><button class="btn bp" onclick="ctlSaveBatchEditor()">Save batches</button></div></div></div>
-  <div class="modal-bg" id="mctldisp"><div class="modal"><div class="mh"><span class="mt">Dispense controlled medicine / صرف دواء</span><button class="xbtn" onclick="CM('mctldisp')">✕</button></div><input type="hidden" id="ctld-med"><div class="fg"><label>Medicine</label><input id="ctld-name" disabled></div><div class="frow"><div class="fg"><label>Quantity</label><input id="ctld-qty" type="number" min="1"></div><div class="fg"><label>Dispensing type</label><select id="ctld-type" onchange="ctlDispTypeChanged()"><option value="inpatient">Inpatient / تنويم</option><option value="internal">Internal hospital department / قسم داخلي</option><option value="outpatient">Outpatient / عيادات أو مريض خارجي</option></select></div></div><div class="fg" id="ctld-dept-wrap"><label>Hospital department / القسم</label><select id="ctld-dept"></select></div><div class="fg"><label>Recipient name / اسم المستلم</label><input id="ctld-recipient"></div><div class="fg"><label>Notes</label><textarea id="ctld-note" rows="2"></textarea></div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="CM('mctldisp')">Cancel</button><button class="btn bs" onclick="ctlConfirmDispense()">Confirm dispensing</button></div></div></div>
-  <input type="file" id="ctl-logo-file" accept="image/png,image/jpeg" style="display:none" onchange="ctlSavePrintLogo(this.files[0])">`);
+  document.body.insertAdjacentHTML('beforeend',`<div class="modal-bg" id="mctlbatches"><div class="modal"><div class="mh"><span class="mt" id="mctlb-title">Expiry batches</span><button class="xbtn" data-clickact="CM" data-a1="mctlbatches">✕</button></div><div id="mctlb-list"></div><button class="btn bg bsm" data-clickact="ctlAddBatchEditorRow">+ Add expiry batch</button><div class="fl g8" style="justify-content:flex-end;margin-top:18px"><button class="btn bg" data-clickact="CM" data-a1="'mctlbatches'">Cancel</button><button class="btn bp" data-clickact="ctlSaveBatchEditor">Save batches</button></div></div></div>
+  <div class="modal-bg" id="mctldisp"><div class="modal"><div class="mh"><span class="mt">Dispense controlled medicine / صرف دواء</span><button class="xbtn" data-clickact="CM" data-a1="mctldisp">✕</button></div><input type="hidden" id="ctld-med"><div class="fg"><label>Medicine</label><input id="ctld-name" disabled></div><div class="frow"><div class="fg"><label>Quantity</label><input id="ctld-qty" type="number" min="1"></div><div class="fg"><label>Dispensing type</label><select id="ctld-type" data-changeact="ctlDispTypeChanged"><option value="inpatient">Inpatient / تنويم</option><option value="internal">Internal hospital department / قسم داخلي</option><option value="outpatient">Outpatient / عيادات أو مريض خارجي</option></select></div></div><div class="fg" id="ctld-dept-wrap"><label>Hospital department / القسم</label><select id="ctld-dept"></select></div><div class="fg"><label>Recipient name / اسم المستلم</label><input id="ctld-recipient"></div><div class="fg"><label>Notes</label><textarea id="ctld-note" rows="2"></textarea></div><div class="fl g8" style="justify-content:flex-end"><button class="btn bg" data-clickact="CM" data-a1="'mctldisp'">Cancel</button><button class="btn bs" data-clickact="ctlConfirmDispense">Confirm dispensing</button></div></div></div>
+  <input type="file" id="ctl-logo-file" accept="image/png,image/jpeg" style="display:none" data-changeact="ctlSavePrintLogo">`);
 }
 globalThis.CTL_BATCH_CTX = null;
 function ctlAddBatchEditorRow(b){b=b||{};var d=document.createElement('div');d.className='batch-editor-row';d.innerHTML='<input type="number" class="be-qty" min="0" placeholder="Qty" value="'+esc(b.qty||'')+'"><input type="date" class="be-exp" value="'+esc(b.expiry||'')+'"><input class="be-lot" placeholder="Batch / lot" value="'+esc(b.lot||'')+'"><button class="btn bd2c bxs" onclick="this.parentElement.remove()">✕</button>';el('mctlb-list').appendChild(d)}
@@ -256,7 +258,7 @@ async function ctlApplyBulkShelf(){
   CTL_DEPT_SELECTED[dept]={};CM('mctl-bulk-shelf');toast(ids.length+' medicines added to shelf ✓','succ');renderCtlDepartments();return true
 }
 
-function renderCtlDepartments(){
+function renderCtlDepartments(){ctlEnhInstallActions(document.body);
   if(ctlIsWarehouse()){var v=el('ctl-departments-view');if(v)v.style.display='none';return;}
   var sel=el('ctl-dept');
   if(!sel)return;
@@ -283,7 +285,7 @@ function renderCtlDepartments(){
   el('ctl-dept-table').innerHTML=list.length?list.map(function(x,i){
     var m=ctlMedicine(x.medId)||{};
     return '<tr>'+
-      '<td><input type="checkbox" data-id="'+x.medId+'" onchange="ctlToggleDeptMed(this)" '+(selected[x.medId]?'checked':'')+'></td>'+
+      '<td><input type="checkbox" data-id="'+x.medId+'" data-changeact="ctlToggleDeptMed" '+(selected[x.medId]?'checked':'')+'></td>'+
       '<td>'+(i+1)+'</td>'+
       '<td>'+esc(m.moh||'—')+'</td>'+
       '<td>'+esc(m.nupco||'—')+'</td>'+
@@ -295,7 +297,7 @@ function renderCtlDepartments(){
       '<td>'+ctlNum(x.qty)+'</td>'+
       '<td><span class="shelf-badge">'+esc(ctlDeptShelfName(dept,x.shelfId))+'</span></td>'+
       '<td>'+ctlBatchText(x.batches)+'</td>'+
-      '<td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" onclick="ctlEditDeptMedicine(this.dataset.id)">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" onclick="ctlRemoveDeptMedicine(this.dataset.id)">Remove</button>':'<span class="chip">Read only</span>')+'</td>'+
+      '<td>'+(can?'<button class="btn bg bxs" data-id="'+x.medId+'" data-clickact="ctlEditDeptMedicine">Edit</button> <button class="btn bd2c bxs" data-id="'+x.medId+'" data-clickact="ctlRemoveDeptMedicine">Remove</button>':'<span class="chip">Read only</span>')+'</td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="13" style="text-align:center;padding:24px;color:var(--tx2)">No medicines assigned to this department.</td></tr>';
 
@@ -416,17 +418,17 @@ function shelfExpiryCell(medId){
     }
     return '<div class="'+cls+'" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">'
       +'<span><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <small>('+label+')</small></span>'
-      +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" onclick="openEditExpiry(this)">✎</button> '
-      +'<button class="btn bd2c bxs" data-bid="'+b.id+'" onclick="delBatch(this.dataset.bid,this)">×</button></span></div>';
+      +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" data-clickact="openEditExpiry">✎</button> '
+      +'<button class="btn bd2c bxs" data-bid="'+b.id+'" data-clickact="delBatch">×</button></span></div>';
   }).join('');
   return (rows||'<span style="color:var(--tx3)">No expiry batches</span>')
-    +'<div style="margin-top:5px"><button class="btn bg bxs" data-mid="'+medId+'" onclick="openAddExpiryForMed(this.dataset.mid)">+ Add expiry</button></div>';
+    +'<div style="margin-top:5px"><button class="btn bg bxs" data-mid="'+medId+'" data-clickact="openAddExpiryForMed">+ Add expiry</button></div>';
 }
 function openAddExpiryForMed(medId){
   openAddExpiry();
   if(el('exp-med-sel'))el('exp-med-sel').value=medId;
 }
-function renderShelfMedicationDatabase(){
+function renderShelfMedicationDatabase(){ctlEnhInstallActions(document.body);
   if(!CU||CU.role!=='department'||!el('shelf-med-db'))return;
   var shelves=getShelves(CU.deptId),meds=getMeds(CU.deptId),shown=meds.filter(shelfMedMatches);
   var cfg=typeof getPharmacyCategoryConfig==='function'?getPharmacyCategoryConfig(CU.deptId):{order:[]};
@@ -454,7 +456,7 @@ function renderShelfMedicationDatabase(){
       lastCategory=category;
     }
     rowNo++;
-    html+='<tr><td><input type="checkbox" '+(SHELF_MED_SELECTED[m.id]?'checked':'')+' data-mid="'+m.id+'" onchange="toggleShelfMedication(this.dataset.mid,this.checked)"></td>'
+    html+='<tr><td><input type="checkbox" '+(SHELF_MED_SELECTED[m.id]?'checked':'')+' data-mid="'+m.id+'" data-changeact="toggleShelfMedication"></td>'
       +'<td>'+rowNo+'</td><td><b>'+esc(m.name)+'</b>'+requestColdMarker(m)+'</td><td>'+esc(category)+'</td><td>'+bdg(m)+'</td>'
       +'<td>'+(function(){
           var sids=fsMedShelfIds(m);
@@ -664,27 +666,20 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   ctlPdfDrop,
   ctlPdfClearReview,
   ctlParseReceiptPdf,
-  ctlPdfSetField,
   ctlPdfToggleAll,
   ctlApprovePdfReceipt,
   renderCtlPdfReceiptPanel,
-  ctlSavePendingPdfExpiry,
   ctlAddCatalogMedicine,
   ctlFmtDMY,
   ctlCanDispense,
-  ctlAddBatchEditorRow,
-  ctlSaveBatchEditor,
   ctlOpenDispense,
-  ctlDispTypeChanged,
   ctlLogo,
   ctlChooseLogo,
-  ctlSavePrintLogo,
   ctlPrintSettings,
   ctlPublicUrl,
   ctlPublishDept,
   renderCtlAnalytics,
   printCtlAnalytics,
-  ctlToggleDeptMed,
   ctlToggleAllDeptMeds,
   ctlOpenBulkShelf,
   ctlApplyBulkShelf,
@@ -701,7 +696,6 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   bulkSetMedicationFlag,
   openAddExpiryForMed,
   renderShelfMedicationDatabase,
-  toggleShelfMedication,
   toggleAllShelfMedications,
   clearShelfMedicationSelection,
   assignSelectedMedsToShelf,
