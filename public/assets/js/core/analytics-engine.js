@@ -206,13 +206,8 @@ function serviceMetrics(rows, high, totalUnits) {
     }
   });
 
-  // Median, not mean: one order left open over a weekend should not move the figure.
   turnaroundHours.sort((a, b) => a - b);
-  const mid = turnaroundHours.length
-    ? (turnaroundHours.length % 2
-        ? turnaroundHours[(turnaroundHours.length - 1) / 2]
-        : (turnaroundHours[turnaroundHours.length / 2 - 1] + turnaroundHours[turnaroundHours.length / 2]) / 2)
-    : null;
+  const mid = median(turnaroundHours);
 
   return {
     requestedUnits: requested,
@@ -377,7 +372,10 @@ export function departmentFillRates(stats, minRequested = 1) {
     .sort((a, b) => (a.fillRate ?? 101) - (b.fillRate ?? 101));
 }
 
-function median(sorted) {
+/* Median, not mean, everywhere in this file: one order left open over a weekend
+   should not move a turnaround figure, and one mistyped quantity should not
+   raise the bar that would have caught it. Takes an ALREADY SORTED array. */
+export function median(sorted) {
   if (!sorted.length) return null;
   const mid = sorted.length / 2;
   return sorted.length % 2 ? sorted[(sorted.length - 1) / 2] : (sorted[mid - 1] + sorted[mid]) / 2;
@@ -439,4 +437,60 @@ export function detectQuantityOutliers(rows, { minSamples = 8, minScore = 6, min
   });
 
   return found.sort((a, b) => b.factor - a.factor).slice(0, limit);
+}
+
+/* ── Request fulfilment ───────────────────────────────────────────────────
+   How much of what a department asked for actually arrived, and how long it
+   took. Lived inside modules/73 with no test; the arithmetic is the same, the
+   inputs are now arguments so it can have one.
+
+   A request with nothing requested has no fulfilment percentage at all — it is
+   excluded rather than counted as zero, which would drag every average down by
+   the number of empty rows. */
+
+export function requestFulfillmentPct(request) {
+  const requested = ((request && request.items) || []).reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  const dispensed = ((request && request.dispensed) || []).reduce((sum, item) => sum + (Number(item.qty) || 0), 0);
+  if (!requested) return null;
+  return round1(dispensed / requested * 100);
+}
+
+export function round1(n) { return Math.round(n * 10) / 10; }
+export function mean(values) { return values.length ? values.reduce((a, b) => a + b, 0) / values.length : 0; }
+
+export function fulfillmentStats(requests, year, nameOf = deptLabel) {
+  const rows = (Array.isArray(requests) ? requests : [])
+    .filter(r => r && (r.status === 'fulfilled' || r.status === 'partial')
+      && new Date(r.fulfilledAt || r.updatedAt || r.created || 0).getFullYear() === year)
+    .map(r => ({ r, pct: requestFulfillmentPct(r) }))
+    .filter(x => x.pct !== null);
+
+  const avgPct = rows.length ? round1(mean(rows.map(x => x.pct))) : null;
+  const byDept = {};
+  rows.forEach(x => { const d = nameOf(x.r.deptId); (byDept[d] = byDept[d] || []).push(x.pct); });
+  const deptStats = Object.entries(byDept)
+    .map(([dept, pcts]) => ({ dept, avg: round1(mean(pcts)), count: pcts.length }))
+    .sort((a, b) => a.avg - b.avg);
+  const worst10 = rows.slice().sort((a, b) => a.pct - b.pct).slice(0, 10);
+
+  /* How long a request took, and whether it met its slot. An archived month is
+     ONE synthetic row whose created and fulfilledAt are both the month start, so
+     timing it would add a 0-hour entry per month and drag the median down. */
+  const hours = [];
+  let scheduled = 0, onTime = 0;
+  rows.forEach(({ r }) => {
+    if (r.__aggregated) return;
+    const start = Date.parse(r.created || '');
+    const done = Date.parse(r.fulfilledAt || '');
+    if (isFinite(start) && isFinite(done) && done >= start) hours.push((done - start) / 3600000);
+    const due = Date.parse(r.scheduledFor || '');
+    if (isFinite(due) && isFinite(done)) { scheduled++; if (done <= due) onTime++; }
+  });
+  hours.sort((a, b) => a - b);
+
+  return {
+    total: rows.length, avgPct, deptStats, worst10,
+    medianHours: median(hours), timedCount: hours.length,
+    scheduled, onTime, onTimePct: scheduled ? round1(onTime / scheduled * 100) : null
+  };
 }

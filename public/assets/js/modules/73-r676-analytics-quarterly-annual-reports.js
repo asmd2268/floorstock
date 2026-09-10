@@ -5,8 +5,9 @@ import {
   allRows, rowsForPeriod, computeStats, topMedicines,
   availableYears, priorPeriod, sameQuarterPriorYear, periodLabel,
   detectSpikes, zeroDispenseSummary, deptLabel,
-  topShortfalls, departmentFillRates, detectQuantityOutliers
-} from '../core/analytics-engine.js?v=c7b1bd3819';
+  topShortfalls, departmentFillRates, detectQuantityOutliers,
+  fulfillmentStats, round1 as engineRound1
+} from '../core/analytics-engine.js?v=52b10d9631';
 import {
   spikeThresholdPct, canEditSpikeThreshold, saveSpikeThreshold,
   spikeBadge, renderSpikeLegend, shareBadge, renderShareLegend,
@@ -665,7 +666,7 @@ const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو
 /* ── utilities ──────────────────────────────────────────────────────────── */
 function pct(a, total) { return total > 0 ? Math.round(a / total * 1000) / 10 : 0; }
 function avg(arr) { return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0; }
-function round1(n) { return Math.round(n * 10) / 10; }
+const round1 = engineRound1;
 function deptName(id) {
   const list = typeof window.gd === 'function' ? (window.gd() || []) : [];
   const d = list.find(x => String(x.id) === String(id));
@@ -782,51 +783,7 @@ function fulfillmentRequests() {
   const archive = (window.S && typeof S.g === 'function' ? S.g('request_analytics_summary_v1') : []) || [];
   return live.concat(archive);
 }
-function requestFulfillmentPct(r) {
-  const requestedQty = (r.items || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-  const dispensedQty = (r.dispensed || []).reduce((s, i) => s + (Number(i.qty) || 0), 0);
-  if (!requestedQty) return null;
-  return round1(dispensedQty / requestedQty * 100);
-}
-function fulfillmentStatsForYear(y) {
-  const rows = fulfillmentRequests()
-    .filter(r => (r.status === 'fulfilled' || r.status === 'partial') && new Date(r.fulfilledAt || r.updatedAt || r.created || 0).getFullYear() === y)
-    .map(r => ({ r, pct: requestFulfillmentPct(r) }))
-    .filter(x => x.pct !== null);
-
-  const avgPct = rows.length ? round1(avg(rows.map(x => x.pct))) : null;
-  const byDept = {};
-  rows.forEach(x => { const d = deptName(x.r.deptId); (byDept[d] = byDept[d] || []).push(x.pct); });
-  const deptStats = Object.entries(byDept)
-    .map(([dept, pcts]) => ({ dept, avg: round1(avg(pcts)), count: pcts.length }))
-    .sort((a, b) => a.avg - b.avg);
-  const worst10 = rows.slice().sort((a, b) => a.pct - b.pct).slice(0, 10);
-
-  /* How long a request took, and whether it met its slot. Archived months are one
-     synthetic row whose created and fulfilledAt are both the month start, so
-     timing them would add a 0-hour entry per month and drag the median down. */
-  const hours = [];
-  let scheduled = 0, onTime = 0;
-  rows.forEach(({ r }) => {
-    if (r.__aggregated) return;
-    const start = Date.parse(r.created || '');
-    const done = Date.parse(r.fulfilledAt || '');
-    if (isFinite(start) && isFinite(done) && done >= start) hours.push((done - start) / 3600000);
-    const due = Date.parse(r.scheduledFor || '');
-    if (isFinite(due) && isFinite(done)) { scheduled++; if (done <= due) onTime++; }
-  });
-  hours.sort((a, b) => a - b);
-  const medianHours = hours.length
-    ? (hours.length % 2 ? hours[(hours.length - 1) / 2]
-        : (hours[hours.length / 2 - 1] + hours[hours.length / 2]) / 2)
-    : null;
-
-  return {
-    total: rows.length, avgPct, deptStats, worst10,
-    medianHours, timedCount: hours.length,
-    scheduled, onTime, onTimePct: scheduled ? round1(onTime / scheduled * 100) : null
-  };
-}
+function fulfillmentStatsForYear(y) { return fulfillmentStats(fulfillmentRequests(), y, deptName); }
 
 /* Median turnaround rendered in whichever unit reads naturally at that scale. */
 function fulfillHoursLabel(h) {
