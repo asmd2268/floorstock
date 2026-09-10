@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { earliestDays, controlledStatus } from '../core/controlled-stock-status.js?v=4caae09948';
 import { normalizeCode, rowsFromTextItems, dedupeRows, findMedicineByCode } from '../core/receipt-pdf-rows.js?v=cbbd054b27';
 
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, PDF receipt import,
@@ -36,21 +37,8 @@ function ctlClassLabel(v){
     :'<span class="badge brd">Narcotic / مخدر</span>';
 }
 
-function ctlEarliestDays(batches){
-  var arr=(batches||[]).map(function(b){return daysUntil(b.expiry)}).filter(function(d){return d!==null});
-  return arr.length?Math.min.apply(null,arr):null;
-}
-function ctlStatus(m,w,p){
-  var min=ctlNum(m.min),wqty=ctlNum(w.system)+ctlNum(w.outside),pqty=ctlNum(p.qty);
-  var wd=ctlEarliestDays(w.batches),pd=ctlEarliestDays(p.batches),d=[wd,pd].filter(function(x){return x!==null});
-  var earliest=d.length?Math.min.apply(null,d):null,days=ctlAlertDays();
-  if(earliest!==null&&earliest<=0)return {key:'expired',html:'<span class="badge brd">Expired</span>'};
-  if(earliest!==null&&earliest<=days)return {key:'soon',html:'<span class="badge byl">Expiring ≤ '+days+'d</span>'};
-  if(wqty===0||pqty===0)return {key:'out',html:'<span class="badge brd">Out of stock</span>'};
-  if((min>0&&wqty<min)||(min>0&&pqty<min))return {key:'low',html:'<span class="badge byl">Below minimum</span>'};
-  return {key:'ok',html:'<span class="badge bgn">OK</span>'};
-}
-
+function ctlEarliestDays(batches){return earliestDays(batches)}
+function ctlStatus(m,w,p){return controlledStatus(m,w,p,ctlAlertDays())}
 
 // ── WAREHOUSE PDF RECEIPT IMPORT ─────────────────────────────
 globalThis.CTL_PDF_REVIEW = [];
