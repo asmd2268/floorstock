@@ -78,7 +78,10 @@ test('the browser asks for the same thing before the call is made', async () => 
 test('an older dateless report lets the pharmacist choose the batch instead of failing', async () => {
   const response = await readFile(new URL('modules/80-controlled-pharmacy-ui-redesign.js', jsRoot), 'utf8');
   assert.match(response, /class="ccc-src-exp"/);
-  assert.match(response, /Choose the batch this quantity is deducted from/);
+  /* The message moved to core/crash-response-validation.js with the rule that
+     produces it; the screen keeps the picker that answers it. */
+  const validation = await readFile(new URL('core/crash-response-validation.js', jsRoot), 'utf8');
+  assert.match(validation, /Choose the batch this quantity is deducted from/);
   assert.ok(!/contact a pharmacy admin/.test(response), 'the dead end is gone');
   // And the plan falls back to that pick when the report carries no date.
   assert.match(response, /ccDateKey\(row\.dataset\.reportedExpiry\|\|''\)\|\|ccDateKey\(srcPick\?srcPick\.value:''\)/);
@@ -87,7 +90,8 @@ test('an older dateless report lets the pharmacist choose the batch instead of f
 test('a replacement below the cart standard is allowed, only above is refused', async () => {
   const response = await readFile(new URL('modules/80-controlled-pharmacy-ui-redesign.js', jsRoot), 'utf8');
   const page = await readFile(new URL('../public/index.html', import.meta.url), 'utf8');
-  assert.match(response, /result>standard\+0\.000001/);
+  const rules = await readFile(new URL('core/crash-response-validation.js', jsRoot), 'utf8');
+  assert.match(rules, /result > num\(standard\) \+ EPSILON/);
   assert.ok(!/result<standard[^\-]*error=/.test(response), 'below standard must not be an error');
   assert.match(page, /may be below the standard/);
 });
