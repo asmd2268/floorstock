@@ -1,7 +1,7 @@
 /* HTML escaping has one implementation: fsEsc, from core/dom-utils.js, which
    also publishes it as the global `esc` before any feature module loads. The
    local copies removed here each re-derived the same fallback. */
-import { allRows, rowDate, deptLabel } from '../core/analytics-engine.js?v=52b10d9631';
+import { allRows, rowDate, deptLabel } from '../core/analytics-engine.js?v=ea7b98eca6';
 
 (function () {
 'use strict';

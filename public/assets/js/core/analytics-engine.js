@@ -3,7 +3,7 @@
  * Single source of truth for all analytics computation.
  * Pure functions — no DOM, no side effects.
  */
-import { buildAnalyticsMedicineIndex, resolveAnalyticsMedicine } from './analytics-medicine-resolver.js?v=28ce20a94d';
+import { buildAnalyticsMedicineIndex, resolveAnalyticsMedicine } from './analytics-medicine-resolver.js?v=0026680539';
 
 export function allRows() {
   // Two sources, not three. request_analytics_archive was a second, parallel
@@ -16,8 +16,8 @@ export function allRows() {
   // shaped identically to a real request row so nothing below needs to special-case
   // it, and carrying the counts (requestCount, zeroDispenseCount, serviceCounts)
   // that let an archived month weigh exactly as much as the orders it replaced.
-  return (typeof window.gr === 'function' ? window.gr() : [])
-    .concat((window.S && window.S.g && window.S.g('request_analytics_summary_v1')) || [])
+  return (typeof globalThis.gr === 'function' ? globalThis.gr() : [])
+    .concat((globalThis.S && globalThis.S.g && globalThis.S.g('request_analytics_summary_v1')) || [])
     .filter(r => r && r.status !== 'pending');
 }
 
@@ -38,7 +38,7 @@ export function rowDate(row) {
 }
 
 export function deptLabel(id) {
-  const list = typeof window.gd === 'function' ? window.gd() : [];
+  const list = typeof globalThis.gd === 'function' ? globalThis.gd() : [];
   const d = list.find(x => String(x.id) === String(id));
   return (d && d.name) || id || '—';
 }

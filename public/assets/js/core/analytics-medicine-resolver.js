@@ -16,10 +16,10 @@ function highAlert(record){
 
 export function buildAnalyticsMedicineIndex(){
   var byDepartment=Object.create(null),byId=Object.create(null);
-  var departments=typeof window.gd==='function'?window.gd()||[]:[];
+  var departments=typeof globalThis.gd==='function'?globalThis.gd()||[]:[];
   departments.forEach(function(department){
     var departmentId=text(department&&department.id);
-    var medicines=typeof window.getMeds==='function'?window.getMeds(departmentId)||[]:[];
+    var medicines=typeof globalThis.getMeds==='function'?globalThis.getMeds(departmentId)||[]:[];
     medicines.forEach(function(medicine){
       var id=text(medicine&&medicine.id);
       if(!id)return;

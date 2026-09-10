@@ -7,13 +7,17 @@ import {
   detectSpikes, zeroDispenseSummary, deptLabel,
   topShortfalls, departmentFillRates, detectQuantityOutliers,
   fulfillmentStats, round1 as engineRound1
-} from '../core/analytics-engine.js?v=52b10d9631';
+} from '../core/analytics-engine.js?v=ea7b98eca6';
 import {
   spikeThresholdPct, canEditSpikeThreshold, saveSpikeThreshold,
   spikeBadge, renderSpikeLegend, shareBadge, renderShareLegend,
   fulfillBadge, renderFulfillLegend, renderThresholdControl, bindThresholdControl,
   FULFILL_TIERS
 } from '../core/analytics-severity.js?v=3a9756438b';
+import {
+  medicineNamesFrom, MONTHS_EN, MONTHS_AR,
+  drugComparisonStats as comparisonStats, deptDrugTrendStats as trendStats
+} from '../core/analytics-drug-trends.js?v=ce84bf0b15';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -660,8 +664,6 @@ window.addEventListener('floorstock:analytics-rendered', function (e) {
 
 /* ── constants ──────────────────────────────────────────────────────────── */
 const BRAND = 'By Ali Abudahash';
-const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const MONTHS_AR = ['يناير','فبراير','مارس','أبريل','مايو','يونيو','يوليو','أغسطس','سبتمبر','أكتوبر','نوفمبر','ديسمبر'];
 
 /* ── utilities ──────────────────────────────────────────────────────────── */
 function pct(a, total) { return total > 0 ? Math.round(a / total * 1000) / 10 : 0; }
@@ -931,47 +933,9 @@ function renderFulfillment() {
    department/medicine resolution as the rest of this file) rather than
    re-deriving medicine identity — a medicine's routine/high bucket already
    carries a per-department qty breakdown for whatever row set it's given. */
-function drugComparisonMedicineNames() {
-  const stats = computeStats(allRows());
-  const names = [...Object.values(stats.routine), ...Object.values(stats.high)].map(b => b.name).filter(Boolean);
-  return [...new Set(names)].sort((a, b) => a.localeCompare(b));
-}
-function drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth) {
-  const fromMs = new Date(fromYear, fromMonth - 1, 1).getTime();
-  const toMs = new Date(toYear, toMonth, 1).getTime();
-  return allRows().filter(r => {
-    const d = new Date(r.fulfilledAt || r.updatedAt || r.created || 0);
-    const t = d.getTime();
-    return t >= fromMs && t < toMs;
-  });
-}
-function drugComparisonMedicineQty(rows, medicineName) {
-  const stats = computeStats(rows);
-  // The picker hands back a display name; buckets are keyed by normalised
-  // identity, so normalise before looking one up.
-  const key = typeof globalThis.fsR17MedNorm === 'function'
-    ? (globalThis.fsR17MedNorm(medicineName) || medicineName)
-    : medicineName;
-  const bucket = stats.routine[key] || stats.high[key] || stats.routine[medicineName] || stats.high[medicineName];
-  return bucket ? { qty: bucket.qty, depts: bucket.depts } : { qty: 0, depts: {} };
-}
+function drugComparisonMedicineNames() { return medicineNamesFrom(allRows()); }
 function drugComparisonStats(medicineName, fromYear, fromMonth, toYear, toMonth) {
-  const rows = drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth);
-  const total = drugComparisonMedicineQty(rows, medicineName);
-  const deptRows = Object.entries(total.depts)
-    .map(([dept, qty]) => ({ dept, qty }))
-    .sort((a, b) => b.qty - a.qty);
-
-  const months = [];
-  let y = fromYear, m = fromMonth;
-  while (y < toYear || (y === toYear && m <= toMonth)) {
-    const monthRows = drugComparisonRowsInRange(y, m, y + (m === 12 ? 1 : 0), m === 12 ? 1 : m + 1);
-    const monthQty = drugComparisonMedicineQty(monthRows, medicineName).qty;
-    months.push({ year: y, month: m, label: MONTHS_EN[m - 1] || String(m), qty: monthQty });
-    if (m === 12) { y++; m = 1; } else { m++; }
-  }
-
-  return { medicineName, totalQty: total.qty, deptRows, months };
+  return comparisonStats(allRows(), medicineName, fromYear, fromMonth, toYear, toMonth);
 }
 function renderDrugComparisonSection() {
   const medSel = document.getElementById('car-drug-cmp-med');
@@ -1123,23 +1087,7 @@ function renderDrugComparison() {
    department resolution) exactly like the cross-department report — the
    only difference is an extra deptId filter on every row set. */
 function deptDrugTrendStats(deptId, medicineName, fromYear, fromMonth, toYear, toMonth) {
-  const rows = drugComparisonRowsInRange(fromYear, fromMonth, toYear, toMonth).filter(r => String(r.deptId) === String(deptId));
-  const total = drugComparisonMedicineQty(rows, medicineName).qty;
-
-  const months = [];
-  let y = fromYear, m = fromMonth;
-  while (y < toYear || (y === toYear && m <= toMonth)) {
-    const monthRows = drugComparisonRowsInRange(y, m, y + (m === 12 ? 1 : 0), m === 12 ? 1 : m + 1).filter(r => String(r.deptId) === String(deptId));
-    const monthQty = drugComparisonMedicineQty(monthRows, medicineName).qty;
-    months.push({ year: y, month: m, label: MONTHS_EN[m - 1] || String(m), qty: monthQty });
-    if (m === 12) { y++; m = 1; } else { m++; }
-  }
-
-  const nonZeroMonths = months.filter(m => m.qty > 0);
-  const avgPerMonth = months.length ? round1(total / months.length) : 0;
-  const peak = months.reduce((best, m) => (!best || m.qty > best.qty) ? m : best, null);
-
-  return { deptName: deptLabel(deptId), medicineName, totalQty: total, months, avgPerMonth, peak: peak && peak.qty > 0 ? peak : null, activeMonths: nonZeroMonths.length };
+  return trendStats(allRows(), deptId, medicineName, fromYear, fromMonth, toYear, toMonth);
 }
 function renderDeptTrendSection() {
   const deptSel = document.getElementById('car-dept-trend-dept');
