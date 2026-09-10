@@ -1,3 +1,4 @@
+import { consumeBatches, mergeBatches } from '../core/controlled-batch-consumption.js?v=5be3ed9b36';
 (function(){
 'use strict';
 const E=globalThis.E;
@@ -248,8 +249,7 @@ function markOptionalC(){var modal=E('v13x-stock-modal');if(!modal)return;modal.
 window.markControlledStockOptional=markOptionalC;
 
 /* ── Controlled pharmacy dispensing updates the inpatient department custody. ── */
-function consumeDetailedC(batches,qty){var left=qty,remain=[],used=[];(batches||[]).slice().sort(function(a,b){return String(a.expiry||'9999').localeCompare(String(b.expiry||'9999'))}).forEach(function(b){var n=numC(b.qty),take=Math.min(n,left);if(take>0)used.push({qty:take,expiry:b.expiry||'',lot:b.lot||''});left-=take;n-=take;if(n>0)remain.push(Object.assign({},b,{qty:n}))});return {remaining:remain,used:used,short:left}}
-function mergeBatchesC(a,b){var map={};(a||[]).concat(b||[]).forEach(function(x){var k=(x.expiry||'')+'|'+(x.lot||'');if(!map[k])map[k]={qty:0,expiry:x.expiry||'',lot:x.lot||''};map[k].qty+=numC(x.qty)});return Object.keys(map).map(function(k){return map[k]}).filter(function(x){return x.qty>0})}
+var consumeDetailedC=consumeBatches,mergeBatchesC=mergeBatches;
 window.ctlConfirmDispense=async function(){
   if(!canDispenseC())return toast('Only the controlled-pharmacy custodian can dispense to departments.','err');
   var id=(E('ctld-med')||{}).value||'',qty=numC((E('ctld-qty')||{}).value),type=(E('ctld-type')||{}).value||'inpatient',recipient=((E('ctld-recipient')||{}).value||'').trim();
