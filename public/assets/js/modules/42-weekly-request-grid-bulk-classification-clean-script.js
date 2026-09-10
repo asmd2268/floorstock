@@ -1,3 +1,4 @@
+import { DAYS_EN, DAYS_AR, allAllowed, allBlocked, normalizeGrid, cloneGrid, flattenGrid, unflattenGrid, hourLabel, timeToMinutes, rowRanges, nextAllowed, currentClose, weeklyAllowedRows, splitRange } from '../core/request-window-grid.js?v=488d488726';
 import { canEditRequestWhileWindowIsOpen, requestWindowDeadlineFromGrid } from '../core/request-edit-policy.js?v=5da8fb0f2c';
 
 (function(){
@@ -5,15 +6,7 @@ import { canEditRequestWhileWindowIsOpen, requestWindowDeadlineFromGrid } from '
 const E=globalThis.E;
 function escH(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
 var GRID_KEY='request_hour_grids_v1';
-var DAYS_EN=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-var DAYS_AR=['الأحد','الاثنين','الثلاثاء','الأربعاء','الخميس','الجمعة','السبت'];
 var draft=null,sourceDept='',painting=false,paintValue=true;
-function allAllowed(){return Array.from({length:7},function(){return Array(24).fill(true)})}
-function allBlocked(){return Array.from({length:7},function(){return Array(24).fill(false)})}
-function normalizeGrid(g){var out=allBlocked();if(!Array.isArray(g))return out;for(var d=0;d<7;d++)for(var h=0;h<24;h++)out[d][h]=!!(g[d]&&g[d][h]);return out}
-function cloneGrid(g){return normalizeGrid(g).map(function(r){return r.slice()})}
-function flattenGrid(g){var n=normalizeGrid(g),out=[];for(var d=0;d<7;d++)for(var h=0;h<24;h++)out.push(!!n[d][h]);return out}
-function unflattenGrid(flat){var out=allBlocked();if(!Array.isArray(flat))return out;for(var i=0;i<168;i++)out[Math.floor(i/24)][i%24]=!!flat[i];return out}
 function getMaps(){try{var m=(window.S&&S.g&&S.g(GRID_KEY))||{};return m&&typeof m==='object'?m:{}}catch(e){return{}}}
 function deptAliases(dept){
  var raw=String(dept==null?'':dept),out=[];
@@ -37,7 +30,7 @@ function legacyGrid(dept){
  var applicable=wins.filter(function(w){return w&&w.active!==false&&(w.dept==='all'||aliases.indexOf(String(w.dept))>-1)});
  if(!applicable.length)return allAllowed();
  var g=allBlocked();
- applicable.forEach(function(w){var days=Array.isArray(w.days)?w.days:[],a=timeM(w.from),b=timeM(w.to);days.forEach(function(d){for(var h=0;h<24;h++){var hs=h*60,he=(h+1)*60;if(a<=b){if(he>a&&hs<b)g[d][h]=true}else{if(he>a||hs<b)g[d][h]=true}}})});
+ applicable.forEach(function(w){var days=Array.isArray(w.days)?w.days:[],a=timeToMinutes(w.from),b=timeToMinutes(w.to);days.forEach(function(d){for(var h=0;h<24;h++){var hs=h*60,he=(h+1)*60;if(a<=b){if(he>a&&hs<b)g[d][h]=true}else{if(he>a||hs<b)g[d][h]=true}}})});
  return g
 }
 function storedWeeklyGrid(dept){
@@ -47,15 +40,8 @@ function storedWeeklyGrid(dept){
  return Array.isArray(rec.gridFlat)?unflattenGrid(rec.gridFlat):normalizeGrid(rec.grid)
 }
 function gridFor(dept){var stored=storedWeeklyGrid(dept);if(stored)return stored;var mapped=mappedGrid(dept);return mapped||legacyGrid(dept)}
-function timeM(t){var p=String(t||'00:00').split(':');return (+p[0]||0)*60+(+p[1]||0)}
-function hourLabel(h){return String(h).padStart(2,'0')+':00'}
-function rowRanges(row){var out=[],start=null;for(var h=0;h<=24;h++){var on=h<24&&!!row[h];if(on&&start===null)start=h;if(!on&&start!==null){out.push(hourLabel(start)+'–'+(h===24?'24:00':hourLabel(h)));start=null}}return out}
 function riyadhParts(){var parts=new Intl.DateTimeFormat('en-GB',{timeZone:'Asia/Riyadh',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(new Date()),o={};parts.forEach(function(p){o[p.type]=p.value});var y=+o.year,m=+o.month,d=+o.day,h=+o.hour,mi=+o.minute,dow=new Date(Date.UTC(y,m-1,d)).getUTCDay();return{year:y,month:m,day:d,hour:h,minute:mi,dow:dow}}
-function nextAllowed(g,p){for(var step=1;step<=168;step++){var total=p.hour+step,day=(p.dow+Math.floor(total/24))%7,h=total%24;if(g[day][h])return{dayIndex:day,day:DAYS_EN[day],time:hourLabel(h),hour:h,minsAway:step*60-p.minute}}return null}
-function currentClose(g,d,h){var x=h;while(x<24&&g[d][x])x++;return x===24?'24:00':hourLabel(x)}
 function allowedText(dept,check){var g=check&&Array.isArray(check.scheduleGrid)?check.scheduleGrid:gridFor(dept),p=riyadhParts(),today=rowRanges(g[p.dow]);var n=check&&check.next?check.next:nextAllowed(g,p);return{today:today.length?today.join('، '):'لا يوجد وقت مسموح اليوم / No allowed hours today',next:n?(DAYS_EN[n.dayIndex]+' / '+DAYS_AR[n.dayIndex]+' '+hourLabel(n.hour)):'لا يوجد وقت مسموح خلال الأسبوع / No allowed time this week',week:weeklyAllowedRows(g)}}
-function splitRange(r){var p=String(r||'').split(/\s*[–-]\s*/);return{from:p[0]||'',to:p[1]||''}}
-function weeklyAllowedRows(g){var rows=[],order=[6,0,1,2,3,4,5];order.forEach(function(d){var rs=rowRanges(g[d]||[]);if(rs.length)rows.push({dayIndex:d,ar:DAYS_AR[d],en:DAYS_EN[d],ranges:rs})});return rows}
 function weeklyRowsHtml(rows){if(!rows||!rows.length)return '<div class="fhint">لا توجد أوقات طلب مفعلة خلال الأسبوع / No request hours are enabled this week.</div>';return '<ul>'+rows.map(function(row){var arParts=row.ranges.map(function(r){var p=splitRange(r);return p.from==='00:00'&&p.to==='24:00'?'متاح طوال اليوم (24 ساعة)':'من '+p.from+' إلى '+p.to}),enParts=row.ranges.map(function(r){var p=splitRange(r);return p.from==='00:00'&&p.to==='24:00'?'Open 24 hours':p.from+'–'+p.to});return '<li><span class="ar">يوم '+escH(row.ar)+': '+escH(arParts.join('، ثم '))+'</span><span class="en">'+escH(row.en)+': '+escH(enParts.join(', '))+'</span></li>'}).join('')+'</ul>'}
 window.isRequestAllowed=function(deptId){var g=gridFor(deptId),p=riyadhParts(),allowed=!!(g[p.dow]&&g[p.dow][p.hour]),base={scheduleGrid:cloneGrid(g),scheduleSource:mappedGrid(deptId)?'weekly-grid':'legacy'};if(allowed)return Object.assign(base,{allowed:true,reason:'',window:{to:currentClose(g,p.dow,p.hour)},grid:true});return Object.assign(base,{allowed:false,reason:'Outside request hours',next:nextAllowed(g,p),grid:true})}
 window.getRequestEditDeadline=function(deptId,submittedAt){return requestWindowDeadlineFromGrid(gridFor(deptId),submittedAt)};
