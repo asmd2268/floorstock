@@ -10,6 +10,7 @@ import { buildTxnRecords, applyNewLocations } from '../core/pharmacy-inventory-t
 import { visibleMedicines, filterMedicines, medicinesNeedingReorder } from '../core/pharmacy-inventory-filters.js?v=911683c544';
 import { parseMedicineImport } from '../core/pharmacy-inventory-import.js?v=c5674b7fcb';
 import { splitForPurge, validPurgeDays } from '../core/pharmacy-inventory-retention.js?v=a46a0a692a';
+import { lastMovementByMedicine, inactiveSince, cutoffDaysAgo, periodSummary } from '../core/pharmacy-inventory-reports.js?v=7ce2ca81f2';
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -1533,13 +1534,9 @@ function piRenderReportsTab(body){
   var html='';
 
   // ── Not received filter ──
-  var recvCutoff=new Date(Date.now()-inactiveRecvDays*864e5).toISOString().slice(0,10);
   var allMeds=piMedSuggestions();
-  var lastRecv={};
-  txns.filter(function(t){return t.type==='receipt'}).forEach(function(t){
-    var k=t.medName.trim();if(!lastRecv[k]||t.date>lastRecv[k])lastRecv[k]=t.date;
-  });
-  var notRecv=allMeds.filter(function(m){return !lastRecv[m]||lastRecv[m]<recvCutoff});
+  var lastRecv=lastMovementByMedicine(txns,'receipt');
+  var notRecv=inactiveSince(txns,allMeds,'receipt',cutoffDaysAgo(inactiveRecvDays)).map(function(row){return row.medicine});
 
   html+='<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">📭 Not received since / لم يُستلم منذ</span></div><div class="cb">';
   html+='<div class="fl g8 ic" style="margin-bottom:10px"><label style="font-size:13px">Last <input id="pi-rpt-recv-days" type="number" min="1" value="'+inactiveRecvDays+'" style="width:60px;margin:0 4px" onchange="window.renderPharmInv()"> days</label></div>';
@@ -1552,12 +1549,8 @@ function piRenderReportsTab(body){
   html+='</div></div>';
 
   // ── Not dispensed filter ──
-  var dispCutoff=new Date(Date.now()-inactiveDispDays*864e5).toISOString().slice(0,10);
-  var lastDisp={};
-  txns.filter(function(t){return t.type==='dispense'}).forEach(function(t){
-    var k=t.medName.trim();if(!lastDisp[k]||t.date>lastDisp[k])lastDisp[k]=t.date;
-  });
-  var notDisp=allMeds.filter(function(m){return !lastDisp[m]||lastDisp[m]<dispCutoff});
+  var lastDisp=lastMovementByMedicine(txns,'dispense');
+  var notDisp=inactiveSince(txns,allMeds,'dispense',cutoffDaysAgo(inactiveDispDays)).map(function(row){return row.medicine});
 
   html+='<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">📤 Not dispensed since / لم يُصرف منذ</span></div><div class="cb">';
   html+='<div class="fl g8 ic" style="margin-bottom:10px"><label style="font-size:13px">Last <input id="pi-rpt-disp-days" type="number" min="1" value="'+inactiveDispDays+'" style="width:60px;margin:0 4px" onchange="window.renderPharmInv()"> days</label></div>';
@@ -1576,12 +1569,9 @@ function piRenderReportsTab(body){
   html+='<label style="font-size:13px">To <input id="pi-rpt-sum-to" type="date" value="'+piEsc(sumTo)+'" onchange="window.renderPharmInv()" style="margin:0 4px"></label>';
   html+='<input id="pi-rpt-sum-med" type="text" placeholder="Filter medicine / فلتر" value="'+piEsc(sumMed)+'" oninput="window.renderPharmInv()" style="min-width:140px">';
   html+='</div>';
-  var sumData={};
-  txns.filter(function(t){return t.date>=sumFrom&&t.date<=sumTo&&(!sumMed||t.medName.toLowerCase().indexOf(sumMed)>=0)}).forEach(function(t){
-    var k=t.medName.trim();if(!sumData[k])sumData[k]={recv:0,disp:0};
-    if(t.type==='receipt')sumData[k].recv+=t.qty;else sumData[k].disp+=t.qty;
-  });
-  var sumKeys=Object.keys(sumData).sort();
+  var summary=periodSummary(txns,{from:sumFrom,to:sumTo,medicine:sumMed}),sumData={};
+  summary.rows.forEach(function(row){sumData[row.medicine]={recv:row.received,disp:row.dispensed}});
+  var sumKeys=summary.rows.map(function(row){return row.medicine});
   if(!sumKeys.length){html+='<div class="fhint">No transactions in this period.</div>';}
   else{
     var totalRecv=0,totalDisp=0;
