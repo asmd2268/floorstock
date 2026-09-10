@@ -252,16 +252,31 @@ window.ccxRenderDashboardAlerts=function(){
   };
 
   function getScopeConfig(){return getPharmacyCategoryConfig();}
-  function saveScopeConfig(cfg){saveGlobalConfig(cfg);return true;}
+  function saveScopeConfig(cfg){return saveGlobalConfig(cfg);}
+  /* Every one of these returns its write. Renaming a category touches one
+     document per department plus two settings documents, with no transaction
+     across them, so the caller has to await them all and say plainly which ones
+     did not land — a "renamed everywhere ✓" over a failed department write
+     leaves the same category spelled two ways, which is the split this project
+     spends most of its time undoing. */
   function updateConfigsRename(oldName,newName){
     var cfg=getPharmacyCategoryConfig();
     cfg.order=cfg.order.map(function(c){return c===oldName?newName:c;});
-    saveGlobalConfig(cfg);
+    return saveGlobalConfig(cfg);
   }
   function updateConfigsRemove(name){
     var cfg=getPharmacyCategoryConfig();
     cfg.order=cfg.order.filter(function(c){return c!==name;});
-    saveGlobalConfig(cfg);
+    return saveGlobalConfig(cfg);
+  }
+  /* Runs the writes, names what failed. */
+  async function saveAllOrReport(jobs,successMessage){
+    var results=await Promise.allSettled(jobs.map(function(job){return Promise.resolve(job.run()).then(function(){return job.label})}));
+    var failed=results.map(function(result,index){return result.status==='rejected'?jobs[index].label:null}).filter(Boolean);
+    if(!failed.length){toast(successMessage,'succ');return true}
+    results.forEach(function(result){if(result.status==='rejected')console.error('Category change failed',result.reason)});
+    toast('Not saved for: '+failed.join(', ')+'. Reopen the list and try again. / لم يُحفظ في: '+failed.join('، '),'err');
+    return false;
   }
   window.openManageCats=function(){
     if(!canManageCategoryNames())return toast('Category management is available only to authorized Pharmacy users and Master.','err');
@@ -282,24 +297,29 @@ window.ccxRenderDashboardAlerts=function(){
     }).join('');
   
 };
-    window.renameManagedCategory=function(oldName,newValue){
+    window.renameManagedCategory=async function(oldName,newValue){
     if(!canManageCategoryNames())return;
     if(isSolutionsCategory(oldName))return toast('Solutions is fixed and cannot be renamed.','info');
     var n=String(newValue||'').trim();if(!n)return renderCatList();
     var cats=allCats();if(cats.some(function(c){return c!==oldName&&c.toLowerCase()===n.toLowerCase();})){toast('Category name already exists.','err');return renderCatList();}
     var global=typeof getCategories==='function'?getCategories().slice():cats.slice();
-    global=uniq(global.map(function(c){return c===oldName?n:c;}));setCategories(global);
+    global=uniq(global.map(function(c){return c===oldName?n:c;}));
+    var jobs=[{label:'Category list / قائمة التصنيفات',run:function(){return setCategories(global)}}];
     (typeof gd==='function'?gd():[]).forEach(function(d){
-      var ms=getMeds(d.id),changed=false;ms.forEach(function(m){if(m.category===oldName){m.category=n;changed=true;}});if(changed)setMeds(d.id,ms);
+      var ms=getMeds(d.id),changed=false;ms.forEach(function(m){if(m.category===oldName){m.category=n;changed=true;}});
+      if(changed)jobs.push({label:d.name||d.id,run:function(){return setMeds(d.id,ms)}});
     });
-    updateConfigsRename(oldName,n);
-    if(typeof refreshCatSelectors==='function')refreshCatSelectors();refreshDeptCategorySelectors();renderCatList();if(typeof renderInv==='function')renderInv();toast('Category renamed everywhere.','succ');
+    jobs.push({label:'Category order / ترتيب التصنيفات',run:function(){return updateConfigsRename(oldName,n)}});
+    var renamed=await saveAllOrReport(jobs,'Category renamed everywhere ✓');
+    if(typeof refreshCatSelectors==='function')refreshCatSelectors();refreshDeptCategorySelectors();renderCatList();if(typeof renderInv==='function')renderInv();
+    return renamed;
   };
-  window.moveManagedCategory=function(cat,dir){
+  window.moveManagedCategory=async function(cat,dir){
     if(isSolutionsCategory(cat))return;
     var cfg=getScopeConfig(),solution=cfg.order.find(function(c){return isSolutionsCategory(c);}),arr=cfg.order.filter(function(c){return !isSolutionsCategory(c);}),i=arr.indexOf(cat),j=i+dir;
     if(i<0||j<0||j>=arr.length)return;
-    var t=arr[i];arr[i]=arr[j];arr[j]=t;if(solution)arr.push(solution);cfg.order=arr;saveScopeConfig(cfg);
+    var t=arr[i];arr[i]=arr[j];arr[j]=t;if(solution)arr.push(solution);cfg.order=arr;
+    try{await saveScopeConfig(cfg)}catch(error){console.error('Category order was not saved',error);toast('The new order was not saved. / لم يُحفظ الترتيب الجديد','err')}
     renderCatList();refreshDeptCategorySelectors();if(typeof renderInv==='function')renderInv();if(typeof renderReqForm==='function')renderReqForm();
   };
   window.removeManagedCategory=async function(name){
@@ -309,8 +329,12 @@ window.ccxRenderDashboardAlerts=function(){
     (typeof gd==='function'?gd():[]).some(function(d){return (getMeds(d.id)||[]).some(function(m){if(m.category===name){used=true;return true;}return false;});});
     if(used)return toast('Reassign medicines in this category before deleting it.','err');
     if(!await uiConfirm('Delete category "'+name+'"?'))return;
-    var cats=(typeof getCategories==='function'?getCategories():[]).filter(function(c){return c!==name;});setCategories(cats);updateConfigsRemove(name);
-    if(typeof refreshCatSelectors==='function')refreshCatSelectors();refreshDeptCategorySelectors();renderCatList();if(typeof renderInv==='function')renderInv();toast('Category deleted everywhere.','info');
+    var cats=(typeof getCategories==='function'?getCategories():[]).filter(function(c){return c!==name;});
+    await saveAllOrReport([
+      {label:'Category list / قائمة التصنيفات',run:function(){return setCategories(cats)}},
+      {label:'Category order / ترتيب التصنيفات',run:function(){return updateConfigsRemove(name)}}
+    ],'Category deleted everywhere ✓');
+    if(typeof refreshCatSelectors==='function')refreshCatSelectors();refreshDeptCategorySelectors();renderCatList();if(typeof renderInv==='function')renderInv();
   };
   function enforceButton(){
     var b=document.querySelector('#pg-inv button[onclick="openManageCats()"]');if(b)b.style.display=canManageCategoryNames()?'inline-flex':'none';
