@@ -86,3 +86,46 @@ test('the pharmacy inventory screen works entirely through delegated actions', a
   expect(outcome.dialogClosed, 'the delegated Cancel closed it').toBe(true);
   expect(outcome.inlineHandlers, 'no inline handler remains on the screen').toBe(0);
 });
+
+test('the crash-cart operations and custody screens are delegated too', async ({ page }) => {
+  await page.goto('/');
+  await expect.poll(async () => page.locator('html').getAttribute('data-asdh-modules')).toBe('ready');
+
+  const outcome = await page.evaluate(() => {
+    window.toast = () => {};
+    window.uiConfirm = async () => false;
+    window.CU = { role: 'pharmacy', username: 'p', active: true, master: true };
+    window.MASTER_ACTUAL = window.CU;
+    window.S.cache.departments = [{ id: 'dept-a', name: 'Ward A' }];
+    window.S.cache.crash_carts = [{ id: 'cart-a', name: 'ICU cart', deptId: 'dept-a', seal: 'S-1', items: [{ id: 'i1', name: 'Adrenaline', qty: 4, present: 4, batches: [{ batchId: 'b1', expiry: '2027-01-01', qty: 4 }] }] }];
+    document.getElementById('auth').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    const host = document.getElementById('pg-crash-ops');
+    host.classList.add('on');
+    window.renderCrashOperations();
+
+    const stillGlobal = ['r17CrashSaveDetails', 'r18OpenCrashCorrection', 'acc2SaveGrace', 'acc2CancelUsage', 'controlledStoragePrint']
+      .filter((name) => typeof window[name] === 'function');
+
+    /* A row action reaches its handler through the delegated listener. */
+    const edit = host.querySelector('[data-clickact="r18OpenCrashCorrection"]');
+    if (edit) edit.click();
+
+    return {
+      stillGlobal,
+      hadRowAction: !!edit,
+      correctionOpened: !!document.querySelector('#r18-crash-correction-modal.on, .modal-bg.on'),
+      /* The tab bar above this screen is drawn by another module that has not
+         been converted yet; what matters here is that none of THIS screen's
+         actions are still wired by name. */
+      inlineFromThisScreen: [...host.querySelectorAll('[onclick],[onchange],[oninput]')]
+        .map((node) => node.getAttribute('onclick') || node.getAttribute('onchange') || node.getAttribute('oninput') || '')
+        .filter((source) => /r17|r18|acc2|controlledStorage/.test(source)),
+    };
+  });
+
+  expect(outcome.stillGlobal, 'these names are no longer global').toEqual([]);
+  expect(outcome.hadRowAction, 'the delegated row action is rendered').toBe(true);
+  expect(outcome.correctionOpened, 'pressing it opened the correction dialog').toBe(true);
+  expect(outcome.inlineFromThisScreen, 'this screen wires nothing by name any more').toEqual([]);
+});

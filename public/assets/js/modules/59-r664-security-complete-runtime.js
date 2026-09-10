@@ -328,10 +328,10 @@ var ALLOWED=new Set((
   'ctlAddCatalogMedicine ctlEditCatalogMedicine ctlEditWarehouseStock ctlSendToPharmacy ctlEditPharmacyStock ctlOpenDispense ctlReceiveDelivery ctlImportMasterFile ctlImportMasterText '+
   'ctlDeptFinalApply ctlDeptFinalToggle ctlConfirmDepartmentPrint ctlOpenDepartmentPrintOptions renderDepartmentControlledPanel '+
   'crashPrint crashAddItem crashReportOpen ccxOpenReport ccCrashExpiryChoiceChanged ccCrashUnavailableToggled ccCrashResponsePreview v13asViewReport setCrashSealPolicy ccAcceptReport ccRejectReport ccToggleNoConsumption ccSaveNCSettings ccExtraBatchChoiceChanged ccApplyExtraBatches ccToggleCrashSection '+
-  'r17CrashSaveDetails r18OpenCrashCorrection r18CrashCorrectionAddBatch r17CrashRenderMatrix '+
-  'acc2SetAdminTab acc2RefreshMedicationList acc2SaveAssignment acc2CancelAssignmentEdit acc2EditAssignment acc2ToggleAssignment acc2DeleteAssignment acc2SetFilter acc2Decision acc2UndoApproval acc2SaveGrace mrSetPeriod mrSetSearch acc2SubSetMed acc2SetReceiptDept acc2RegimenDeptChanged acc2SaveRegimenVersion acc2CancelRegimenEdit acc2ActivateRegimen acc2ToggleRegimenPause acc2StartRegimenVersion acc2DeleteRegimen acc2SubmitUsage '+
-  'acc3SetDept acc3AddMedicine acc3ToggleMedicine acc3SaveRegimen acc3CancelEdit acc3EditRegimen acc3PrintRegimen acc3ToggleRegimen acc3AddItemRow acc3RemoveItemRow acc2UpdateDoseCalc anlPrintAccountability acc2SetDeptTab acc2SetMedTab acc3UpdateDoseRate acc3SubmitPlanUsage acc3ApprovePlanUsage acc3RejectPlanUsage acc3RecordPlanReceipt acc2PrintAnalytics'+
-  'controlledStorageCountsChanged controlledStorageEditUnit controlledStoragePrint controlledStorageDeleteUnit controlledStorageAssignByName controlledStorageValidateSearch '+
+  ' r17CrashRenderMatrix '+
+  'acc2SetAdminTab acc2SaveAssignment acc2SetFilter acc2Decision acc2SaveGrace mrSetPeriod mrSetSearch acc2RegimenDeptChanged acc2SaveRegimenVersion acc2SubmitUsage '+
+  'acc3SetDept acc3AddMedicine acc3ToggleMedicine acc3SaveRegimen acc3CancelEdit acc3EditRegimen acc3PrintRegimen acc3ToggleRegimen acc3AddItemRow acc3RemoveItemRow anlPrintAccountability acc3UpdateDoseRate acc3SubmitPlanUsage acc3ApprovePlanUsage acc3RejectPlanUsage acc3RecordPlanReceipt '+
+  ' '+
   'ctlOpenHijriLedger ctlEditLedgerMove ctlOpenCustodyHandover ctlReprintHandover '+
   'ctlAnApply ctlAnPrint ctlCmpApply ctlCmpPrint _r676PrintDept '+
   'bulkReplacementToggleLimits runBulkReplacement aaFinalSaveExpiryRules phExpiryToggleDept phExpirySetView phExpirySelectAllDepartments phExpiryClearDepartments phExpiryEditRules '+
@@ -339,7 +339,7 @@ var ALLOWED=new Set((
   'v13XClose v13XAddBatch v13XSaveCatalogMed v13XSaveStock valQ v14SaveEditReq2 v14SetPrintFilter v16ToggleScope v16ToggleMultiApplicable v16ApplyMultiClean v16ManageHiddenCategories v16SaveHiddenCats '+
   'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
   'clToggleRole clTogglePerDeptFilter plToggle plPharmFeatToggle plRoomAssignToggle '+
-  'acc2SaveClassColors acc2ResetClassColors acc2SaveIntColors acc2ResetIntColors '+
+  ' '+
   ''+
   ''+
   ''+
@@ -347,9 +347,9 @@ var ALLOWED=new Set((
   ''+
   ''+
   ''+
-  'ccTabCarts ccTabOps usrTabPerms ccOpsTab '+
-  'saveDeptPrintNames setSelectedMedsOutOfStock renderPharmInv acc2AddExpiryRow acc2ShowExpirySection acc2RemoveExpiryRow acc2SaveExpiryBatches acc2MedSearch '+
-  'acc2CancelUsage acc3CancelPlanUsage acc3SavePlanExpiry acc2SetCustFilter acc2ResetBalance dispSlotAllToggle '+
+  'ccTabCarts ccTabOps usrTabPerms '+
+  'saveDeptPrintNames setSelectedMedsOutOfStock renderPharmInv '+
+  ' acc3CancelPlanUsage acc3SavePlanExpiry dispSlotAllToggle '+
   'parseFloat isNaN'
 ).split(/\s+/).filter(Boolean));
 
