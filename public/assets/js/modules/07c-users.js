@@ -42,6 +42,12 @@ function injectUsersTabBar(activePg){
 window.injectUsersTabBar=injectUsersTabBar;
 function renderUsers(){
   injectUsersTabBar('pg-users');
+  /* The page is reachable by roles that may READ the user list but not create
+     one. Leaving "+ Add User" on screen for them meant a button whose only
+     answer was "Only the Pharmacy Manager may create users" — visible, and
+     good for nothing. It is hidden for them instead. */
+  var addUserBtn=document.querySelector('#pg-users [data-asdh-binding="b029"]');
+  if(addUserBtn)addUserBtn.style.display=(typeof canManageUsers==='function'&&canManageUsers())?'':'none';
   if(typeof canManageUsers==='function'&&!canManageUsers()){el('utbl').innerHTML='<tr><td colspan="4" style="text-align:center;padding:24px">User management is restricted to the Pharmacy Director.</td></tr>';return}
   var us=gu(),ds=fsRoleScopedDepts(gd());
   if(!us.length&&typeof window.S!=='undefined'&&typeof S.loadUsers==='function'&&!window.__usersPageLoadPending){
