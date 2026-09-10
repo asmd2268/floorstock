@@ -26,6 +26,14 @@ test('no failure is swallowed with nothing behind it', () => {
   assert.match(audit('--strict'), /EMPTY CATCH blocks: 0/);
 });
 
+test('no wrapper calls the global of its own name', () => {
+  /* Six did. `function editReqWindow(i){return globalThis.editReqWindow(i)}`
+     works only because a module loaded later overwrites that global with the
+     real implementation; reorder the imports and the first click hangs the tab
+     in its own recursion. */
+  assert.match(audit('--strict'), /SELF-DELEGATING WRAPPERS \(function x → globalThis\.x\): 0/);
+});
+
 test('the audit counts a reference from HTML, a test, or a name list', () => {
   /* Handlers are dispatched by name from strings in this project, so a scan
      that only followed real references would call live code dead. */

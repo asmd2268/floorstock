@@ -6,4 +6,3 @@ export function debounce(fn, wait) {
   };
 }
 
-globalThis.debounce = debounce;

@@ -3,7 +3,7 @@ import { normalizeRole } from '../core/role-capabilities.js?v=ae15f94c34';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c8beef9722';
 import { fsNorm } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
-import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
+import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
 import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=c13c38051a';
 
@@ -306,7 +306,8 @@ globalThis.logoutBusy = false;
 async function doLogout(){
   if(logoutBusy)return;logoutBusy=true;
   var logoutButtons=Array.from(document.querySelectorAll('[onclick*="doLogout"],#logout-btn,.logout-btn'));logoutButtons.forEach(function(button){button.disabled=true});
-  function timeout(promise,ms,label){return Promise.race([Promise.resolve(promise),new Promise(function(_,reject){setTimeout(function(){reject(new Error(label||'Operation timed out'))},ms)})])}
+  /* One timeout: core/promise-timeout.js, already imported above. */
+  var timeout=withTimeout;
   try{
     // Do not persist page drafts while tearing down the authenticated session.
     // The old persistence chain could re-enter itself during Safari pagehide,

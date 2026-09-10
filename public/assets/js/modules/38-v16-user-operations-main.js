@@ -191,8 +191,6 @@ window.isMaster=function(){
            (typeof window.isMasterActual==='function'&&window.isMasterActual());
   }catch(e){return false}
 };
-function isMaster(){return window.isMaster()}
-
 /* ────────────────────────────────────────────────────────────────
    PERMISSION HELPERS
 ──────────────────────────────────────────────────────────────── */

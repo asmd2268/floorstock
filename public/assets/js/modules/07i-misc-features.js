@@ -264,16 +264,8 @@ function renderSchedule(){
 }
 
 // ── Request Window CRUD ───────────────────────────────────
-
-function editReqWindow(i){return globalThis.editReqWindow(i)}
 // ── Dispense Slot CRUD ────────────────────────────────────
-function addDispSlot(){return globalThis.addDispSlot()}
-function editDispSlot(i){return globalThis.editDispSlot(i)}
 // ── Monthly Limits ────────────────────────────────────────
-function openBulkLimits(){return globalThis.openBulkLimits()}
-function applyBulkLimit(){return globalThis.applyBulkLimit()}
-
-
 // ── DEPT: Show window info + block if outside window ──────
 // Single global exit lifecycle: persist transient UI state, close public listeners, then warn on pending writes.
 window.addEventListener('beforeunload',function(e){
@@ -314,11 +306,6 @@ publishLegacy("07i-misc-features.js", {
   setMonthlyLimits,
   getMonthlyReqCount,
   renderSchedule,
-  editReqWindow,
-  addDispSlot,
-  editDispSlot,
-  openBulkLimits,
-  applyBulkLimit,
 });
 
 export {};

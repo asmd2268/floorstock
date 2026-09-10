@@ -9,4 +9,3 @@ export function withTimeout(promise, milliseconds, message) {
   });
 }
 
-globalThis.withTimeout = withTimeout;

@@ -9,10 +9,10 @@ import {
   fulfillmentEditReason,
 } from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
 import { loadScriptOnce } from '../core/script-loader.js?v=5e8c0b2d04';
-import { debounce } from '../core/timing.js?v=6b9368dd75';
+import { debounce } from '../core/timing.js?v=e4cf678c0c';
 import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=e6374b4039';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
-import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
+import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=eec5742551';
 import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=7a75e3ae82';
@@ -143,18 +143,18 @@ async function fsCallFunction(name,data){
   return payload&&Object.prototype.hasOwnProperty.call(payload,'result')?payload.result:payload;
 }
 window.fsCallFunction=fsCallFunction;
-globalThis.renderInvDebounced = globalThis.debounce(function(){renderInv()},220);
+globalThis.renderInvDebounced = debounce(function(){renderInv()},220);
 function hasPendingRequestDraft(){
   return Array.from(document.querySelectorAll('#rfbody input, #rfbody textarea, #rfbody select')).some(function(field){
     if(field.disabled||field.type==='checkbox'||field.type==='radio')return false;
     return String(field.value||'').trim()!=='';
   });
 }
-globalThis.renderReqFormDebounced = globalThis.debounce(function(){
+globalThis.renderReqFormDebounced = debounce(function(){
   if(hasPendingRequestDraft())return;
   renderReqForm();
 },220);
-globalThis.renderControlledDebounced = globalThis.debounce(function(){renderControlled()},220);
+globalThis.renderControlledDebounced = debounce(function(){renderControlled()},220);
 globalThis._firebasePersistenceAttempted = false;
 globalThis._firebaseReadyPromise = null;
 function initFirebase(){

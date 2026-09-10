@@ -52,6 +52,17 @@ for (const [file, src] of corpus) {
   });
 }
 
+/* A wrapper that calls the global of its own name works only while some later
+   module happens to overwrite that global with the real implementation. Change
+   the load order and it calls itself forever — a hung tab, not an error. */
+const selfDelegating = [];
+for (const [file, src] of corpus) {
+  src.split('\n').forEach((line, index) => {
+    const match = /^\s*(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{\s*return\s+(?:globalThis|window)\.\1\s*\(/.exec(line);
+    if (match) selfDelegating.push(`${file}:${index + 1} ${match[1]}`);
+  });
+}
+
 const dead = [];
 for (const [name, where] of declaredIn) {
   if (where.length > 1) continue;
@@ -74,15 +85,21 @@ console.log(`DEAD (declared, referenced nowhere): ${dead.length}`);
 dead.forEach((d) => console.log('  ' + d));
 console.log(`\nEMPTY CATCH blocks: ${silent.length}`);
 silent.slice(0, 15).forEach((s) => console.log('  ' + s));
+console.log(`\nSELF-DELEGATING WRAPPERS (function x → globalThis.x): ${selfDelegating.length}`);
+selfDelegating.forEach((entry) => console.log('  ' + entry));
+
 console.log(`\nSAME FUNCTION NAME IN MORE THAN ONE FILE: ${duplicated.length}`);
 duplicated.slice(0, 25).forEach((d) => console.log('  ' + d));
 
-if (process.argv.includes('--strict') && (dead.length || silent.length)) {
+if (process.argv.includes('--strict') && (dead.length || silent.length || selfDelegating.length)) {
   if (dead.length) {
     console.error('\nDead code: delete it, or call it. A function nothing reaches is not "kept for later" — it is read by everyone who edits the file and run by nobody.');
   }
   if (silent.length) {
     console.error('\nA catch with nothing in it swallows a failure whole: no handling, no log, and no reason written down. Either report it (console.warn is enough for something the user cannot act on), or write one line saying why silence is correct here — storage that may be unavailable, an optional module that is not loaded, tearing down something already gone.');
+  }
+  if (selfDelegating.length) {
+    console.error('\nA wrapper that calls the global of its own name depends on load order to not be infinite recursion. Call the global directly, or import the owner.');
   }
   process.exit(1);
 }
