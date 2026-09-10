@@ -1,5 +1,5 @@
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
-import { estimateDocBytes } from './firestore-doc-size.js?v=ed46614d2f';
+import { estimateDocBytes } from './firestore-doc-size.js?v=e36fbcceed';
 import { ROTATION_POLICIES } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* Ceilings that enforce themselves: the newest rows are kept, the oldest give
@@ -114,4 +114,4 @@ rotationPolicies().forEach((policy) => registerAutoMaintenance({
   run: () => policy.run(policy),
 }));
 
-Object.assign(globalThis, { registerRotation, rotationPolicies, rotationPolicyFor, rowsToRotate, rotateKey });
+Object.assign(globalThis, { rotationPolicies, rowsToRotate, rotateKey });

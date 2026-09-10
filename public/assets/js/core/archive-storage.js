@@ -1,4 +1,4 @@
-import { archiveFileName } from './archive-manifest.js?v=6bf6b393b9';
+import { archiveFileName } from './archive-manifest.js?v=3da5b8801d';
 
 /* Keeping archives in the project instead of only on one computer.
 
@@ -112,5 +112,4 @@ Object.assign(globalThis, {
   uploadArchive,
   listStoredArchives,
   archiveDownloadUrl,
-  deleteStoredArchive,
 });

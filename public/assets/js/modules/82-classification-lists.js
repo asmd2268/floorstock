@@ -313,7 +313,6 @@ document.addEventListener('asdh:real-load-complete',function(){
 });
 
 publishLegacy("82-classification-lists.js", {
-  clScanCandidates,
   clHasVisibleLists: window.clHasVisibleLists,
   clOpenClassificationLists: window.clOpenClassificationLists,
   renderClassificationLists: window.renderClassificationLists

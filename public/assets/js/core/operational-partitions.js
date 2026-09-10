@@ -3,7 +3,7 @@ import {
   appendMonthPartitionedRows,
   monthOf,
   monthPartitionSpec,
-} from './month-partitioned-store.js?v=405d877017';
+} from './month-partitioned-store.js?v=aeb7b09869';
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 import { legacyStateDoc } from './legacy-state-doc.js?v=95b728cbfc';
 
@@ -187,4 +187,4 @@ SPECS.forEach((spec) => registerStorageCleanup({
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true) && !!legacyRows(spec.key),
 }));
 
-Object.assign(globalThis, { operationalPartitionSpecs, migrateKeyToMonths });
+Object.assign(globalThis, { migrateKeyToMonths });

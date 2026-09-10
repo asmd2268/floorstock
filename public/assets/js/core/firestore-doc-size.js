@@ -71,5 +71,4 @@ Object.assign(globalThis, {
   FIRESTORE_DOC_LIMIT,
   estimateValueBytes,
   estimateDocBytes,
-  docFillPercent,
 });

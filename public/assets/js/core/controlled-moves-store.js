@@ -1,4 +1,4 @@
-import { hijriMonthLabelBilingual, hijriMonthKey } from './hijri-calendar.js?v=7cb3fbc1ff';
+import { hijriMonthLabelBilingual, hijriMonthKey } from './hijri-calendar.js?v=c5193ff179';
 import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 import {
   registerMonthPartitionedKey,
@@ -8,7 +8,7 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
   partitionKey,
-} from './month-partitioned-store.js?v=405d877017';
+} from './month-partitioned-store.js?v=aeb7b09869';
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.
@@ -146,7 +146,6 @@ Object.assign(globalThis, {
   saveControlledMove,
   deleteControlledMove,
   availableControlledMonths,
-  controlledMovesForMonths,
   migrateControlledMovesToMonths,
   controlledMovePartitionKey: (month, part) => partitionKey(CONTROLLED_MOVES_KEY, month, part),
 });

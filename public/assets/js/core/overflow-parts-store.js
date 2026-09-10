@@ -1,4 +1,4 @@
-import { estimateDocBytes, FIRESTORE_DOC_LIMIT } from './firestore-doc-size.js?v=ed46614d2f';
+import { estimateDocBytes, FIRESTORE_DOC_LIMIT } from './firestore-doc-size.js?v=e36fbcceed';
 
 /* The general answer to "a record filled up and everything stopped".
 
@@ -172,7 +172,6 @@ Object.assign(globalThis, {
   hasOverflowParts,
   splitForOverflow,
   joinOverflowParts,
-  mayHaveOverflow,
   overflowProbeKeys,
   writeWithOverflow,
 });

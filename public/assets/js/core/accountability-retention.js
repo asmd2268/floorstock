@@ -1,10 +1,10 @@
 import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
 import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
-import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=6bf6b393b9';
-import { uploadArchive } from './archive-storage.js?v=2e7d4b5e6f';
-import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=7cb3fbc1ff';
-import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=405d877017';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=3da5b8801d';
+import { uploadArchive } from './archive-storage.js?v=24b92dea32';
+import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=c5193ff179';
+import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=aeb7b09869';
 
 /* Accountability history retention.
 

@@ -305,17 +305,10 @@ function CM(id){document.getElementById(id).classList.remove('on');if(id==='mexp
 
 publishLegacy("07g-barcode-scanner.js", {
   switchExpTab,
-  parseBarcode,
-  parseExpiryStr,
-  formatParsedFields,
-  getMedSelectOptions,
-  fuzzyMatchMed,
-  startScanner,
   switchCamera,
   stopScanner,
   restartScanner,
   captureFrame,
-  onScanSuccess,
   applyScanResult,
   parseTypedBarcode,
   applyTypedResult,

@@ -1,4 +1,4 @@
-import { hijriMonthLabelBilingual, currentHijriMonthKey, shiftHijriMonth, hijriMonthsBetween } from './hijri-calendar.js?v=7cb3fbc1ff';
+import { hijriMonthLabelBilingual, currentHijriMonthKey, shiftHijriMonth, hijriMonthsBetween } from './hijri-calendar.js?v=c5193ff179';
 
 /* Temporary, master-granted permission to export the controlled ledger.
 
@@ -175,7 +175,6 @@ Object.assign(globalThis, {
   grantExportPermission,
   revokeExportPermission,
   grantsForDisplay,
-  pruneExpiredGrants,
   defaultGrantRange,
   grantIsLive,
 });

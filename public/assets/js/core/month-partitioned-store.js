@@ -1,4 +1,4 @@
-import { hijriMonthKey, shiftHijriMonth } from './hijri-calendar.js?v=7cb3fbc1ff';
+import { hijriMonthKey, shiftHijriMonth } from './hijri-calendar.js?v=c5193ff179';
 import { stableRowFingerprint, isSynthesizedMigrationId } from './row-fingerprint.js?v=9a446bb45d';
 
 /* State keys stored as one document per calendar month.
@@ -396,7 +396,6 @@ Object.assign(globalThis, {
   registerMonthPartitionedKey,
   monthPartitionSpec,
   monthPartitionedKeyNames,
-  isMonthPartitionDoc,
   monthPartitionRows,
   partitionKeysInCache,
   recentPartitionKeys,

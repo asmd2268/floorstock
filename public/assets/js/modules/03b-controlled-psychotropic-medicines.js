@@ -256,7 +256,6 @@ publishLegacy("03b-controlled-psychotropic-medicines.js", {
   ctlPharmacy,
   ctlSetPharmacy,
   ctlDeptList,
-  ctlEnrichDeptList,
   ctlSetDeptList,
   ctlMoves,
   ctlSaveMovementLog,
@@ -275,7 +274,6 @@ publishLegacy("03b-controlled-psychotropic-medicines.js", {
   ctlReceiveDelivery,
   ctlAssignMedicineToDept,
   ctlRemoveDeptMedicine,
-  ctlImportRows,
   ctlImportMasterFile,
   ctlImportMasterText,
 });

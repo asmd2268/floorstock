@@ -122,7 +122,6 @@ export function hijriMonthsBetween(fromMonthKey, toMonthKey) {
 
 Object.assign(globalThis, {
   HIJRI_MONTHS_AR,
-  HIJRI_MONTHS_EN,
   hijriParts,
   hijriMonthKey,
   hijriMonthLabel,

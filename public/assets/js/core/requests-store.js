@@ -5,7 +5,7 @@ import {
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
   partitionKeysInCache,
-} from './month-partitioned-store.js?v=405d877017';
+} from './month-partitioned-store.js?v=aeb7b09869';
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 
@@ -147,10 +147,5 @@ registerStorageCleanup({
 Object.assign(globalThis, {
   REQUESTS_KEY,
   requestRows,
-  appendRequests,
-  saveRequest,
-  deleteRequest,
-  applyRequestChanges,
-  availableRequestMonths,
   migrateRequestsToMonths,
 });

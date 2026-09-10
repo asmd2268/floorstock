@@ -1,4 +1,4 @@
-import { dedupeMonthPartitions, monthPartitionedKeyNames } from './month-partitioned-store.js?v=405d877017';
+import { dedupeMonthPartitions, monthPartitionedKeyNames } from './month-partitioned-store.js?v=aeb7b09869';
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 

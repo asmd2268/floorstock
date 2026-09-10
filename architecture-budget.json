@@ -1,9 +1,9 @@
 {
-  "globals": 1231,
+  "globals": 1130,
   "modules": {
     "core/event-bindings.js": 1133,
-    "modules/03-core-application-firebase-state-auth.js": 1761,
-    "modules/07j-controlled-module-enhancements.js": 765,
+    "modules/03-core-application-firebase-state-auth.js": 1742,
+    "modules/07j-controlled-module-enhancements.js": 735,
     "modules/38-v16-user-operations-main.js": 834,
     "modules/40-v16-clean-optimized-script.js": 782,
     "modules/49-asdh-final-persistence-actions-20260725.js": 881,

@@ -288,7 +288,6 @@ window.addEventListener('beforeunload',function(e){
 
 publishLegacy("07i-misc-features.js", {
   checkPublicView,
-  renderMobileRequest,
   getNotes,
   setNotes,
   noteEsc,

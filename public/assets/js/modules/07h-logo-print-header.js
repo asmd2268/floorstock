@@ -121,8 +121,6 @@ window.fsOfficialPrint=function(opts){
 };
 
 publishLegacy("07h-logo-print-header.js", {
-  getLogo,
-  setLogoData,
   openLogoSettings,
   handleLogoDrop,
   handleLogoFile,

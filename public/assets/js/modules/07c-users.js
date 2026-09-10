@@ -247,7 +247,6 @@ document.addEventListener('click', function(event){
 publishLegacy("07c-users.js", {
   fsRoleScopedDepts,
   renderUsers,
-  bindUserPageActions,
   updateUserRoleFields,
   openAddUser,
   saveUser,

@@ -3,7 +3,7 @@ import {
   appendMonthPartitionedRows,
   monthPartitionRows,
   partitionKeysInCache,
-} from './month-partitioned-store.js?v=405d877017';
+} from './month-partitioned-store.js?v=aeb7b09869';
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
 import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
 import { CRASH_REPORT_LIVE_MONTHS as POLICY_LIVE_MONTHS } from './upkeep-policy.js?v=fc7bd6e72a';
@@ -130,8 +130,6 @@ registerStorageCleanup({
 
 Object.assign(globalThis, {
   CRASH_REPORT_ARCHIVE_KEY,
-  archivedReports,
   allCrashReports,
   reportsReadyToArchive,
-  archiveOldCrashReports,
 });

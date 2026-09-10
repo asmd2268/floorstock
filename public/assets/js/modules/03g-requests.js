@@ -241,8 +241,6 @@ window.requestScheduledDispenseBlocked=requestScheduledDispenseBlocked;
 publishLegacy("03g-requests.js", {
   filterR,
   renderReqs,
-  installRequestActionBindings,
-  rcard,
   viewReq,
   openFulfill,
   valQ,

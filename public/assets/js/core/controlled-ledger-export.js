@@ -1,8 +1,8 @@
-import { hijriDateLabel, hijriMonthKey, hijriMonthLabelBilingual, hijriMonthsBetween } from './hijri-calendar.js?v=7cb3fbc1ff';
-import { partitionKey } from './month-partitioned-store.js?v=405d877017';
-import { CONTROLLED_MOVES_KEY, controlledMoveRows } from './controlled-moves-store.js?v=0d6d46def9';
-import { mayExportMonths, exportPermissionReason } from './export-grants.js?v=3405b578ca';
-import { buildArchiveManifest, archiveFileName } from './archive-manifest.js?v=6bf6b393b9';
+import { hijriDateLabel, hijriMonthKey, hijriMonthLabelBilingual, hijriMonthsBetween } from './hijri-calendar.js?v=c5193ff179';
+import { partitionKey } from './month-partitioned-store.js?v=aeb7b09869';
+import { CONTROLLED_MOVES_KEY, controlledMoveRows } from './controlled-moves-store.js?v=a58b8592df';
+import { mayExportMonths, exportPermissionReason } from './export-grants.js?v=c3fc3bf86f';
+import { buildArchiveManifest, archiveFileName } from './archive-manifest.js?v=3da5b8801d';
 
 /* Exporting the controlled ledger to Excel, one Hijri month or a range of them.
 
@@ -130,6 +130,5 @@ export function describeExportRange(fromMonth, toMonth) {
 
 Object.assign(globalThis, {
   exportControlledLedger,
-  controlledLedgerRowsForMonths,
   describeExportRange,
 });

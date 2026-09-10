@@ -171,7 +171,8 @@ export function doPrint(){
     if(typeof window.persistPrintOrdersMeta==='function')Promise.resolve(window.persistPrintOrdersMeta(orders.map(function(o){return o.request.id}))).catch(function(e){console.error(e)});
   }catch(e){}
   if(typeof window.renderPrint==='function')window.renderPrint();
-  window.PPP=0;
+  /* The print-page selection state has one owner: core/print-page-state.js. */
+  resetPrintPageState();
   return undefined;
 }
 
