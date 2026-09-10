@@ -1,6 +1,9 @@
 /* Pharmacy Inventory — rooms → cabinets → shelves → medicines */
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=779ca10b8c';
 import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
+import { pharmacyPrintCss, pharmacyPrintName, pharmacyPrintQr, luma } from '../core/pharmacy-print-style.js?v=be72d2bca8';
+import { usePharmacyInventory, piPrintReorder, piPrintCabinet, piPublicCabinetUrl, piPrintCabinetMap, piPrintRoomDoor, piDoPrint } from '../core/pharmacy-inventory-print.js?v=f4d5757a6e';
 import {
   piParseShelfLine, piShelfLine, piShelfCells, piCellLabel, piFindShelf,
   piCellOptionsHtml, piShelfCmp, piShelvesOf,
@@ -84,12 +87,6 @@ function piGetColors(){
   try{var s=window.S&&window.S.g&&window.S.g(CC_KEY);return Object.assign({},defs,s||{})}catch(e){return defs}
 }
 
-function hexToRgb(hex){
-  var r=parseInt(hex.slice(1,3),16),g=parseInt(hex.slice(3,5),16),b=parseInt(hex.slice(5,7),16);
-  return {r:r,g:g,b:b};
-}
-function luma(hex){var c=hexToRgb(hex);return 0.299*c.r+0.587*c.g+0.114*c.b}
-
 // ── State ──────────────────────────────────────────────────────────────────
 var PI_UI={
   tab:'rooms',          // rooms | meds | print | import
@@ -111,8 +108,89 @@ var PI_UI={
 };
 
 // ── Main render ────────────────────────────────────────────────────────────
+
+/* One listener per event for this whole screen, instead of fifty-five global
+   function names for the CSP bridge to rebind. The markup carries what to do
+   (data-clickact) and what to do it to (data-a1, data-a2…), so the arguments
+   travel as data rather than as source code inside an attribute.
+   See core/delegated-actions.js. */
+function piInstallActions(root){
+  if(!root)return;
+  installActions(root,{
+    piOpenAddRoom:function(el,event){piOpenAddRoom()},
+    piOpenAddCabinet:function(el,event){piOpenAddCabinet(el.dataset.a1)},
+    piOpenEditRoom:function(el,event){piOpenEditRoom(el.dataset.a1)},
+    piDeleteRoom:function(el,event){piDeleteRoom(el.dataset.a1)},
+    piOpenEditCabinet:function(el,event){piOpenEditCabinet(el.dataset.a1,el.dataset.a2)},
+    piPrintCabinet:function(el,event){piPrintCabinet(el.dataset.a1,el.dataset.a2)},
+    piPrintCabinetMap:function(el,event){piPrintCabinetMap(el.dataset.a1,el.dataset.a2)},
+    piDeleteCabinet:function(el,event){piDeleteCabinet(el.dataset.a1,el.dataset.a2)},
+    piFilterByShelf:function(el,event){piFilterByShelf(el.dataset.a1,el.dataset.a2,el.dataset.a3)},
+    piSaveRoom:function(el,event){piSaveRoom()},
+    piCloseModal:function(el,event){piCloseModal(el.dataset.a1)},
+    piSaveCabinet:function(el,event){piSaveCabinet()},
+    piMedClearFilters:function(el,event){piMedClearFilters()},
+    piPrintReorder:function(el,event){piPrintReorder()},
+    piOpenAddMed:function(el,event){piOpenAddMed()},
+    piShowMedDetail:function(el,event){piShowMedDetail(el.dataset.a1)},
+    piOpenEditMed:function(el,event){piOpenEditMed(el.dataset.a1)},
+    piDeleteMed:function(el,event){piDeleteMed(el.dataset.a1)},
+    piAddLocRow:function(el,event){piAddLocRow()},
+    piSaveMed:function(el,event){piSaveMed()},
+    piDoPrint:function(el,event){piDoPrint()},
+    piPrintRoomDoor:function(el,event){piPrintRoomDoor()},
+    piPrintSelectedCabinetMap:function(el,event){piPrintSelectedCabinetMap()},
+    piDoImport:function(el,event){piDoImport()},
+    piDownloadTemplate:function(el,event){piDownloadTemplate()},
+    piAddTxnRow:function(el,event){piAddTxnRow(el.dataset.a1)},
+    removeClosest:function(el){var row=el.closest(el.dataset.a1);if(row)row.remove()},
+    removeById:function(el){var row=document.getElementById(el.dataset.a1);if(row)row.remove()},
+    piSubmitTxnRows:function(el,event){piSubmitTxnRows(el.dataset.a1)},
+    piHistClear:function(el,event){piHistClear()},
+    piDeleteTxn:function(el,event){piDeleteTxn(el.dataset.a1)},
+    piPurgeTxns:function(el,event){piPurgeTxns()},
+    piSavePurgeDays:function(el,event){piSavePurgeDays()}
+  },{event:'click',attribute:'clickact'});
+  installActions(root,{
+    piMedSearch:function(el,event){piMedSearch(el.value)},
+    rerender:function(){window.renderPharmInv()},
+    piTxnMedChanged:function(el,event){piTxnMedChanged(el)}
+  },{event:'input',attribute:'inputact'});
+  installActions(root,{
+    piMedLocFilter:function(el,event){piMedLocFilter(el.value)},
+    piMedClsFilter:function(el,event){piMedClsFilter(el.value)},
+    piMedExpiryFilter:function(el,event){piMedExpiryFilter(el.value)},
+    piMedStatusFilter:function(el,event){piMedStatusFilter(el.value)},
+    piMedUrgencyFilter:function(el,event){piMedUrgencyFilter(el.value)},
+    piMedDosageFilter:function(el,event){piMedDosageFilter(el.value)},
+    piMedToggleMulti:function(el,event){piMedToggleMulti(el.checked)},
+    piMedToggleOOS:function(el,event){piMedToggleOOS(el.checked)},
+    piIntRadioChange:function(el,event){piIntRadioChange(el.dataset.a1,el.dataset.a2,el.dataset.a3,el)},
+    piLocShelfChanged:function(el,event){piLocShelfChanged(el)},
+    piPrintRoomChange:function(el,event){piPrintRoomChange(el.value)},
+    rerender:function(){window.renderPharmInv()},
+    piPrintCabChange:function(el,event){piPrintCabChange(el.value)},
+    piPrintOptChange:function(el,event){piPrintOptChange(el.dataset.a1,el.checked)},
+    piPdfScan:function(el,event){piPdfScan(el,el.dataset.a2)},
+    piTxnMedChanged:function(el,event){piTxnMedChanged(el)}
+  },{event:'change',attribute:'changeact'});
+}
+
+usePharmacyInventory({
+  rooms:function(){return piRooms()},
+  meds:function(){return piMeds()},
+  colors:function(){return piGetColors()},
+  ui:function(){return PI_UI},
+  toast:function(m,k){return piToast(m,k)},
+  allowedRooms:function(){return piAllowedRooms()},
+  intCls:function(){return piIntCls()},
+  intColors:function(){return piIntColors()},
+  syncPublicCabinet:function(room,cab,shelves){return piSyncPublicCabinet(room,cab,shelves)}
+});
 window.renderPharmInv = function(){
   var host=piE('pg-pharm-inv');if(!host)return;
+  /* Installed on <body>: this screen's dialogs are appended there, not inside the page. */
+  piInstallActions(document.body);
   var tab=PI_UI.tab;
   host.innerHTML='';
   // Classification Lists and Badge Colors live in the Inventory section — not duplicated here
@@ -151,7 +229,7 @@ function piRenderRoomsTab(host){
   var html='';
   if(piAllowedRooms().length){html+='<div class="fhint" style="margin-bottom:10px">Showing your assigned rooms only / تظهر الغرف المخصصة لك فقط</div>'}
   if(canEdit){
-    html+='<div style="margin-bottom:14px"><button class="btn bp bsm" onclick="piOpenAddRoom()">+ Add Room / إضافة غرفة</button></div>';
+    html+='<div style="margin-bottom:14px"><button class="btn bp bsm" data-clickact="piOpenAddRoom">+ Add Room / إضافة غرفة</button></div>';
   }
   if(!rooms.length){
     host.innerHTML=html+'<div class="card"><div class="cb" style="text-align:center;color:var(--tx2);padding:32px">No rooms yet. Add a room to start building your pharmacy map.</div></div>';
@@ -162,9 +240,9 @@ function piRenderRoomsTab(host){
     html+='<div class="ch"><span class="ct">🏠 '+piEsc(room.name)+'</span>';
     if(canEdit){
       html+='<div class="fl g8 ic">';
-      html+='<button class="btn bg bxs" onclick="piOpenAddCabinet(\''+piEsc(room.id)+'\')">+ Cabinet</button>';
-      html+='<button class="btn bg bxs" onclick="piOpenEditRoom(\''+piEsc(room.id)+'\')">✏️ Edit</button>';
-      html+='<button class="btn bd2c bxs" onclick="piDeleteRoom(\''+piEsc(room.id)+'\')">🗑</button>';
+      html+='<button class="btn bg bxs" data-clickact="piOpenAddCabinet" data-a1="'+piEsc(room.id)+'">+ Cabinet</button>';
+      html+='<button class="btn bg bxs" data-clickact="piOpenEditRoom" data-a1="'+piEsc(room.id)+'">✏️ Edit</button>';
+      html+='<button class="btn bd2c bxs" data-clickact="piDeleteRoom" data-a1="'+piEsc(room.id)+'">🗑</button>';
       html+='</div>';
     }
     html+='</div><div class="cb">';
@@ -179,10 +257,10 @@ function piRenderRoomsTab(host){
       html+='</div>';
       if(canEdit){
         html+='<div class="fl g8 ic">';
-        html+='<button class="btn bg bxs" onclick="piOpenEditCabinet(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')">✏️</button>';
-        html+='<button class="btn bg bxs" onclick="piPrintCabinet(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')" title="Print list / طباعة قائمة">🖨</button>';
-        html+='<button class="btn bg bxs" onclick="piPrintCabinetMap(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')" title="Print cabinet map on one A4 / خريطة الخزانة بورقة A4">🗺</button>';
-        html+='<button class="btn bd2c bxs" onclick="piDeleteCabinet(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\')">🗑</button>';
+        html+='<button class="btn bg bxs" data-clickact="piOpenEditCabinet" data-a1="'+piEsc(room.id)+'" data-a2="'+piEsc(cab.id)+'">✏️</button>';
+        html+='<button class="btn bg bxs" data-clickact="piPrintCabinet" data-a1="'+piEsc(room.id)+'" data-a2="'+piEsc(cab.id)+'" title="Print list / طباعة قائمة">🖨</button>';
+        html+='<button class="btn bg bxs" data-clickact="piPrintCabinetMap" data-a1="'+piEsc(room.id)+'" data-a2="'+piEsc(cab.id)+'" title="Print cabinet map on one A4 / خريطة الخزانة بورقة A4">🗺</button>';
+        html+='<button class="btn bd2c bxs" data-clickact="piDeleteCabinet" data-a1="'+piEsc(room.id)+'" data-a2="'+piEsc(cab.id)+'">🗑</button>';
         html+='</div>';
       }
       html+='</div>';
@@ -193,7 +271,7 @@ function piRenderRoomsTab(host){
         html+='<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;direction:ltr">';
         shelves.forEach(function(sh){
           var meds=piMedsInShelf(room.id,cab.id,sh.id);
-          html+='<div style="background:var(--s2);border:1px solid var(--br);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer" onclick="piFilterByShelf(\''+piEsc(room.id)+'\',\''+piEsc(cab.id)+'\',\''+piEsc(sh.id)+'\')" title="'+meds.length+' medicine(s)">'+piEsc(sh.name)+' <b>'+meds.length+'</b></div>';
+          html+='<div style="background:var(--s2);border:1px solid var(--br);border-radius:5px;padding:3px 8px;font-size:11px;cursor:pointer" data-clickact="piFilterByShelf" data-a1="'+piEsc(room.id)+'" data-a2="'+piEsc(cab.id)+'" data-a3="'+piEsc(sh.id)+'" title="'+meds.length+' medicine(s)">'+piEsc(sh.name)+' <b>'+meds.length+'</b></div>';
         });
         html+='</div>';
       }
@@ -213,23 +291,23 @@ function piMedsInShelf(roomId,cabId,shelfId){
 }
 
 // ── Room modal ─────────────────────────────────────────────────────────────
-window.piOpenAddRoom=function(){
+function piOpenAddRoom(){
   PI_UI.editRoomId='';
   piShowModal('pi-room-modal','<h3>Add Room / إضافة غرفة</h3>'+
     '<div class="fg"><label>Room name</label><input id="pi-room-name" class="inp" placeholder="e.g. Main Room, Cold Room"></div>'+
-    '<div style="margin-top:12px"><button class="btn bp" onclick="piSaveRoom()">Save</button> <button class="btn bg bsm" onclick="piCloseModal()">Cancel</button></div>');
+    '<div style="margin-top:12px"><button class="btn bp" data-clickact="piSaveRoom">Save</button> <button class="btn bg bsm" data-clickact="piCloseModal">Cancel</button></div>');
   setTimeout(function(){var x=piE('pi-room-name');if(x)x.focus()},40);
 };
-window.piOpenEditRoom=function(roomId){
+function piOpenEditRoom(roomId){
   var room=(piRooms()||[]).find(function(r){return r.id===roomId});
   if(!room)return;
   PI_UI.editRoomId=roomId;
   piShowModal('pi-room-modal','<h3>Edit Room</h3>'+
     '<div class="fg"><label>Room name</label><input id="pi-room-name" class="inp" value="'+piEsc(room.name)+'"></div>'+
-    '<div style="margin-top:12px"><button class="btn bp" onclick="piSaveRoom()">Save</button> <button class="btn bg bsm" onclick="piCloseModal()">Cancel</button></div>');
+    '<div style="margin-top:12px"><button class="btn bp" data-clickact="piSaveRoom">Save</button> <button class="btn bg bsm" data-clickact="piCloseModal">Cancel</button></div>');
   setTimeout(function(){var x=piE('pi-room-name');if(x)x.focus()},40);
 };
-window.piSaveRoom=async function(){
+async function piSaveRoom(){
   var name=String((piE('pi-room-name')||{}).value||'').trim();
   if(!name)return piToast('Enter a room name','err');
   var rooms=piClone(piRooms());
@@ -242,7 +320,7 @@ window.piSaveRoom=async function(){
   try{await piSaveRooms(rooms);piCloseModal();window.renderPharmInv();piToast('Saved ✓','succ')}
   catch(e){piToast(String(e&&e.message||e),'err')}
 };
-window.piDeleteRoom=async function(roomId){
+async function piDeleteRoom(roomId){
   var rooms=piRooms();
   var room=rooms.find(function(r){return r.id===roomId});
   if(!room)return;
@@ -257,11 +335,11 @@ window.piDeleteRoom=async function(roomId){
 };
 
 // ── Cabinet modal ───────────────────────────────────────────────────────────
-window.piOpenAddCabinet=function(roomId){
+function piOpenAddCabinet(roomId){
   PI_UI.editRoomId=roomId;PI_UI.editCabId='';
   piShowCabModal(roomId,'');
 };
-window.piOpenEditCabinet=function(roomId,cabId){
+function piOpenEditCabinet(roomId,cabId){
   PI_UI.editRoomId=roomId;PI_UI.editCabId=cabId;
   piShowCabModal(roomId,cabId);
 };
@@ -289,11 +367,11 @@ function piShowCabModal(roomId,cabId){
          showing, the box reads as though five shelves were the maximum. */
       '<div class="fhint" style="margin-top:4px">One shelf per line, no limit. Add <b>x N</b> to split a shelf into N cells — shelves need not match: <code>A x 4</code>, <code>B x 6</code>, <code>C</code>. Untick above to keep the exact order you typed.<br>رفّ بكل سطر، بلا حد. أضف <b>x N</b> لتقسيم الرف إلى N خانات — ولا يلزم تساوي الأرفف. أزل العلامة أعلاه ليبقى ترتيبك اليدوي.</div>'+
     '</div>'+
-    '<div style="margin-top:12px"><button class="btn bp" onclick="piSaveCabinet()">Save</button> <button class="btn bg bsm" onclick="piCloseModal()">Cancel</button></div>'
+    '<div style="margin-top:12px"><button class="btn bp" data-clickact="piSaveCabinet">Save</button> <button class="btn bg bsm" data-clickact="piCloseModal">Cancel</button></div>'
   );
   setTimeout(function(){var x=piE('pi-cab-name');if(x)x.focus()},40);
 }
-window.piSaveCabinet=async function(){
+async function piSaveCabinet(){
   var name=String((piE('pi-cab-name')||{}).value||'').trim();
   var type=String((piE('pi-cab-type')||{}).value||'storage');
   var shelfLines=String((piE('pi-cab-shelves')||{}).value||'').split('\n').map(function(s){return s.trim()}).filter(Boolean);
@@ -331,7 +409,7 @@ window.piSaveCabinet=async function(){
   try{await piSaveRooms(rooms);piCloseModal();window.renderPharmInv();piToast('Saved ✓','succ')}
   catch(e){piToast(String(e&&e.message||e),'err')}
 };
-window.piDeleteCabinet=async function(roomId,cabId){
+async function piDeleteCabinet(roomId,cabId){
   var rooms=piClone(piRooms());
   var room=rooms.find(function(r){return r.id===roomId});if(!room)return;
   var cab=(room.cabinets||[]).find(function(c){return c.id===cabId});if(!cab)return;
@@ -343,7 +421,7 @@ window.piDeleteCabinet=async function(roomId,cabId){
   try{await piSaveRooms(rooms);await piSaveMeds(meds);window.renderPharmInv();piToast('Deleted','info')}
   catch(e){piToast(String(e&&e.message||e),'err')}
 };
-window.piFilterByShelf=function(roomId,cabId,shelfId){
+function piFilterByShelf(roomId,cabId,shelfId){
   PI_UI.tab='meds';PI_UI.medFilterLoc=roomId+':'+cabId+':'+shelfId;window.renderPharmInv();
 };
 
@@ -379,27 +457,27 @@ function piRenderMedsTab(host){
 
   var filterHtml=
     '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:8px">'+
-    '<input id="pi-med-search" class="inp" placeholder="🔍 Search name / MOH / Nupco..." value="'+piEsc(PI_UI.medFilter)+'" oninput="piMedSearch(this.value)" style="grid-column:1/-1">'+
-    '<select id="pi-med-loc-filter" class="psel" onchange="piMedLocFilter(this.value)" title="Location">'+locOpts+'</select>'+
-    '<select id="pi-med-cls-filter" class="psel" onchange="piMedClsFilter(this.value)" title="Classification">'+
+    '<input id="pi-med-search" class="inp" placeholder="🔍 Search name / MOH / Nupco..." value="'+piEsc(PI_UI.medFilter)+'" data-inputact="piMedSearch" style="grid-column:1/-1">'+
+    '<select id="pi-med-loc-filter" class="psel" data-changeact="piMedLocFilter" title="Location">'+locOpts+'</select>'+
+    '<select id="pi-med-cls-filter" class="psel" data-changeact="piMedClsFilter" title="Classification">'+
       '<option value="">All classifications</option>'+
       ['ha','haz','lasa','ref'].map(function(v){var l={ha:'🔴 HA',haz:'⚠ HAZ',lasa:'🔵 LASA',ref:'❄ Ref'};return '<option value="'+v+'" '+(PI_UI.medFilterCls===v?'selected':'')+'>'+l[v]+'</option>'}).join('')+
     '</select>'+
-    '<select id="pi-med-expiry-filter" class="psel" onchange="piMedExpiryFilter(this.value)" title="Expiry">'+
+    '<select id="pi-med-expiry-filter" class="psel" data-changeact="piMedExpiryFilter" title="Expiry">'+
       '<option value="">All expiry</option>'+
       '<option value="expired" '+(PI_UI.medFilterExpiry==='expired'?'selected':'')+'>⛔ Expired</option>'+
       '<option value="soon" '+(PI_UI.medFilterExpiry==='soon'?'selected':'')+'>⚠ Expiring ≤'+PI_EXPIRY_WARN_DAYS+'d</option>'+
       '<option value="ok" '+(PI_UI.medFilterExpiry==='ok'?'selected':'')+'>✓ Valid</option>'+
     '</select>'+
-    '<select id="pi-med-status-filter" class="psel" onchange="piMedStatusFilter(this.value)" title="Availability Status">'+intOpts('status',PI_UI.medFilterStatus)+'</select>'+
-    '<select id="pi-med-urgency-filter" class="psel" onchange="piMedUrgencyFilter(this.value)" title="Urgency">'+intOpts('urgency',PI_UI.medFilterUrgency)+'</select>'+
-    '<select id="pi-med-dosage-filter" class="psel" onchange="piMedDosageFilter(this.value)" title="Dosage Form">'+intOpts('dosageForm',PI_UI.medFilterDosage)+'</select>'+
+    '<select id="pi-med-status-filter" class="psel" data-changeact="piMedStatusFilter" title="Availability Status">'+intOpts('status',PI_UI.medFilterStatus)+'</select>'+
+    '<select id="pi-med-urgency-filter" class="psel" data-changeact="piMedUrgencyFilter" title="Urgency">'+intOpts('urgency',PI_UI.medFilterUrgency)+'</select>'+
+    '<select id="pi-med-dosage-filter" class="psel" data-changeact="piMedDosageFilter" title="Dosage Form">'+intOpts('dosageForm',PI_UI.medFilterDosage)+'</select>'+
     '</div>'+
     '<div class="fl g8 ic mb14" style="flex-wrap:wrap">'+
-    '<label class="fl ic g8" style="cursor:pointer"><input type="checkbox" '+(PI_UI.medFilterMultiLoc?'checked':'')+' onchange="piMedToggleMulti(this.checked)"> Multi-location only</label>'+
-    '<label class="fl ic g8" style="cursor:pointer"><input type="checkbox" '+(PI_UI.medFilterOOS?'checked':'')+' onchange="piMedToggleOOS(this.checked)"> Out of stock only</label>'+
+    '<label class="fl ic g8" style="cursor:pointer"><input type="checkbox" '+(PI_UI.medFilterMultiLoc?'checked':'')+' data-changeact="piMedToggleMulti"> Multi-location only</label>'+
+    '<label class="fl ic g8" style="cursor:pointer"><input type="checkbox" '+(PI_UI.medFilterOOS?'checked':'')+' data-changeact="piMedToggleOOS"> Out of stock only</label>'+
     (PI_UI.medFilter||PI_UI.medFilterLoc||PI_UI.medFilterCls||PI_UI.medFilterExpiry||PI_UI.medFilterStatus||PI_UI.medFilterUrgency||PI_UI.medFilterDosage||PI_UI.medFilterMultiLoc||PI_UI.medFilterOOS?
-      '<button class="btn bg bxs" onclick="piMedClearFilters()">✕ Clear filters</button>':'')+
+      '<button class="btn bg bxs" data-clickact="piMedClearFilters">✕ Clear filters</button>':'')+
     '</div>';
 
   var meds=filterMedicines(allMeds,{
@@ -421,7 +499,7 @@ function piRenderMedsTab(host){
       reorderHtml+='<tr><td><b>'+piEsc(m.name)+'</b></td><td style="font-family:monospace">'+piEsc(m.mohCode||'—')+'</td><td style="font-family:monospace">'+piEsc(m.nupcoCode||'—')+'</td><td>'+stat+'</td><td style="font-size:11px">'+piEsc(locs)+'</td></tr>';
     });
     reorderHtml+='</tbody></table>';
-    reorderHtml+='<button class="btn bg bsm" style="margin-top:8px" onclick="piPrintReorder()">🖨 Print reorder list</button></div></div>';
+    reorderHtml+='<button class="btn bg bsm" style="margin-top:8px" data-clickact="piPrintReorder">🖨 Print reorder list</button></div></div>';
   }
 
   // LASA conflicts detection — pharmacy role only (point 3)
@@ -430,7 +508,7 @@ function piRenderMedsTab(host){
   var lasaNames={};
   meds.forEach(function(m){if(m.classification==='lasa')lasaNames[(m.name||'').toLowerCase()]=true});
 
-  var addBtn=canEdit?'<button class="btn bp bsm" onclick="piOpenAddMed()" style="margin-bottom:12px">+ Add Medicine</button>':'';
+  var addBtn=canEdit?'<button class="btn bp bsm" data-clickact="piOpenAddMed" style="margin-bottom:12px">+ Add Medicine</button>':'';
 
   if(!meds.length){
     host.innerHTML=filterHtml+reorderHtml+addBtn+'<div class="card"><div class="cb" style="text-align:center;color:var(--tx2);padding:28px">No medicines match the selected filters. / لا توجد أدوية تطابق الفلاتر.</div></div>';
@@ -470,9 +548,9 @@ function piRenderMedsTab(host){
     var oos=m.outOfStock?'<span class="badge brd" style="font-size:10px">OUT OF STOCK</span>':'';
     // Internal classification badges
     var intBadges=piIntBadge('status',m.internalStatus)+piIntBadge('urgency',m.urgency)+piIntBadge('dosageForm',m.dosageForm);
-    var actions='<button class="btn bg bxs" onclick="piShowMedDetail(\''+piEsc(m.id)+'\')" title="Details / التفاصيل">🔍</button> '+
-      (canEdit?'<button class="btn bg bxs" onclick="piOpenEditMed(\''+piEsc(m.id)+'\')">✏️</button> '+
-      '<button class="btn bd2c bxs" onclick="piDeleteMed(\''+piEsc(m.id)+'\')">🗑</button>':'');
+    var actions='<button class="btn bg bxs" data-clickact="piShowMedDetail" data-a1="'+piEsc(m.id)+'" title="Details / التفاصيل">🔍</button> '+
+      (canEdit?'<button class="btn bg bxs" data-clickact="piOpenEditMed" data-a1="'+piEsc(m.id)+'">✏️</button> '+
+      '<button class="btn bd2c bxs" data-clickact="piDeleteMed" data-a1="'+piEsc(m.id)+'">🗑</button>':'');
     return '<tr>'+
       '<td>'+cls+'<b>'+piEsc(m.name)+'</b><br>'+(intBadges?'<div style="margin-top:3px">'+intBadges+'</div>':'')+expiry+' '+oos+'</td>'+
       '<td style="font-family:monospace;font-size:12px">'+piEsc(m.mohCode||'—')+'</td>'+
@@ -498,16 +576,16 @@ function piClassBadge(cls,colors){
   return '';
 }
 
-window.piMedSearch=function(v){PI_UI.medFilter=v;window.renderPharmInv()};
-window.piMedLocFilter=function(v){PI_UI.medFilterLoc=v;window.renderPharmInv()};
-window.piMedClsFilter=function(v){PI_UI.medFilterCls=v;window.renderPharmInv()};
-window.piMedExpiryFilter=function(v){PI_UI.medFilterExpiry=v;window.renderPharmInv()};
-window.piMedStatusFilter=function(v){PI_UI.medFilterStatus=v;window.renderPharmInv()};
-window.piMedUrgencyFilter=function(v){PI_UI.medFilterUrgency=v;window.renderPharmInv()};
-window.piMedDosageFilter=function(v){PI_UI.medFilterDosage=v;window.renderPharmInv()};
-window.piMedToggleMulti=function(v){PI_UI.medFilterMultiLoc=v;window.renderPharmInv()};
-window.piMedToggleOOS=function(v){PI_UI.medFilterOOS=v;window.renderPharmInv()};
-window.piMedClearFilters=function(){
+function piMedSearch(v){PI_UI.medFilter=v;window.renderPharmInv()};
+function piMedLocFilter(v){PI_UI.medFilterLoc=v;window.renderPharmInv()};
+function piMedClsFilter(v){PI_UI.medFilterCls=v;window.renderPharmInv()};
+function piMedExpiryFilter(v){PI_UI.medFilterExpiry=v;window.renderPharmInv()};
+function piMedStatusFilter(v){PI_UI.medFilterStatus=v;window.renderPharmInv()};
+function piMedUrgencyFilter(v){PI_UI.medFilterUrgency=v;window.renderPharmInv()};
+function piMedDosageFilter(v){PI_UI.medFilterDosage=v;window.renderPharmInv()};
+function piMedToggleMulti(v){PI_UI.medFilterMultiLoc=v;window.renderPharmInv()};
+function piMedToggleOOS(v){PI_UI.medFilterOOS=v;window.renderPharmInv()};
+function piMedClearFilters(){
   PI_UI.medFilter='';PI_UI.medFilterLoc='';PI_UI.medFilterCls='';PI_UI.medFilterExpiry='';
   PI_UI.medFilterStatus='';PI_UI.medFilterUrgency='';PI_UI.medFilterDosage='';
   PI_UI.medFilterMultiLoc=false;PI_UI.medFilterOOS=false;
@@ -527,8 +605,8 @@ function piLocationsHtml(locations){
   }).join('');
 }
 
-window.piOpenAddMed=function(){PI_UI.editMedId='';piShowMedModal(null)};
-window.piOpenEditMed=function(id){var m=piMeds().find(function(x){return x.id===id});PI_UI.editMedId=id;piShowMedModal(m)};
+function piOpenAddMed(){PI_UI.editMedId='';piShowMedModal(null)};
+function piOpenEditMed(id){var m=piMeds().find(function(x){return x.id===id});PI_UI.editMedId=id;piShowMedModal(m)};
 
 function piIntClsRadios(grp,fieldId,currentVal){
   var g=piIntCls()[grp];if(!g||!g.options)return '';
@@ -539,15 +617,15 @@ function piIntClsRadios(grp,fieldId,currentVal){
     var lm=luma(hex);var tc=lm>128?'#111':'#fff';
     var style=checked?'background:'+hex+';color:'+tc+';border-color:'+hex:'border:1px solid var(--br)';
     return '<label style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;cursor:pointer;font-size:12px;'+(checked?'background:'+hex+';color:'+tc+';':'border:1px solid var(--br);')+'margin-bottom:4px">'+
-      '<input type="radio" name="'+fieldId+'" value="'+piEsc(o.key)+'" '+(checked?'checked':'')+' style="display:none" onchange="piIntRadioChange(\''+piEsc(grp)+'\',\''+piEsc(fieldId)+'\',\''+piEsc(o.key)+'\',this)">'+
+      '<input type="radio" name="'+fieldId+'" value="'+piEsc(o.key)+'" '+(checked?'checked':'')+' style="display:none" data-changeact="piIntRadioChange" data-a1="'+piEsc(grp)+'" data-a2="'+piEsc(fieldId)+'" data-a3="'+piEsc(o.key)+'">'+
       piEsc(o.label)+'</label>';
   }).join('');
   // None option
   var noneChecked=!currentVal||currentVal==='none';
   return '<label style="display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:20px;cursor:pointer;font-size:12px;border:1px solid var(--br);margin-bottom:4px;'+(noneChecked?'opacity:.5':'')+'">'+
-    '<input type="radio" name="'+fieldId+'" value="none" '+(noneChecked?'checked':'')+' style="display:none" onchange="piIntRadioChange(\''+piEsc(grp)+'\',\''+piEsc(fieldId)+'\',\'none\',this)">None / لا يوجد</label>'+opts;
+    '<input type="radio" name="'+fieldId+'" value="none" '+(noneChecked?'checked':'')+' style="display:none" data-changeact="piIntRadioChange" data-a1="'+piEsc(grp)+'" data-a2="'+piEsc(fieldId)+'" data-a3="none">None / لا يوجد</label>'+opts;
 }
-window.piIntRadioChange=function(grp,fieldId,key,radio){
+function piIntRadioChange(grp,fieldId,key,radio){
   // Restyle all labels in this group
   var intColors=piIntColors();
   var g=piIntCls()[grp];
@@ -599,9 +677,9 @@ function piShowMedModal(m){
     '</div>'+
     '<div class="fg"><label>Location(s) + Expiry per batch / المواقع وتواريخ الانتهاء لكل دفعة</label>'+
     '<div id="pi-med-locs">'+piLocationsHtml(m?m.locations:null)+'</div>'+
-    '<button class="btn bg bxs" style="margin-top:4px" onclick="piAddLocRow()">+ Add location</button>'+
+    '<button class="btn bg bxs" style="margin-top:4px" data-clickact="piAddLocRow">+ Add location</button>'+
     '</div>'+
-    '<div style="margin-top:14px"><button class="btn bp" onclick="piSaveMed()">Save</button> <button class="btn bg bsm" onclick="piCloseModal()">Cancel</button></div>';
+    '<div style="margin-top:14px"><button class="btn bp" data-clickact="piSaveMed">Save</button> <button class="btn bg bsm" data-clickact="piCloseModal">Cancel</button></div>';
   piShowModal('pi-med-modal',html);
   setTimeout(function(){var x=piE('pi-med-name');if(x)x.focus()},40);
 }
@@ -651,7 +729,7 @@ function piTxnLocSelectHtml(type, medName, current) {
 
 /* Re-render a row's options once its medicine is known, keeping any choice that
    is still valid for the new medicine. */
-window.piTxnMedChanged = function (input) {
+function piTxnMedChanged(input) {
   var tr = input && input.closest ? input.closest('tr') : null;
   if (!tr) return;
   var cell = tr.querySelector('.pi-txn-loc');
@@ -664,27 +742,27 @@ window.piTxnMedChanged = function (input) {
 
 function piLocRowHtml(rooms,locVal,expiryVal,cellVal){
   return '<div class="fl g8 ic pi-loc-row" style="margin-bottom:6px;flex-wrap:wrap">'+
-    '<select class="psel pi-loc-sel" style="flex:2;min-width:160px" onchange="piLocShelfChanged(this)"><option value="">Select shelf...</option>'+
+    '<select class="psel pi-loc-sel" style="flex:2;min-width:160px" data-changeact="piLocShelfChanged"><option value="">Select shelf...</option>'+
     rooms.map(function(room){return (room.cabinets||[]).map(function(cab){return piShelvesOf(cab).map(function(sh){var v=room.id+'|'+cab.id+'|'+sh.id;return '<option value="'+piEsc(v)+'" '+(v===locVal?'selected':'')+'>'+piEsc(room.name+' › '+cab.name+' › '+sh.name)+'</option>'}).join('')}).join('')}).join('')+
     '</select>'+
     '<select class="psel pi-loc-cell-sel" style="flex:0 0 92px;min-width:92px" title="Cell on this shelf / الخانة داخل الرف">'+piCellOptionsHtml(rooms,locVal,cellVal)+'</select>'+
     '<input type="date" class="inp pi-loc-expiry" style="flex:1;min-width:130px" placeholder="Expiry for this batch" value="'+piEsc(expiryVal||'')+'">'+
-    '<button class="btn bd2c bxs" onclick="this.closest(\'.pi-loc-row\').remove()">✕</button>'+
+    '<button class="btn bd2c bxs" data-clickact="removeClosest" data-a1=".pi-loc-row">✕</button>'+
     '</div>';
 }
-window.piAddLocRow=function(){
+function piAddLocRow(){
   var c=piE('pi-med-locs');if(!c)return;
   var rooms=piRooms();
   var div=document.createElement('div');
   div.innerHTML=piLocRowHtml(rooms,'','','');
   c.appendChild(div.firstChild);
 };
-window.piLocShelfChanged=function(sel){
+function piLocShelfChanged(sel){
   var row=sel&&sel.closest('.pi-loc-row');if(!row)return;
   var cellSel=row.querySelector('.pi-loc-cell-sel');if(!cellSel)return;
   cellSel.innerHTML=piCellOptionsHtml(piRooms(),sel.value,'');
 };
-window.piSaveMed=async function(){
+async function piSaveMed(){
   var name=String((piE('pi-med-name')||{}).value||'').trim();
   if(!name)return piToast('Enter a medicine name','err');
   var locations=[];
@@ -720,7 +798,7 @@ window.piSaveMed=async function(){
   try{await piSaveMeds(meds);piCloseModal();window.renderPharmInv();piToast('Saved ✓','succ')}
   catch(e){piToast(String(e&&e.message||e),'err')}
 };
-window.piShowMedDetail=function(id){
+function piShowMedDetail(id){
   var m=piMeds().find(function(x){return x.id===id});if(!m)return;
   var rooms=piRooms();
   var colors=piGetColors();
@@ -751,13 +829,13 @@ window.piShowMedDetail=function(id){
   }
   // Overall status
   if(m.outOfStock)html+='<div class="alert-banner" style="margin-bottom:10px">⛔ Out of stock / نافد</div>';
-  html+='<div style="margin-top:10px"><button class="btn bg bsm" onclick="piCloseModal()">Close</button>';
-  if(piCanEdit())html+=' <button class="btn bp bsm" onclick="piCloseModal();piOpenEditMed(\''+piEsc(id)+'\')">✏️ Edit</button>';
+  html+='<div style="margin-top:10px"><button class="btn bg bsm" data-clickact="piCloseModal">Close</button>';
+  if(piCanEdit())html+=' <button class="btn bp bsm" data-clickact="piCloseModal" data-a1=");piOpenEditMed(\''+piEsc(id)+'">✏️ Edit</button>';
   html+='</div>';
   piShowModal('pi-detail-modal',html);
 };
 
-window.piDeleteMed=async function(id){
+async function piDeleteMed(id){
   if(!confirm('Delete this medicine?'))return;
   var meds=piMeds().filter(function(m){return m.id!==id});
   try{await piSaveMeds(meds);window.renderPharmInv();piToast('Deleted','info')}
@@ -779,21 +857,21 @@ function piRenderPrintTab(host){
   var html=
     '<div class="card" style="margin-bottom:14px"><div class="ch"><span class="ct">🖨 Print Options</span></div><div class="cb">'+
     '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">'+
-    '<div class="fg"><label>Room</label><select id="pi-print-room" class="psel" onchange="piPrintRoomChange(this.value)">'+roomOpts+'</select></div>'+
-    '<div class="fg"><label>Cabinet</label><select id="pi-print-cab" class="psel" onchange="piPrintCabChange(this.value)">'+cabOpts+'</select></div>'+
+    '<div class="fg"><label>Room</label><select id="pi-print-room" class="psel" data-changeact="piPrintRoomChange">'+roomOpts+'</select></div>'+
+    '<div class="fg"><label>Cabinet</label><select id="pi-print-cab" class="psel" data-changeact="piPrintCabChange">'+cabOpts+'</select></div>'+
     '</div>'+
     '<div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:12px">'+
     ['showMoh:MOH Code','showNupco:Nupco Code','showExpiry:Expiry Date','showQr:QR Code (expiry)','showRoom:Show Room'].map(function(x){
       var k=x.split(':')[0],l=x.split(':')[1];
-      return '<label class="fl ic g8"><input type="checkbox" '+(opts[k]?'checked':'')+' onchange="piPrintOptChange(\''+k+'\',this.checked)"> '+l+'</label>';
+      return '<label class="fl ic g8"><input type="checkbox" '+(opts[k]?'checked':'')+' data-changeact="piPrintOptChange" data-a1="'+k+'"> '+l+'</label>';
     }).join('')+
     '</div>'+
     '<div class="fl g8 ic" style="flex-wrap:wrap">'+
-    '<button class="btn bp" onclick="piDoPrint()">🖨 Print Cabinet List</button>'+
-    '<button class="btn bg bsm" onclick="piPrintRoomDoor()">🚪 Print Room Door List</button>'+
+    '<button class="btn bp" data-clickact="piDoPrint">🖨 Print Cabinet List</button>'+
+    '<button class="btn bg bsm" data-clickact="piPrintRoomDoor">🚪 Print Room Door List</button>'+
     /* The map needs one cabinet: it is a drawing of that cabinet, so "all
        cabinets" has nothing to draw. The button says which one it will print. */
-    '<button class="btn bp bsm" onclick="piPrintSelectedCabinetMap()"'+(PI_UI.printCabId?'':' disabled title="Choose a cabinet first / اختر خزانة أولًا"')+'>🗺 Print Cabinet Map (A4 + QR) / خريطة الخزانة</button>'+
+    '<button class="btn bp bsm" data-clickact="piPrintSelectedCabinetMap"'+(PI_UI.printCabId?'':' disabled title="Choose a cabinet first / اختر خزانة أولًا"')+'>🗺 Print Cabinet Map (A4 + QR) / خريطة الخزانة</button>'+
     '</div>'+
     '</div></div>';
 
@@ -828,29 +906,8 @@ function piRenderPrintTab(host){
 }
 
 // Print reorder list (out-of-stock + expiring soon)
-window.piPrintReorder=function(){
-  var rooms=piRooms();var colors=piGetColors();
-  /* The same list the screen shows, under the same room restriction: this used
-     to read every medicine in the pharmacy, so a staff member assigned to two
-     rooms printed a reorder list covering rooms they cannot even see. */
-  var reorderMeds=medicinesNeedingReorder(visibleMedicines(piMeds(),piAllowedRooms()));
-  if(!reorderMeds.length)return piToast('No items need reordering','info');
-  var css=piPrintCss(colors)+'  .ro-section{margin-bottom:20px} .ro-title{font-size:16px;font-weight:700;border-bottom:2px solid #000;margin-bottom:8px;padding-bottom:4px} .ro-soon{color:#b45309} .ro-expired,.ro-oos{color:#dc2626;font-weight:600}';
-  var rows=reorderMeds.map(function(m){
-    var stat=m.outOfStock?'<span class="ro-oos">⛔ Out of stock</span>':(piExpiryStatus(m.expiry)==='expired'?'<span class="ro-expired">⛔ Expired ('+piEsc(m.expiry)+')</span>':'<span class="ro-soon">⚠ Expiring '+piEsc(m.expiry)+' ('+piDaysToExpiry(m.expiry)+'d)</span>');
-    var locs=(m.locations||[]).slice(0,3).map(function(l){var ro=rooms.find(function(r){return r.id===l.roomId});var ca=ro&&(ro.cabinets||[]).find(function(c){return c.id===l.cabId});return (ro?ro.name:'?')+(ca?' › '+ca.name:'')}).join(', ');
-    return '<tr><td>'+piPrintClass2(m.classification,m.name,colors)+'</td><td class="mono">'+piEsc(m.mohCode||'—')+'</td><td class="mono">'+piEsc(m.nupcoCode||'—')+'</td><td>'+stat+'</td><td style="font-size:11px">'+piEsc(locs)+'</td></tr>';
-  }).join('');
-  var body='<div class="ro-section"><div class="ro-title">📋 Reorder List — '+new Date().toLocaleDateString('en-SA')+'</div>'+
-    '<table class="pi-table"><thead><tr><th>Medicine</th><th>MOH</th><th>Nupco</th><th>Status</th><th>Location</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  printDocument({ title:'Reorder List', html:body, css:css, brand:'' });
-};
-
-window.piPrintRoomChange=function(v){
+function piPrintRoomChange(v){
   PI_UI.printRoomId=v;PI_UI.printCabId='';window.renderPharmInv();
-};
-window.piPrintCabinet=function(roomId,cabId){
-  PI_UI.tab='print';PI_UI.printRoomId=roomId;PI_UI.printCabId=cabId;window.renderPharmInv();
 };
 /* One cabinet, one A4 page. The cabinet is drawn as it stands: each shelf is a row
    of the grid, split into however many cells that shelf has -- shelves do not have
@@ -911,235 +968,25 @@ async function piSyncPublicCabinet(room,cab,shelves){
   });
   return true;
 }
-function piPublicCabinetUrl(cabId,shelfId){
-  var base=new URL(location.href);
-  base.search='';base.hash='';
-  base.searchParams.set('view','pharm-cabinet');
-  base.searchParams.set('cab',String(cabId));
-  if(shelfId)base.searchParams.set('shelf',String(shelfId));
-  var t=window.fsTenantId&&fsTenantId();if(t)base.searchParams.set('tenant',t);
-  return base.toString();
-}
-window.piPrintCabinetMap=async function(roomId,cabId){
-  var rooms=piRooms();
-  var room=(rooms||[]).find(function(r){return r.id===roomId});
-  if(!room)return piToast('Room not found / الغرفة غير موجودة','err');
-  var cab=(room.cabinets||[]).find(function(c){return c.id===cabId});
-  if(!cab)return piToast('Cabinet not found / الخزانة غير موجودة','err');
-
-  var shelves=piShelvesOf(cab);
-  if(!shelves.length)return piToast('This cabinet has no shelves yet / لا توجد أرفف بعد','err');
-
-  var meds=piMeds();
-  var colors=piGetColors();
-
-  var published=false;
-  try{published=await piSyncPublicCabinet(room,cab,shelves)}
-  catch(err){console.warn('Public cabinet snapshot failed',err)}
-  // A QR that opens an empty or stale page is worse than no QR, so it is only
-  // printed when the snapshot it points at was actually written just now.
-  if(!published)piToast('Printed without QR — the public copy could not be saved. / طُبعت بلا رمز: تعذر حفظ النسخة العامة','err');
-
-  // medicines that name a cell go in it; the rest are listed under the map so a
-  // medicine is never drawn in a position nobody recorded.
-  var byCell={},unplaced=[];
-  meds.forEach(function(m){
-    (m.locations||[]).forEach(function(l){
-      if(l.roomId!==room.id||l.cabId!==cab.id)return;
-      var sh=shelves.find(function(x){return x.id===l.shelfId});
-      if(!sh)return;
-      var c=parseInt(l.cell,10);
-      if(c>0&&c<=piShelfCells(sh)){
-        var k=sh.id+':'+c;
-        (byCell[k]=byCell[k]||[]).push(m);
-      }else{
-        unplaced.push({shelf:sh,med:m});
-      }
-    });
-  });
-
-  /* Rows share the page equally, so the more shelves a cabinet has the shorter each
-     one is. Overflow was hidden, which on a pharmacy map means a medicine that is
-     really there simply is not shown. Estimate how many chips a row can hold and
-     say "+N more" for the rest, so the sheet never under-reports. */
-  var rowMm=Math.max(8,(258-shelves.length*3)/shelves.length);
-  var chipCap=Math.max(1,Math.floor((rowMm-5)/3.6));
-
-  function medChip(m){
-    var cls=m.outOfStock?' oos':'';
-    var st=piExpiryStatus(m.expiry);
-    if(st==='expired')cls+=' exp';else if(st==='soon')cls+=' soon';
-    return '<span class="mchip'+cls+'">'+(m.high_alert?'<i class="ha"></i>':'')+piEsc(m.name)+'</span>';
-  }
-
-  var grid='<div class="map">'+shelves.map(function(sh){
-    var n=piShelfCells(sh);
-    var cells='';
-    for(var i=1;i<=n;i++){
-      var list=byCell[sh.id+':'+i]||[];
-      var shown=list.slice(0,chipCap),hidden=list.length-shown.length;
-      cells+='<div class="cell"><b class="clab">'+piEsc(piCellLabel(sh,i-1))+'</b>'+
-             '<div class="cbody">'+shown.map(medChip).join('')+
-             (hidden>0?'<span class="mchip more">+'+hidden+' more</span>':'')+
-             '</div></div>';
-    }
-    /* One QR per shelf: staff scan the shelf they are standing at. Below about
-       18mm a printed code stops scanning reliably, so on a tall cabinet the row
-       QR is dropped and the header code -- which opens the whole cabinet --
-       carries it instead. Printing an unscannable square helps nobody. */
-    var shelfQr=(published&&rowMm>=18)?'<div class="sqr">'+piQrSvg(piPublicCabinetUrl(cab.id,sh.id),44)+'</div>':'';
-    return '<div class="srow">'+
-      '<div class="shead">'+piEsc(sh.name)+shelfQr+'</div>'+
-      '<div class="scells" style="grid-template-columns:repeat('+n+',1fr)">'+cells+'</div>'+
-    '</div>';
-  }).join('')+'</div>';
-
-  var foot='';
-  if(unplaced.length){
-    var byShelf={};
-    unplaced.forEach(function(u){(byShelf[u.shelf.name]=byShelf[u.shelf.name]||[]).push(u.med)});
-    foot='<div class="foot"><b><bdi>On a shelf without a recorded cell / على الرف بلا خانة محددة</bdi>:</b> '+
-      Object.keys(byShelf).map(function(k){
-        return '<bdi>'+piEsc(k)+' — '+byShelf[k].map(function(m){return piEsc(m.name)}).join(', ')+'</bdi>';
-      }).join(' · ')+'</div>';
-  }
-
-  var css=
-    '@page{size:A4 portrait;margin:8mm}'+
-    'html,body{margin:0;width:100%}'+
-    'body{font-family:Arial,Helvetica,sans-serif;color:#000;background:#fff;height:281mm;display:flex;flex-direction:column;overflow:hidden}'+
-    '*{-webkit-print-color-adjust:exact;print-color-adjust:exact;box-sizing:border-box}'+
-    '.head{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #000;padding-bottom:4px;flex:0 0 auto}'+
-    '.head h1{font-size:15pt;margin:0}.head .sub{font-size:9pt;color:#333}'+
-    '.hqr{text-align:center}.hqr img{display:block;width:20mm;height:20mm;margin:0 auto;image-rendering:pixelated}.hqr b{display:block;font-size:6.5pt;margin-top:1px}'+
-    '.map{flex:1 1 auto;display:flex;flex-direction:column;gap:3mm;margin-top:3mm;min-height:0}'+
-    '.srow{flex:1 1 0;display:flex;min-height:0;border:1.5px solid #000;border-radius:3px;overflow:hidden}'+
-    '.shead{flex:0 0 18mm;background:#e8f0ff;border-right:1.5px solid #000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1mm;font-weight:700;font-size:11pt}'+
-    '.sqr img{display:block;width:13mm;height:13mm;image-rendering:pixelated}'+
-    '.scells{flex:1 1 auto;display:grid;min-width:0}'+
-    '.cell{border-right:1px dashed #94a3b8;padding:1.5mm;display:flex;flex-direction:column;min-width:0;overflow:hidden}'+
-    '.cell:last-child{border-right:none}'+
-    '.clab{font-size:7pt;color:#475569;flex:0 0 auto}'+
-    '.cbody{flex:1 1 auto;display:flex;flex-wrap:wrap;gap:1mm;align-content:flex-start;overflow:hidden;margin-top:1mm}'+
-    '.mchip{font-size:7.5pt;line-height:1.15;border:1px solid #64748b;border-radius:2px;padding:0 1mm;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}'+
-    '.mchip .ha{display:inline-block;width:5px;height:5px;border-radius:50%;background:'+colors.ha+';margin-right:2px}'+
-    '.mchip.more{border-style:dashed;font-weight:700}'+
-    '.mchip.soon{background:#fef9c3}.mchip.exp{background:#fee2e2}.mchip.oos{text-decoration:line-through;opacity:.6}'+
-    '.foot{flex:0 0 auto;border-top:1px solid #000;margin-top:2mm;padding-top:1.5mm;font-size:7.5pt}'+
-    '.legend{flex:0 0 auto;font-size:7pt;color:#334155;margin-top:1.5mm}';
-
-  /* "4 shelves / أرفف" next to "Storage / مستودع" on one line lets the bidi
-     algorithm interleave the two pairs into nonsense. <bdi> isolates each. */
-  function bd(t){return '<bdi>'+piEsc(t)+'</bdi>'}
-  var head='<div class="head"><div><h1>'+piEsc(cab.name)+'</h1>'+
-    '<div class="sub">'+bd(room.name)+' · '+bd(cab.type==='dispensing'?'Dispensing / منطقة صرف':'Storage / مستودع')+
-    ' · '+bd(shelves.length+' shelves / أرفف')+'</div></div>'+
-    '<div class="hqr">'+(published?piQrSvg(piPublicCabinetUrl(cab.id,''),80)+'<b>Scan for live list / امسح للقائمة</b>':'')+
-    '<div class="sub">'+new Date().toLocaleDateString('en-GB')+'</div></div></div>';
-
-  var legend='<div class="legend">'+
-    ['● high-alert / عالي الخطورة','▪ yellow = expiring soon / قرب الانتهاء','▪ red = expired / منتهٍ','▪ struck through = out of stock / غير متوفر','⌁ +N more = cell is fuller than the space shown / الخانة فيها أكثر']
-      .map(bd).join(' &nbsp; ')+'</div>';
-
-  printDocument({ title:cab.name+' — Map', html:head+grid+foot+legend, css:css, brand:'' });
-};
 /* Inline handlers must be plain calls: the CSP bridge rejects bare assignments,
    so `PI_UI.printCabId=this.value` silently failed and the print controls did
    nothing. The cabinet change also re-renders, because the map button's enabled
    state depends on it. */
-window.piPrintCabChange=function(v){
+function piPrintCabChange(v){
   PI_UI.printCabId=String(v||'');
   window.renderPharmInv();
 };
-window.piPrintOptChange=function(key,checked){
+function piPrintOptChange(key,checked){
   if(!PI_UI.printOpts)PI_UI.printOpts={};
   PI_UI.printOpts[String(key)]=!!checked;
   window.renderPharmInv();
 };
-window.piPrintSelectedCabinetMap=function(){
+function piPrintSelectedCabinetMap(){
   if(!PI_UI.printRoomId||!PI_UI.printCabId)return piToast('Choose a room and one cabinet / اختر غرفة وخزانة واحدة','err');
   return window.piPrintCabinetMap(PI_UI.printRoomId,PI_UI.printCabId);
 };
-window.piPrintRoomDoor=function(){
-  var rooms=piRooms();
-  var meds=piMeds();
-  var colors=piGetColors();
-  var filtRooms=PI_UI.printRoomId?rooms.filter(function(r){return r.id===PI_UI.printRoomId}):rooms;
-  var css=piPrintCss(colors)+'  .pi-door-block{break-inside:avoid;border:2px solid #000;border-radius:8px;padding:12px;margin-bottom:20px} .pi-door-title{font-size:18px;font-weight:700;margin-bottom:8px} .pi-door-cab{margin-bottom:6px;font-size:13px} .pi-door-qr{display:flex;align-items:center;gap:10px}';
-  var body='';
-  filtRooms.forEach(function(room){
-    body+='<div class="pi-door-block"><div class="pi-door-title">🏠 '+piEsc(room.name)+'</div>';
-    (room.cabinets||[]).forEach(function(cab){
-      var cabMeds=meds.filter(function(m){return (m.locations||[]).some(function(l){return l.roomId===room.id&&l.cabId===cab.id})});
-      body+='<div class="pi-door-cab"><b>'+piEsc(cab.name)+'</b>: ';
-      body+=cabMeds.slice(0,8).map(function(m){return piEsc(m.name)}).join(', ')+(cabMeds.length>8?' +'+( cabMeds.length-8)+' more':'');
-      body+='</div>';
-    });
-    body+='</div>';
-  });
-  printDocument({ title:'Room Door List', html:body, css:css, brand:'' });
-};
-
-function piPrintCss(colors){
-  return '@media print{@page{margin:10mm}}body{font-family:Arial,sans-serif;font-size:12px;color:#000;background:#fff}.pi-cab-block{break-inside:avoid;margin-bottom:24px}.pi-cab-header{font-size:15px;font-weight:700;border-bottom:2px solid #000;padding-bottom:4px;margin-bottom:8px}.pi-cab-type{font-size:11px;font-weight:400;margin-left:8px;opacity:.6}.pi-shelf-label{font-size:11px;font-weight:600;margin:8px 0 3px;text-transform:uppercase;letter-spacing:.5px;opacity:.65}.pi-table{width:100%;border-collapse:collapse;margin-bottom:8px}.pi-table th,.pi-table td{border:1px solid #ccc;padding:3px 6px;text-align:left;font-size:11px}.pi-table th{background:#f0f0f0;font-weight:600}.pi-oos{opacity:.5;text-decoration:line-through}.mono{font-family:monospace}'+
-    // Classification styles
-    '.pi-ha{background:'+colors.ha+';color:'+(luma(colors.ha)>128?'#000':'#fff')+';padding:1px 4px;border-radius:2px}'+
-    '.pi-haz{border-bottom:2px solid '+colors.haz+';position:relative}'+
-    '.pi-haz::after{content:"";position:absolute;top:0;left:0;right:0;bottom:0;background:repeating-linear-gradient(135deg,transparent,transparent 4px,'+colors.haz+'22 4px,'+colors.haz+'22 5px)}'+
-    '.pi-lasa{outline:2px solid '+colors.lasa+';outline-offset:1px;display:inline-block;padding:0 3px}'+
-    '.pi-soon td{background:#fef9c3}.pi-expired td{background:#fee2e2}.pi-oos{text-decoration:line-through;opacity:.55}';
-}
-function piPrintClass2(cls,name,colors){
-  if(cls==='ha')return '<span class="pi-ha">'+piEsc(name)+'</span>';
-  if(cls==='haz')return '<span class="pi-haz">'+piEsc(name)+'</span>';
-  if(cls==='lasa')return '<span class="pi-lasa">'+piEsc(name)+'</span>';
-  return piEsc(name);
-}
-
-window.piDoPrint=function(){
-  var opts=PI_UI.printOpts;
-  var rooms=piRooms();var meds=piMeds();var colors=piGetColors();
-  var filtRooms=PI_UI.printRoomId?rooms.filter(function(r){return r.id===PI_UI.printRoomId}):rooms;
-  var css=piPrintCss(colors);
-  var body='';
-  filtRooms.forEach(function(room){
-    var cabs=(room.cabinets||[]).filter(function(c){return !PI_UI.printCabId||c.id===PI_UI.printCabId});
-    cabs.forEach(function(cab){
-      var cabMeds=meds.filter(function(m){return (m.locations||[]).some(function(l){return l.roomId===room.id&&l.cabId===cab.id})});
-      body+='<div class="pi-cab-block">';
-      body+='<div class="pi-cab-header">'+(opts.showRoom?piEsc(room.name)+' — ':'')+piEsc(cab.name)+'<span class="pi-cab-type">'+(cab.type==='dispensing'?'Dispensing':'Storage')+'</span></div>';
-      var shelfMap={};
-      cabMeds.forEach(function(m){(m.locations||[]).filter(function(l){return l.roomId===room.id&&l.cabId===cab.id}).forEach(function(l){if(!shelfMap[l.shelfId])shelfMap[l.shelfId]=[];shelfMap[l.shelfId].push(m)})});
-      piShelvesOf(cab).forEach(function(sh){
-        var shMeds=shelfMap[sh.id]||[];if(!shMeds.length)return;
-        body+='<div class="pi-shelf-label">'+piEsc(sh.name)+'</div>';
-        var intColorsP=piIntColors();
-        body+='<table class="pi-table"><thead><tr><th>Medicine</th>';
-        if(opts.showMoh)body+='<th>MOH</th>';if(opts.showNupco)body+='<th>Nupco</th>';
-        body+='<th>Status</th><th>Urgency</th><th>Form</th>';
-        if(opts.showExpiry&&!opts.showQr)body+='<th>Expiry</th>';if(opts.showQr)body+='<th>QR</th>';
-        body+='</tr></thead><tbody>';
-        shMeds.forEach(function(m){
-          var expSt=piExpiryStatus(m.expiry);
-          var rowCls=(m.outOfStock?'pi-oos':'')+(expSt==='soon'?' pi-soon':expSt==='expired'?' pi-expired':'');
-          function piPrintIntBadge(grp,key){if(!key||key==='none')return '—';var g2=piIntCls()[grp];var o=g2&&(g2.options||[]).find(function(x){return x.key===key});if(!o)return piEsc(key);var hex=intColorsP[key]||o.def||'#888';var lm=luma(hex);return '<span style="background:'+hex+';color:'+(lm>128?'#000':'#fff')+';padding:1px 5px;border-radius:3px;font-size:10px">'+piEsc(o.label)+'</span>'}
-          body+='<tr class="pi-med-row '+rowCls+'"><td>'+piPrintClass2(m.classification,m.name,colors)+(m.outOfStock?' <span style="color:#dc2626">[OOS]</span>':'')+(expSt==='soon'?' <span style="color:#b45309">⚠'+piDaysToExpiry(m.expiry)+'d</span>':expSt==='expired'?' <span style="color:#dc2626">⛔</span>':'')+'</td>';
-          if(opts.showMoh)body+='<td class="mono">'+piEsc(m.mohCode||'—')+'</td>';
-          if(opts.showNupco)body+='<td class="mono">'+piEsc(m.nupcoCode||'—')+'</td>';
-          body+='<td>'+piPrintIntBadge('status',m.internalStatus)+'</td>';
-          body+='<td>'+piPrintIntBadge('urgency',m.urgency)+'</td>';
-          body+='<td>'+piPrintIntBadge('dosageForm',m.dosageForm)+'</td>';
-          if(opts.showExpiry&&!opts.showQr)body+='<td style="'+(expSt!=='ok'?'color:'+(expSt==='soon'?'#b45309':'#dc2626'):'')+'">'+piEsc(m.expiry||'—')+'</td>';
-          if(opts.showQr)body+='<td>'+(m.expiry?piQrSvg(m.expiry,36):'—')+'</td>';
-          body+='</tr>';
-        });
-        body+='</tbody></table>';
-      });
-      body+='</div>';
-    });
-  });
-  printDocument({ title:'Pharmacy Inventory', html:body, css:css, brand:'' });
-};
+var piPrintCss=pharmacyPrintCss;
+var piPrintClass2=pharmacyPrintName;
 
 /* Rendered by the bundled generator (window.makeReadableQR), which every other QR
    in the app uses. This used to point at a third-party QR image service, which the
@@ -1147,17 +994,7 @@ window.piDoPrint=function(){
    actually appeared — and it sent the encoded value off-site. A data: URI also prints and
    works offline, which an external image does not. Falls back to the plain text
    if the generator is unavailable, so a label still carries the value. */
-function piQrSvg(data,size){
-  var value=String(data==null?'':data);
-  if(!value)return '—';
-  try{
-    if(typeof window.makeReadableQR==='function'){
-      var src=window.makeReadableQR(value);
-      if(src)return '<img src="'+src+'" width="'+size+'" height="'+size+'" style="image-rendering:pixelated" alt="'+piEsc(value)+'">';
-    }
-  }catch(error){console.warn('QR generation failed; showing the value instead.',error)}
-  return '<span style="font-size:9px;font-family:var(--mono)">'+piEsc(value)+'</span>';
-}
+var piQrSvg=pharmacyPrintQr;
 
 // ══════════════════════════════════════════════════════════
 // IMPORT TAB
@@ -1169,14 +1006,14 @@ function piRenderImportTab(host){
     '<textarea id="pi-import-data" class="inp" rows="10" style="font-family:monospace;resize:vertical;width:100%" placeholder="Medicine Name&#9;MOH Code&#9;Nupco Code&#10;Amoxicillin 500mg&#9;12345&#9;NP-001"></textarea>'+
     '<div class="fl g8 ic" style="flex-wrap:wrap;margin-top:10px">'+
     '<select id="pi-import-cls" class="psel"><option value="none">No classification</option><option value="ha">High Alert</option><option value="haz">Hazard</option><option value="lasa">LASA</option><option value="ref">Refrigerated</option></select>'+
-    '<button class="btn bp" onclick="piDoImport()">⬇ Import</button>'+
-    '<button class="btn bg bsm" onclick="piDownloadTemplate()">📥 Download template</button>'+
+    '<button class="btn bp" data-clickact="piDoImport">⬇ Import</button>'+
+    '<button class="btn bg bsm" data-clickact="piDownloadTemplate">📥 Download template</button>'+
     '</div>'+
     '<div id="pi-import-result" style="margin-top:12px"></div>'+
     '</div></div>';
 }
 
-window.piDoImport=async function(){
+async function piDoImport(){
   var raw=String((piE('pi-import-data')||{}).value||'').trim();
   if(!raw)return piToast('Paste data first','err');
   var existingMeds=piClone(piMeds());
@@ -1197,7 +1034,7 @@ window.piDoImport=async function(){
   }catch(e){piToast(String(e&&e.message||e),'err')}
 };
 
-window.piDownloadTemplate=function(){
+function piDownloadTemplate(){
   var csv='Medicine Name\tMOH Code\tNupco Code\nAmoxicillin 500mg\t12345\tNP-001\nParacetamol 1g\t67890\tNP-002';
   var blob=new Blob([csv],{type:'text/tab-separated-values'});
   var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='pharmacy_inventory_template.tsv';a.click();
@@ -1219,7 +1056,7 @@ function piShowModal(id,html){
   overlay.onclick=function(e){if(e.target===overlay)piCloseModal()};
   document.body.appendChild(overlay);
 }
-window.piCloseModal=function(){var m=piE('pi-global-modal');if(m)m.parentNode.removeChild(m)};
+function piCloseModal(){var m=piE('pi-global-modal');if(m)m.parentNode.removeChild(m)};
 
 // ══════════════════════════════════════════════════════════
 // RECEIVE / DISPENSE ENTRY TAB
@@ -1268,9 +1105,9 @@ function piRenderTxnEntryTab(body,type){
   html+='<thead><tr>'+cols.map(function(c){return'<th style="text-align:left;padding:4px 6px;font-size:11px;opacity:.6;white-space:nowrap">'+piEsc(c)+'</th>'}).join('')+'</tr></thead>';
   html+='<tbody id="pi-txn-body-'+type+'"></tbody></table>';
   html+='<div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">';
-  html+='<button class="btn bg bsm" type="button" onclick="piAddTxnRow(\''+type+'\')">+ Add row / إضافة صف</button>';
-  html+='<button class="btn bp bsm" type="button" onclick="piSubmitTxnRows(\''+type+'\')">Save all / حفظ الكل</button>';
-  if(isReceipt)html+='<label class="btn bg bsm" style="cursor:pointer">📄 PDF scan<input type="file" accept=".pdf,.txt,.csv" style="display:none" onchange="piPdfScan(this,\''+type+'\')"></label>';
+  html+='<button class="btn bg bsm" type="button" data-clickact="piAddTxnRow" data-a1="'+type+'">+ Add row / إضافة صف</button>';
+  html+='<button class="btn bp bsm" type="button" data-clickact="piSubmitTxnRows" data-a1="'+type+'">Save all / حفظ الكل</button>';
+  if(isReceipt)html+='<label class="btn bg bsm" style="cursor:pointer">📄 PDF scan<input type="file" accept=".pdf,.txt,.csv" style="display:none" data-changeact="piPdfScan" data-a2="'+type+'"></label>';
   html+='</div></div></div>';
   body.innerHTML=html;
   piAddTxnRow(type);
@@ -1321,7 +1158,7 @@ if(typeof document!=='undefined'&&!window.__piGridKeysBound){
   document.addEventListener('keydown',piGridKeydown,true);
 }
 
-window.piAddTxnRow=function(type){
+function piAddTxnRow(type){
   var isReceipt=type==='receipt';
   var tbody=document.getElementById('pi-txn-body-'+type);if(!tbody)return;
   /* A delivery is entered in one sitting, so the date and supplier repeat down the
@@ -1339,7 +1176,7 @@ window.piAddTxnRow=function(type){
   var td=function(content){return'<td style="padding:3px 4px">'+content+'</td>'};
   var inp=function(cls,ph,type2,extra){return'<input class="'+cls+' pi-txn-field" data-row="'+rowId+'" type="'+(type2||'text')+'" placeholder="'+piEsc(ph)+'" style="width:100%;box-sizing:border-box" '+(extra||'')+'>';};
   var tr=document.createElement('tr');tr.id=rowId;tr.dataset.type=type;
-  var cells=td('<input class="pi-txn-med" data-row="'+rowId+'" list="'+listId+'" placeholder="Medicine name..." style="min-width:160px;width:100%;box-sizing:border-box" oninput="piTxnMedChanged(this)" onchange="piTxnMedChanged(this)">');
+  var cells=td('<input class="pi-txn-med" data-row="'+rowId+'" list="'+listId+'" placeholder="Medicine name..." style="min-width:160px;width:100%;box-sizing:border-box" data-inputact="piTxnMedChanged" data-changeact="piTxnMedChanged">');
   cells+=td('<input class="pi-txn-qty" data-row="'+rowId+'" type="number" min="0" step="any" placeholder="0" style="width:70px">');
   if(isReceipt){
     cells+=td('<input class="pi-txn-batch" data-row="'+rowId+'" type="text" placeholder="Batch #" style="width:90px">');
@@ -1352,12 +1189,12 @@ window.piAddTxnRow=function(type){
   }
   cells+=td('<input class="pi-txn-note" data-row="'+rowId+'" type="text" placeholder="Note..." style="min-width:80px">');
   cells+=td(piTxnLocSelectHtml(type,'',''));
-  cells+=td('<button type="button" class="btn bd2c bxs" style="padding:2px 7px" onclick="document.getElementById(\''+rowId+'\').remove()">✕</button>');
+  cells+=td('<button type="button" class="btn bd2c bxs" style="padding:2px 7px" data-clickact="removeById" data-a1="'+rowId+'">✕</button>');
   tr.innerHTML=cells;tbody.appendChild(tr);
   tr.querySelector('.pi-txn-med').focus();
 };
 
-window.piSubmitTxnRows=async function(type){
+async function piSubmitTxnRows(type){
   var tbody=document.getElementById('pi-txn-body-'+type);if(!tbody)return;
   var rows=Array.from(tbody.querySelectorAll('tr'));
   if(!rows.length)return piToast('No rows to save / لا توجد صفوف','err');
@@ -1398,7 +1235,7 @@ window.piSubmitTxnRows=async function(type){
   }catch(e){piToast(String(e&&e.message||e),'err')}
 };
 
-window.piPdfScan=async function(input,type){
+async function piPdfScan(input,type){
   var file=input&&input.files&&input.files[0];if(!file)return;
   var tbody=document.getElementById('pi-txn-body-'+type);if(!tbody)return;
   try{
@@ -1445,11 +1282,11 @@ function piRenderHistoryTab(body){
   }).sort(function(a,b){return b.date.localeCompare(a.date)});
   var html='<div class="card" style="margin-bottom:12px"><div class="cb">';
   html+='<div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:12px">';
-  html+='<select id="pi-hist-ftype" class="psel" onchange="window.renderPharmInv()" style="min-width:120px"><option value="all">All / الكل</option><option value="receipt"'+(fType==='receipt'?' selected':'')+'>📥 Receive</option><option value="dispense"'+(fType==='dispense'?' selected':'')+'>📤 Dispense</option></select>';
-  html+='<input id="pi-hist-fmed" type="text" placeholder="Medicine search / بحث دواء" style="min-width:160px" value="'+piEsc(fMed)+'" oninput="window.renderPharmInv()">';
-  html+='<input id="pi-hist-ffrom" type="date" value="'+piEsc(fFrom)+'" onchange="window.renderPharmInv()" title="From date">';
-  html+='<input id="pi-hist-fto" type="date" value="'+piEsc(fTo)+'" onchange="window.renderPharmInv()" title="To date">';
-  if(fType!=='all'||fMed||fFrom||fTo)html+='<button class="btn bg bsm" onclick="piHistClear()">✕ Clear</button>';
+  html+='<select id="pi-hist-ftype" class="psel" data-changeact="rerender" style="min-width:120px"><option value="all">All / الكل</option><option value="receipt"'+(fType==='receipt'?' selected':'')+'>📥 Receive</option><option value="dispense"'+(fType==='dispense'?' selected':'')+'>📤 Dispense</option></select>';
+  html+='<input id="pi-hist-fmed" type="text" placeholder="Medicine search / بحث دواء" style="min-width:160px" value="'+piEsc(fMed)+'" data-inputact="rerender">';
+  html+='<input id="pi-hist-ffrom" type="date" value="'+piEsc(fFrom)+'" data-changeact="rerender" title="From date">';
+  html+='<input id="pi-hist-fto" type="date" value="'+piEsc(fTo)+'" data-changeact="rerender" title="To date">';
+  if(fType!=='all'||fMed||fFrom||fTo)html+='<button class="btn bg bsm" data-clickact="piHistClear">✕ Clear</button>';
   html+='</div>';
   if(!filtered.length){html+='<div class="fhint">No records found.</div></div></div>';body.innerHTML=html;return}
   html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px">';
@@ -1466,32 +1303,32 @@ function piRenderHistoryTab(body){
     html+='<td style="padding:5px 8px;opacity:.7">'+piEsc(t.supplier||'—')+'</td>';
     html+='<td style="padding:5px 8px;opacity:.7">'+piEsc(t.note||'')+'</td>';
     html+='<td style="padding:5px 8px;opacity:.6;font-size:11px">'+piEsc(t.createdBy||'')+'</td>';
-    if(piIsMaster())html+='<td style="padding:5px 8px"><button class="btn bd2c bxs" style="font-size:11px;padding:1px 7px" onclick="piDeleteTxn(\''+piEsc(t.id)+'\')">Delete</button></td>';
+    if(piIsMaster())html+='<td style="padding:5px 8px"><button class="btn bd2c bxs" style="font-size:11px;padding:1px 7px" data-clickact="piDeleteTxn" data-a1="'+piEsc(t.id)+'">Delete</button></td>';
     html+='</tr>';
   });
   html+='</tbody></table></div>';
   if(eligible.length&&piIsMaster()){
     html+='<div style="margin-top:12px;padding:10px;background:rgba(245,158,11,.1);border-radius:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">';
     html+='<span style="font-size:13px">⚠ <b>'+eligible.length+'</b> record(s) are older than <b>'+settings.purgeDays+'</b> days and eligible for purge.</span>';
-    html+='<button class="btn" style="background:#ef4444;color:#fff" onclick="piPurgeTxns()">Purge now / حذف القديم</button>';
+    html+='<button class="btn" style="background:#ef4444;color:#fff" data-clickact="piPurgeTxns">Purge now / حذف القديم</button>';
     html+='</div>';
   }
   html+='</div></div>';
   if(piIsMaster()){
     html+='<div class="card" style="margin-top:12px"><div class="ch"><span class="ct">⚙ Settings / الإعدادات</span></div><div class="cb"><div class="fl g8 ic">';
     html+='<label style="font-size:13px">Auto-purge after <input id="pi-purge-days" type="number" min="30" max="3650" value="'+piEsc(String(settings.purgeDays))+'" style="width:70px;margin:0 4px"> days</label>';
-    html+='<button class="btn bp bsm" onclick="piSavePurgeDays()">Save</button>';
+    html+='<button class="btn bp bsm" data-clickact="piSavePurgeDays">Save</button>';
     html+='</div></div></div>';
   }
   body.innerHTML=html;
 }
 
-window.piHistClear=function(){
+function piHistClear(){
   ['pi-hist-ftype','pi-hist-fmed','pi-hist-ffrom','pi-hist-fto'].forEach(function(id){var el=document.getElementById(id);if(el)el.value=el.tagName==='SELECT'?'all':''});
   window.renderPharmInv();
 };
 
-window.piDeleteTxn=async function(id){
+async function piDeleteTxn(id){
   if(!piIsMaster())return piToast('Master only.','err');
   if(!window.confirm('Delete this record? / حذف هذا السجل؟'))return;
   try{
@@ -1500,7 +1337,7 @@ window.piDeleteTxn=async function(id){
   }catch(e){piToast(String(e&&e.message||e),'err')}
 };
 
-window.piPurgeTxns=async function(){
+async function piPurgeTxns(){
   if(!piIsMaster())return piToast('Master only.','err');
   var split=splitForPurge(piTxns(),{purgeDays:piTxnSettings().purgeDays});
   if(!split.purge.length)return piToast('Nothing is old enough to purge. / لا يوجد سجل قديم بما يكفي','info');
@@ -1508,7 +1345,7 @@ window.piPurgeTxns=async function(){
   try{await piSaveTxns(split.keep);piToast('Purged '+split.purge.length+' record(s) ✓','succ');window.renderPharmInv()}catch(e){piToast(String(e&&e.message||e),'err')}
 };
 
-window.piSavePurgeDays=async function(){
+async function piSavePurgeDays(){
   var inp=document.getElementById('pi-purge-days');if(!inp)return;
   var days=validPurgeDays(inp.value);
   if(days===null)return piToast('Minimum 30 days. / الحد الأدنى 30 يوماً','err');
@@ -1539,7 +1376,7 @@ function piRenderReportsTab(body){
   var notRecv=inactiveSince(txns,allMeds,'receipt',cutoffDaysAgo(inactiveRecvDays)).map(function(row){return row.medicine});
 
   html+='<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">📭 Not received since / لم يُستلم منذ</span></div><div class="cb">';
-  html+='<div class="fl g8 ic" style="margin-bottom:10px"><label style="font-size:13px">Last <input id="pi-rpt-recv-days" type="number" min="1" value="'+inactiveRecvDays+'" style="width:60px;margin:0 4px" onchange="window.renderPharmInv()"> days</label></div>';
+  html+='<div class="fl g8 ic" style="margin-bottom:10px"><label style="font-size:13px">Last <input id="pi-rpt-recv-days" type="number" min="1" value="'+inactiveRecvDays+'" style="width:60px;margin:0 4px" data-changeact="rerender"> days</label></div>';
   if(!notRecv.length){html+='<div class="fhint">All medicines received within this period ✓</div>';}
   else{
     html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:1px solid var(--br)"><th style="text-align:left;padding:5px 8px">Medicine</th><th style="text-align:left;padding:5px 8px">Last Receipt</th></tr></thead><tbody>';
@@ -1553,7 +1390,7 @@ function piRenderReportsTab(body){
   var notDisp=inactiveSince(txns,allMeds,'dispense',cutoffDaysAgo(inactiveDispDays)).map(function(row){return row.medicine});
 
   html+='<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">📤 Not dispensed since / لم يُصرف منذ</span></div><div class="cb">';
-  html+='<div class="fl g8 ic" style="margin-bottom:10px"><label style="font-size:13px">Last <input id="pi-rpt-disp-days" type="number" min="1" value="'+inactiveDispDays+'" style="width:60px;margin:0 4px" onchange="window.renderPharmInv()"> days</label></div>';
+  html+='<div class="fl g8 ic" style="margin-bottom:10px"><label style="font-size:13px">Last <input id="pi-rpt-disp-days" type="number" min="1" value="'+inactiveDispDays+'" style="width:60px;margin:0 4px" data-changeact="rerender"> days</label></div>';
   if(!notDisp.length){html+='<div class="fhint">All medicines dispensed within this period ✓</div>';}
   else{
     html+='<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:13px"><thead><tr style="border-bottom:1px solid var(--br)"><th style="text-align:left;padding:5px 8px">Medicine</th><th style="text-align:left;padding:5px 8px">Last Dispatch</th></tr></thead><tbody>';
@@ -1565,9 +1402,9 @@ function piRenderReportsTab(body){
   // ── Period summary ──
   html+='<div class="card"><div class="ch"><span class="ct">📊 Period Summary / ملخص الفترة</span></div><div class="cb">';
   html+='<div class="fl g8 ic" style="flex-wrap:wrap;margin-bottom:12px">';
-  html+='<label style="font-size:13px">From <input id="pi-rpt-sum-from" type="date" value="'+piEsc(sumFrom)+'" onchange="window.renderPharmInv()" style="margin:0 4px"></label>';
-  html+='<label style="font-size:13px">To <input id="pi-rpt-sum-to" type="date" value="'+piEsc(sumTo)+'" onchange="window.renderPharmInv()" style="margin:0 4px"></label>';
-  html+='<input id="pi-rpt-sum-med" type="text" placeholder="Filter medicine / فلتر" value="'+piEsc(sumMed)+'" oninput="window.renderPharmInv()" style="min-width:140px">';
+  html+='<label style="font-size:13px">From <input id="pi-rpt-sum-from" type="date" value="'+piEsc(sumFrom)+'" data-changeact="rerender" style="margin:0 4px"></label>';
+  html+='<label style="font-size:13px">To <input id="pi-rpt-sum-to" type="date" value="'+piEsc(sumTo)+'" data-changeact="rerender" style="margin:0 4px"></label>';
+  html+='<input id="pi-rpt-sum-med" type="text" placeholder="Filter medicine / فلتر" value="'+piEsc(sumMed)+'" data-inputact="rerender" style="min-width:140px">';
   html+='</div>';
   var summary=periodSummary(txns,{from:sumFrom,to:sumTo,medicine:sumMed}),sumData={};
   summary.rows.forEach(function(row){sumData[row.medicine]={recv:row.received,disp:row.dispensed}});

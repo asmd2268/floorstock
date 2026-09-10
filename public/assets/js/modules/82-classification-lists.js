@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=779ca10b8c';
 
 // ── CLASSIFICATION LISTS (High Alert / Hazard / LASA) ────────────────────
 // Master builds one authoritative, printable list per classification by
@@ -144,7 +145,7 @@ function clMasterTypeCard(type){
           '</div></label></div>';
       }).join('')+
       '<div class="fhint" style="margin-top:6px">Uncheck a row to exclude that medicine from the list entirely. / ألغِ التحديد لاستبعاد الدواء من القائمة نهائيًا.</div>'+
-      '<div class="fl g8" style="margin-top:10px"><button class="btn bs bsm" onclick="window.clConfirmSave(\''+type+'\')">✔ Confirm &amp; save list / تأكيد وحفظ</button><button class="btn bg bsm" onclick="window.clCancelReview(\''+type+'\')">Cancel / إلغاء</button></div>'+
+      '<div class="fl g8" style="margin-top:10px"><button class="btn bs bsm" data-act="confirm" data-type="'+esc(type)+'">✔ Confirm &amp; save list / تأكيد وحفظ</button><button class="btn bg bsm" data-act="cancel" data-type="'+esc(type)+'">Cancel / إلغاء</button></div>'+
       '</div></div>';
   }
   var defaultDate=(entry&&entry.approvedAt?entry.approvedAt:new Date().toISOString()).slice(0,10);
@@ -156,7 +157,7 @@ function clMasterTypeCard(type){
     '<div class="fg" style="max-width:180px"><label>Validity / مدة الاعتماد</label><div class="fl ic g6"><input type="number" id="cl-validity-years-'+type+'" min="1" max="20" value="'+existingYears+'" style="width:70px;margin:0"><span style="font-size:12px;color:var(--tx2)">year(s) / سنة</span></div></div>'+
     '</div>'+
     '<div class="fhint">'+medCount+' medicine(s) currently on this list'+(entry&&entry.approvedAt?(' · Approved '+esc((entry.approvedAt||'').slice(0,10))+' · Effective '+esc((entry.effectiveAt||'').slice(0,10))):'')+'</div>'+
-    '<div class="fl g8" style="margin-top:8px"><button class="btn bp bsm" onclick="window.clGenerate(\''+type+'\')">🔄 Generate / Refresh from all departments</button><button class="btn bg bsm" onclick="window.clPrint(\''+type+'\')" '+(medCount?'':'disabled')+'>🖨 Print</button></div>'+
+    '<div class="fl g8" style="margin-top:8px"><button class="btn bp bsm" data-act="generate" data-type="'+esc(type)+'">🔄 Generate / Refresh from all departments</button><button class="btn bg bsm" data-act="print" data-type="'+esc(type)+'" '+(medCount?'':'disabled')+'>🖨 Print</button></div>'+
     '<label class="cl-role-chk" style="margin-top:10px;max-width:420px"><input type="checkbox" onchange="window.clTogglePerDeptFilter(this,\''+type+'\')" '+(entry&&entry.perDepartmentFilter===true?'checked':'')+'><span>Departments each see only their own medicines on this list / كل قسم يشوف أدويته فقط بهذي القائمة</span></label>'+
     '<div class="fhint" style="margin-top:10px"><b>Visible to / تظهر لـ:</b></div><div class="cl-roles-grid">'+rolesHtml+'</div>'+
     reviewHtml+
@@ -173,7 +174,7 @@ function clReadOnlyTypeCard(type){
     '<div class="fhint"><b>Reference / المرجع:</b> '+esc(entry.referenceName||'—')+'</div>'+
     '<div class="fhint"><b>Approved / الاعتماد:</b> '+esc((entry.approvedAt||'').slice(0,10))+' · <b>Effective / الفعالية:</b> '+esc((entry.effectiveAt||'').slice(0,10))+'</div>'+
     scopedNote+
-    '<div class="fl g8" style="margin:8px 0"><button class="btn bg bsm" onclick="window.clPrint(\''+type+'\')">🖨 Print</button></div>'+
+    '<div class="fl g8" style="margin:8px 0"><button class="btn bg bsm" data-act="print" data-type="'+esc(type)+'">🖨 Print</button></div>'+
     '<div class="tw"><table class="ccx-table"><thead><tr><th>#</th><th>Generic name / الاسم العلمي</th><th>Concentration / التركيز</th></tr></thead><tbody>'+
     meds.map(function(m,i){return '<tr><td>'+(i+1)+'</td><td><b>'+esc(m.name)+'</b></td><td>'+esc(m.concentration||'—')+'</td></tr>'}).join('')+
     '</tbody></table></div></div></div>';
@@ -229,19 +230,27 @@ window.renderClassificationLists=function(){
     ?CL_TYPES.map(clMasterTypeCard).join('')
     :clVisibleTypesForRole().map(clReadOnlyTypeCard).join('');
   host.innerHTML='<div class="fl ic jb mb14" style="flex-wrap:wrap;gap:10px"><div>'+title+'</div></div>'+body;
+  /* One listener for the whole page instead of four global function names for
+     the CSP bridge to rebind — see core/delegated-actions.js. */
+  installActions(host,{
+    generate:function(el){clGenerate(el.dataset.type)},
+    cancel:function(el){clCancelReview(el.dataset.type)},
+    confirm:function(el){clConfirmSave(el.dataset.type)},
+    print:function(el){clPrint(el.dataset.type)}
+  });
   if(typeof window.injectInvTabBar==='function')window.injectInvTabBar('pg-classification-lists');
 };
 
-window.clGenerate=function(type){
+function clGenerate(type){
   if(!clIsMaster())return;
   staged[type]=clScanCandidates(type);
-  window.renderClassificationLists();
+  renderClassificationLists();
 };
-window.clCancelReview=function(type){
+function clCancelReview(type){
   delete staged[type];
-  window.renderClassificationLists();
+  renderClassificationLists();
 };
-window.clConfirmSave=function(type){
+function clConfirmSave(type){
   if(!clIsMaster())return;
   var host=E('pg-classification-lists');
   var overrides={},included={};
@@ -271,7 +280,7 @@ window.clConfirmSave=function(type){
   delete staged[type];
   clSave(type,entry).then(function(){
     toast&&toast('Classification list saved — valid for '+years+' year(s) ✓','succ');
-    window.renderClassificationLists();
+    renderClassificationLists();
   }).catch(function(err){toast&&toast('Save failed: '+String(err&&err.message||err),'err')});
 };
 window.clTogglePerDeptFilter=function(checkbox,type){
@@ -292,7 +301,6 @@ function clMedicinesForViewer(entry){
   }
   return meds;
 }
-window.clPrint=clPrint;
 window.clToggleRole=function(checkbox,type,role){
   if(!clIsMaster())return;
   var entry=clEntry(type);if(!entry){checkbox.checked=!checkbox.checked;return toast&&toast('Generate and save the list first / أنشئ واحفظ القائمة أولاً','err')}

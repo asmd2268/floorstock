@@ -338,17 +338,17 @@ var ALLOWED=new Set((
   'v13InventorySelect updateAllInventoryMergeCount v13SelectVisibleInventory v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge v13OpenBulkClassification v13WLoadMore v13ApplyControlledClassification v13BulkReplacementClassOnly '+
   'v13XClose v13XAddBatch v13XSaveCatalogMed v13XSaveStock valQ v14SaveEditReq2 v14SetPrintFilter v16ToggleScope v16ToggleMultiApplicable v16ApplyMultiClean v16ManageHiddenCategories v16SaveHiddenCats '+
   'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
-  'clGenerate clCancelReview clConfirmSave clPrint clToggleRole clTogglePerDeptFilter plToggle plPharmFeatToggle plRoomAssignToggle '+
+  'clToggleRole clTogglePerDeptFilter plToggle plPharmFeatToggle plRoomAssignToggle '+
   'acc2SaveClassColors acc2ResetClassColors acc2SaveIntColors acc2ResetIntColors '+
-  'piOpenAddRoom piOpenEditRoom piSaveRoom piDeleteRoom piOpenAddCabinet piOpenEditCabinet piSaveCabinet piDeleteCabinet piFilterByShelf '+
-  'piOpenAddMed piOpenEditMed piSaveMed piDeleteMed piAddLocRow piIntRadioChange '+
-  'piMedSearch piMedLocFilter piMedClsFilter piMedExpiryFilter piMedStatusFilter piMedUrgencyFilter piMedDosageFilter piMedToggleMulti piMedToggleOOS piMedClearFilters '+
-  'piShowMedDetail '+
-  'piPrintRoomChange piPrintCabinet piPrintReorder piDoPrint piPrintRoomDoor '+
-  'piDoImport piDownloadTemplate piCloseModal piAddTxnRow piSubmitTxnRows piDeleteTxn piPurgeTxns piSavePurgeDays piHistClear piPdfScan '+
-  'piPrintCabinetMap piLocShelfChanged piPrintSelectedCabinetMap piPrintCabChange piPrintOptChange '+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
+  ''+
   'ccTabCarts ccTabOps usrTabPerms ccOpsTab '+
-  'saveDeptPrintNames setSelectedMedsOutOfStock piTxnMedChanged renderPharmInv acc2AddExpiryRow acc2ShowExpirySection acc2RemoveExpiryRow acc2SaveExpiryBatches acc2MedSearch '+
+  'saveDeptPrintNames setSelectedMedsOutOfStock renderPharmInv acc2AddExpiryRow acc2ShowExpirySection acc2RemoveExpiryRow acc2SaveExpiryBatches acc2MedSearch '+
   'acc2CancelUsage acc3CancelPlanUsage acc3SavePlanExpiry acc2SetCustFilter acc2ResetBalance dispSlotAllToggle '+
   'parseFloat isNaN'
 ).split(/\s+/).filter(Boolean));
