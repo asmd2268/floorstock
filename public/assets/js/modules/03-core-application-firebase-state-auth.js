@@ -13,7 +13,7 @@ import { debounce } from '../core/timing.js?v=6b9368dd75';
 import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=e6374b4039';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
-import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=7975fe045f';
+import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=eec5742551';
 import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=7a75e3ae82';
 import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=4510baaaca';
@@ -135,7 +135,7 @@ async function fsCallFunction(name,data){
     body:JSON.stringify({data:data||{}})
   }),12000,'User service timed out.');
   var payload=null;
-  try{payload=await response.json()}catch(ignoreJson){}
+  try{payload=await response.json()}catch(ignoreJson){console.warn('json was skipped after an error; the rest of this screen still renders.', ignoreJson);}
   if(!response.ok||payload&&payload.error){
     var issue=payload&&payload.error||{};
     throw new Error(issue.message||('User service failed ('+response.status+').'));
@@ -432,7 +432,7 @@ function fsStateScopeCacheForProfile(cache,profile){
   function scopeNorm(value){return String(value||'').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f\u064B-\u065F\u0670]/g,'').replace(/[^a-z0-9\u0600-\u06ff]+/g,' ').replace(/\s+/g,' ').trim()}
   var departments=Array.isArray(cache.departments)?cache.departments:[],dept=departments.find(function(item){return String(item&&item.id||'')===deptId})||{};
   var candidates=[deptId,profile.deptName,profile.departmentName,profile.department,profile.deptCode,profile.departmentCode,dept.id,dept.name,dept.code,dept.codeName];
-  try{if(typeof window.fsR5DepartmentCandidates==='function')candidates=candidates.concat(window.fsR5DepartmentCandidates(deptId,profile.deptName||profile.departmentName||dept.name)||[])}catch(ignoreAliases){}
+  try{if(typeof window.fsR5DepartmentCandidates==='function')candidates=candidates.concat(window.fsR5DepartmentCandidates(deptId,profile.deptName||profile.departmentName||dept.name)||[])}catch(ignoreAliases){/* an optional source that is not loaded in this session */}
   var seed=candidates.map(scopeNorm).join(' ');
   if(/(^| )nicu( |$)|neonatal|حديثي الولادة|المواليد/.test(seed))candidates=candidates.concat(['NICU','Neonatal Intensive Care Unit','Neonatal ICU','Newborn Intensive Care Unit','العناية المركزة لحديثي الولادة','العناية المركزة للمواليد']);
   var allowed=new Set(candidates.map(scopeNorm).filter(Boolean));
@@ -999,7 +999,7 @@ function fsStatePlainSet(k,v){
           +' Open System Health to see it and what can be archived.'
           +'\nسجل '+k+' تجاوز حد المستند ولا يمكن تقسيمه. افتح System Health لمعرفة ما يمكن أرشفته.';
       }
-    }catch(sizeError){}
+    }catch(sizeError){console.warn('estimateDocBytes was skipped after an error; the rest of this screen still renders.', sizeError);}
     toast('Save failed — Firebase rejected the update.'+hint,'err');
     throw error;
   });
@@ -1015,7 +1015,7 @@ globalThis.S = {
       var snapshot=Object.assign({},S.cache);
       delete snapshot.users;
       localStorage.setItem(S.cacheKey,JSON.stringify(snapshot));
-    }catch(e){}
+    }catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
   },
   init:async function(statusCallback,profileHint){
     S.stopRealtime();
@@ -1029,7 +1029,7 @@ globalThis.S = {
       Object.keys(localStorage).forEach(function(key){
         if(key.indexOf('floorstock_last_cache_v2_')===0&&key!==cacheKey)localStorage.removeItem(key);
       });
-    }catch(removeError){}
+    }catch(removeError){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
     var hasCachedState=false;
     try{
       var cached=cacheKey?localStorage.getItem(cacheKey):null;
@@ -1398,9 +1398,9 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     }
   },
   stopRealtime:function(){
-    if(Array.isArray(S.scopedUnsubs)){S.scopedUnsubs.forEach(function(fn){try{fn()}catch(e){}});S.scopedUnsubs=null;}
+    if(Array.isArray(S.scopedUnsubs)){S.scopedUnsubs.forEach(function(fn){try{fn()}catch(e){console.warn('fn was skipped after an error; the rest of this screen still renders.', e);}});S.scopedUnsubs=null;}
     if(S.stateUnsub){S.stateUnsub();S.stateUnsub=null;}
-    if(Array.isArray(S.collectionUnsubs)){S.collectionUnsubs.forEach(function(fn){try{fn()}catch(e){}});S.collectionUnsubs=null;S.__collectionRowsById={};}
+    if(Array.isArray(S.collectionUnsubs)){S.collectionUnsubs.forEach(function(fn){try{fn()}catch(e){console.warn('fn was skipped after an error; the rest of this screen still renders.', e);}});S.collectionUnsubs=null;S.__collectionRowsById={};}
     if(S.selfProfileUnsub){S.selfProfileUnsub();S.selfProfileUnsub=null;}
     if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
     if(S.usersPollTimer){clearInterval(S.usersPollTimer);S.usersPollTimer=null;}

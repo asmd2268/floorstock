@@ -85,7 +85,7 @@ function enhanceCrash(){var reason=E('ccr-reason');if(reason){Array.from(reason.
 /* Crash response save is handled by the authoritative idempotent path. */
 
 /* Monthly check reminder */
-function crashMonthlyReminder(){if(!mgr())return;var parts={};try{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Riyadh',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date()).forEach(function(p){if(p.type!=='literal')parts[p.type]=Number(p.value)})}catch(e){}var d=parts.year?new Date(parts.year,parts.month-1,parts.day):new Date(),last=new Date(d.getFullYear(),d.getMonth()+1,0),days=last.getDate()-d.getDate();if(days>7)return;var a=E('crash-open-alerts');if(a&&!E('v16-monthly-check')){var x=document.createElement('div');x.id='v16-monthly-check';x.className='alert-banner-y';x.innerHTML='<div dir="rtl"><b>الفحص الشهري:</b> متبقي '+days+' يوم حتى نهاية الشهر.</div><div dir="ltr"><b>Monthly Check:</b> '+days+' day(s) remaining until month end.</div>';a.prepend(x)}}
+function crashMonthlyReminder(){if(!mgr())return;var parts={};try{new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Riyadh',year:'numeric',month:'numeric',day:'numeric'}).formatToParts(new Date()).forEach(function(p){if(p.type!=='literal')parts[p.type]=Number(p.value)})}catch(e){console.warn('DateTimeFormat was skipped after an error; the rest of this screen still renders.', e);}var d=parts.year?new Date(parts.year,parts.month-1,parts.day):new Date(),last=new Date(d.getFullYear(),d.getMonth()+1,0),days=last.getDate()-d.getDate();if(days>7)return;var a=E('crash-open-alerts');if(a&&!E('v16-monthly-check')){var x=document.createElement('div');x.id='v16-monthly-check';x.className='alert-banner-y';x.innerHTML='<div dir="rtl"><b>الفحص الشهري:</b> متبقي '+days+' يوم حتى نهاية الشهر.</div><div dir="ltr"><b>Monthly Check:</b> '+days+' day(s) remaining until month end.</div>';a.prepend(x)}}
 
 function activePageId(){var p=document.querySelector('.pg.on');return p&&p.id||''}
 function afterRender(){
@@ -133,7 +133,7 @@ function ensureBulkReplacementButtonW(){
  if(!btn){var tools=pg.querySelector('.fl.ic.jb.mb14 .fl.g8.ic')||pg.querySelector('.fl.g8.ic');if(!tools)return;btn=document.createElement('button');btn.id='bulk-replace-med-btn';btn.type='button';btn.className='btn bg';btn.innerHTML='⇄ Bulk Replacement';tools.appendChild(btn)}
  btn.style.display='inline-flex';btn.disabled=false;btn.onclick=function(){if(typeof window.openBulkReplacement==='function')window.openBulkReplacement();else if(typeof window.toast==='function')toast('Bulk Replacement is unavailable.','err')};
 }
-function classHtmlW(m){if(typeof window.bdg==='function'){try{return bdg(m)}catch(e){}}return escW(sigW(m))}
+function classHtmlW(m){if(typeof window.bdg==='function'){try{return bdg(m)}catch(e){console.warn('bdg was skipped after an error; the rest of this screen still renders.', e);}}return escW(sigW(m))}
 function selectedCountW(){var n=el('v13q-selected-count');if(n)n.textContent=state.selected.size+' selected'}
 window.v13InventorySelect=function(chk){var k=String(chk.dataset.dept)+'::'+String(chk.dataset.med);if(chk.checked)state.selected.set(k,{dept:chk.dataset.dept,med:chk.dataset.med});else state.selected.delete(k);selectedCountW()};
 window.v13SelectVisibleInventory=function(chk){document.querySelectorAll('#all-inv-body .v13q-row-check').forEach(function(c){c.checked=chk.checked;window.v13InventorySelect(c)})};
@@ -391,7 +391,7 @@ window.scheduleNavigationRefresh=scheduleV16Refresh;
   };
 
   function applyWarehouseUI(){
-    var isWh=false;try{isWh=ctlIsWarehouse()}catch(e){}
+    var isWh=false;try{isWh=ctlIsWarehouse()}catch(e){console.warn('ctlIsWarehouse was skipped after an error; the rest of this screen still renders.', e);}
     if(!isWh)return;
     var pg=document.getElementById('pg-controlled');if(!pg||document.getElementById('wh-receive-card'))return;
     var anchor=document.getElementById('ctl-tabs')||pg.firstElementChild;

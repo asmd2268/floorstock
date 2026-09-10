@@ -1,4 +1,4 @@
-import { earliestExpiry } from '../core/controlled-expiry-format.js?v=fdeecabaed';
+import { earliestExpiry } from '../core/controlled-expiry-format.js?v=7370bbb9a3';
 (function(){
   var ZDB_KEY='asdhealth_zebra_label_db_v12',ZPR_KEY='asdhealth_zebra_printer_v12';
   var zdb=[],zprinters=[],zebraDevice=null;
@@ -21,11 +21,11 @@ import { earliestExpiry } from '../core/controlled-expiry-format.js?v=fdeecabaed
         depts.forEach(function(d){(getMeds(d.id)||[]).forEach(function(m){zebraCollectMed(map,m.name||m.medication,m.strength||m.dose,'Inventory: '+(d.name||d.id),(m.expiry||''));(m.batches||[]).forEach(function(b){zebraCollectMed(map,m.name||m.medication,m.strength||m.dose,'Inventory: '+(d.name||d.id),b.expiry||b.date)})})});
       }
       if(source==='all'||source==='controlled'){
-        try{(typeof ctlCatalog==='function'?(ctlCatalog()||[]):[]).forEach(function(m){zebraCollectMed(map,m.name,m.strength||m.dose,'Controlled medicines','')})}catch(e){}
-        try{(gd()||[]).forEach(function(d){(ctlDeptList(d.id)||[]).forEach(function(x){var m=ctlMedicine(x.medId)||{};(x.batches||[]).forEach(function(b){zebraCollectMed(map,m.name,m.strength||m.dose,'Controlled custody: '+(d.name||d.id),b.expiry)});zebraCollectMed(map,m.name,m.strength||m.dose,'Controlled custody: '+(d.name||d.id),'')})})}catch(e){}
+        try{(typeof ctlCatalog==='function'?(ctlCatalog()||[]):[]).forEach(function(m){zebraCollectMed(map,m.name,m.strength||m.dose,'Controlled medicines','')})}catch(e){/* an optional source that is not loaded in this session */}
+        try{(gd()||[]).forEach(function(d){(ctlDeptList(d.id)||[]).forEach(function(x){var m=ctlMedicine(x.medId)||{};(x.batches||[]).forEach(function(b){zebraCollectMed(map,m.name,m.strength||m.dose,'Controlled custody: '+(d.name||d.id),b.expiry)});zebraCollectMed(map,m.name,m.strength||m.dose,'Controlled custody: '+(d.name||d.id),'')})})}catch(e){console.warn('gd was skipped after an error; the rest of this screen still renders.', e);}
       }
       if(source==='all'||source==='crash'){
-        try{(crashCarts()||[]).forEach(function(c){(c.items||[]).forEach(function(it){zebraCollectMed(map,it.name,it.strength,'Crash Cart: '+(c.name||c.deptName||c.id||''),'');(it.batches||[]).forEach(function(b){zebraCollectMed(map,it.name,it.strength,'Crash Cart: '+(c.name||c.deptName||c.id||''),b.expiry)})})})}catch(e){}
+        try{(crashCarts()||[]).forEach(function(c){(c.items||[]).forEach(function(it){zebraCollectMed(map,it.name,it.strength,'Crash Cart: '+(c.name||c.deptName||c.id||''),'');(it.batches||[]).forEach(function(b){zebraCollectMed(map,it.name,it.strength,'Crash Cart: '+(c.name||c.deptName||c.id||''),b.expiry)})})})}catch(e){console.warn('crashCarts was skipped after an error; the rest of this screen still renders.', e);}
       }
     }catch(e){console.error('Zebra import extraction',e)}
     return Object.keys(map).map(function(k){return map[k]}).sort(function(a,b){return a.name.localeCompare(b.name)})

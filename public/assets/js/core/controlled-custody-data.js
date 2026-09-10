@@ -25,11 +25,11 @@
 
 import { fsE } from './dom-utils.js?v=b2909b7f46';
 import { fsNorm, fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
-import { fsR5DepartmentRecords, fsR5DepartmentCandidates } from './department-names.js?v=1809097eb2';
+import { fsR5DepartmentRecords, fsR5DepartmentCandidates } from './department-names.js?v=ea6f476532';
 
 export function fsR5ControlledDept(){
   var effective=(typeof globalThis.fsEffectiveUser==='function'?globalThis.fsEffectiveUser():globalThis.CU||{}),value='';
-  try{if(typeof globalThis.ctlCurrentDept==='function')value=globalThis.ctlCurrentDept()||''}catch(e){}
+  try{if(typeof globalThis.ctlCurrentDept==='function')value=globalThis.ctlCurrentDept()||''}catch(e){/* an optional source that is not loaded in this session */}
   if(!value)value=effective.deptId||effective.departmentId||effective.department||'';
   var selector=fsE('ctl-dept');
   if(!value&&selector)value=selector.value||'';
@@ -37,7 +37,7 @@ export function fsR5ControlledDept(){
 }
 export function fsR5ControlledMedicine(id,row){
   var m={};row=row||{};
-  try{if(typeof globalThis.ctlMedicine==='function')m=globalThis.ctlMedicine(id)||{}}catch(e){}
+  try{if(typeof globalThis.ctlMedicine==='function')m=globalThis.ctlMedicine(id)||{}}catch(e){/* an optional source that is not loaded in this session */}
   return {
     name:fsText(m.name||row.name||row.medName||row.medicineName,'Unknown medicine / دواء غير معروف'),
     moh:fsText(m.moh||m.mohCode||row.moh||row.mohCode,''),

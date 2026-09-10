@@ -12,7 +12,7 @@
 
 import { fsE, fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
-import { uiToast, uiNow, uiActor, uiAudit, uiCloseModal, uiOpenModal, uiEnsureStyles } from './module-ui-helpers.js?v=4dc31675ec';
+import { uiToast, uiNow, uiActor, uiAudit, uiCloseModal, uiOpenModal, uiEnsureStyles } from './module-ui-helpers.js?v=3657403ad7';
 
 function fsR6EnsureStyles(){
   uiEnsureStyles('asdhealth-r6-canonical-style',
@@ -57,7 +57,7 @@ function fsR6CrashCanBulk(){
 function fsR6CrashCarts(){return typeof window.crashCarts==='function'?(window.crashCarts()||[]):[]}
 function fsR6CrashFilter(){return String((fsE('ccx-expiry')||{}).value||'')}
 function fsR6CrashRules(){
-  var x={};try{x=window.S&&S.g?S.g('pharmacy_department_expiry_rules')||{}:{}}catch(e){}
+  var x={};try{x=window.S&&S.g?S.g('pharmacy_department_expiry_rules')||{}:{}}catch(e){console.warn('pharmacy_department_expiry_rules was skipped after an error; the rest of this screen still renders.', e);}
   var urgent=Math.max(1,fsNum(x.urgentDays||7)),near=Math.max(urgent+1,fsNum(x.nearDays||30));
   return {urgentDays:urgent,nearDays:near};
 }

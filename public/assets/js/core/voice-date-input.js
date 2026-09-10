@@ -121,7 +121,7 @@ function speechCtor(){return window.SpeechRecognition||window.webkitSpeechRecogn
 // rather than data that needs to follow the account).
 var MODE_KEY='voiceDateInputMode';
 function getMode(){try{return localStorage.getItem(MODE_KEY)==='monthYear'?'monthYear':'full'}catch(e){return 'full'}}
-function setMode(mode){try{localStorage.setItem(MODE_KEY,mode)}catch(e){}}
+function setMode(mode){try{localStorage.setItem(MODE_KEY,mode)}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}}
 
 function attachMicButton(input){
   if(!input||input.dataset.voiceAttached)return;
@@ -150,7 +150,7 @@ function attachMicButton(input){
   }
 
   var recognition=null,listening=false;
-  function stop(){listening=false;btn.textContent='🎤';btn.style.background='var(--s2)';try{if(recognition)recognition.stop()}catch(ignore){}}
+  function stop(){listening=false;btn.textContent='🎤';btn.style.background='var(--s2)';try{if(recognition)recognition.stop()}catch(ignore){/* tearing down something already gone is not a failure */}}
   btn.addEventListener('click',function(){
     if(listening){stop();return;}
     var mode=modeSel.value;

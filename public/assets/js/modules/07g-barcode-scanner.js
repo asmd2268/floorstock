@@ -221,7 +221,7 @@ function switchCamera(deviceId){
 }
 
 function stopScanner(){
-  if(_scanReader){try{_scanReader.reset();}catch(e){} _scanReader=null;}
+  if(_scanReader){try{_scanReader.reset();}catch(e){/* tearing down something already gone is not a failure */} _scanReader=null;}
   if(_scanStream){_scanStream.getTracks().forEach(function(t){t.stop();});_scanStream=null;}
   var line=el('scan-line');if(line)line.style.display='none';
 }

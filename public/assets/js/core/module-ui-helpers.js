@@ -55,13 +55,13 @@ export function uiAudit(action, meta) {
 }
 
 export function uiCloseModal(id) {
-  if (typeof globalThis.CM === 'function') { try { globalThis.CM(id); return; } catch (error) { /* fall through */ } }
+  if (typeof globalThis.CM === 'function') { try { globalThis.CM(id); return; } catch (error) {console.warn('CM was skipped after an error; the rest of this screen still renders.', error); /* fall through */ } }
   const node = fsE(id);
   if (node) node.classList.remove('on');
 }
 
 export function uiOpenModal(id) {
-  if (typeof globalThis.OM === 'function') { try { globalThis.OM(id); return; } catch (error) { /* fall through */ } }
+  if (typeof globalThis.OM === 'function') { try { globalThis.OM(id); return; } catch (error) {console.warn('OM was skipped after an error; the rest of this screen still renders.', error); /* fall through */ } }
   const node = fsE(id);
   if (node) node.classList.add('on');
 }

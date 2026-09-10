@@ -128,7 +128,7 @@ function renderControlledBody(){
 
   try{
     if(typeof ctlEnsureDepartmentSeed==='function')ctlEnsureDepartmentSeed();
-  }catch(error){}
+  }catch(error){/* an optional source that is not loaded in this session */}
 
   window.CTL_VIEW=normalizeViewC(window.CTL_VIEW);
   if(window.CTL_VIEW==='storage'&&!(typeof window.canControlledPharmacyStorage==='function'&&window.canControlledPharmacyStorage())){
@@ -199,7 +199,7 @@ function renderControlledBody(){
   }
 
   if(typeof renderCtlPdfReceiptPanel==='function'&&displayView==='overview'){
-    try{renderCtlPdfReceiptPanel();}catch(error){}
+    try{renderCtlPdfReceiptPanel();}catch(error){console.warn('renderCtlPdfReceiptPanel was skipped after an error; the rest of this screen still renders.', error);}
   }
 
   if(displayView!=='storage'){
@@ -439,12 +439,12 @@ function resolveSeedDeptF(label,depts,excludeId){
 }
 function deptDataScoreF(id){
   var score=0;
-  try{score+=(S.g('meds_'+id)||[]).length*4}catch(e){}
-  try{score+=(S.g('expiry_'+id)||[]).length*2}catch(e){}
-  try{score+=(S.g('shelves_'+id)||[]).length}catch(e){}
-  try{score+=(typeof crashCarts==='function'?(crashCarts()||[]):[]).filter(function(c){return String(c.deptId)===String(id)}).length*12}catch(e){}
-  try{score+=(S.g('requests')||[]).filter(function(r){return String(r.deptId)===String(id)}).length*3}catch(e){}
-  try{score+=(S.g('users')||[]).filter(function(u){return String(u.deptId)===String(id)}).length*15}catch(e){}
+  try{score+=(S.g('meds_'+id)||[]).length*4}catch(e){console.warn('meds_ was skipped after an error; the rest of this screen still renders.', e);}
+  try{score+=(S.g('expiry_'+id)||[]).length*2}catch(e){console.warn('expiry_ was skipped after an error; the rest of this screen still renders.', e);}
+  try{score+=(S.g('shelves_'+id)||[]).length}catch(e){console.warn('shelves_ was skipped after an error; the rest of this screen still renders.', e);}
+  try{score+=(typeof crashCarts==='function'?(crashCarts()||[]):[]).filter(function(c){return String(c.deptId)===String(id)}).length*12}catch(e){/* an optional source that is not loaded in this session */}
+  try{score+=(S.g('requests')||[]).filter(function(r){return String(r.deptId)===String(id)}).length*3}catch(e){console.warn('requests was skipped after an error; the rest of this screen still renders.', e);}
+  try{score+=(S.g('users')||[]).filter(function(u){return String(u.deptId)===String(id)}).length*15}catch(e){console.warn('users was skipped after an error; the rest of this screen still renders.', e);}
   return score
 }
 function mergeUniqueF(a,b,keyFn){var out=(Array.isArray(a)?a:[]).slice(),seen={};out.forEach(function(x){seen[keyFn(x)]=1});(Array.isArray(b)?b:[]).forEach(function(x){var k=keyFn(x);if(!seen[k]){seen[k]=1;out.push(x)}});return out}

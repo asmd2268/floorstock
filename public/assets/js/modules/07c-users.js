@@ -209,7 +209,7 @@ async function openDeptRestrictModal(uid, email) {
     var us = gu();
     var target = us.find(function(u){return u.id===uid});
     blocked = Array.isArray(target&&target.blockedDepts) ? target.blockedDepts : [];
-  }catch(_){}
+  }catch(_){console.warn('gu was skipped after an error; the rest of this screen still renders.', _);}
   var existing = document.getElementById('modal-dept-restrict');
   if(existing) existing.remove();
   var modal = document.createElement('div');

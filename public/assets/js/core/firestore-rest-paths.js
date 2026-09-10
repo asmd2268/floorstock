@@ -6,7 +6,7 @@ export function fsStateRestBase() {
     if (emulator) {
       return 'http://127.0.0.1:8080/v1/projects/demo-floorstock-emulator/databases/(default)/documents';
     }
-  } catch (_) { /* fall through to production REST */ }
+  } catch (_) {console.warn('toLowerCase was skipped after an error; the rest of this screen still renders.', _); /* fall through to production REST */ }
   return `https://firestore.googleapis.com/v1/projects/${globalThis.FIREBASE_CONFIG.projectId}/databases/(default)/documents`;
 }
 export function fsRestPath(value) {

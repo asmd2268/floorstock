@@ -18,7 +18,7 @@ import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
 
 export function fsR5DMY(v){
   if(!v)return '—';
-  try{if(typeof globalThis.ctlFmtDMY==='function')return globalThis.ctlFmtDMY(v)}catch(e){}
+  try{if(typeof globalThis.ctlFmtDMY==='function')return globalThis.ctlFmtDMY(v)}catch(e){/* an optional source that is not loaded in this session */}
   var d=new Date(v);if(isNaN(d))return String(v);
   return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();
 }
@@ -138,7 +138,7 @@ export function fsR5ExpiryDays(row){
 /* The department's own "near expiry" window, kept per department in this tab
    only — it is a way of looking at the list, not a saved setting. */
 export function fsR5NearDays(dept){
-  var v='';try{v=sessionStorage.getItem('asdhealth-controlled-near-days-'+dept)||''}catch(e){}
+  var v='';try{v=sessionStorage.getItem('asdhealth-controlled-near-days-'+dept)||''}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
   return Math.max(1,Math.floor(fsNum(v||30)));
 }
 

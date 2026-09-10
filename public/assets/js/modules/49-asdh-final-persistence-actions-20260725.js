@@ -532,7 +532,7 @@ function uid(){var u=window.FB_AUTH&&FB_AUTH.currentUser;return String(u&&u.uid|
 function key(type){return 'asdh_r666_draft_'+uid()+'_'+type}
 function read(type){try{var raw=sessionStorage.getItem(key(type))||localStorage.getItem(key(type))||'null';return JSON.parse(raw)}catch(e){return null}}
 function write(type,value){var raw=JSON.stringify(value);try{sessionStorage.setItem(key(type),raw)}catch(e){console.warn('Session draft could not be stored.',e)}try{localStorage.setItem(key(type),raw)}catch(e){console.warn('Durable draft could not be stored.',e)}}
-function clear(type){try{sessionStorage.removeItem(key(type))}catch(e){}try{localStorage.removeItem(key(type))}catch(e){}dirty[type]=false;notice('')}
+function clear(type){try{sessionStorage.removeItem(key(type))}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}try{localStorage.removeItem(key(type))}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}dirty[type]=false;notice('')}
 function notice(text){var id='r666-draft-notice',node=E(id),page=document.querySelector('.pg.on');if(!text){if(node)node.remove();return}if(!node){node=document.createElement('div');node.id=id;node.className='alert-banner-y';node.style.margin='8px 0';if(page)page.insertBefore(node,page.firstChild)}if(node)node.textContent=text}
 function captureNewRequest(){var host=E('pg-newreq');if(!host)return null;var quantities={};host.querySelectorAll('.rqi[data-mid]').forEach(function(input){if(String(input.value||'').trim())quantities[input.dataset.mid]=input.value});return {search:(E('rsrch')||{}).value||'',quantities:quantities,at:new Date().toISOString()}}
 function restoreNewRequest(draft){if(!draft||!E('pg-newreq'))return;restoring=true;try{var search=E('rsrch');if(search)search.value=draft.search||'';Object.keys(draft.quantities||{}).forEach(function(id){var input=document.querySelector('#pg-newreq .rqi[data-mid="'+CSS.escape(String(id))+'"]');if(input)input.value=draft.quantities[id]});if(typeof window.cntItems==='function')window.cntItems()}finally{restoring=false}}
@@ -610,7 +610,7 @@ function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((w
 function canEdit(){return typeof window.isMaster==='function'&&window.isMaster()}
 function actor(){return window.fsActor?window.fsActor():{name:'Unknown',user:'Unknown',id:''}}
 function now(){return typeof nowISO==='function'?nowISO():new Date().toISOString()}
-function rules(){var x={};try{x=(window.S&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){}var u=Math.max(1,num(x.urgentDays||7)),n=Math.max(u+1,num(x.nearDays||30));return {urgentDays:u,nearDays:n}}
+function rules(){var x={};try{x=(window.S&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){console.warn('pharmacy_department_expiry_rules was skipped after an error; the rest of this screen still renders.', e);}var u=Math.max(1,num(x.urgentDays||7)),n=Math.max(u+1,num(x.nearDays||30));return {urgentDays:u,nearDays:n}}
 function canonical(nameOrItem,strength){if(typeof window.fsCrashCanonicalMedication==='function')return window.fsCrashCanonicalMedication(nameOrItem,strength);var it=(nameOrItem&&typeof nameOrItem==='object')?nameOrItem:{name:nameOrItem,strength:strength,concentration:strength};return {generic:String(it.name||it.genericName||'').trim(),concentration:String(it.strength||it.concentration||strength||'').trim()}}
 function medicationIdentity(itemOrName){return normalText(canonical(itemOrName).generic)}
 function cartHasMedication(cart,source){var wanted=medicationIdentity(source);return !!wanted&&(cart.items||[]).some(function(item){return medicationIdentity(item)===wanted})}
@@ -752,7 +752,7 @@ window.crashPrint=function(id){
   // load lifecycle Safari handles the same as any other page.
   var w=typeof openBlobPrint==='function'?openBlobPrint(h):null;
   if(!w){if(typeof toast==='function')toast('Allow pop-ups to print.','err');return false}
-  try{Promise.resolve(publishPublic([c])).catch(function(err){console.warn('Crash Cart public sync deferred',err)})}catch(err){}
+  try{Promise.resolve(publishPublic([c])).catch(function(err){console.warn('Crash Cart public sync deferred',err)})}catch(err){console.warn('resolve was skipped after an error; the rest of this screen still renders.', err);}
   return true
 };
 
@@ -766,7 +766,7 @@ window.crashPrint=function(id){
 var PREVIEW_KEY='asdh_master_role_preview_v3';
 const E=globalThis.E;
 function previewRead(){try{return JSON.parse(sessionStorage.getItem(PREVIEW_KEY)||'null')}catch(e){return null}}
-function previewClear(){try{sessionStorage.removeItem(PREVIEW_KEY)}catch(e){}}
+function previewClear(){try{sessionStorage.removeItem(PREVIEW_KEY)}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}}
 function deptZ(id){try{return ((typeof gd==='function'?gd():[])||[]).find(function(d){return String(d.id)===String(id)})||null}catch(e){return null}}
 var departmentLinksRepairBusyZ=false,departmentLinksRepairedZ=false;
 /* A full reload is the authoritative role transition. It clears every stale page, modal,

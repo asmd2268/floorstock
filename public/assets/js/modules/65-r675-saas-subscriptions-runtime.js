@@ -54,7 +54,7 @@ function readCachedTenants(uid){
 }
 function writeCachedTenants(uid,rows){
   var key=tenantsCacheKey(uid);if(!key)return;
-  try{localStorage.setItem(key,JSON.stringify(rows||[]))}catch(error){}
+  try{localStorage.setItem(key,JSON.stringify(rows||[]))}catch(error){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
 }
 function currentUid(){return String(window.FB_AUTH&&FB_AUTH.currentUser&&FB_AUTH.currentUser.uid||'')}
 function writeCachedContext(uid,data){
@@ -66,7 +66,7 @@ function writeCachedContext(uid,data){
       if(name.indexOf(SAAS_CACHE_PREFIX)===0&&name!==key&&name!==tenantsCacheKey(uid))localStorage.removeItem(name);
     });
     localStorage.setItem(key,JSON.stringify({platformAdmin:data.platformAdmin===true,subscription:data.subscription||null}));
-  }catch(error){}
+  }catch(error){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
 }
 
 async function callable(name,data){if(typeof window.fsCallFunction!=='function')throw new Error('Subscription service is unavailable.');return window.fsCallFunction(name,data||{})}

@@ -19,7 +19,7 @@ async function mandatoryBackup(kind,target){
   return token;
 }
 function consumeBackup(token,kind,target){
-  var raw=sessionStorage.getItem('r635_delete_backup_token'),saved=null;try{saved=JSON.parse(raw||'null')}catch(e){}
+  var raw=sessionStorage.getItem('r635_delete_backup_token'),saved=null;try{saved=JSON.parse(raw||'null')}catch(e){console.warn('parse was skipped after an error; the rest of this screen still renders.', e);}
   var valid=saved&&token&&saved.id===token.id&&saved.kind===kind&&saved.target===String(target||'')&&(Date.now()-new Date(saved.createdAt).getTime()<10*60*1000);
   sessionStorage.removeItem('r635_delete_backup_token');
   if(!valid)throw new Error('A new backup is required before deletion');
@@ -443,7 +443,7 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
 
 /* ===== No-Consumption crash cart report support ===== */
 var CC_NC_SETTINGS_KEY='crash_cart_nc_settings_v1';
-function ccNCSettings(){var s={};try{s=(window.S&&S.g?S.g(CC_NC_SETTINGS_KEY):null)||{}}catch(e){}return {defaultLimit:Math.max(1,Number(s.defaultLimit||s.monthlyLimit)||2),cartLimits:s.cartLimits&&typeof s.cartLimits==='object'?s.cartLimits:{}}}
+function ccNCSettings(){var s={};try{s=(window.S&&S.g?S.g(CC_NC_SETTINGS_KEY):null)||{}}catch(e){console.warn('g was skipped after an error; the rest of this screen still renders.', e);}return {defaultLimit:Math.max(1,Number(s.defaultLimit||s.monthlyLimit)||2),cartLimits:s.cartLimits&&typeof s.cartLimits==='object'?s.cartLimits:{}}}
 function ccNCLimitForCart(cartId){var s=ccNCSettings();var perCart=s.cartLimits[String(cartId)];return perCart!=null?Math.max(1,Number(perCart)):s.defaultLimit}
 function ccNCCountThisMonth(cartId){
   var ym=new Date().toISOString().slice(0,7);

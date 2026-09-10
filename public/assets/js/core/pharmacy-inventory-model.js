@@ -14,7 +14,7 @@
    missing date never reads as a clean shelf. */
 
 import { fsEsc } from './dom-utils.js?v=b2909b7f46';
-import { earliestExpiry } from './controlled-expiry-format.js?v=fdeecabaed';
+import { earliestExpiry } from './controlled-expiry-format.js?v=7370bbb9a3';
 
 /* Shelves read as a row of labels, so their order is the whole point. localeCompare
    with numeric:true puts A before B and "Shelf 2" before "Shelf 10" -- plain string

@@ -39,14 +39,14 @@ globalThis.FS_R5_DEPT_ALIASES = {
 function fsR5DepartmentRecords(){
   var pools=[],records=[],seen={};
   function addPool(x){if(Array.isArray(x))pools.push(x)}
-  try{if(typeof globalThis.gd==='function')addPool(globalThis.gd()||[])}catch(e){}
-  try{if(typeof globalThis.getDepts==='function')addPool(globalThis.getDepts()||[])}catch(e){}
-  try{if(globalThis.S&&typeof S.g==='function')addPool(S.g('departments')||[])}catch(e){}
+  try{if(typeof globalThis.gd==='function')addPool(globalThis.gd()||[])}catch(e){/* an optional source that is not loaded in this session */}
+  try{if(typeof globalThis.getDepts==='function')addPool(globalThis.getDepts()||[])}catch(e){/* an optional source that is not loaded in this session */}
+  try{if(globalThis.S&&typeof S.g==='function')addPool(S.g('departments')||[])}catch(e){/* an optional source that is not loaded in this session */}
   try{
     if(typeof globalThis.gu==='function')addPool((globalThis.gu()||[]).map(function(u){
       return {id:u&&fsText(u.deptId||u.departmentId||u.department,''),name:u&&fsText(u.deptName||u.departmentName||u.departmentLabel,'')};
     }));
-  }catch(e){}
+  }catch(e){/* an optional source that is not loaded in this session */}
   if(globalThis.CU)addPool([{id:CU.deptId||CU.departmentId||CU.department,name:CU.deptName||CU.departmentName||CU.departmentLabel}]);
   pools.forEach(function(pool){
     pool.forEach(function(d){

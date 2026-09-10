@@ -571,7 +571,7 @@ function patchPrintFunctions(){
         '<div style="font-size:40px;margin-bottom:14px">💊</div>'+
         '<h3 style="margin:0 0 8px;color:#333">Preparing drug list…</h3>'+
         '<p style="font-size:13px;color:#888">جاري تحضير قائمة الأدوية</p></body></html>');
-    }catch(e){}
+    }catch(e){console.warn('write was skipped after an error; the rest of this screen still renders.', e);}
     return _origDeptPrint.apply(this,arguments);
   };
   window.doDeptPrint.__r689Wrapped=true;

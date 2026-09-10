@@ -145,7 +145,7 @@ function plPharmInvCard(){
   var assign=piGetRoomAssign();
   var rooms=typeof window.piRooms==='function'?window.piRooms():[];
   var staffList=[];
-  try{var users=typeof window.getUsers==='function'?window.getUsers():[];staffList=users.filter(function(u){return u.role==='pharmacy_staff'})}catch(e){}
+  try{var users=typeof window.getUsers==='function'?window.getUsers():[];staffList=users.filter(function(u){return u.role==='pharmacy_staff'})}catch(e){/* an optional source that is not loaded in this session */}
   var assignHtml='';
   if(!rooms.length){assignHtml='<div style="color:var(--tx2);font-size:13px">No rooms defined yet in Pharmacy Inventory.</div>'}
   else{

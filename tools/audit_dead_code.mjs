@@ -41,8 +41,13 @@ for (const [file, src] of corpus) {
       declaredIn.get(node.id.name).push(file);
     }
     if (node.type === 'CatchClause') {
-      const body = node.body.body;
-      if (body.length === 0) silent.push(`${file}:${node.loc.start.line} empty catch`);
+      /* A catch that says WHY it is silent is not the problem: the problem is a
+         failure with nothing behind it — no handling, no log, and no reason
+         written down for the next person. A comment counts as a reason. */
+      const inner = src.slice(node.body.start + 1, node.body.end - 1);
+      if (!node.body.body.length && !/\/\*|\/\//.test(inner)) {
+        silent.push(`${file}:${node.loc.start.line} empty catch`);
+      }
     }
   });
 }
@@ -72,7 +77,12 @@ silent.slice(0, 15).forEach((s) => console.log('  ' + s));
 console.log(`\nSAME FUNCTION NAME IN MORE THAN ONE FILE: ${duplicated.length}`);
 duplicated.slice(0, 25).forEach((d) => console.log('  ' + d));
 
-if (process.argv.includes('--strict') && dead.length) {
-  console.error('\nDead code: delete it, or call it. A function nothing reaches is not "kept for later" — it is read by everyone who edits the file and run by nobody.');
+if (process.argv.includes('--strict') && (dead.length || silent.length)) {
+  if (dead.length) {
+    console.error('\nDead code: delete it, or call it. A function nothing reaches is not "kept for later" — it is read by everyone who edits the file and run by nobody.');
+  }
+  if (silent.length) {
+    console.error('\nA catch with nothing in it swallows a failure whole: no handling, no log, and no reason written down. Either report it (console.warn is enough for something the user cannot act on), or write one line saying why silence is correct here — storage that may be unavailable, an optional module that is not loaded, tearing down something already gone.');
+  }
   process.exit(1);
 }

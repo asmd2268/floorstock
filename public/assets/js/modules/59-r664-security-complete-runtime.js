@@ -8,7 +8,7 @@ function currentUser(){return window.CU||{}}
 function actualUser(){return (window.fsActualUser&&window.fsActualUser())||window.MASTER_ACTUAL||currentUser()}
 function effectiveUser(){return (window.fsEffectiveUser&&window.fsEffectiveUser())||currentUser()}
 function actualMaster(){
-  try{if(typeof window.isMasterActual==='function')return !!window.isMasterActual()}catch(ignore){}
+  try{if(typeof window.isMasterActual==='function')return !!window.isMasterActual()}catch(ignore){/* an optional source that is not loaded in this session */}
   var u=actualUser();return !!(u&&u.master===true);
 }
 function permissionProfile(){return resolvePermissionProfile({currentUser:currentUser(),effectiveUser:effectiveUser(),actualUser:actualUser(),previewUser:window.MASTER_EFFECTIVE||null})}
@@ -250,7 +250,7 @@ window.__startAppExtensions.push(function(){setTimeout(boot,900)});
   var warningTimer=null,logoutTimer=null,lastActivity=Date.now(),warningOpen=false,lastReset=0;
   function signedIn(){return !!(window.FB_AUTH&&FB_AUTH.currentUser)}
   function clearTimers(){if(warningTimer)clearTimeout(warningTimer);if(logoutTimer)clearTimeout(logoutTimer);warningTimer=logoutTimer=null}
-  async function forceLogout(){clearTimers();warningOpen=false;try{if(window.FB_AUTH&&FB_AUTH.currentUser)await FB_AUTH.signOut()}catch(ignore){}try{sessionStorage.clear()}catch(ignore){}location.reload()}
+  async function forceLogout(){clearTimers();warningOpen=false;try{if(window.FB_AUTH&&FB_AUTH.currentUser)await FB_AUTH.signOut()}catch(ignore){console.warn('signOut was skipped after an error; the rest of this screen still renders.', ignore);}try{sessionStorage.clear()}catch(ignore){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}location.reload()}
   function showWarning(){
     if(!signedIn()||warningOpen)return;
     warningOpen=true;
@@ -494,7 +494,7 @@ function placeholderDataUrl(label){
 function reportFailure(error){
   if(warned)return;
   warned=true;
-  try{console.warn('Local QR generation is unavailable; printing will continue without a scannable QR code.',error)}catch(ignore){}
+  try{console.warn('Local QR generation is unavailable; printing will continue without a scannable QR code.',error)}catch(ignore){console.warn('warn was skipped after an error; the rest of this screen still renders.', ignore);}
 }
 
 function createCode(text,options){
@@ -597,9 +597,9 @@ window.makeReadableQR=createQrDataUrl;
   if(!window.console||window.__ASDH_DEBUG)return;
   var nativeError=typeof console.error==='function'?console.error.bind(console):function(){};
   var nativeWarn=typeof console.warn==='function'?console.warn.bind(console):function(){};
-  ['log','info','debug','trace'].forEach(function(method){try{console[method]=function(){}}catch(ignore){}});
-  try{console.warn=function(){nativeWarn('[ASDHealth] A recoverable warning occurred.');}}catch(ignore){}
-  try{console.error=function(){nativeError('[ASDHealth] An operation failed. Review the in-app message or Firebase logs.');}}catch(ignore){}
+  ['log','info','debug','trace'].forEach(function(method){try{console[method]=function(){}}catch(ignore){/* a console method that cannot be replaced is not a failure worth reporting */}});
+  try{console.warn=function(){nativeWarn('[ASDHealth] A recoverable warning occurred.');}}catch(ignore){console.warn('nativeWarn was skipped after an error; the rest of this screen still renders.', ignore);}
+  try{console.error=function(){nativeError('[ASDHealth] An operation failed. Review the in-app message or Firebase logs.');}}catch(ignore){console.warn('nativeError was skipped after an error; the rest of this screen still renders.', ignore);}
 })();
 
 /* Stable architecture boundary shared by legacy-compatible modules.  New code

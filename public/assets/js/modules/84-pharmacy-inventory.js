@@ -5,9 +5,9 @@ import {
   piParseShelfLine, piShelfLine, piShelfCells, piCellLabel, piFindShelf,
   piCellOptionsHtml, piShelfCmp, piShelvesOf,
   piDaysToExpiry, piExpiryStatus, piExpiryLabel, medicineExpiryFromLocations, PI_EXPIRY_WARN_DAYS
-} from '../core/pharmacy-inventory-model.js?v=8d3adeaf6a';
+} from '../core/pharmacy-inventory-model.js?v=77f4ad8cd5';
 import { buildTxnRecords, applyNewLocations } from '../core/pharmacy-inventory-transactions.js?v=e2389f9994';
-import { visibleMedicines, filterMedicines, medicinesNeedingReorder } from '../core/pharmacy-inventory-filters.js?v=911683c544';
+import { visibleMedicines, filterMedicines, medicinesNeedingReorder } from '../core/pharmacy-inventory-filters.js?v=709188b2f5';
 import { parseMedicineImport } from '../core/pharmacy-inventory-import.js?v=c5674b7fcb';
 import { splitForPurge, validPurgeDays } from '../core/pharmacy-inventory-retention.js?v=a46a0a692a';
 import { lastMovementByMedicine, inactiveSince, cutoffDaysAgo, periodSummary } from '../core/pharmacy-inventory-reports.js?v=7ce2ca81f2';
@@ -445,7 +445,7 @@ function piRenderMedsTab(host){
       var allDeptMeds=[];
       if(typeof gd==='function')gd().forEach(function(dept){if(typeof getMeds==='function')(getMeds(dept.id)||[]).forEach(function(m){allDeptMeds.push({name:(m.name||m.medication||'').toLowerCase()})})});
       Object.keys(lasaNames).forEach(function(n){if(allDeptMeds.some(function(x){return x.name===n}))deptLasaConflicts.push(n)});
-    }catch(e){}
+    }catch(e){/* an optional source that is not loaded in this session */}
     if(deptLasaConflicts.length){
       conflictBanner='<div class="alert-banner" style="margin-bottom:12px">⚠ LASA name match with dept inventory: <b>'+deptLasaConflicts.join(', ')+'</b> — verify look-alike labeling is consistent.</div>';
     }
@@ -1314,7 +1314,7 @@ function piGridKeydown(e){
   var next=target.children[col]&&target.children[col].querySelector('input');
   if(!next)return;
   next.focus();
-  try{next.select()}catch(selectError){}
+  try{next.select()}catch(selectError){/* tearing down something already gone is not a failure */}
 }
 if(typeof document!=='undefined'&&!window.__piGridKeysBound){
   window.__piGridKeysBound=true;

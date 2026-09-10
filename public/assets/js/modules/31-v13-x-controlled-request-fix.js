@@ -147,7 +147,7 @@ window.ensureControlledBulkReplacementButton=addBulkReplacement;
   var IMP_KEY='asd_import_draft_v2';
   function q(id){return document.getElementById(id)}
   function readJSON(k,f){try{var v=JSON.parse(sessionStorage.getItem(k)||'null');return v==null?f:v}catch(e){return f}}
-  function writeJSON(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+  function writeJSON(k,v){try{sessionStorage.setItem(k,JSON.stringify(v))}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}}
   function moveAnnouncementHostToTop(){
     var host=q('dept-announcement-host'),app=q('app');if(!host||!app)return;
     var nav=q('mnav');
@@ -188,7 +188,7 @@ window.ensureControlledBulkReplacementButton=addBulkReplacement;
   window.saveImportDraft=saveImportDraft;
   window.restoreImportDraft=restoreImportDraft;
 
-  window.clearImportDraftState=function(){try{sessionStorage.removeItem(IMP_KEY)}catch(e){}window.IROWS=[]};
+  window.clearImportDraftState=function(){try{sessionStorage.removeItem(IMP_KEY)}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}window.IROWS=[]};
 
   window.persistTransientUiState=function(){
     captureInventorySelection();saveImportDraft();

@@ -14,7 +14,7 @@
 
 import { fsE, fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText } from './text-normalize.js?v=aa16ae9ac0';
-import { uiToast, uiAudit, uiCloseModal, uiOpenModal } from './module-ui-helpers.js?v=4dc31675ec';
+import { uiToast, uiAudit, uiCloseModal, uiOpenModal } from './module-ui-helpers.js?v=3657403ad7';
 import { buildTestSession, restoreActualSession } from './master-test-mode.js?v=5c343a4df5';
 
 function fsR6ActualMaster(){
@@ -27,7 +27,7 @@ function fsR6MasterUsers(){
 }
 function fsR6RoleLabel(role){
   var labels={pharmacy:'Pharmacy Director / مدير الصيدلية',inpatient_supervisor:'Inpatient Pharmacy Supervisor / مشرف صيدلية التنويم',outpatient_pharmacy_supervisor:'Outpatient Pharmacy Supervisor / مشرف الصيدلية الخارجية',pharmacy_staff:'Pharmacy Staff / موظف صيدلية',controlled_pharmacy:'Controlled Medicines Officer / مسؤول الأدوية المخدرة',warehouse:'Warehouse Custody Officer / مسؤول عهدة المستودع',department:'Department Employee / موظف قسم'};
-  if(typeof window.masterRoleLabel==='function'){try{return window.masterRoleLabel(role)}catch(e){}}
+  if(typeof window.masterRoleLabel==='function'){try{return window.masterRoleLabel(role)}catch(e){console.warn('masterRoleLabel was skipped after an error; the rest of this screen still renders.', e);}}
   return labels[role]||role||'Unknown role';
 }
 function fsR6EnsureMasterModal(){
@@ -225,7 +225,7 @@ window.floorstockEnforceMasterSystemHealth=function(){
       page.classList.remove('on');
       if(typeof window.showPg==='function'){
         var fallback=CU&&CU.role==='department'?'pg-newreq':(CU&&['warehouse','controlled_pharmacy'].indexOf(CU.role)>=0?'pg-controlled':'pg-dash');
-        try{window.showPg(fallback)}catch(e){}
+        try{window.showPg(fallback)}catch(e){console.warn('showPg was skipped after an error; the rest of this screen still renders.', e);}
       }
     }
   }

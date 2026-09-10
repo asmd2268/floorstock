@@ -52,7 +52,7 @@ function canonicalMedication(itemOrName,strengthValue){
 }
 window.fsCrashCanonicalMedication=canonicalMedication;
 function meta(item){return canonicalMedication(item)}
-function rules(){var x={};try{x=(typeof S!=='undefined'&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){}var urgent=Math.max(1,numx(x.urgentDays||7)),near=Math.max(urgent+1,numx(x.nearDays||30));return {urgentDays:urgent,nearDays:near}}
+function rules(){var x={};try{x=(typeof S!=='undefined'&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){console.warn('pharmacy_department_expiry_rules was skipped after an error; the rest of this screen still renders.', e);}var urgent=Math.max(1,numx(x.urgentDays||7)),near=Math.max(urgent+1,numx(x.nearDays||30));return {urgentDays:urgent,nearDays:near}}
 function daysUntil(v){return window.fsDaysUntil?window.fsDaysUntil(v):null}
 function batchLevel(b){var d=daysUntil(b&&b.expiry),r=rules();if(d===null)return 'missing';if(d<0)return'expired';if(d<=r.urgentDays)return'urgent';if(d<=r.nearDays)return'near';return'normal'}
 var RANK={expired:5,urgent:4,near:3,missing:2,normal:1};
@@ -361,12 +361,12 @@ function identity(v){return tokens(v).join(' ')}
 function pairKey(a,b){var p=[norm(a),norm(b)].sort();return p[0]+'||'+p[1]}
 function getSeparationRules(){
  if(separationCache&&typeof separationCache==='object')return separationCache;
- try{var r=window.S&&S.g?S.g(SEPARATION_KEY):null;if(r&&typeof r==='object'&&!Array.isArray(r)){separationCache=r;return separationCache}}catch(e){}
+ try{var r=window.S&&S.g?S.g(SEPARATION_KEY):null;if(r&&typeof r==='object'&&!Array.isArray(r)){separationCache=r;return separationCache}}catch(e){console.warn('g was skipped after an error; the rest of this screen still renders.', e);}
  try{var x=JSON.parse(localStorage.getItem(SEPARATION_KEY)||'{}');separationCache=x&&typeof x==='object'&&!Array.isArray(x)?x:{};return separationCache}catch(e){separationCache={};return separationCache}
 }
 async function saveSeparationRules(rules){
  separationCache=rules||{};
- try{localStorage.setItem(SEPARATION_KEY,JSON.stringify(separationCache))}catch(e){}
+ try{localStorage.setItem(SEPARATION_KEY,JSON.stringify(separationCache))}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
  if(window.S&&S.s)await S.s(SEPARATION_KEY,separationCache);
 }
 function isManuallySeparated(a,b){return !!getSeparationRules()[pairKey(a,b)]}

@@ -4,7 +4,7 @@ import { resolveMasterFromUser } from '../core/master-authority.js?v=c8beef9722'
 import { fsNorm } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=a17eca6e66';
-import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=7975fe045f';
+import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=c13c38051a';
 
 // ── APP SHELL: STATE URLS / THEME / AUTO-CATEGORY / AUTH / NAV / DASHBOARD / INVENTORY ──

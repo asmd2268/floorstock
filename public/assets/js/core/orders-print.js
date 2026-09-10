@@ -13,8 +13,8 @@
 
 import { fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
-import { uiToast } from './module-ui-helpers.js?v=4dc31675ec';
-import { fsR5DepartmentRecords } from './department-names.js?v=1809097eb2';
+import { uiToast } from './module-ui-helpers.js?v=3657403ad7';
+import { fsR5DepartmentRecords } from './department-names.js?v=ea6f476532';
 
 export function fsR5MedicineFlags(m){
   m=m||{};
@@ -34,7 +34,7 @@ export function fsR5SelectedOrders(ids){
     var r=requests.find(function(x){return String(x.id)===String(id)});
     if(!r)return null;
     var meds=[];
-    try{if(typeof window.getMeds==='function')meds=window.getMeds(r.deptId||r.departmentId||'')||[]}catch(e){}
+    try{if(typeof window.getMeds==='function')meds=window.getMeds(r.deptId||r.departmentId||'')||[]}catch(e){/* an optional source that is not loaded in this session */}
     var rows=(Array.isArray(r.dispensed)?r.dispensed:[])
       .filter(function(x){return fsNum(x&&x.qty)>0})
       .map(function(x){
@@ -146,19 +146,19 @@ export function doPrint(){
   if(printUrl.searchParams&&typeof printUrl.searchParams.set==='function')printUrl.searchParams.set('job',token);
   var popup=window.open(printUrl.href,'_blank');
   if(!popup){
-    try{localStorage.removeItem(storageKey);}catch(e){}
+    try{localStorage.removeItem(storageKey);}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
     delete window.__ASDH_PRINT_ORDER_JOBS__[token];
     return uiToast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة للطباعة','err');
   }
 
   setTimeout(function(){
-    try{localStorage.removeItem(storageKey);}catch(e){}
+    try{localStorage.removeItem(storageKey);}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
     if(window.__ASDH_PRINT_ORDER_JOBS__)delete window.__ASDH_PRINT_ORDER_JOBS__[token];
   },120000);
 
   try{
     if(typeof window.persistPrintOrdersMeta==='function')Promise.resolve(window.persistPrintOrdersMeta(orders.map(function(o){return o.request.id}))).catch(function(e){console.error(e)});
-  }catch(e){}
+  }catch(e){/* an optional source that is not loaded in this session */}
   if(typeof window.renderPrint==='function')window.renderPrint();
   /* The print-page selection state has one owner: core/print-page-state.js. */
   resetPrintPageState();

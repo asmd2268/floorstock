@@ -75,7 +75,7 @@ function requestGridOrphans(){
   try{
     var tombstones=window.S&&typeof S.g==='function'?(S.g('deleted_departments')||[]):[];
     (Array.isArray(tombstones)?tombstones:[]).forEach(function(value){deleted[String(value).toLowerCase()]=1;});
-  }catch(error){}
+  }catch(error){/* an optional source that is not loaded in this session */}
 
   var records={};
   function add(id,name,source){
@@ -90,22 +90,22 @@ function requestGridOrphans(){
   try{
     var windows=typeof window.getReqWindows==='function'?(getReqWindows()||[]):[];
     windows.forEach(function(item){if(item&&item.dept)add(item.dept,item.deptName,'Request schedule');});
-  }catch(error){}
+  }catch(error){/* an optional source that is not loaded in this session */}
 
   try{
     var slots=typeof window.getDispSlots==='function'?(getDispSlots()||[]):[];
     slots.forEach(function(item){if(item)add(item.dept||item.deptId,item.deptName,'Dispense slot');});
-  }catch(error){}
+  }catch(error){/* an optional source that is not loaded in this session */}
 
   try{
     var limits=typeof window.getMonthlyLimits==='function'?(getMonthlyLimits()||{}):{};
     Object.keys(limits||{}).forEach(function(id){add(id,'','Monthly limit');});
-  }catch(error){}
+  }catch(error){/* an optional source that is not loaded in this session */}
 
   try{
     var maps=window.S&&typeof S.g==='function'?(S.g(GRID_KEY)||{}):{};
     Object.keys(maps||{}).forEach(function(id){add(id,'','Legacy hour grid');});
-  }catch(error){}
+  }catch(error){/* an optional source that is not loaded in this session */}
 
   try{
     var prefixes=['meds_','expiry_','shelves_','alerts_','controlled_dept_list_','controlled_settings_'];
@@ -119,7 +119,7 @@ function requestGridOrphans(){
         }
       });
     }
-  }catch(error){}
+  }catch(error){console.warn('keys was skipped after an error; the rest of this screen still renders.', error);}
 
   try{
     var users=typeof window.gu==='function'?(gu()||[]):[];
@@ -130,7 +130,7 @@ function requestGridOrphans(){
       var record=records[id.toLowerCase()];
       if(record)record.userCount++;
     });
-  }catch(error){}
+  }catch(error){/* an optional source that is not loaded in this session */}
 
   return Object.keys(records).map(function(key){return records[key];}).sort(function(a,b){
     return String(a.name||a.id).localeCompare(String(b.name||b.id));
@@ -582,7 +582,7 @@ window.saveRequestHourGrid=async function(){
   if(!window.S||typeof S.s!=='function')throw new Error('Storage service is not ready');
   await setReqWindows(next);
   // Remove stale cache entries from the former experimental key so they cannot override the saved schedule.
-  try{var old=getMaps();ids.forEach(function(id){deptAliases(id).forEach(function(a){delete old[a]})});if(window.S&&S.cache)S.cache[GRID_KEY]=old}catch(ignore){}
+  try{var old=getMaps();ids.forEach(function(id){deptAliases(id).forEach(function(a){delete old[a]})});if(window.S&&S.cache)S.cache[GRID_KEY]=old}catch(ignore){console.warn('getMaps was skipped after an error; the rest of this screen still renders.', ignore);}
   setStatus('تم تطبيق الجدول بنجاح على '+ids.length+' قسم / Schedule successfully applied to '+ids.length+' department(s)',true);
   if(typeof toast==='function')toast('تم تطبيق أوقات قبول الطلبات على '+ids.length+' قسم / Weekly request schedule applied to '+ids.length+' department(s) ✓','succ');
   window.renderRequestHourGridUI();

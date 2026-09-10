@@ -75,7 +75,7 @@ function parseXlsxData(buffer,fname){
         var rgb2=(bg.rgb||bg.argb||'').toUpperCase();
         if(rgb2&&rgb2!=='00000000'&&rgb2!=='FFFFFFFF'&&rgb2!=='FFFFFF'&&rgb2.length>=6)return rgb2;
       }
-    }catch(e){}
+    }catch(e){console.warn('toUpperCase was skipped after an error; the rest of this screen still renders.', e);}
     return null;
   }
   // Red = High Alert (FF0000, FFFF0000)

@@ -23,15 +23,15 @@
 
 import { fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText } from './text-normalize.js?v=aa16ae9ac0';
-import { uiToast } from './module-ui-helpers.js?v=4dc31675ec';
-import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=41ac59e5f7';
-import { fsR12PrintDate, fsR12HasNearExpiry, fsR5BatchText, fsR5Class } from './controlled-expiry-format.js?v=fdeecabaed';
+import { uiToast } from './module-ui-helpers.js?v=3657403ad7';
+import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=e629c424f7';
+import { fsR12PrintDate, fsR12HasNearExpiry, fsR5BatchText, fsR5Class } from './controlled-expiry-format.js?v=7370bbb9a3';
 
 function fsR5PublicUrl(dept){
-  try{if(typeof window.ctlPublicUrl==='function')return window.ctlPublicUrl(dept)}catch(e){}
+  try{if(typeof window.ctlPublicUrl==='function')return window.ctlPublicUrl(dept)}catch(e){/* an optional source that is not loaded in this session */}
   var url=new URL(location.origin+location.pathname);url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var tenant=window.fsTenantId&&fsTenantId();if(tenant)url.searchParams.set('tenant',tenant);return url.toString();
 }
-function fsR5PrintSettings(dept){try{if(typeof window.ctlPrintSettings==='function')return window.ctlPrintSettings(dept)||{}}catch(e){}return {}}
+function fsR5PrintSettings(dept){try{if(typeof window.ctlPrintSettings==='function')return window.ctlPrintSettings(dept)||{}}catch(e){/* an optional source that is not loaded in this session */}return {}}
 /* Arabic department name for the printed heading.
  *
  * Resolved by module 83, which keeps the mapping as master-editable state keyed by
@@ -455,7 +455,7 @@ function openBlobPrintR5(html){
 window.printDepartmentCustodyExact=async function(dept,options){
   options=options||{};
   dept=fsText(dept||fsR5ControlledDept(),'');
-  if(options.printWindow){try{options.printWindow.close();}catch(e){}}
+  if(options.printWindow){try{options.printWindow.close();}catch(e){/* tearing down something already gone is not a failure */}}
   try{
     var result=await fsLoginTimeout(fsR5ControlledRows(dept),18000,'Controlled custody print data timed out.');
     if(!result.rows||!result.rows.length){
@@ -466,7 +466,7 @@ window.printDepartmentCustodyExact=async function(dept,options){
     setTimeout(function(){
       try{
         if(typeof window.ctlPublishDept==='function')Promise.resolve(window.ctlPublishDept(result.dept||dept)).catch(function(error){console.warn('Background controlled public publish skipped.',error);});
-      }catch(error){}
+      }catch(error){/* an optional source that is not loaded in this session */}
     },0);
     return true;
   }catch(error){
