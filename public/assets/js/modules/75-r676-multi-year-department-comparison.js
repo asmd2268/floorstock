@@ -2,6 +2,7 @@
    also publishes it as the global `esc` before any feature module loads. The
    local copies removed here each re-derived the same fallback. */
 import { allRows, rowDate, deptLabel } from '../core/analytics-engine.js?v=ea7b98eca6';
+import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
 
 (function () {
 'use strict';
@@ -81,11 +82,7 @@ function attach(root) {
     if (typeof window.fsOfficialPrint === 'function') {
       window.fsOfficialPrint({ title: 'Multi-year comparison', html: tableEl.outerHTML + '<div class="brand">By Ali Abudahash</div>', css });
     } else {
-      const w = window.open('', '_blank');
-      if (!w) return;
-      w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Multi-year report</title><style>${css}</style></head><body>${tableEl.outerHTML}<div class="brand">By Ali Abudahash</div></body></html>`);
-      w.document.close();
-      w.print();
+      printDocument({ title: 'Multi-year comparison', html: tableEl.outerHTML, css });
     }
   });
 

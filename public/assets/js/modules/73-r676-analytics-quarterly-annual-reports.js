@@ -20,6 +20,7 @@ import {
 } from '../core/analytics-drug-trends.js?v=ce84bf0b15';
 import { crashCartStats } from '../core/analytics-crash-carts.js?v=33105767c7';
 import { narcoticStats } from '../core/analytics-narcotics.js?v=684e55b66c';
+import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -525,18 +526,7 @@ window._r676PrintDept = function(name) {
       <tr><td>Dispensed units</td><td>${d.units || 0}</td></tr>
       <tr><td>Zero-dispense requests</td><td>${d.zeroDispenseReqs || 0}</td></tr>
     </tbody></table><div class="brand">By Ali Abudahash</div>`;
-  // Blob URL + window.open(url,...), not window.open('','_blank') +
-  // document.write(): Safari does not reliably fire 'load' on a document
-  // written that way, so window.print() below would silently never run
-  // there — same root cause confirmed behind the Crash Cart print bug in
-  // Safari. A blob: URL is a real navigation whose load lifecycle Safari
-  // handles normally; the unconditional setTimeout is a second safety net.
-  const fullHtml = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(name)}</title><style>${DEPT_PRINT_CSS}</style></head><body>${html}<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print();}if(document.readyState==='complete')setTimeout(g,400);else window.addEventListener('load',function(){setTimeout(g,400)},{once:true});setTimeout(g,1500);})()</sc` + `ript></body></html>`;
-  const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const w = window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
-  if (!w) return;
+  printDocument({ title: name, html, css: DEPT_PRINT_CSS, brand: '' });
 };
 
 function attach(root, stats) {
@@ -627,14 +617,13 @@ function buildPrintHtml(detail) {
   `;
   const root = document.getElementById('analytics-reports-card');
   const html = (root ? root.innerHTML : '') + '<div class="brand">By Ali Abudahash</div>';
+  /* One printer for every report in this file. The three that used to open a
+     blank window and document.write() into it never printed in Safari at all:
+     that document does not reliably fire `load`, so nothing called print(). */
   if (typeof window.fsOfficialPrint === 'function') {
     window.fsOfficialPrint({ title: 'Analytics report / التقرير الإحصائي', html, css });
   } else {
-    const w = window.open('', '_blank');
-    if (!w) return;
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Analytics report</title><style>${css}</style></head><body>${html}</body></html>`);
-    w.document.close();
-    w.print();
+    printDocument({ title: 'Analytics report / التقرير الإحصائي', html, css, brand: '' });
   }
 }
 
@@ -1526,11 +1515,7 @@ function openPrintWindow(title, bodyHtml) {
     window.fsOfficialPrint({ title, html: bodyHtml, css: PRINT_CSS });
     return;
   }
-  const w = window.open('', '_blank');
-  if (!w) { window.toast && window.toast('Allow pop-ups to print.', 'err'); return; }
-  const footer = `<div class="brand">${BRAND}</div>`;
-  w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(title)}</title><style>${PRINT_CSS}</style></head><body>${bodyHtml}${footer}<script>(function(){var done=false;function go(){if(done)return;done=true;window.print()}window.addEventListener("load",function(){setTimeout(go,300)},{once:true});setTimeout(go,1500)})()</script></body></html>`);
-  w.document.close();
+  printDocument({ title, html: bodyHtml, css: PRINT_CSS, brand: BRAND });
 }
 
 function printCrashReport() {

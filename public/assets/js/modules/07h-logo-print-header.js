@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { openBlobPrint, printDocument } from '../core/print-window.js?v=7e3e2088a2';
 
 // ── LOGO / OFFICIAL PRINT HEADER ─────────────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
@@ -110,32 +111,14 @@ function officialPrintHeaderHTML(){
     '<div dir="rtl" style="text-align:right">'+rows(arabic,'rtl')+'</div>'+
   '</div>';
 }
-function openBlobPrint(fullHtml){
-  var blob=new Blob([fullHtml],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var pw=window.__preOpenedPW;
-  if(pw&&!pw.closed){
-    window.__preOpenedPW=null;
-    pw.location.href=url;
-    setTimeout(function(){URL.revokeObjectURL(url);},60000);
-    return pw;
-  }
-  var w=window.open(url,'_blank','width=1100,height=850');
-  setTimeout(function(){URL.revokeObjectURL(url)},60000);
-  if(!w){window.toast&&window.toast('Allow pop-ups to print.','err');}
-  return w;
-}
 window.fsOfficialPrint=function(opts){
-  var title=String(opts&&opts.title||'ASDHealth');
-  var html=String(opts&&opts.html||'');
-  var css=String(opts&&opts.css||'');
-  var hdr=typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'';
-  var brand='<div style="text-align:center;font-size:8.5pt;color:#555;margin-top:14px">By Ali Abudahash</div>';
-  var pcss='@page{size:A4;margin:10mm}body{font-family:Arial,Tahoma,sans-serif;background:#fff;color:#111;margin:0}'+css;
-  var autoprint='<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(g,300);else window.addEventListener("load",function(){setTimeout(g,300)},{once:true})})()</sc'+'ript>';
-  openBlobPrint('<!doctype html><html><head><meta charset="utf-8"><title>'+title.replace(/</g,'&lt;')+'</title><style>'+pcss+'</style></head><body>'+hdr+html+brand+autoprint+'</body></html>');
+  return printDocument({
+    title:String(opts&&opts.title||'ASDHealth'),
+    html:String(opts&&opts.html||''),
+    css:String(opts&&opts.css||''),
+    header:typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():''
+  });
 };
-
 
 publishLegacy("07h-logo-print-header.js", {
   getLogo,
