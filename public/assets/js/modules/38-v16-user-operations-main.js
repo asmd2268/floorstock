@@ -1,5 +1,6 @@
 import { selectedPrintIds, restorePrintSelection } from '../core/print-order-selection.js?v=42a613d169';
 import { openReceiveExpiryDialog } from '../core/receive-expiry-dialog.js?v=ef6827a3ad';
+import { installActions } from '../core/delegated-actions.js?v=779ca10b8c';
 (function(){
 'use strict';
 var E=window.fsE;
@@ -16,8 +17,8 @@ function hideMap(){return get('medication_visibility_rules_v3',{})||{}}
 function freezeMap(){var a=get('medication_freeze_rules_v3',{})||{},b=get('global_request_freeze_v2',{})||{};Object.keys(b).forEach(function(k){if(!a[k])a[k]=b[k]});return a}
 function applies(info,dept){return !!(info&&(info.allDepartments===true||info.deptIds==='all'||(Array.isArray(info.departmentIds)&&info.departmentIds.indexOf(dept)>-1)||(Array.isArray(info.deptIds)&&info.deptIds.indexOf(dept)>-1)))}
 function findRule(map,m,dept){return typeof window.fsR17MedicationRuleFor==='function'?window.fsR17MedicationRuleFor(map,m,dept):null}
-function deptChecks(prefix){return '<label class="ops-scope-all"><input id="'+prefix+'-all" type="checkbox" onchange="window.v16ToggleScope(\''+prefix+'\',this.checked)"> All departments / جميع الأقسام</label>'+(typeof gd==='function'?(gd()||[]):[]).map(function(d){return '<label><input class="'+prefix+'-dept" type="checkbox" value="'+esc(d.id)+'"> '+esc(d.name||d.id)+'</label>'}).join('')}
-window.v16ToggleScope=function(prefix,on){document.querySelectorAll('.'+prefix+'-dept').forEach(function(x){x.checked=on})};
+function deptChecks(prefix){return '<label class="ops-scope-all"><input id="'+prefix+'-all" type="checkbox" data-changeact="v16ToggleScope" data-a1="'+prefix+'"> All departments / جميع الأقسام</label>'+(typeof gd==='function'?(gd()||[]):[]).map(function(d){return '<label><input class="'+prefix+'-dept" type="checkbox" value="'+esc(d.id)+'"> '+esc(d.name||d.id)+'</label>'}).join('')}
+function v16ToggleScope(prefix,on){document.querySelectorAll('.'+prefix+'-dept').forEach(function(x){x.checked=on})};
 
 /* Inventory permissions and controls */
 function ensureInventoryTools(){
@@ -31,9 +32,9 @@ function ensureInventoryTools(){
  var catBtn=Array.from(document.querySelectorAll('#pg-inv button')).find(function(x){return /Categories/i.test(x.textContent||'')});if(catBtn)catBtn.style.display='inline-flex';
 }
 /* Hide whole category from requests */
-function enhanceCategories(){var modal=E('mcat-mgr');if(!modal||!mgr())return;var p=modal.querySelector('p');if(p)p.innerHTML='Manage the <b>single global category order for every department</b>. Changes are saved automatically. Hiding a category affects New Request only; shelves and expiry entry remain available.';var ctx=E('dept-cat-context');if(ctx)ctx.innerHTML='<b>Global order / ترتيب موحد:</b> this exact order is used automatically in Inventory, New Request, shelves and Print for every department. No category is forced first or last.<div class="fl g8" style="margin-top:8px"><button class="btn bg bsm" onclick="v16ManageHiddenCategories()">Hide/show categories from requests</button></div>'}
-window.v16ManageHiddenCategories=function(){var map=get('hidden_request_categories_v1',{})||{},cats=typeof getCategories==='function'?getCategories():[];document.body.insertAdjacentHTML('beforeend','<div class="modal-bg on" id="v16-cat-hide"><div class="modal"><div class="mh"><span class="mt">Request category visibility</span><button class="xbtn" onclick="document.getElementById(\'v16-cat-hide\').remove()">×</button></div>'+cats.map(function(c){return '<label style="display:flex;align-items:center;gap:8px;padding:7px"><input class="v16-cat-check" type="checkbox" value="'+esc(c)+'" '+(map[norm(c)]?'checked':'')+' style="width:auto;margin:0"> Hide '+esc(c)+' from New Request</label>'}).join('')+'<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" onclick="document.getElementById(\'v16-cat-hide\').remove()">Cancel</button><button class="btn bs" onclick="v16SaveHiddenCats()">Save</button></div></div></div>')};
-window.v16SaveHiddenCats=async function(){var map={};document.querySelectorAll('.v16-cat-check:checked').forEach(function(x){map[norm(x.value)]={name:x.value,updatedAt:now(),updatedBy:CU.username||''}});await set('hidden_request_categories_v1',map);E('v16-cat-hide').remove();toast('Category visibility saved ✓','succ');if(typeof renderReqForm==='function')renderReqForm()};
+function enhanceCategories(){var modal=E('mcat-mgr');if(!modal||!mgr())return;var p=modal.querySelector('p');if(p)p.innerHTML='Manage the <b>single global category order for every department</b>. Changes are saved automatically. Hiding a category affects New Request only; shelves and expiry entry remain available.';var ctx=E('dept-cat-context');if(ctx)ctx.innerHTML='<b>Global order / ترتيب موحد:</b> this exact order is used automatically in Inventory, New Request, shelves and Print for every department. No category is forced first or last.<div class="fl g8" style="margin-top:8px"><button class="btn bg bsm" data-clickact="v16ManageHiddenCategories">Hide/show categories from requests</button></div>'}
+function v16ManageHiddenCategories(){var map=get('hidden_request_categories_v1',{})||{},cats=typeof getCategories==='function'?getCategories():[];document.body.insertAdjacentHTML('beforeend','<div class="modal-bg on" id="v16-cat-hide"><div class="modal"><div class="mh"><span class="mt">Request category visibility</span><button class="xbtn" data-clickact="removeById" data-a1="v16-cat-hide">×</button></div>'+cats.map(function(c){return '<label style="display:flex;align-items:center;gap:8px;padding:7px"><input class="v16-cat-check" type="checkbox" value="'+esc(c)+'" '+(map[norm(c)]?'checked':'')+' style="width:auto;margin:0"> Hide '+esc(c)+' from New Request</label>'}).join('')+'<div class="fl g8" style="justify-content:flex-end"><button class="btn bg" data-clickact="removeById" data-a1="v16-cat-hide">Cancel</button><button class="btn bs" data-clickact="v16SaveHiddenCats">Save</button></div></div></div>')};
+async function v16SaveHiddenCats(){var map={};document.querySelectorAll('.v16-cat-check:checked').forEach(function(x){map[norm(x.value)]={name:x.value,updatedAt:now(),updatedBy:CU.username||''}});await set('hidden_request_categories_v1',map);E('v16-cat-hide').remove();toast('Category visibility saved ✓','succ');if(typeof renderReqForm==='function')renderReqForm()};
 
 /* Multi-department medicine maintenance */
 function openMulti(){if(typeof window.v16OpenMultiDepartments==='function')return window.v16OpenMultiDepartments()}
@@ -135,29 +136,29 @@ function ensureBulkReplacementButtonW(){
 }
 function classHtmlW(m){if(typeof window.bdg==='function'){try{return bdg(m)}catch(e){console.warn('bdg was skipped after an error; the rest of this screen still renders.', e);}}return escW(sigW(m))}
 function selectedCountW(){var n=el('v13q-selected-count');if(n)n.textContent=state.selected.size+' selected'}
-window.v13InventorySelect=function(chk){var k=String(chk.dataset.dept)+'::'+String(chk.dataset.med);if(chk.checked)state.selected.set(k,{dept:chk.dataset.dept,med:chk.dataset.med});else state.selected.delete(k);selectedCountW()};
-window.v13SelectVisibleInventory=function(chk){document.querySelectorAll('#all-inv-body .v13q-row-check').forEach(function(c){c.checked=chk.checked;window.v13InventorySelect(c)})};
+function v13InventorySelect(chk){var k=String(chk.dataset.dept)+'::'+String(chk.dataset.med);if(chk.checked)state.selected.set(k,{dept:chk.dataset.dept,med:chk.dataset.med});else state.selected.delete(k);selectedCountW()};
+function v13SelectVisibleInventory(chk){document.querySelectorAll('#all-inv-body .v13q-row-check').forEach(function(c){c.checked=chk.checked;window.v13InventorySelect(c)})};
 function filterRowsW(){
  var q=normW((el('all-inv-search')||{}).value||''),variants=!!(el('all-inv-variants')||{}).checked,hide=!!(el('all-inv-hide-identical')||{}).checked,mismatch=!!(el('all-inv-class-mismatch')||{}).checked,seen={};
  state.filtered=state.rows.filter(function(x){if(q&&x.search.indexOf(q)<0)return false;if(variants&&!x.isVariant)return false;if(mismatch&&!x.mismatch)return false;if(hide&&!variants&&!mismatch){if(seen[x.exact])return false;seen[x.exact]=1}return true});state.shown=Math.min(state.pageSize,state.filtered.length);renderRowsW()
 }
 function renderRowsW(){
  var body=el('all-inv-body');if(!body)return;var slice=state.filtered.slice(0,state.shown);
- body.innerHTML=slice.map(function(x){var k=rowIdW(x),checked=state.selected.has(k)?' checked':'';var cls=typeof rowCls==='function'?rowCls(x.med):'';return '<tr class="'+cls+'"><td><input type="checkbox" class="all-inv-name-check v13q-row-check" data-name="'+escW(x.med.name)+'" data-dept="'+escW(x.deptId)+'" data-med="'+escW(x.med.id)+'" onchange="v13InventorySelect(this);if(window.updateAllInventoryMergeCount)updateAllInventoryMergeCount()"'+checked+'></td><td><b>'+escW(x.med.name)+'</b>'+(x.isVariant?'<div class="fhint">Possible naming variant</div>':'')+(x.mismatch?'<div class="v13q-mismatch">Classification differs across departments</div>':'')+'</td><td>'+escW(x.dept)+'</td><td>'+escW(x.med.category||'')+'</td><td>'+classHtmlW(x.med)+'</td><td>'+escW(x.med.min||0)+'</td><td>'+escW(x.med.max||0)+'</td><td>'+escW(x.med.monthly||'—')+'</td></tr>'}).join('');
+ body.innerHTML=slice.map(function(x){var k=rowIdW(x),checked=state.selected.has(k)?' checked':'';var cls=typeof rowCls==='function'?rowCls(x.med):'';return '<tr class="'+cls+'"><td><input type="checkbox" class="all-inv-name-check v13q-row-check" data-name="'+escW(x.med.name)+'" data-dept="'+escW(x.deptId)+'" data-med="'+escW(x.med.id)+'" data-changeact="inventorySelect"'+checked+'></td><td><b>'+escW(x.med.name)+'</b>'+(x.isVariant?'<div class="fhint">Possible naming variant</div>':'')+(x.mismatch?'<div class="v13q-mismatch">Classification differs across departments</div>':'')+'</td><td>'+escW(x.dept)+'</td><td>'+escW(x.med.category||'')+'</td><td>'+classHtmlW(x.med)+'</td><td>'+escW(x.med.min||0)+'</td><td>'+escW(x.med.max||0)+'</td><td>'+escW(x.med.monthly||'—')+'</td></tr>'}).join('');
  var info=el('v13w-result-info');if(info)info.textContent='Showing '+slice.length+' of '+state.filtered.length+' records';var more=el('v13w-load-more');if(more)more.style.display=state.shown<state.filtered.length?'inline-flex':'none';selectedCountW()
 }
-window.v13WLoadMore=function(){state.shown=Math.min(state.shown+state.pageSize,state.filtered.length);renderRowsW()};
+function v13WLoadMore(){state.shown=Math.min(state.shown+state.pageSize,state.filtered.length);renderRowsW()};
 
 function ensureBulkModalW(){
   if(el('v13q-bulk-class-modal'))return;
   var m=document.createElement('div');
   m.id='v13q-bulk-class-modal';
   m.className='modal-bg';
-  m.innerHTML='<div class="modal v13q-modal"><div class="mh"><span class="mt">Bulk classification / تعديل التصنيف بالجملة</span><button class="xbtn" onclick="if(typeof CM===\'function\')CM(\'v13q-bulk-class-modal\')">✕</button></div><div class="fg"><label>Operation</label><select id="v13q-class-op"><option value="replace">Replace classifications</option><option value="add">Add selected classifications</option><option value="remove">Remove selected classifications</option></select></div><div class="v13q-flags"><label><input type="checkbox" value="high_alert"> High Alert</label><label><input type="checkbox" value="lasa"> LASA</label><label><input type="checkbox" value="refrigerated"> Refrigerator</label><label><input type="checkbox" value="hazard"> Hazard</label></div><div class="fhint">Medication names are not changed.</div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" onclick="if(typeof CM===\'function\')CM(\'v13q-bulk-class-modal\')">Cancel</button><button class="btn bp" onclick="v13ApplyBulkClassification()">Save classification</button></div></div>';
+  m.innerHTML='<div class="modal v13q-modal"><div class="mh"><span class="mt">Bulk classification / تعديل التصنيف بالجملة</span><button class="xbtn" data-clickact="closeBulkClass">✕</button></div><div class="fg"><label>Operation</label><select id="v13q-class-op"><option value="replace">Replace classifications</option><option value="add">Add selected classifications</option><option value="remove">Remove selected classifications</option></select></div><div class="v13q-flags"><label><input type="checkbox" value="high_alert"> High Alert</label><label><input type="checkbox" value="lasa"> LASA</label><label><input type="checkbox" value="refrigerated"> Refrigerator</label><label><input type="checkbox" value="hazard"> Hazard</label></div><div class="fhint">Medication names are not changed.</div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" data-clickact="closeBulkClass">Cancel</button><button class="btn bp" data-clickact="v13ApplyBulkClassification">Save classification</button></div></div>';
   document.body.appendChild(m);
 }
 
-window.v13OpenBulkClassification=function(){
+function v13OpenBulkClassification(){
   if(!state.selected.size)return toast('Select one or more medications first.','err');
   ensureBulkModalW();
   var modal=el('v13q-bulk-class-modal');
@@ -169,7 +170,7 @@ window.v13OpenBulkClassification=function(){
 
 window.openAllDepartmentsInventory=function(){
  if(!canManageW())return typeof window.toast==='function'?toast('Not authorized.','err'):null;window.closeAllDepartmentsInventory();state.selected.clear();state.rows=buildRowsW();state.filtered=state.rows.slice();state.shown=Math.min(state.pageSize,state.filtered.length);
- var html='<div class="modal-bg on" id="all-inv-modal" role="dialog" aria-modal="true"><div class="modal all-inv-modal"><div class="mh"><div><div class="mt">All Departments Inventory / جميع قوائم الأقسام</div><div class="fhint">Naming comparison, classification consistency, merge and bulk classification.</div></div><button type="button" class="xbtn" id="v13w-all-inv-close">×</button></div><div class="all-inv-mergebar"><button class="btn bp bsm" onclick="openMergeInventoryNames()">Merge selected names</button><button class="btn bg bsm" onclick="undoLatestInventoryNameMerge()">Undo latest merge</button><button class="btn bg bsm" onclick="v13OpenBulkClassification()">Bulk classification</button><span class="chip" id="v13q-selected-count">0 selected</span></div><div class="v13q-toolbar"><div class="sbr" style="max-width:420px"><span class="sic">🔎</span><input id="all-inv-search" placeholder="Search medication, department or category..." style="margin:0"></div><label><input type="checkbox" id="all-inv-variants"> Show possible naming variants only</label><label><input type="checkbox" id="all-inv-hide-identical" checked> Hide identical-name repetitions</label><label><input type="checkbox" id="all-inv-class-mismatch"> Classification mismatch only</label><span class="chip">'+state.rows.length+' records</span></div><div class="all-inv-wrap"><table class="all-inv-table"><thead><tr><th><input type="checkbox" style="width:auto;margin:0" onchange="v13SelectVisibleInventory(this)"></th><th>Medication</th><th>Department</th><th>Category</th><th>Classifications</th><th>Min</th><th>Max</th><th>Monthly</th></tr></thead><tbody id="all-inv-body"></tbody></table></div><div class="v13w-footer"><span class="fhint" id="v13w-result-info"></span><div class="fl g8"><button class="btn bg bsm" id="v13w-load-more" onclick="v13WLoadMore()">Load more</button><button class="btn bg bsm" id="v13w-close-bottom">Close</button></div></div></div></div>';
+ var html='<div class="modal-bg on" id="all-inv-modal" role="dialog" aria-modal="true"><div class="modal all-inv-modal"><div class="mh"><div><div class="mt">All Departments Inventory / جميع قوائم الأقسام</div><div class="fhint">Naming comparison, classification consistency, merge and bulk classification.</div></div><button type="button" class="xbtn" id="v13w-all-inv-close">×</button></div><div class="all-inv-mergebar"><button class="btn bp bsm" data-clickact="openMergeInventoryNames">Merge selected names</button><button class="btn bg bsm" data-clickact="undoLatestInventoryNameMerge">Undo latest merge</button><button class="btn bg bsm" data-clickact="v13OpenBulkClassification">Bulk classification</button><span class="chip" id="v13q-selected-count">0 selected</span></div><div class="v13q-toolbar"><div class="sbr" style="max-width:420px"><span class="sic">🔎</span><input id="all-inv-search" placeholder="Search medication, department or category..." style="margin:0"></div><label><input type="checkbox" id="all-inv-variants"> Show possible naming variants only</label><label><input type="checkbox" id="all-inv-hide-identical" checked> Hide identical-name repetitions</label><label><input type="checkbox" id="all-inv-class-mismatch"> Classification mismatch only</label><span class="chip">'+state.rows.length+' records</span></div><div class="all-inv-wrap"><table class="all-inv-table"><thead><tr><th><input type="checkbox" style="width:auto;margin:0" data-changeact="v13SelectVisibleInventory"></th><th>Medication</th><th>Department</th><th>Category</th><th>Classifications</th><th>Min</th><th>Max</th><th>Monthly</th></tr></thead><tbody id="all-inv-body"></tbody></table></div><div class="v13w-footer"><span class="fhint" id="v13w-result-info"></span><div class="fl g8"><button class="btn bg bsm" id="v13w-load-more" data-clickact="v13WLoadMore">Load more</button><button class="btn bg bsm" id="v13w-close-bottom">Close</button></div></div></div></div>';
  document.body.insertAdjacentHTML('beforeend',html);document.body.style.overflow='hidden';el('v13w-all-inv-close').onclick=window.closeAllDepartmentsInventory;el('v13w-close-bottom').onclick=window.closeAllDepartmentsInventory;el('all-inv-modal').addEventListener('click',function(ev){if(ev.target===this)window.closeAllDepartmentsInventory()});['all-inv-search','all-inv-variants','all-inv-hide-identical','all-inv-class-mismatch'].forEach(function(id){var x=el(id);x.addEventListener(id==='all-inv-search'?'input':'change',filterRowsW)});renderRowsW()
 };
 window.ensureBulkReplacementButton=ensureBulkReplacementButtonW;
@@ -213,7 +214,13 @@ function scheduleV16Refresh(id){
 /* ────────────────────────────────────────────────────────────────
    MASTER showPg — Clean navigation and page isolation
 ──────────────────────────────────────────────────────────────── */
+function v16InstallActions(root){if(!root)return; /* one listener per event: core/delegated-actions.js */
+  installActions(root,{removeById:function(el){var n=document.getElementById(el.dataset.a1);if(n)n.remove()},removeParent:function(el){if(el.parentElement)el.parentElement.remove()},removeClosest:function(el){var n=el.closest(el.dataset.a1);if(n)n.remove()},closeBulkClass:function(){if(typeof CM==='function')CM('v13q-bulk-class-modal')},inventorySelect:function(el){v13InventorySelect(el);if(window.updateAllInventoryMergeCount)updateAllInventoryMergeCount()},whReceiveSelect:function(el){whReceiveSelect(el.dataset.id)},v16ManageHiddenCategories:function(el,event){v16ManageHiddenCategories()},v16SaveHiddenCats:function(el,event){v16SaveHiddenCats()},v13ApplyBulkClassification:function(el,event){v13ApplyBulkClassification()},openMergeInventoryNames:function(el,event){openMergeInventoryNames()},undoLatestInventoryNameMerge:function(el,event){undoLatestInventoryNameMerge()},v13OpenBulkClassification:function(el,event){v13OpenBulkClassification()},v13WLoadMore:function(el,event){v13WLoadMore()},whReceiveOpen:function(el,event){whReceiveOpen()},whBulkReceiveOpen:function(el,event){whBulkReceiveOpen()},whBulkDispenseOpen:function(el,event){whBulkDispenseOpen()},saveRequestCountLimits:function(el,event){saveRequestCountLimits()},v14SetPrintFilter:function(el,event){v14SetPrintFilter(el.dataset.a1)}},{event:'click',attribute:'clickact'});
+  installActions(root,{inventorySelect:function(el){v13InventorySelect(el);if(window.updateAllInventoryMergeCount)updateAllInventoryMergeCount()},v16ToggleScope:function(el){v16ToggleScope(el.dataset.a1,el.checked)},v13SelectVisibleInventory:function(el,event){v13SelectVisibleInventory(el)}},{event:'change',attribute:'changeact'});
+  installActions(root,{whBulkResolveRow:function(el,event){whBulkResolveRow(el)}},{event:'input',attribute:'inputact'});
+}
 window.showPg = function(id){
+  v16InstallActions(document.body);
   var guards=window.__showPgGuards||[];
   for(var gi=0;gi<guards.length;gi++){
     var allowed=true;
@@ -368,7 +375,7 @@ window.scheduleNavigationRefresh=scheduleV16Refresh;
     var q=((document.getElementById('wh-receive-search')||{}).value||'').toLowerCase().trim();
     var rows=medList().filter(function(m){return !q||[m.name,m.moh,m.nupco].join(' ').toLowerCase().includes(q)}).slice(0,100);
     var box=document.getElementById('wh-receive-results');if(!box)return;
-    box.innerHTML=rows.length?rows.map(function(m){var on=String(m.id)===String(whSelectedReceiveId)?' on':'';return '<div class="wh-receive-result'+on+'" data-id="'+esc(m.id)+'" onclick="whReceiveSelect(this.dataset.id)"><div><b>'+esc(m.name||'')+'</b><div class="wh-receive-meta">MOH: '+esc(m.moh||'—')+' · NUPCO: '+esc(m.nupco||'—')+'</div></div><span class="chip">Select</span></div>'}).join(''):'<div style="padding:18px;text-align:center;color:var(--tx2)">No matching medicine</div>';
+    box.innerHTML=rows.length?rows.map(function(m){var on=String(m.id)===String(whSelectedReceiveId)?' on':'';return '<div class="wh-receive-result'+on+'" data-id="'+esc(m.id)+'" data-clickact="whReceiveSelect"><div><b>'+esc(m.name||'')+'</b><div class="wh-receive-meta">MOH: '+esc(m.moh||'—')+' · NUPCO: '+esc(m.nupco||'—')+'</div></div><span class="chip">Select</span></div>'}).join(''):'<div style="padding:18px;text-align:center;color:var(--tx2)">No matching medicine</div>';
   };
   window.whReceiveSelect=function(id){
     whSelectedReceiveId=id;var m=medList().find(function(x){return String(x.id)===String(id)});var hid=document.getElementById('wh-receive-med-id');if(hid)hid.value=id;
@@ -394,7 +401,7 @@ window.scheduleNavigationRefresh=scheduleV16Refresh;
     var pg=document.getElementById('pg-controlled');if(!pg||document.getElementById('wh-receive-card'))return;
     var anchor=document.getElementById('ctl-tabs')||pg.firstElementChild;
     var card=document.createElement('div');card.id='wh-receive-card';card.className='card';
-    card.innerHTML='<div class="ch"><div><span class="ct">Warehouse receiving / استلام أدوية المستودع</span><div class="fhint">Search the shared list, enter received quantity, and optionally link it to an expiry date and batch.</div></div><button class="btn bs" onclick="whReceiveOpen()">+ Receive medicine</button></div><div class="cb"><div class="alert-banner-y" style="margin:0">Warehouse print controls are limited to warehouse stock reports. Inpatient department printing is not available for this role.</div></div>';
+    card.innerHTML='<div class="ch"><div><span class="ct">Warehouse receiving / استلام أدوية المستودع</span><div class="fhint">Search the shared list, enter received quantity, and optionally link it to an expiry date and batch.</div></div><button class="btn bs" data-clickact="whReceiveOpen">+ Receive medicine</button></div><div class="cb"><div class="alert-banner-y" style="margin:0">Warehouse print controls are limited to warehouse stock reports. Inpatient department printing is not available for this role.</div></div>';
     if(anchor&&anchor.parentNode)anchor.parentNode.insertBefore(card,anchor.nextSibling);else pg.insertBefore(card,pg.firstChild);
   }
   window.applyWarehouseControlledUi=applyWarehouseUI;
@@ -404,7 +411,7 @@ window.scheduleNavigationRefresh=scheduleV16Refresh;
 (function(){
   window.whAddBatchRow=function(b){
     var row=document.createElement('div');row.className='wh-batch-row';b=b||{};
-    row.innerHTML='<div><label>Expiry date</label><input class="wh-exp" type="date" value="'+esc(b.expiry||'')+'"></div><div><label>Linked qty (optional)</label><input class="wh-qty" type="number" min="0" value="'+(b.qty==null?'':esc(b.qty))+'"></div><div><label>Batch / Lot (optional)</label><input class="wh-lot" value="'+esc(b.lot||'')+'"></div><button class="btn bd2c bxs" type="button" onclick="this.parentElement.remove()">✕</button>';
+    row.innerHTML='<div><label>Expiry date</label><input class="wh-exp" type="date" value="'+esc(b.expiry||'')+'"></div><div><label>Linked qty (optional)</label><input class="wh-qty" type="number" min="0" value="'+(b.qty==null?'':esc(b.qty))+'"></div><div><label>Batch / Lot (optional)</label><input class="wh-lot" value="'+esc(b.lot||'')+'"></div><button class="btn bd2c bxs" type="button" data-clickact="removeParent">✕</button>';
     document.getElementById('mwh-batches').appendChild(row);
   };
   window.ctlEditWarehouseStock=function(id){
@@ -443,7 +450,7 @@ window.scheduleNavigationRefresh=scheduleV16Refresh;
  function byCode(code){var n=norm(code);if(!n)return null;return catalog().find(function(m){return norm(m.nupco)===n||norm(m.moh)===n})||null}
  function rowHtml(kind){
   var reqExp=kind==='dispense'?' required':'';
-  return '<tr class="wh-bulk-row" data-kind="'+kind+'"><td><input class="wh-code" placeholder="NUPCO / MOH" oninput="whBulkResolveRow(this)"></td><td class="wh-match"><span class="wh-match-pending">Enter code</span></td><td><input class="wh-qty-input" type="number" min="1" step="1" placeholder="0"></td><td><input class="wh-exp-input" type="date"'+reqExp+'></td><td><input class="wh-lot-input" placeholder="Optional"></td><td><button class="btn bd2c bxs" type="button" onclick="this.closest(\'tr\').remove()">✕</button></td></tr>'
+  return '<tr class="wh-bulk-row" data-kind="'+kind+'"><td><input class="wh-code" placeholder="NUPCO / MOH" data-inputact="whBulkResolveRow"></td><td class="wh-match"><span class="wh-match-pending">Enter code</span></td><td><input class="wh-qty-input" type="number" min="1" step="1" placeholder="0"></td><td><input class="wh-exp-input" type="date"'+reqExp+'></td><td><input class="wh-lot-input" placeholder="Optional"></td><td><button class="btn bd2c bxs" type="button" data-clickact="removeClosest" data-a1="tr">✕</button></td></tr>'
  }
  function add(kind){var box=document.getElementById(kind==='receive'?'wh-bulk-receive-rows':'wh-bulk-dispense-rows');if(box)box.insertAdjacentHTML('beforeend',rowHtml(kind))}
  window.whBulkAddReceiveRow=function(){add('receive')};
@@ -485,7 +492,7 @@ window.scheduleNavigationRefresh=scheduleV16Refresh;
  };
  function addButtons(){
   var card=document.getElementById('wh-receive-card');if(!card)return;var head=card.querySelector('.ch');if(!head||head.querySelector('.wh-bulk-buttons'))return;
-  var wrap=document.createElement('div');wrap.className='fl g8 wh-bulk-buttons';wrap.innerHTML='<button class="btn bs" onclick="whBulkReceiveOpen()">+ Bulk receive / استلام متعدد</button><button class="btn bp" onclick="whBulkDispenseOpen()">⇢ Bulk dispense / صرف متعدد</button>';var old=head.querySelector('button[onclick="whReceiveOpen()"]');if(old)old.replaceWith(wrap);else head.appendChild(wrap);
+  var wrap=document.createElement('div');wrap.className='fl g8 wh-bulk-buttons';wrap.innerHTML='<button class="btn bs" data-clickact="whBulkReceiveOpen">+ Bulk receive / استلام متعدد</button><button class="btn bp" data-clickact="whBulkDispenseOpen">⇢ Bulk dispense / صرف متعدد</button>';var old=head.querySelector('button[data-clickact="whReceiveOpen"]');if(old)old.replaceWith(wrap);else head.appendChild(wrap);
  }
  window.addWarehouseControlledBulkButtons=addButtons;
 })();
@@ -538,8 +545,7 @@ function attachIdleListeners(){
   resetIdleTimer();
 }
 window.refreshRequestIdleTimer=function(){clearIdleTimers();attachIdleListeners()};
-window.clearRequestIdleTimer=clearIdleTimers;
-
+var clearRequestIdleTimer=clearIdleTimers;
 /* ══════════════════════════════════════════════════════════════
    Request Count Limits — rolling 24 hours and rolling 7 days
 ══════════════════════════════════════════════════════════════ */
@@ -575,8 +581,6 @@ function getRollingRequestCount(deptId,milliseconds){
     return String(request.deptId)===String(deptId)&&requestCreatedTime(request)>=threshold;
   }).length;
 }
-window.getRequestCountLimits=getRequestCountLimits;
-window.getRollingRequestCount=getRollingRequestCount;
 window.checkRequestCountLimits=function(deptId){
   var limits=getRequestCountLimits()[deptId]||{};
   var used24=getRollingRequestCount(deptId,24*60*60*1000);
@@ -617,7 +621,7 @@ window.renderRequestCountLimitsSection=function(){
   var section=document.createElement('div');
   section.id='r18-request-count-limits-section';
   section.innerHTML='<div class="card" style="margin-top:18px">'+
-    '<div class="ch"><div><span class="ct">Request Count Limits / حدود عدد الطلبيات</span><div class="fhint">Rolling windows: the previous 24 hours and previous 7 × 24 hours. Leave blank for unlimited.</div></div><button class="btn bs bsm" type="button" onclick="saveRequestCountLimits()">Save / حفظ</button></div>'+ 
+    '<div class="ch"><div><span class="ct">Request Count Limits / حدود عدد الطلبيات</span><div class="fhint">Rolling windows: the previous 24 hours and previous 7 × 24 hours. Leave blank for unlimited.</div></div><button class="btn bs bsm" type="button" data-clickact="saveRequestCountLimits">Save / حفظ</button></div>'+ 
     '<div class="cb"><div class="tw"><table><thead><tr>'+ 
       '<th>Department</th><th>Max / 24h</th><th>Used / 24h</th><th>Remaining</th>'+ 
       '<th>Max / 7 days</th><th>Used / 7d</th><th>Remaining</th>'+ 
@@ -677,16 +681,6 @@ window.refreshRequestCountLimitWarning=function(){
 
 /* Compatibility entry point: request editing now has one authoritative policy.
    Pending requests are editable only while the department ordering window is open. */
-window.opsEditRequest=function(id){
-  if(typeof window.v16EditRequest==='function')return window.v16EditRequest(id);
-  return typeof toast==='function'?toast('Request editing is not available yet. Please reopen My Requests.','err'):null;
-};
-window.v14SaveEditReq2=function(){
-  return typeof toast==='function'?toast('This legacy editor has been retired. Reopen the request from My Requests.','err'):null;
-};
-
-
-
 })();
 
 // --- Merged from 04-v13-complete-clean-fix-script.js (Phase 6 consolidation) ---
@@ -789,9 +783,9 @@ function renderPrintTable(){
       var filterBar=document.createElement('div');filterBar.id='v14-print-filter';
       filterBar.innerHTML=
         '<span style="font-size:12px;font-weight:700;color:var(--tx2)">Show:</span>'
-        +'<button class="btn bg bsm" id="v14-pf-fulfilled" onclick="v14SetPrintFilter(\'fulfilled\')">✅ Fulfilled</button>'
-        +'<button class="btn bg bsm" id="v14-pf-today" onclick="v14SetPrintFilter(\'today\')">📅 Today\'s fulfilled</button>'
-        +'<button class="btn bg bsm" id="v14-pf-all" onclick="v14SetPrintFilter(\'all\')">All requests</button>'
+        +'<button class="btn bg bsm" id="v14-pf-fulfilled" data-clickact="v14SetPrintFilter" data-a1="fulfilled">✅ Fulfilled</button>'
+        +'<button class="btn bg bsm" id="v14-pf-today" data-clickact="v14SetPrintFilter" data-a1="today">📅 Today\'s fulfilled</button>'
+        +'<button class="btn bg bsm" id="v14-pf-all" data-clickact="v14SetPrintFilter" data-a1="all">All requests</button>'
         +'<span style="font-size:11px;color:var(--tx2);margin-inline-start:8px">'
         +'✅ Fulfilled: '+fulfilled.length+' · 📅 Today: '+todayFulfilled.length+' · ⏳ Pending: '+pending.length
         +'</span>';
@@ -819,7 +813,7 @@ function renderPrintTable(){
   if(typeof window.injectPrintTabBar==='function')window.injectPrintTabBar('pg-print');
 };
 
-window.v14SetPrintFilter=function(f){
+function v14SetPrintFilter(f){
   _v14PrintFilter=f;
   if(typeof window.renderPrint==='function')window.renderPrint();
 };

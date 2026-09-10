@@ -327,16 +327,16 @@ var ALLOWED=new Set((
   'impToggleRow impEdit ctlPdfSetField ctlSavePendingPdfExpiry ctlAddBatchEditorRow ctlSaveBatchEditor ctlDispTypeChanged ctlConfirmDispense ctlSavePrintLogo ctlToggleDeptMed ctlEditDeptMedicine ctlRemoveDeptMedicine '+
   'ctlAddCatalogMedicine ctlEditCatalogMedicine ctlEditWarehouseStock ctlSendToPharmacy ctlEditPharmacyStock ctlOpenDispense ctlReceiveDelivery ctlImportMasterFile ctlImportMasterText '+
   'ctlDeptFinalApply ctlDeptFinalToggle ctlConfirmDepartmentPrint ctlOpenDepartmentPrintOptions renderDepartmentControlledPanel '+
-  'crashPrint crashAddItem crashReportOpen ccxOpenReport ccCrashExpiryChoiceChanged ccCrashUnavailableToggled ccCrashResponsePreview v13asViewReport setCrashSealPolicy ccAcceptReport ccRejectReport ccToggleNoConsumption ccSaveNCSettings ccExtraBatchChoiceChanged ccApplyExtraBatches ccToggleCrashSection '+
+  'crashPrint crashAddItem crashReportOpen ccxOpenReport v13asViewReport setCrashSealPolicy ccAcceptReport ccRejectReport ccToggleNoConsumption ccSaveNCSettings ccApplyExtraBatches '+
   ' r17CrashRenderMatrix '+
   'acc2SetAdminTab acc2SaveAssignment acc2SetFilter acc2Decision acc2SaveGrace mrSetPeriod mrSetSearch acc2RegimenDeptChanged acc2SaveRegimenVersion acc2SubmitUsage '+
   'acc3SetDept acc3AddMedicine acc3ToggleMedicine acc3SaveRegimen acc3CancelEdit acc3EditRegimen acc3PrintRegimen acc3ToggleRegimen acc3AddItemRow acc3RemoveItemRow anlPrintAccountability acc3UpdateDoseRate acc3SubmitPlanUsage acc3ApprovePlanUsage acc3RejectPlanUsage acc3RecordPlanReceipt '+
   ' '+
   'ctlOpenHijriLedger ctlEditLedgerMove ctlOpenCustodyHandover ctlReprintHandover '+
-  'ctlAnApply ctlAnPrint ctlCmpApply ctlCmpPrint _r676PrintDept '+
-  'bulkReplacementToggleLimits runBulkReplacement aaFinalSaveExpiryRules phExpiryToggleDept phExpirySetView phExpirySelectAllDepartments phExpiryClearDepartments phExpiryEditRules '+
-  'v13InventorySelect updateAllInventoryMergeCount v13SelectVisibleInventory v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge v13OpenBulkClassification v13WLoadMore v13ApplyControlledClassification v13BulkReplacementClassOnly '+
-  'v13XClose v13XAddBatch v13XSaveCatalogMed v13XSaveStock valQ v14SaveEditReq2 v14SetPrintFilter v16ToggleScope v16ToggleMultiApplicable v16ApplyMultiClean v16ManageHiddenCategories v16SaveHiddenCats '+
+  ' _r676PrintDept '+
+  'bulkReplacementToggleLimits runBulkReplacement aaFinalSaveExpiryRules '+
+  ' updateAllInventoryMergeCount v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge v13ApplyControlledClassification v13BulkReplacementClassOnly '+
+  'v13XClose v13XAddBatch v13XSaveCatalogMed v13XSaveStock valQ v16ToggleMultiApplicable v16ApplyMultiClean '+
   'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
   'clToggleRole clTogglePerDeptFilter plToggle plPharmFeatToggle plRoomAssignToggle '+
   ' '+

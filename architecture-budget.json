@@ -1,10 +1,10 @@
 {
-  "globals": 1033,
+  "globals": 1006,
   "modules": {
     "core/event-bindings.js": 1133,
     "modules/03-core-application-firebase-state-auth.js": 1742,
     "modules/07j-controlled-module-enhancements.js": 717,
-    "modules/38-v16-user-operations-main.js": 832,
+    "modules/38-v16-user-operations-main.js": 826,
     "modules/40-v16-clean-optimized-script.js": 782,
     "modules/49-asdh-final-persistence-actions-20260725.js": 807,
     "modules/50-r617-integrated-operations.js": 1391,
