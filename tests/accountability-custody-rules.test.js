@@ -128,3 +128,22 @@ test('the screen and the server both refuse a fraction', async () => {
   assert.match(server, /Number\.isInteger\(units\)/);
   assert.match(server, /Units used must be a whole number/);
 });
+
+test('a department signs once for every custody line it is receiving', async () => {
+  const { readFile } = await import('node:fs/promises');
+  /* Three approved lines used to mean three QR handovers and three signatures.
+     The callable already accepted a list — it voids the old sessions, refuses
+     records from more than one department, and returns one pair of codes — and
+     only the screen was still asking for a single record. */
+  const screen = await readFile(new URL('../public/assets/js/modules/70-r676-accountability-regimen-roster-and-log.js', import.meta.url), 'utf8');
+  assert.match(screen, /async function reissueHandover\(usageIds,deptId,button,label\)/);
+  assert.match(screen, /reissue-selected/);
+  assert.match(screen, /records reissued as one handover/);
+  assert.doesNotMatch(screen, /function reissueHandoverOne/, 'one path takes a list, rather than two paths');
+
+  const tab = await readFile(new URL('../public/assets/js/modules/50-r617-integrated-operations.js', import.meta.url), 'utf8');
+  assert.match(tab, /data-acc2-qr-action="reissue-selected"/);
+
+  const callable = await readFile(new URL('../functions/index.js', import.meta.url), 'utf8');
+  assert.match(callable, /All selected records must belong to the same department/);
+});

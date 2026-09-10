@@ -161,7 +161,7 @@ window.saveExpiry=async function(){
     if(button)button.disabled=false;
   }
 };
-window.v13SaveReceive=async function(){var modal=el('v13-receive-modal'),requestId=modal&&modal.dataset?String(modal.dataset.requestId||''):'';var req=(gr()||[]).find(function(x){return String(x.id)===requestId});if(!req)return toast('Request not available','err');var arr=(getExpiry(CU.deptId)||[]).slice(),received=[];document.querySelectorAll('#v13-receive-body tr[data-med]').forEach(function(tr){var date=tr.querySelector('.v13-r-exp').value,lot=tr.querySelector('.v13-r-lot').value.trim(),medId=tr.dataset.med,qty=Number(tr.dataset.qty||0);if(date){arr.push({id:'ex_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,6),medId:medId,expiry:date,date:date,batch:lot,lot:lot,qty:qty,sourceRequestId:requestId,receivedAt:typeof nowISO==='function'?nowISO():new Date().toISOString()});received.push({medId:medId,qty:qty,expiry:date,batch:lot})}});try{await setExpiry(CU.deptId,arr);await S.upd('requests',requestId,{receivedAt:typeof nowISO==='function'?nowISO():new Date().toISOString(),receivedBy:typeof actualActorName==='function'?actualActorName():CU.username,receivedExpiry:received});await auditAction('department_request_received',{requestId:requestId,items:received});if(modal&&modal.dataset)delete modal.dataset.requestId;CM('v13-receive-modal');if(typeof renderMyReqs==='function')renderMyReqs();toast('All received items saved permanently ✓','succ')}catch(e){console.error(e);toast('Received items were not fully saved.','err')}};
+window.v13SaveReceive=saveReceivedExpiry;
 
 /* Notes. */
 window.submitNote=async function(){if(!window.CU||CU.role!=='department')return;var body=el('note-body').value.trim();if(!body)return toast('Write a note first','err');var notes=(getNotes()||[]).slice(),priority=el('note-priority').value,note={id:'n_'+Date.now()+'_'+Math.random().toString(36).slice(2,6),deptId:CU.deptId,deptName:CU.deptName,username:CU.username,type:el('note-type').value,priority:priority,medName:el('note-med-name').value.trim(),body:body,status:priority==='urgent'?'urgent':'open',reply:'',created:typeof nowISO==='function'?nowISO():new Date().toISOString(),updatedAt:typeof nowISO==='function'?nowISO():new Date().toISOString()};notes.push(note);try{await setNotes(notes);el('note-body').value='';el('note-med-name').value='';renderDeptNotes();updateNotesBadge();toast('Note submitted and saved ✓','succ')}catch(e){toast('Note was not saved.','err')}};
@@ -365,9 +365,10 @@ window.__startAppExtensions.push(function(){setTimeout(indicator,700)});
 window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDefault();e.returnValue=''});
 })();
 
-
 // --- Merged from 63-r668-request-lock-drafts-and-session-defaults.js (Phase 6 consolidation) ---
 import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=df8094448c';
+import { saveReceivedExpiry } from '../core/receive-expiry-dialog.js?v=ef6827a3ad';
+import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
 
 (function(){
 'use strict';
@@ -594,7 +595,6 @@ window.__r17CrashExecuteBulkExtensions.push(function(){var after=(typeof crashRe
 window.clearFloorstockFormDraft=function(type){clear(type)};
 })();
 
-
 // --- Merged from 48-asdh-final-request-completion-script.js (Phase 6 consolidation) ---
 (function(){
 'use strict';
@@ -610,7 +610,7 @@ function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((w
 function canEdit(){return typeof window.isMaster==='function'&&window.isMaster()}
 function actor(){return window.fsActor?window.fsActor():{name:'Unknown',user:'Unknown',id:''}}
 function now(){return typeof nowISO==='function'?nowISO():new Date().toISOString()}
-function rules(){var x={};try{x=(window.S&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){console.warn('pharmacy_department_expiry_rules was skipped after an error; the rest of this screen still renders.', e);}var u=Math.max(1,num(x.urgentDays||7)),n=Math.max(u+1,num(x.nearDays||30));return {urgentDays:u,nearDays:n}}
+var rules=currentExpiryThresholds;
 function canonical(nameOrItem,strength){if(typeof window.fsCrashCanonicalMedication==='function')return window.fsCrashCanonicalMedication(nameOrItem,strength);var it=(nameOrItem&&typeof nameOrItem==='object')?nameOrItem:{name:nameOrItem,strength:strength,concentration:strength};return {generic:String(it.name||it.genericName||'').trim(),concentration:String(it.strength||it.concentration||strength||'').trim()}}
 function medicationIdentity(itemOrName){return normalText(canonical(itemOrName).generic)}
 function cartHasMedication(cart,source){var wanted=medicationIdentity(source);return !!wanted&&(cart.items||[]).some(function(item){return medicationIdentity(item)===wanted})}
@@ -676,7 +676,6 @@ async function saveCrashBulkMedication(){
 }
 function enhanceButtons(){var pg=E('pg-crashcart');if(!pg)return;var head=pg.querySelector('.fl.ic.jb.mb14');if(canEdit()&&head&&!E('cc-bulk-medication-btn')){var bb=document.createElement('button');bb.id='cc-bulk-medication-btn';bb.type='button';bb.className='btn bp';bb.textContent='↔ Apply medication to selected carts';bb.onclick=window.openCrashBulkMedicationModal;var actions=head.querySelector('.fl.g8.ic')||head;actions.appendChild(bb)}document.querySelectorAll('#pg-crashcart .ccx-cart').forEach(function(card){var cartId=String(card.id||'').replace(/^ccx-cart-/,'');if(!cartId)return;var bar=card.querySelector('.ccx-toolbar-actions')||card.querySelector('.ch .fl')||card.querySelector('.ch');if(!bar)return;/* Legacy decorators used to append a second report action. Keep the canonical action rendered by module 44 and remove every duplicate. */Array.prototype.slice.call(card.querySelectorAll('button[onclick*="crashReportOpen"]')).slice(1).forEach(function(button){button.remove()});var old=card.querySelector('.cc-final-manage-btn');if(!canEdit()){if(old)old.remove();return}if(!old){var b=document.createElement('button');b.type='button';b.className='btn bg bsm cc-final-manage-btn';b.textContent='✎ Manage contents / تعديل المحتويات';b.onclick=function(){openEditor(cartId,false)};bar.appendChild(b)}})}
 window.enhanceCrashButtons=enhanceButtons;
-
 
 /* Keep the public no-login snapshot aligned with printing, including Expiry Track rules. */
 async function publishPublic(carts){if(!window.FB_DB||!Array.isArray(carts))return;var r=rules(),depts=typeof gd==='function'?(gd()||[]):[],collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');await Promise.all(carts.map(function(c){var d=depts.find(function(x){return String(x.id)===String(c.deptId)})||{},items=(c.items||[]).map(function(it){var med=normalizedMedication(it.name,it.concentration||it.strength),required=num(it.qty),available=num(it.present==null?it.qty:it.present);return {name:med.name,concentration:med.concentration,strength:med.concentration,required:required,available:available,status:available<=0?'Out of stock':(available<required?'Less than required':'Available'),batches:(it.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':num(b.qty)}})}});return collection.doc('crash_'+String(c.id)).set({cartId:c.id,name:c.name||'',department:d.name||c.deptId||'',lastClosedAt:c.lastClosedAt||null,expiryRules:r,expiryTrackRules:{urgent:'0–'+r.urgentDays+' days',near:(r.urgentDays+1)+'–'+r.nearDays+' days',expired:'Before today'},updatedAt:firebase.firestore.FieldValue.serverTimestamp(),items:items},{merge:false})}))}
@@ -756,9 +755,7 @@ window.crashPrint=function(id){
   return true
 };
 
-
 })();
-
 
 // --- Merged from 47-asdh-authoritative-final-fixes-script.js (Phase 6 consolidation) ---
 (function(){
@@ -792,7 +789,6 @@ window.finalizePreviewStart=function(){
      a misleading Firebase save failure when a tenant was read-only or a role
      lacked the corresponding write permission. */
 };
-
 
 /* Keep every officer print option. Department employees retain only the one exact print action
    installed by asdh-final-department-controlled-fix-script. */

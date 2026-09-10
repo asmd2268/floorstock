@@ -531,12 +531,38 @@ function showModal(data){
   document.body.appendChild(modal);
 }
 
-async function reissueHandoverOne(usageId,deptId,button){if(button){button.disabled=true;button.textContent='…'}try{if(typeof window.fsCallFunction!=='function')throw new Error('Secure service is still loading. Please retry.');var data=await window.fsCallFunction('reissueAccountabilityHandover',{usageIds:[usageId],expiresInMinutes:30});if(!data||!data.sessionId)throw new Error('Incomplete response from service.');showModal(data);if(window.toast)toast('QR codes reissued ✓ / تم إعادة إصدار الرموز ✓','succ');if(typeof window.renderMedicationAccountability==='function')setTimeout(window.renderMedicationAccountability,700)}catch(error){var message=String(error&&error.message||error).replace(/^FirebaseError:\s*/,'');if(window.toast)toast(message,'err')}finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent='Reissue / إعادة إصدار'}}}
+/* A department that has three custody lines waiting should sign once, not three
+   times. Reissue takes a LIST: the callable already voids the old sessions,
+   refuses records from more than one department, and returns one pair of codes
+   for all of them — only the screen was still asking for a single record. */
+async function reissueHandover(usageIds,deptId,button,label){
+  var ids=(usageIds||[]).filter(Boolean);
+  if(!ids.length)return window.toast&&toast('Select one or more records first. / اختر سجلًا واحدًا على الأقل.','err');
+  var original=button?button.textContent:'';
+  if(button){button.disabled=true;button.textContent='…'}
+  try{
+    if(typeof window.fsCallFunction!=='function')throw new Error('Secure service is still loading. Please retry.');
+    var data=await window.fsCallFunction('reissueAccountabilityHandover',{usageIds:ids,expiresInMinutes:30});
+    if(!data||!data.sessionId)throw new Error('Incomplete response from service.');
+    showModal(data);
+    if(window.toast)toast(ids.length>1
+      ? ids.length+' records reissued as one handover ✓ / أُعيد إصدار '+ids.length+' سجلات بتسليم واحد ✓'
+      : 'QR codes reissued ✓ / تم إعادة إصدار الرموز ✓','succ');
+    if(typeof window.renderMedicationAccountability==='function')setTimeout(window.renderMedicationAccountability,700);
+  }catch(error){
+    var message=String(error&&error.message||error).replace(/^FirebaseError:\s*/,'');
+    if(window.toast)toast(message,'err');
+  }finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent=label||original}}
+}
 async function createHandover(deptId,button){var ids=Array.from(document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(deptId))+'"]:checked:not(:disabled)')).map(function(x){return x.value});if(!ids.length)return window.toast&&toast('Select one or more approved records first. / اختر سجلًا معتمدًا واحدًا على الأقل.','err');if(button){button.disabled=true;button.textContent='Creating QR… / جاري إنشاء الرموز'}try{if(!(window.fsHasCapability&&window.fsHasCapability('accountability.handover.create')))throw new Error('This role cannot create accountability handovers.');if(typeof window.fsCallFunction!=='function')throw new Error('Secure service is still loading. Please retry.');var data=await window.fsCallFunction('createAccountabilityHandover',{usageIds:ids,expiresInMinutes:30});if(!data||!data.sessionId)throw new Error('The QR handover service returned an incomplete response.');showModal(data);if(window.toast)toast('Temporary pharmacy and department QR codes created ✓','succ');if(typeof window.renderMedicationAccountability==='function')setTimeout(window.renderMedicationAccountability,700)}catch(error){console.error('QR handover creation failed',error);var message=String(error&&error.message||error).replace(/^FirebaseError:\s*/,'');if(window.toast)toast(message,'err')}finally{if(button&&document.body.contains(button)){button.disabled=false;button.textContent='Create temporary dual QR / إنشاء رمزي QR مؤقتين'}}}
 setTimeout(installPermissionUi,0);
 window.__startAppExtensions=window.__startAppExtensions||[];
 window.__startAppExtensions.push(function(){setTimeout(installPermissionUi,500)});
-document.addEventListener('click',function(event){var action=event.target.closest('[data-acc2-qr-action]');if(action){var dept=action.getAttribute('data-dept'),kind=action.getAttribute('data-acc2-qr-action');if(kind==='select'){document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(dept))+'"]:not(:disabled)').forEach(function(x){x.checked=true})}else if(kind==='create')createHandover(dept,action);else if(kind==='reissue-one'){var usageId=action.getAttribute('data-usage-id');if(usageId)reissueHandoverOne(usageId,dept,action)}return}if(event.target.closest('[data-r671-close]')){closeModal();return}},true);
+document.addEventListener('click',function(event){var action=event.target.closest('[data-acc2-qr-action]');if(action){var dept=action.getAttribute('data-dept'),kind=action.getAttribute('data-acc2-qr-action');if(kind==='select'){document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(dept))+'"]:not(:disabled)').forEach(function(x){x.checked=true})}else if(kind==='create')createHandover(dept,action);else if(kind==='reissue-one'){var usageId=action.getAttribute('data-usage-id');if(usageId)reissueHandover([usageId],dept,action,'Reissue / إعادة إصدار')}
+  else if(kind==='reissue-selected'){
+    var selected=Array.from(document.querySelectorAll('.acc2-qr-usage[data-dept="'+CSS.escape(String(dept))+'"]:checked')).map(function(x){return x.value});
+    reissueHandover(selected,dept,action,'Reissue selected / إعادة إصدار المحدد');
+  }return}if(event.target.closest('[data-r671-close]')){closeModal();return}},true);
 })();
 
 export {};

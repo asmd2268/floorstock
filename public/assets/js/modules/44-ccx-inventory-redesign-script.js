@@ -1,3 +1,4 @@
+import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
 (function(){
 'use strict';
 var ccxSearchTimer=null;
@@ -52,7 +53,7 @@ function canonicalMedication(itemOrName,strengthValue){
 }
 window.fsCrashCanonicalMedication=canonicalMedication;
 function meta(item){return canonicalMedication(item)}
-function rules(){var x={};try{x=(typeof S!=='undefined'&&S.g)?(S.g('pharmacy_department_expiry_rules')||{}):{}}catch(e){console.warn('pharmacy_department_expiry_rules was skipped after an error; the rest of this screen still renders.', e);}var urgent=Math.max(1,numx(x.urgentDays||7)),near=Math.max(urgent+1,numx(x.nearDays||30));return {urgentDays:urgent,nearDays:near}}
+var rules=currentExpiryThresholds;
 function daysUntil(v){return window.fsDaysUntil?window.fsDaysUntil(v):null}
 function batchLevel(b){var d=daysUntil(b&&b.expiry),r=rules();if(d===null)return 'missing';if(d<0)return'expired';if(d<=r.urgentDays)return'urgent';if(d<=r.nearDays)return'near';return'normal'}
 var RANK={expired:5,urgent:4,near:3,missing:2,normal:1};

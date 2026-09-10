@@ -624,8 +624,16 @@ test('department expiry and inventory saves retain own safety snapshots without 
   assert.equal(canDeleteStateKey(department, 'inventory_snapshot_emergency_old_meds'), true);
   assert.equal(canDeleteStateKey(department, 'inventory_snapshot_nicu_old_meds'), false);
   assert.match(requestSource, /inventory_integrity_','inventory_snapshot_index_/);
-  assert.match(persistenceSource, /setExpiry\(CU\.deptId,arr\)/);
-  assert.match(persistenceSource, /S\.upd\('requests',requestId/);
+  /* Receiving a delivery appends to the department's OWN expiry list and saves
+     it through its own setter, so one department can never write another's.
+     That lives with the dialog now (core/receive-expiry-dialog.js). */
+  const receiveDialog = fs.readFileSync(
+    new URL('../public/assets/js/core/receive-expiry-dialog.js', import.meta.url),
+    'utf8',
+  );
+  assert.match(receiveDialog, /const deptId = globalThis\.CU\.deptId;/);
+  assert.match(receiveDialog, /setExpiry\(deptId, \(globalThis\.getExpiry\(deptId\) \|\| \[\]\)\.slice\(\)\.concat\(built\.records\)\)/);
+  assert.match(receiveDialog, /S\.upd\('requests', requestId/);
 });
 
 test('authoritative permission profile allows actual Master and inpatient supervisor state writes', () => {
