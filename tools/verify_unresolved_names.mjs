@@ -94,9 +94,13 @@ function bindings(pattern, out) {
   }
 }
 
-/* Names this project puts on the global object, in all three of its forms. */
-const published = new Set();
-for (const { program } of files) collectPublishedGlobals(program, published);
+/* Names this project puts on the global object, in all three of its forms, kept
+   per file. A file may NOT satisfy its own reference by publishing it: a
+   publishLegacy list naming a function that had been deleted is exactly the
+   shape of break this check exists to catch, and `{ name }` in that list is a
+   reference to a binding that has to exist here. */
+const publishedByFile = new Map();
+for (const { file, program } of files) publishedByFile.set(file, collectPublishedGlobals(program, new Set()));
 
 const errors = [];
 for (const { file, program } of files) {
@@ -129,7 +133,10 @@ for (const { file, program } of files) {
 
   walk(program, (node) => {
     if (node.type === 'MemberExpression' && !node.computed && node.property.type === 'Identifier') node.property.__skip = true;
-    if (node.type === 'Property' && !node.computed && node.key.type === 'Identifier') node.key.__skip = true;
+    /* `{ name }` is a REFERENCE, not just a key: skipping it hid a publishLegacy
+       list still naming a function that had been deleted — the module threw at
+       load and every browser test failed with "modules never became ready". */
+    if (node.type === 'Property' && !node.computed && !node.shorthand && node.key.type === 'Identifier') node.key.__skip = true;
     if (node.type === 'MethodDefinition' && !node.computed && node.key?.type === 'Identifier') node.key.__skip = true;
     if (node.type === 'LabeledStatement' || node.type === 'BreakStatement' || node.type === 'ContinueStatement') {
       if (node.label) node.label.__skip = true;
@@ -145,8 +152,22 @@ for (const { file, program } of files) {
     if (node.type === 'Identifier' && !node.__skip && !referenced.has(node.name)) referenced.set(node.name, node);
   });
 
+  /* `window.x = …` in THIS file creates a global this file may then call by its
+     bare name. A publishLegacy shorthand does not: `{ x }` there reads a binding
+     that must already exist here. */
+  const assignedHere = new Set();
+  walk(program, (node) => {
+    if (node.type === 'AssignmentExpression' && node.left.type === 'MemberExpression' && !node.left.computed
+      && node.left.object.type === 'Identifier'
+      && (node.left.object.name === 'window' || node.left.object.name === 'globalThis')
+      && node.left.property.type === 'Identifier') assignedHere.add(node.left.property.name);
+  });
+  const publishedElsewhere = (name) => {
+    for (const [other, names] of publishedByFile) if (other !== file && names.has(name)) return true;
+    return false;
+  };
   for (const [name, node] of referenced) {
-    if (declared.has(name) || guarded.has(name) || AMBIENT.has(name) || published.has(name)) continue;
+    if (declared.has(name) || assignedHere.has(name) || guarded.has(name) || AMBIENT.has(name) || publishedElsewhere(name)) continue;
     errors.push(`${path.relative(root, file)}:${node.loc?.start.line}: uses "${name}", which nothing in the module graph defines or publishes.`);
   }
 }

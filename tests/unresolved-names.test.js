@@ -42,3 +42,15 @@ test('the fixed callers stay fixed', () => {
   assert.doesNotMatch(read('public/assets/js/modules/50-r617-integrated-operations.js'), /acc2Bar|acc2AnalyticsTab_REMOVED/);
   assert.doesNotMatch(read('public/assets/js/modules/80-controlled-pharmacy-ui-redesign.js'), /=clone\(crashCarts\(\)\)/);
 });
+
+test('a publishLegacy list naming a deleted function is caught', async () => {
+  /* This shipped: a function moved to a core module, its name left behind in
+     the publishing list as `{ name }`. That is a REFERENCE — the module threw
+     at load and every browser test failed with "modules never became ready" —
+     but the check counted the same line as a published global and allowed it.
+     A file may not satisfy its own reference by publishing it. */
+  const source = await import('node:fs').then((fs) => fs.readFileSync(checker, 'utf8'));
+  assert.match(source, /!node\.shorthand/, 'shorthand properties are references, not just keys');
+  assert.match(source, /publishedElsewhere/);
+  assert.match(source, /assignedHere/, 'but window.x = … in the same file still counts');
+});

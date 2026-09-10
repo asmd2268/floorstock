@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { normalizeCode, rowsFromTextItems, dedupeRows, findMedicineByCode } from '../core/receipt-pdf-rows.js?v=cbbd054b27';
 
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, PDF receipt import,
 // batch editor v6, dispensing, analytics, print suite, department shelf
@@ -55,37 +56,12 @@ function ctlStatus(m,w,p){
 globalThis.CTL_PDF_REVIEW = [];
 function ctlPdfReceipts(){return S.g('controlled_pdf_receipts')||[]}
 function ctlSetPdfReceipts(v){return S.s('controlled_pdf_receipts',v)}
-function ctlPdfNormalizeCode(v){return String(v==null?'':v).replace(/[^0-9]/g,'').replace(/^0+(?=\d)/,'')}
+var ctlPdfNormalizeCode=normalizeCode;
 function ctlPdfCanUse(){return !!(CU&&(ctlIsWarehouse()||ctlIsMaster()))}
 function ctlPdfDrag(e,on){e.preventDefault();var z=el('ctl-pdf-drop');if(z)z.classList.toggle('drag',!!on)}
 function ctlPdfDrop(e){e.preventDefault();ctlPdfDrag(e,false);var f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0];if(f)ctlParseReceiptPdf(f)}
 function ctlPdfClearReview(){CTL_PDF_REVIEW=[];if(el('ctl-pdf-receipt-file'))el('ctl-pdf-receipt-file').value='';if(el('ctl-pdf-review-wrap'))el('ctl-pdf-review-wrap').style.display='none';if(el('ctl-pdf-progress'))el('ctl-pdf-progress').textContent=''}
-function ctlPdfFindMedicine(code){
-  var c=ctlPdfNormalizeCode(code);if(!c)return null;
-  return ctlCatalog().find(function(m){return ctlPdfNormalizeCode(m.moh)===c||ctlPdfNormalizeCode(m.nupco)===c})||null;
-}
-function ctlPdfRowsFromItems(items,pageNo){
-  var groups=[];
-  items.forEach(function(it){
-    var str=String(it.str||'').trim();if(!str)return;
-    var y=Math.round((it.transform&&it.transform[5]||0)*2)/2,x=it.transform&&it.transform[4]||0,g=null;
-    for(var i=0;i<groups.length;i++)if(Math.abs(groups[i].y-y)<=2.5){g=groups[i];break}
-    if(!g){g={y:y,t:[]};groups.push(g)}g.t.push({x:x,s:str});
-  });
-  var out=[];
-  groups.sort(function(a,b){return b.y-a.y}).forEach(function(g){
-    g.t.sort(function(a,b){return a.x-b.x});
-    var ts=g.t,codeToken=null;
-    for(var i=0;i<ts.length;i++){var n=ctlPdfNormalizeCode(ts[i].s);if(/^\d{8,14}$/.test(n)){codeToken={code:n,index:i,x:ts[i].x};break}}
-    if(!codeToken)return;
-    var qtyToken=null;
-    for(var j=ts.length-1;j>codeToken.index;j--){var raw=ts[j].s.replace(/,/g,'').trim();if(/^\d+(?:\.\d+)?$/.test(raw)){qtyToken={qty:Number(raw),index:j};break}}
-    if(!qtyToken||!isFinite(qtyToken.qty))return;
-    var desc=ts.slice(codeToken.index+1,qtyToken.index).map(function(x){return x.s}).join(' ').trim();
-    out.push({page:pageNo,code:codeToken.code,description:desc,qty:qtyToken.qty});
-  });
-  return out;
-}
+function ctlPdfFindMedicine(code){return findMedicineByCode(ctlCatalog(),code)}
 async function ctlParseReceiptPdf(file){
   if(!ctlPdfCanUse())return toast('Warehouse permission required','err');
   if(!file||!/\.pdf$/i.test(file.name||''))return toast('Choose a PDF file','err');
@@ -96,9 +72,9 @@ async function ctlParseReceiptPdf(file){
     for(var p=1;p<=doc.numPages;p++){
       if(pr)pr.textContent='جاري قراءة الصفحة '+p+' من '+doc.numPages+'...\nReading page '+p+' of '+doc.numPages+'...';
       var page=await doc.getPage(p),content=await page.getTextContent({normalizeWhitespace:true});
-      raw=raw.concat(ctlPdfRowsFromItems(content.items,p));
+      raw=raw.concat(rowsFromTextItems(content.items,p));
     }
-    var seen={};raw=raw.filter(function(r){var k=r.page+'|'+r.code+'|'+r.qty;if(seen[k])return false;seen[k]=1;return true});
+    raw=dedupeRows(raw);
     CTL_PDF_REVIEW=raw.map(function(r,i){var med=ctlPdfFindMedicine(r.code);return {id:'pdfrow_'+Date.now()+'_'+i,page:r.page,code:r.code,description:r.description,pdfQty:ctlNum(r.qty),approvedQty:ctlNum(r.qty),expiry:'',selected:!!med,medId:med?med.id:'',medName:med?med.name:'',matched:!!med}});
     if(pr)pr.textContent='تمت قراءة '+doc.numPages+' صفحة من '+file.name+'\nRead '+doc.numPages+' page(s) from '+file.name;
     ctlRenderPdfReview();
@@ -727,7 +703,6 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   ctlPdfDrop,
   ctlPdfClearReview,
   ctlPdfFindMedicine,
-  ctlPdfRowsFromItems,
   ctlParseReceiptPdf,
   ctlRenderPdfReview,
   ctlPdfSetField,
