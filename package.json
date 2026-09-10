@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "verify:modules": "node tools/verify_modules.mjs && node tools/verify_unresolved_names.mjs",
+    "verify:modules": "node tools/verify_modules.mjs && node tools/verify_unresolved_names.mjs && node tools/verify_action_handler_scopes.mjs",
     "verify": "python3 verify_repo.py && node tools/generate_upkeep_policy.mjs --check && npm run verify:modules && npm run audit:duplicates",
     "audit:architecture": "node tools/audit_architecture.mjs",
     "audit:dead": "node tools/audit_dead_code.mjs --strict", "audit:duplicates": "node tools/audit_duplicate_helpers.mjs --strict",

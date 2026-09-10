@@ -106,6 +106,10 @@ function scheduleAfterRender(){if(afterRenderScheduled)return;afterRenderSchedul
 window.schedulePagePostRender=scheduleAfterRender;
 window.enhanceRequests=enhanceRequests;
 
+/* Handlers owned by this scope — see the note above v16InstallActions. */
+installActions(document.body,{v16ManageHiddenCategories:function(){v16ManageHiddenCategories()},v16SaveHiddenCats:function(){v16SaveHiddenCats()}},{event:'click',attribute:'clickact'});
+installActions(document.body,{v16ToggleScope:function(el){v16ToggleScope(el.dataset.a1,el.checked)}},{event:'change',attribute:'changeact'});
+
 })();
 
 // --- Merged from 30-v13-w-supervisor-inventory-main.js (Phase 6 consolidation) ---
@@ -175,6 +179,11 @@ window.openAllDepartmentsInventory=function(){
 };
 window.ensureBulkReplacementButton=ensureBulkReplacementButtonW;
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&el('all-inv-modal'))window.closeAllDepartmentsInventory()});
+
+/* Handlers owned by this scope — see the note above v16InstallActions. */
+function v13Select(el){v13InventorySelect(el);if(window.updateAllInventoryMergeCount)window.updateAllInventoryMergeCount()}
+installActions(document.body,{v13OpenBulkClassification:function(){v13OpenBulkClassification()},v13WLoadMore:function(){v13WLoadMore()},inventorySelect:v13Select},{event:'click',attribute:'clickact'});
+installActions(document.body,{inventorySelect:v13Select,v13SelectVisibleInventory:function(el){v13SelectVisibleInventory(el)}},{event:'change',attribute:'changeact'});
 })();
 
 
@@ -214,9 +223,14 @@ function scheduleV16Refresh(id){
 /* ────────────────────────────────────────────────────────────────
    MASTER showPg — Clean navigation and page isolation
 ──────────────────────────────────────────────────────────────── */
+/* This file is nine merged IIFEs: a name is reachable only from the scope that
+   declares it, so each scope registers the handlers it owns and installActions
+   merges them by name onto one document.body listener. The v13 inventory
+   handlers, v16ToggleScope and v14SetPrintFilter were registered here and threw
+   ReferenceError on every click — they are declared in sibling scopes.
+   tools/verify_action_handler_scopes.mjs fails the build on a repeat. */
 function v16InstallActions(root){if(!root)return; /* one listener per event: core/delegated-actions.js */
-  installActions(root,{removeById:function(el){var n=document.getElementById(el.dataset.a1);if(n)n.remove()},removeParent:function(el){if(el.parentElement)el.parentElement.remove()},removeClosest:function(el){var n=el.closest(el.dataset.a1);if(n)n.remove()},closeBulkClass:function(){if(typeof CM==='function')CM('v13q-bulk-class-modal')},inventorySelect:function(el){v13InventorySelect(el);if(window.updateAllInventoryMergeCount)updateAllInventoryMergeCount()},whReceiveSelect:function(el){whReceiveSelect(el.dataset.id)},v16ManageHiddenCategories:function(el,event){v16ManageHiddenCategories()},v16SaveHiddenCats:function(el,event){v16SaveHiddenCats()},v13ApplyBulkClassification:function(el,event){v13ApplyBulkClassification()},openMergeInventoryNames:function(el,event){openMergeInventoryNames()},undoLatestInventoryNameMerge:function(el,event){undoLatestInventoryNameMerge()},v13OpenBulkClassification:function(el,event){v13OpenBulkClassification()},v13WLoadMore:function(el,event){v13WLoadMore()},whReceiveOpen:function(el,event){whReceiveOpen()},whBulkReceiveOpen:function(el,event){whBulkReceiveOpen()},whBulkDispenseOpen:function(el,event){whBulkDispenseOpen()},saveRequestCountLimits:function(el,event){saveRequestCountLimits()},v14SetPrintFilter:function(el,event){v14SetPrintFilter(el.dataset.a1)}},{event:'click',attribute:'clickact'});
-  installActions(root,{inventorySelect:function(el){v13InventorySelect(el);if(window.updateAllInventoryMergeCount)updateAllInventoryMergeCount()},v16ToggleScope:function(el){v16ToggleScope(el.dataset.a1,el.checked)},v13SelectVisibleInventory:function(el,event){v13SelectVisibleInventory(el)}},{event:'change',attribute:'changeact'});
+  installActions(root,{removeById:function(el){var n=document.getElementById(el.dataset.a1);if(n)n.remove()},removeParent:function(el){if(el.parentElement)el.parentElement.remove()},removeClosest:function(el){var n=el.closest(el.dataset.a1);if(n)n.remove()},closeBulkClass:function(){if(typeof CM==='function')CM('v13q-bulk-class-modal')},whReceiveSelect:function(el){whReceiveSelect(el.dataset.id)},v13ApplyBulkClassification:function(el,event){v13ApplyBulkClassification()},openMergeInventoryNames:function(el,event){openMergeInventoryNames()},undoLatestInventoryNameMerge:function(el,event){undoLatestInventoryNameMerge()},whReceiveOpen:function(el,event){whReceiveOpen()},whBulkReceiveOpen:function(el,event){whBulkReceiveOpen()},whBulkDispenseOpen:function(el,event){whBulkDispenseOpen()},saveRequestCountLimits:function(el,event){saveRequestCountLimits()}},{event:'click',attribute:'clickact'});
   installActions(root,{whBulkResolveRow:function(el,event){whBulkResolveRow(el)}},{event:'input',attribute:'inputact'});
 }
 window.showPg = function(id){
@@ -732,7 +746,6 @@ window.injectPrintTabBar=function(activePg){
 
 window.renderPrint=function(){ /* selection carried across the rebuild: core/print-order-selection.js */ var kept=selectedPrintIds();renderPrintTable();restorePrintSelection(kept)};
 function renderPrintTable(){
-  v16InstallActions(document.body);
   var purgeBtn=E('purge-old-orders-btn');
   if(purgeBtn)purgeBtn.style.display=(window.CU&&CU.master===true)?'inline-flex':'none';
 
@@ -801,6 +814,8 @@ function v14SetPrintFilter(f){
   if(typeof window.renderPrint==='function')window.renderPrint();
 };
 
+/* Handlers owned by this scope — see the note above v16InstallActions. */
+installActions(document.body,{v14SetPrintFilter:function(el){v14SetPrintFilter(el.dataset.a1)}},{event:'click',attribute:'clickact'});
 
 })();
 
