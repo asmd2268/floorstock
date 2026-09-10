@@ -18,6 +18,7 @@ import {
   medicineNamesFrom, MONTHS_EN, MONTHS_AR,
   drugComparisonStats as comparisonStats, deptDrugTrendStats as trendStats
 } from '../core/analytics-drug-trends.js?v=ce84bf0b15';
+import { crashCartStats } from '../core/analytics-crash-carts.js?v=33105767c7';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -1234,99 +1235,7 @@ function renderDrugsThreshold() {
 }
 
 function crashStatsForYears(fromY, toY) {
-  const reports = crashReportList().filter(r => {
-    const y = new Date(r.openedAt || r.created || 0).getFullYear();
-    return y >= fromY && y <= toY;
-  });
-
-  // Per-cart openings
-  const cartOpenings = {};
-  const cartReplacements = {};
-
-  reports.forEach(r => {
-    if (String(r.operation || 'open') === 'seal_correction') return;
-    const cid = String(r.cartId || '—');
-    cartOpenings[cid] = (cartOpenings[cid] || 0) + 1;
-    const replacements = Array.isArray(r.replacements) ? r.replacements.length : 0;
-    if (!cartReplacements[cid]) cartReplacements[cid] = [];
-    cartReplacements[cid].push(replacements);
-  });
-
-  // Avg days between openings per cart
-  const cartIntervalDays = {};
-  const carts = crashCartList();
-  carts.forEach(c => {
-    const cid = String(c.id);
-    const times = reports
-      .filter(r => String(r.cartId) === cid && String(r.operation || 'open') !== 'seal_correction')
-      .map(r => new Date(r.openedAt || r.created || 0).getTime())
-      .filter(t => t > 0)
-      .sort((a, b) => a - b);
-    if (times.length < 2) { cartIntervalDays[cid] = null; return; }
-    const diffs = [];
-    for (let i = 1; i < times.length; i++) diffs.push((times[i] - times[i - 1]) / 86400000);
-    cartIntervalDays[cid] = round1(avg(diffs));
-  });
-
-  // Total replacements & avg per opening
-  const totalOpenings = reports.filter(r => String(r.operation || 'open') !== 'seal_correction').length;
-  const totalReplacements = reports.reduce((s, r) => s + (Array.isArray(r.replacements) ? r.replacements.length : 0), 0);
-  const avgReplacementsPerOpening = totalOpenings ? round1(totalReplacements / totalOpenings) : 0;
-
-  // Top 5 most opened, bottom 2 least opened (among carts with at least 1 opening)
-  const cartsSorted = carts
-    .map(c => ({
-      id: String(c.id), name: c.name || c.id,
-      dept: deptName(c.deptId),
-      openings: cartOpenings[String(c.id)] || 0,
-      avgRepl: cartReplacements[String(c.id)] ? round1(avg(cartReplacements[String(c.id)])) : 0,
-      intervalDays: cartIntervalDays[String(c.id)],
-    }))
-    .filter(c => c.openings > 0)
-    .sort((a, b) => b.openings - a.openings);
-
-  const top5 = cartsSorted.slice(0, 5);
-  const bottom2 = cartsSorted.slice(-2).reverse();
-
-  // Top 10 medicines replaced across all reports
-  const medCounts = {};
-  reports.forEach(r => {
-    (r.replacements || []).forEach(rep => {
-      const name = String(rep.name || rep.medName || rep.genericName || rep.medId || '—');
-      medCounts[name] = (medCounts[name] || 0) + 1;
-    });
-  });
-  const topMeds = Object.entries(medCounts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count)
-    .slice(0, 10);
-
-  // Department contribution to top 10 replaced medicines
-  const deptMedCounts = {};
-  reports.forEach(r => {
-    const dept = deptName(r.deptId);
-    (r.replacements || []).forEach(rep => {
-      const name = String(rep.name || rep.medName || rep.genericName || rep.medId || '—');
-      if (!deptMedCounts[name]) deptMedCounts[name] = {};
-      deptMedCounts[name][dept] = (deptMedCounts[name][dept] || 0) + 1;
-    });
-  });
-
-  // Opening reason breakdown (includes no-consumption)
-  const reasonCounts = {};
-  reports.forEach(r => {
-    if (String(r.operation || 'open') === 'seal_correction') return;
-    let reason = r.noConsumption
-      ? 'No medications consumed / فحص روتيني بدون استهلاك'
-      : String(r.reason || '—').trim();
-    if (reason.length > 90) reason = reason.slice(0, 90) + '…';
-    reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
-  });
-  const reasonBreakdown = Object.entries(reasonCounts)
-    .map(([reason, count]) => ({ reason, count }))
-    .sort((a, b) => b.count - a.count);
-
-  return { totalOpenings, totalReplacements, avgReplacementsPerOpening, top5, bottom2, topMeds, deptMedCounts, cartsSorted, reasonBreakdown };
+  return crashCartStats(crashReportList(), crashCartList(), fromY, toY, deptName);
 }
 
 function renderCrashSection() {
