@@ -75,3 +75,18 @@ export function filterUsageRows(rows, filters = {}, assignmentOf = () => ({}), n
     return true;
   });
 }
+
+/* Units are whole units.
+
+   A department consumed two ampoules or three, never one and a half: the count
+   is of items taken out of a cupboard and signed for, and a fraction cannot be
+   reconciled against a physical count or handed over at a shift change. Where a
+   dose is entered instead, the units are derived by rounding UP to the next
+   whole item, because that is what actually leaves the shelf.
+
+   Returns the whole number, or null when the value is not one. */
+export function wholeUnits(value) {
+  const n = Number(String(value == null ? '' : value).trim());
+  if (!Number.isFinite(n) || n <= 0) return null;
+  return Number.isInteger(n) ? n : null;
+}

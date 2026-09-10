@@ -99,3 +99,32 @@ test('a row whose assignment is gone is still filtered by its own medicine name'
   const rows = [{ assignmentId: 'deleted', deptId: 'icu', medName: 'Morphine 10mg' }];
   assert.equal(filterUsageRows(rows, { medicine: 'morphine' }, () => null).length, 1);
 });
+
+test('units used are whole units — an ampoule and a half cannot be signed for', async () => {
+  const { wholeUnits } = await import('../public/assets/js/core/accountability-custody-rules.js');
+  /* The count is of items taken out of a cupboard and handed over at a shift
+     change; a fraction cannot be reconciled against a physical count. */
+  assert.equal(wholeUnits('2'), 2);
+  assert.equal(wholeUnits(3), 3);
+  assert.equal(wholeUnits('1.5'), null);
+  assert.equal(wholeUnits(0.5), null);
+  assert.equal(wholeUnits('2.0'), 2, 'a whole number typed with a decimal point is still whole');
+  assert.equal(wholeUnits(0), null, 'zero units is not a consumption');
+  assert.equal(wholeUnits(-2), null);
+  assert.equal(wholeUnits(''), null);
+  assert.equal(wholeUnits('abc'), null);
+  assert.equal(wholeUnits(null), null);
+});
+
+test('the screen and the server both refuse a fraction', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const screen = await readFile(new URL('../public/assets/js/modules/50-r617-integrated-operations.js', import.meta.url), 'utf8');
+  const server = await readFile(new URL('../functions/index.js', import.meta.url), 'utf8');
+  // The field itself steps in whole units rather than accepting anything.
+  assert.match(screen, /data-acc2="units"[^>]*step="1"/);
+  assert.doesNotMatch(screen, /data-acc2="units"[^>]*step="any"/);
+  assert.match(screen, /wholeUnits\(read\('units'\)\)/);
+  // The screen is not the authority: the callable refuses it too.
+  assert.match(server, /Number\.isInteger\(units\)/);
+  assert.match(server, /Units used must be a whole number/);
+});

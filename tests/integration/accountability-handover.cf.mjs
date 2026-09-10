@@ -97,6 +97,15 @@ step('the partition document exists and is the one it should be',
 step('the legacy single document was not created',
   !(await get('floorstock_state/accountability_usage_v2')));
 
+// 1b — a fraction of a unit is refused by the callable, not only by the screen
+r = await call('accountabilityMutation', nurse.token, {
+  action: 'submitUsage', assignmentId: 'asg1', units: 1.5,
+  consumptionDate: new Date().toISOString().slice(0, 10),
+  patientFile: 'MRN-1b', doctor: 'Dr Sara', reasonLabel: 'Pain',
+});
+step('half a unit is refused server-side',
+  r.status !== 200 && /whole number/i.test(JSON.stringify(r.body)), JSON.stringify(r.body?.error?.message || r.body).slice(0, 90));
+
 // 2 — the balance check must see the pending row across partitions
 r = await call('accountabilityMutation', nurse.token, {
   action: 'submitUsage', assignmentId: 'asg1', units: 47,

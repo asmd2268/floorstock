@@ -526,6 +526,13 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
     if (!assignmentId || !(units > 0)) {
       throw new HttpsError('invalid-argument', 'assignmentId and a positive units value are required.');
     }
+    /* Whole units only. The count is of items taken out of a cupboard and signed
+       for: half an ampoule cannot be reconciled against a physical count or
+       handed over at a shift change. Enforced here as well as on the screen,
+       because the screen is not the authority. */
+    if (!Number.isInteger(units)) {
+      throw new HttpsError('invalid-argument', 'Units used must be a whole number.');
+    }
     const consumptionDate = String(data.consumptionDate || '').trim();
     const patientFile = String(data.patientFile || '').trim().slice(0, 60);
     const doctor = String(data.doctor || '').trim().slice(0, 120);
