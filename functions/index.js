@@ -620,6 +620,33 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
 
   if (action === 'saveAssignment') {
     const { id, deptId, medName, quota, reasons, active, expiryDate, itemDetails } = data;
+    /* The clinical settings the screen collects alongside the custody itself:
+       the concentration, how nursing enters a consumption, and the restrictions.
+       They used to be dropped here — the callable destructured seven fields out
+       of sixteen, wrote the row without the rest, and returned ok, so the screen
+       said "saved ✓" and the concentration column stayed empty. Dose mode
+       depends on the concentration, so that silently never worked either. */
+    const oneOf = (value, allowed, fallback) => (allowed.includes(String(value || '')) ? String(value) : fallback);
+    const optionalAge = (value) => {
+      const age = Number(value);
+      return Number.isFinite(age) && age > 0 ? age : null;
+    };
+    const clinical = {
+      unitSize: Math.max(0, Number(data.unitSize) || 0),
+      unitSizeLabel: String(data.unitSizeLabel || 'mg').slice(0, 40),
+      inputMode: oneOf(data.inputMode, ['units', 'dose'], 'units'),
+      requireWeight: oneOf(data.requireWeight, ['no', 'optional', 'required'], 'no'),
+      genderRestriction: oneOf(data.genderRestriction, ['any', 'male', 'female'], 'any'),
+      pregnancyAllowed: oneOf(data.pregnancyAllowed, ['any', 'caution', 'avoid', 'contraindicated'], 'any'),
+      trimesterRestriction: oneOf(data.trimesterRestriction, ['any', 'avoid_1', 'avoid_2', 'avoid_3', 'only_1', 'only_2', 'only_3'], 'any'),
+      minAge: optionalAge(data.minAge),
+      maxAge: optionalAge(data.maxAge)
+    };
+    /* Dose mode without a concentration cannot convert a dose into units, so it
+       would accept entries it could not compute. Refused rather than stored. */
+    if (clinical.inputMode === 'dose' && !(clinical.unitSize > 0)) {
+      throw new HttpsError('invalid-argument', 'Dose mode needs the concentration of one unit.');
+    }
     if (!deptId || !medName || !(Number(quota) > 0) || !Array.isArray(reasons) || !reasons.length) {
       throw new HttpsError('invalid-argument', 'Department, medicine, positive quota, and at least one reason are required.');
     }
@@ -642,6 +669,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
         existing.active = active !== false;
         existing.expiryDate = expiryDate || '';
         existing.itemDetails = Array.isArray(itemDetails) ? itemDetails : [];
+        Object.assign(existing, clinical);
         existing.updatedAt = now;
         existing.updatedBy = actorName;
       } else {
@@ -650,6 +678,7 @@ exports.accountabilityMutation = onCall(CALLABLE_OPTIONS, async (request) => {
           deptId, medName, quota: Number(quota), balance: Number(quota),
           reasons, active: active !== false,
           expiryDate: expiryDate || '', itemDetails: Array.isArray(itemDetails) ? itemDetails : [],
+          ...clinical,
           createdAt: now, createdBy: actorName,
           updatedAt: now, updatedBy: actorName
         });

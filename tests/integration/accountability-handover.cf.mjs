@@ -77,8 +77,51 @@ await put('floorstock_state/accountability_assignments_v2', {
   updatedAt: new Date().toISOString(),
 });
 
+// 0b — the custody's clinical settings must survive the callable
+let r = await call('accountabilityMutation', pharmacist.token, {
+  action: 'saveAssignment', deptId: 'dept-a', medName: 'Vancomycin', quota: 10,
+  reasons: ['Infection'], active: true,
+  unitSize: 500, unitSizeLabel: 'mg', inputMode: 'dose', requireWeight: 'required',
+  genderRestriction: 'female', pregnancyAllowed: 'caution', trimesterRestriction: 'avoid_1',
+  minAge: 12, maxAge: 80,
+});
+/* Firestore REST returns typed fields; read the row back the way the other
+   assertions in this file do. */
+const plainRow = (doc, medName) => (doc?.fields?.value?.arrayValue?.values || [])
+  .map((entry) => Object.fromEntries(Object.entries(entry.mapValue?.fields || {}).map(([key, value]) => [
+    key,
+    value.stringValue ?? (value.integerValue != null ? Number(value.integerValue)
+      : value.doubleValue != null ? Number(value.doubleValue)
+        : value.booleanValue ?? (value.nullValue !== undefined ? null : undefined)),
+  ])))
+  .find((row) => row.medName === medName) || {};
+const savedVanco = plainRow(await get('floorstock_state/accountability_assignments_v2'), 'Vancomycin');
+step('the concentration and clinical settings are stored, not dropped',
+  r.status === 200 && savedVanco.unitSize === 500 && savedVanco.unitSizeLabel === 'mg'
+  && savedVanco.inputMode === 'dose' && savedVanco.requireWeight === 'required'
+  && savedVanco.genderRestriction === 'female' && savedVanco.minAge === 12,
+  JSON.stringify({ unitSize: savedVanco.unitSize, inputMode: savedVanco.inputMode, minAge: savedVanco.minAge }));
+
+// 0c — dose mode without a concentration cannot convert anything, so it is refused
+r = await call('accountabilityMutation', pharmacist.token, {
+  action: 'saveAssignment', deptId: 'dept-a', medName: 'No Concentration', quota: 5,
+  reasons: ['Test'], active: true, inputMode: 'dose', unitSize: 0,
+});
+step('dose mode without a concentration is refused',
+  r.status !== 200 && /concentration/i.test(JSON.stringify(r.body)), JSON.stringify(r.body?.error?.message || r.body).slice(0, 80));
+
+// 0d — an unknown value for a restriction falls back rather than being stored
+r = await call('accountabilityMutation', pharmacist.token, {
+  action: 'saveAssignment', deptId: 'dept-a', medName: 'Odd Settings', quota: 5,
+  reasons: ['Test'], active: true, genderRestriction: 'martian', requireWeight: 'sometimes',
+});
+const odd = plainRow(await get('floorstock_state/accountability_assignments_v2'), 'Odd Settings');
+step('an unrecognised restriction is stored as "any", not as typed',
+  r.status === 200 && odd.genderRestriction === 'any' && odd.requireWeight === 'no',
+  JSON.stringify({ gender: odd.genderRestriction, weight: odd.requireWeight }));
+
 // 1 — a department submits a usage entry
-let r = await call('accountabilityMutation', nurse.token, {
+r = await call('accountabilityMutation', nurse.token, {
   action: 'submitUsage', assignmentId: 'asg1', units: 4,
   consumptionDate: new Date().toISOString().slice(0, 10),
   patientFile: 'MRN-1', doctor: 'Dr Sara', reasonLabel: 'Post-op pain',
