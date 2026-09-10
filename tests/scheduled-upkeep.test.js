@@ -60,12 +60,15 @@ test('the switch and the last run are visible in the app, not the console', () =
 test('a failure while drawing cannot leave "Checking…" on screen', async () => {
   /* The panel writes "Checking…" and then draws. Anything thrown in between used
      to leave that message there permanently, which reads as a hang rather than a
-     fault — and every escape went through a global that another module has to
-     have published first. */
+     fault. */
   assert.match(ui, /await drawScheduledUpkeep\(host\);/);
   assert.match(ui, /The nightly upkeep panel could not be drawn/);
-  assert.match(ui, /function escapeText\(value\) \{/);
-  assert.ok(!/globalThis\.fsEsc\(/.test(ui), 'render through escapeText, which cannot be missing');
+  /* The escaper is IMPORTED. This test used to demand a local one — and the
+     local one was then written as a call to itself, so every draw overflowed
+     the stack and the panel disappeared from System Health entirely. A file
+     with no escaper of its own cannot repeat that. */
+  assert.match(ui, /import \{ fsEsc as escapeText \} from '\.\/dom-utils\.js/);
+  assert.doesNotMatch(ui, /function escapeText\(/);
 });
 
 test('nothing waits forever: the library load and the call are both bounded', async () => {

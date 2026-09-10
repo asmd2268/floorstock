@@ -14,6 +14,8 @@
    its URL, so the file can state which one it is: one glance at the panel — or
    at a screenshot of it — settles "is this the current build?" without asking
    anybody to open developer tools. */
+import { fsEsc as escapeText } from './dom-utils.js?v=b2909b7f46';
+
 const BUILD = (function () {
   const match = /[?&]v=([0-9a-f]+)/.exec(String(import.meta.url || ''));
   return match ? match[1] : 'unstamped';
@@ -49,9 +51,11 @@ function callFunction(name, data) {
 
 /* dom-utils publishes fsEsc, but a panel that renders before it would throw and
    leave "Checking…" on screen for good. */
-function escapeText(value) {
-  return globalThis.fsEsc ? escapeText(value) : String(value == null ? '' : value);
-}
+/* One escaper, imported. The line that used to stand here read
+   `globalThis.fsEsc ? escapeText(value) : …` — it called ITSELF, so every draw
+   of this panel overflowed the stack before writing anything, and the catch
+   that was meant to report the fault called it again. The panel simply
+   disappeared. There is no local escaper here now, so it cannot happen twice. */
 
 function describeChange(change) {
   const where = change.tenantId ? `${change.tenantId}: ` : '';
