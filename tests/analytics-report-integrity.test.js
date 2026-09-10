@@ -5,6 +5,9 @@ import { topMedicines, topShortfalls, departmentFillRates, detectQuantityOutlier
 
 const engine = fs.readFileSync(new URL('../public/assets/js/core/analytics-engine.js', import.meta.url), 'utf8');
 const report = fs.readFileSync(new URL('../public/assets/js/modules/73-r676-analytics-quarterly-annual-reports.js', import.meta.url), 'utf8');
+/* The report's blocks — KPI row, quarter table, department bars, medicine
+   tables — are their own module now: statistics in, markup out. */
+const sections = fs.readFileSync(new URL('../public/assets/js/core/analytics-report-sections.js', import.meta.url), 'utf8');
 
 // Buckets are keyed by normalised medicine identity so two spellings of one
 // medicine stop splitting their units; the readable spelling has to survive
@@ -40,7 +43,7 @@ test('spike rows carry a display label rather than the normalised key', () => {
 // producing "-100%" painted green -- in a dispensing report, a collapse to zero
 // is never good news and a future quarter is not a collapse at all.
 test('the quarterly table stops at the current quarter and never colours a fall green', () => {
-  const fn = report.slice(report.indexOf('function renderQuarterTable'), report.indexOf('function renderDeptBars'));
+  const fn = sections.slice(sections.indexOf('function renderQuarterTable'), sections.indexOf('function renderDeptBars'));
   assert.match(fn, /currentQuarter/);
   assert.match(fn, /q <= lastQuarter/);
   assert.match(fn, /In progress \/ جارٍ/);
@@ -49,7 +52,7 @@ test('the quarterly table stops at the current quarter and never colours a fall 
 });
 
 test('the running quarter is excluded from the trend baseline', () => {
-  const fn = report.slice(report.indexOf('function renderQuarterTable'), report.indexOf('function renderDeptBars'));
+  const fn = sections.slice(sections.indexOf('function renderQuarterTable'), sections.indexOf('function renderDeptBars'));
   assert.match(fn, /if \(!partial\) prev = st\.units;/);
 });
 
