@@ -65,11 +65,11 @@ async function doDeptPrint(){
       rows+='<tr class="cat-row"><td colspan="6" style="background:#bcbcbc;font-weight:700;font-size:7pt;text-transform:uppercase;letter-spacing:.5px;padding:4px 6px;border:1px solid #ccc">'+cat+' / '+catAr(cat)+'</td></tr>';
       grp[cat].forEach(function(m){
         medNumber++;
-        var bands=[],flags=[];
-        if(m.high_alert){bands.push('rgba('+pClr.ha+',.13)');flags.push('HIGH ALERT / تنبيه عالي')}
-        if(m.hazard){bands.push('rgba('+pClr.haz+',.18)');flags.push('HAZARD / خطر')}
-        if(m.lasa){bands.push('rgba('+pClr.lasa+',.13)');flags.push('LASA')}
-        if(m.refrigerated){bands.push('rgba('+pClr.ref+',.13)');flags.push('REFRIGERATED / مبرد')}
+        var bands=[],flagSpans=[];
+        if(m.high_alert){bands.push('rgba('+pClr.ha+',.13)');flagSpans.push('<span style="color:rgba('+pClr.ha+',1);font-weight:700;white-space:nowrap">HIGH ALERT / تنبيه عالي</span>')}
+        if(m.hazard){bands.push('rgba('+pClr.haz+',.18)');flagSpans.push('<span style="color:rgba('+pClr.haz+',1);font-weight:700;white-space:nowrap">HAZARD / خطر</span>')}
+        if(m.lasa){bands.push('rgba('+pClr.lasa+',.13)');flagSpans.push('<span style="color:rgba('+pClr.lasa+',1);font-weight:700;white-space:nowrap">LASA</span>')}
+        if(m.refrigerated){bands.push('rgba('+pClr.ref+',.13)');flagSpans.push('<span style="color:rgba('+pClr.ref+',1);font-weight:700;white-space:nowrap">REFRIGERATED / مبرد</span>')}
         var bc=m.high_alert?('rgba('+pClr.ha+',1)'):m.hazard?('rgba('+pClr.haz+',1)'):m.lasa?('rgba('+pClr.lasa+',1)'):m.refrigerated?('rgba('+pClr.ref+',1)'):'transparent';
         var bg=bands.length<2
           ?(bands[0]||'#ffffff')
@@ -78,8 +78,7 @@ async function doDeptPrint(){
             var b=((i+1)*100/bands.length).toFixed(2);
             return c+' '+a+'% '+b+'%';
           }).join(',')+')';
-        var flagTxt=flags.join(' + ');
-        var flagColor=m.high_alert?('rgba('+pClr.ha+',1)'):m.hazard?('rgba('+pClr.haz+',1)'):m.lasa?('rgba('+pClr.lasa+',1)'):m.refrigerated?('rgba('+pClr.ref+',1)'):'#000';
+        var flagTxt=flagSpans.join('<span style="color:#aaa"> · </span>');
         var medBatches=expiryRows.filter(function(batch){
           return String(batch.medId)===String(m.id);
         }).sort(function(a,b){
@@ -96,7 +95,7 @@ async function doDeptPrint(){
         rows+='<tr style="background:'+bg+';border-left:3px solid '+bc+'">'
           +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+medNumber+'</td>'
           +'<td style="padding:3px 5px;border:1px solid #ddd;font-weight:500">'+m.name+'</td>'
-          +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700;color:'+flagColor+';font-size:6.5pt">'+flagTxt+'</td>'
+          +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-size:6.5pt">'+flagTxt+'</td>'
           +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+m.min+'</td>'
           +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-weight:700">'+m.max+'</td>'
           +'<td style="padding:3px 5px;border:1px solid #ddd;text-align:center;font-size:7pt;line-height:1.45">'+expText+'</td>'

@@ -107,6 +107,9 @@ function printShelfList(){
   var qrUrl=window.makeReadableQR(expiryUrl);
   var qrSiteUrl=window.makeReadableQR(getAppUrl());
   
+  var _cs=getComputedStyle(document.documentElement);
+  function _rgb(v,fb){return 'rgba('+(_cs.getPropertyValue(v).trim()||fb)+',1)'}
+  var pHex={ha:_rgb('--cls-ha-rgb','239,68,68'),lasa:_rgb('--cls-lasa-rgb','14,165,233'),ref:_rgb('--cls-ref-rgb','147,51,234'),haz:_rgb('--cls-haz-rgb','234,179,8')};
   var rows='';
   Object.keys(byShelf).sort().forEach(function(sid){
     var shelf=sid==='__none__'?{name:'Unassigned / &#x63A;&#x64A;&#x631; &#x645;&#x639;&#x64A;&#x646;'}:shelves.find(function(s){return s.id===sid});
@@ -118,18 +121,13 @@ function printShelfList(){
     Object.keys(byCat).sort().forEach(function(cat){
       rows+='<tr><td colspan="4" style="background:#e8e8e8;font-weight:600;font-size:7.5pt;text-transform:uppercase;padding:3px 8px;color:#555">'+cat+' / '+catAr(cat)+'</td></tr>';
       byCat[cat].forEach(function(m){
-        // The row border and tint follow the most severe class, but the label
-        // lists every class that applies: this was an if/else-if chain, so a
-        // medicine flagged HIGH ALERT + LASA + REFRIGERATED printed as HIGH ALERT
-        // alone and the other two were invisible on paper. Refrigerated was not
-        // represented at all.
-        var bc=m.high_alert?'#da3633':m.hazard?'#d29922':m.lasa?'#8957e5':m.refrigerated?'#8250df':'transparent';
-        var bg=m.high_alert?'#fff0f0':m.hazard?'#fffbea':m.lasa?'#f5f0ff':m.refrigerated?'#f3f0ff':'#fff';
+        var bc=m.high_alert?pHex.ha:m.hazard?pHex.haz:m.lasa?pHex.lasa:m.refrigerated?pHex.ref:'transparent';
+        var bg=m.high_alert?'#fff0f0':m.hazard?'#fffbea':m.lasa?'#f0f9ff':m.refrigerated?'#faf5ff':'#fff';
         var classes=[];
-        if(m.high_alert)classes.push(['HIGH ALERT','#da3633']);
-        if(m.lasa)classes.push(['LASA','#6639ba']);
-        if(m.hazard)classes.push(['HAZARD','#b07d00']);
-        if(m.refrigerated)classes.push(['REFRIGERATED','#6f42c1']);
+        if(m.high_alert)classes.push(['HIGH ALERT',pHex.ha]);
+        if(m.lasa)classes.push(['LASA',pHex.lasa]);
+        if(m.hazard)classes.push(['HAZARD',pHex.haz]);
+        if(m.refrigerated)classes.push(['REFRIGERATED',pHex.ref]);
         // Marked by the department; shown on the sheet so whoever restocks sees it.
         if(m.outOfStock)classes.push(['OUT OF STOCK / نفد','#6e7781']);
         var flag=classes.map(function(c){
