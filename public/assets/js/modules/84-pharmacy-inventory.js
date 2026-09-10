@@ -1,5 +1,6 @@
 /* Pharmacy Inventory — rooms → cabinets → shelves → medicines */
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -906,9 +907,7 @@ window.piPrintReorder=function(){
   }).join('');
   var body='<div class="ro-section"><div class="ro-title">📋 Reorder List — '+new Date().toLocaleDateString('en-SA')+'</div>'+
     '<table class="pi-table"><thead><tr><th>Medicine</th><th>MOH</th><th>Nupco</th><th>Status</th><th>Location</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
-  var win=window.open('','_blank');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Reorder List</title><style>'+css+'</style></head><body>'+body+'</body></html>');
-  win.document.close();setTimeout(function(){win.print()},400);
+  printDocument({ title:'Reorder List', html:body, css:css, brand:'' });
 };
 
 window.piPrintRoomChange=function(v){
@@ -1106,11 +1105,7 @@ window.piPrintCabinetMap=async function(roomId,cabId){
     ['● high-alert / عالي الخطورة','▪ yellow = expiring soon / قرب الانتهاء','▪ red = expired / منتهٍ','▪ struck through = out of stock / غير متوفر','⌁ +N more = cell is fuller than the space shown / الخانة فيها أكثر']
       .map(bd).join(' &nbsp; ')+'</div>';
 
-  var win=window.open('','_blank');
-  if(!win)return piToast('Allow pop-ups to print / اسمح بالنوافذ المنبثقة','err');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>'+piEsc(cab.name)+' — Map</title><style>'+css+'</style></head><body>'+head+grid+foot+legend+'</body></html>');
-  win.document.close();
-  setTimeout(function(){win.print()},400);
+  printDocument({ title:cab.name+' — Map', html:head+grid+foot+legend, css:css, brand:'' });
 };
 /* Inline handlers must be plain calls: the CSP bridge rejects bare assignments,
    so `PI_UI.printCabId=this.value` silently failed and the print controls did
@@ -1146,9 +1141,7 @@ window.piPrintRoomDoor=function(){
     });
     body+='</div>';
   });
-  var win=window.open('','_blank');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Room Door List</title><style>'+css+'</style></head><body>'+body+'</body></html>');
-  win.document.close();setTimeout(function(){win.print()},400);
+  printDocument({ title:'Room Door List', html:body, css:css, brand:'' });
 };
 
 function piPrintCss(colors){
@@ -1209,9 +1202,7 @@ window.piDoPrint=function(){
       body+='</div>';
     });
   });
-  var win=window.open('','_blank');
-  win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>Pharmacy Inventory</title><style>'+css+'</style></head><body>'+body+'</body></html>');
-  win.document.close();setTimeout(function(){win.print()},400);
+  printDocument({ title:'Pharmacy Inventory', html:body, css:css, brand:'' });
 };
 
 /* Rendered by the bundled generator (window.makeReadableQR), which every other QR

@@ -104,3 +104,29 @@ test('the blob URL is released, so a long session does not hold every report ope
     assert.equal(revoked.length, 0, 'not immediately — the window still needs it');
   });
 });
+
+test('the controlled print page goes through the same printer', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../public/assets/js/modules/15-controlled-print-pages.js', import.meta.url), 'utf8');
+  assert.match(source, /printDocument\(/);
+  assert.doesNotMatch(source, /\.document\.write\(/);
+  // The printed document is unchanged: header, certification, brand line.
+  assert.match(source, /officialPrintHeaderHTML\(\)/);
+  assert.match(source, /electronic-cert/);
+  assert.match(source, /A4 landscape/);
+});
+
+test('no module opens a blank window and writes a printable document into it', async () => {
+  const { readFile, readdir } = await import('node:fs/promises');
+  const dir = new URL('../public/assets/js/modules/', import.meta.url);
+  const offenders = [];
+  for (const file of await readdir(dir)) {
+    if (!file.endsWith('.js')) continue;
+    const source = await readFile(new URL(file, dir), 'utf8');
+    /* One legitimate use remains: modules/80 writes a "Preparing…" placeholder
+       into a window it pre-opened during the click, which is then navigated to
+       a real blob URL. It never waits for load and never calls print. */
+    if (/\.document\.write\(/.test(source) && !/Preparing drug list/.test(source)) offenders.push(file);
+  }
+  assert.deepEqual(offenders, [], 'print through core/print-window.js — a written document never fires load in Safari');
+});
