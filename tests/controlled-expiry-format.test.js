@@ -114,3 +114,16 @@ test('anything not psychotropic is labelled narcotic on the sheet', () => {
   assert.match(fsR5Class('narcotic'), /Narcotic/);
   assert.match(fsR5Class(''), /Narcotic/);
 });
+
+test('the earliest expiry is decided by date, not by how the date was typed', async () => {
+  const { earliestExpiry } = await import('../public/assets/js/core/controlled-expiry-format.js');
+  /* This is the date that colours a medicine, puts it on a reorder list, and
+     gets printed on a label. Sorting the strings only works while every one is
+     written YYYY-MM-DD. */
+  assert.equal(earliestExpiry(['2026-01-01', 'March 1, 2025', '2027-01-01']), 'March 1, 2025');
+  assert.equal(earliestExpiry(['2026-05-01', '2026-04-30']), '2026-04-30');
+  // Unparseable text is ignored rather than winning the comparison.
+  assert.equal(earliestExpiry(['soon', '2026-01-01']), '2026-01-01');
+  assert.equal(earliestExpiry([], '2026-09-09'), '2026-09-09', 'the fallback is used only when nothing is dated');
+  assert.equal(earliestExpiry(null), '');
+});

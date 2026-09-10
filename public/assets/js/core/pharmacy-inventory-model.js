@@ -14,6 +14,7 @@
    missing date never reads as a clean shelf. */
 
 import { fsEsc } from './dom-utils.js?v=b2909b7f46';
+import { earliestExpiry } from './controlled-expiry-format.js?v=fdeecabaed';
 
 /* Shelves read as a row of labels, so their order is the whole point. localeCompare
    with numeric:true puts A before B and "Shelf 2" before "Shelf 10" -- plain string
@@ -96,11 +97,5 @@ export function piExpiryLabel(expiryStr){
    correct while every one of them is written YYYY-MM-DD — one date typed the
    other way round quietly became the "earliest" of all. */
 export function medicineExpiryFromLocations(locations, fallback = '') {
-  const dated = (Array.isArray(locations) ? locations : [])
-    .map((location) => String((location && location.expiry) || '').trim())
-    .filter(Boolean)
-    .map((expiry) => ({ expiry, at: new Date(expiry).getTime() }))
-    .filter((entry) => Number.isFinite(entry.at))
-    .sort((a, b) => a.at - b.at);
-  return dated.length ? dated[0].expiry : String(fallback || '').trim();
+  return earliestExpiry((Array.isArray(locations) ? locations : []).map((location) => location && location.expiry), fallback);
 }

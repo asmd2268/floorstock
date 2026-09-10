@@ -15,7 +15,7 @@ import { fsE, fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
 import { uiToast } from './module-ui-helpers.js?v=4dc31675ec';
 import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=41ac59e5f7';
-import { fsR5DMY, fsR12BatchSummaryHtml, fsR5Class, fsR5ExpiryDays, fsR5NearDays } from './controlled-expiry-format.js?v=4fe8aa218d';
+import { fsR5DMY, fsR12BatchSummaryHtml, fsR5Class, fsR5ExpiryDays, fsR5NearDays } from './controlled-expiry-format.js?v=fdeecabaed';
 
 window.ctlDeptFinalApply=function(){
   var dept=fsR5ControlledDept(),input=fsE('ctl-dept-final-days'),days=Math.floor(fsNum(input&&input.value));

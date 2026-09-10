@@ -25,7 +25,7 @@ import { fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText } from './text-normalize.js?v=aa16ae9ac0';
 import { uiToast } from './module-ui-helpers.js?v=4dc31675ec';
 import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=41ac59e5f7';
-import { fsR12PrintDate, fsR12HasNearExpiry, fsR5BatchText, fsR5Class } from './controlled-expiry-format.js?v=4fe8aa218d';
+import { fsR12PrintDate, fsR12HasNearExpiry, fsR5BatchText, fsR5Class } from './controlled-expiry-format.js?v=fdeecabaed';
 
 function fsR5PublicUrl(dept){
   try{if(typeof window.ctlPublicUrl==='function')return window.ctlPublicUrl(dept)}catch(e){}

@@ -13,7 +13,7 @@
    medicine up — its name, its MOH code, its Nupco code — because they have
    whichever of those is printed on the box in front of them. */
 
-import { piExpiryStatus } from './pharmacy-inventory-model.js?v=07dde66dde';
+import { piExpiryStatus } from './pharmacy-inventory-model.js?v=8d3adeaf6a';
 
 export function visibleMedicines(meds, allowedRooms) {
   const list = Array.isArray(meds) ? meds : [];

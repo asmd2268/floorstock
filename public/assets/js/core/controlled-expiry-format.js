@@ -141,3 +141,20 @@ export function fsR5NearDays(dept){
   var v='';try{v=sessionStorage.getItem('asdhealth-controlled-near-days-'+dept)||''}catch(e){}
   return Math.max(1,Math.floor(fsNum(v||30)));
 }
+
+/* Which of these dates comes first.
+
+   Sorting expiry strings only works while every one of them is written
+   YYYY-MM-DD. One date typed the other way round becomes the "earliest" of the
+   list — and the earliest expiry is what colours a medicine, puts it on a
+   reorder list, and gets printed on a label. Compared as dates here, with
+   anything unparseable ignored rather than allowed to win. */
+export function earliestExpiry(values, fallback = '') {
+  const dated = (Array.isArray(values) ? values : [])
+    .map((value) => String(value == null ? '' : value).trim())
+    .filter(Boolean)
+    .map((value) => ({ value, at: new Date(value).getTime() }))
+    .filter((entry) => Number.isFinite(entry.at))
+    .sort((a, b) => a.at - b.at);
+  return dated.length ? dated[0].value : String(fallback || '').trim();
+}
