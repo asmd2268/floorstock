@@ -732,6 +732,7 @@ window.injectPrintTabBar=function(activePg){
 
 window.renderPrint=function(){ /* selection carried across the rebuild: core/print-order-selection.js */ var kept=selectedPrintIds();renderPrintTable();restorePrintSelection(kept)};
 function renderPrintTable(){
+  v16InstallActions(document.body);
   var purgeBtn=E('purge-old-orders-btn');
   if(purgeBtn)purgeBtn.style.display=(window.CU&&CU.master===true)?'inline-flex':'none';
 
