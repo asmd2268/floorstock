@@ -161,19 +161,16 @@ test('esc is not redeclared here — it comes from core/dom-utils.js', () => {
   assert.doesNotMatch(report, /^function esc\(/m);
 });
 
-test('shared helpers sit at module scope, above every IIFE', () => {
-  for (const name of ['spikeThresholdPct', 'spikeBadgeClass', 'spikeBadge', 'renderSpikeLegend']) {
-    const at = reportLines.findIndex(l => l.startsWith(`function ${name}(`));
-    assert.ok(at >= 0, `${name} is missing`);
-    assert.ok(at < firstIife, `${name} is inside an IIFE and invisible to the others`);
+test('the grading vocabulary is imported, not redefined per IIFE', () => {
+  /* These started as one copy per IIFE, edited in lockstep — the permission to
+     change the spike threshold had already drifted into two versions. They live
+     in core/analytics-severity.js now, and no copy may come back. */
+  for (const name of ['spikeThresholdPct', 'spikeBadgeClass', 'spikeBadge', 'renderSpikeLegend',
+    'shareBadgeClass', 'fulfillBadgeClass', 'canEditSpikeThreshold', 'canEditSpikeThresholdShared']) {
+    assert.doesNotMatch(report, new RegExp(`^\\s*function ${name}\\(`, 'm'), `${name} is defined again in modules/73`);
   }
-});
-
-test('SPIKE_THRESHOLD_KEY is reachable from the hoisted helper that reads it', () => {
-  // spikeThresholdPct moved to module scope; a key left inside an IIFE would
-  // make it throw ReferenceError at call time -- which node --check cannot see.
-  const at = reportLines.findIndex(l => /^const SPIKE_THRESHOLD_KEY/.test(l));
-  assert.ok(at >= 0 && at < firstIife, 'SPIKE_THRESHOLD_KEY must be declared at module scope');
+  assert.match(report, /from '\.\.\/core\/analytics-severity\.js/);
+  assert.doesNotMatch(report, /^const SPIKE_THRESHOLD_KEY/m);
 });
 
 test('same-named checks that were never the same function stay apart', () => {

@@ -7,6 +7,12 @@ import {
   detectSpikes, zeroDispenseSummary, deptLabel,
   topShortfalls, departmentFillRates, detectQuantityOutliers
 } from '../core/analytics-engine.js?v=c7b1bd3819';
+import {
+  spikeThresholdPct, canEditSpikeThreshold, saveSpikeThreshold,
+  spikeBadge, renderSpikeLegend, shareBadge, renderShareLegend,
+  fulfillBadge, renderFulfillLegend, renderThresholdControl, bindThresholdControl,
+  FULFILL_TIERS
+} from '../core/analytics-severity.js?v=3a9756438b';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -46,32 +52,6 @@ th{background:#dbeafe;color:#102a5c}
 @media print{button{display:none!important}.section{break-inside:avoid}}
 `;
 
-/* Shared by every IIFE below. These were defined once per IIFE and had to be
-   edited in lockstep; the spike helpers in particular decide how a consumption
-   rise is graded, and a threshold changed in one copy and not the other would
-   have graded the same rise two ways in one report. One definition now. */
-const SPIKE_THRESHOLD_KEY = 'analytics_spike_threshold_pct';
-function spikeThresholdPct() {
-  const v = Number(window.S && typeof S.g === 'function' ? S.g(SPIKE_THRESHOLD_KEY) : null);
-  return Number.isFinite(v) && v > 0 ? v : 30;
-}
-function spikeBadgeClass(pct, threshold) {
-  if (pct >= threshold * 2.5) return 'extreme';
-  if (pct >= threshold * 1.5) return 'high';
-  return 'mid';
-}
-function spikeBadge(pct, threshold) {
-  return `<span class="anl-spike-badge ${spikeBadgeClass(pct, threshold)}">+${pct}%</span>`;
-}
-function renderSpikeLegend(threshold) {
-  return `<div class="anl-legend">
-    <b>Legend / الدليل:</b>
-    <span><span class="anl-spike-badge mid">+${threshold}%</span> ${threshold}–${Math.round(threshold * 1.5 - 1)}% increase</span>
-    <span><span class="anl-spike-badge high">+${Math.round(threshold * 1.5)}%</span> ${Math.round(threshold * 1.5)}–${Math.round(threshold * 2.5 - 1)}% increase</span>
-    <span><span class="anl-spike-badge extreme">+${Math.round(threshold * 2.5)}%</span> ${Math.round(threshold * 2.5)}%+ increase</span>
-  </div>`;
-}
-
 (function () {
 'use strict';
 
@@ -81,40 +61,14 @@ function canUseInpatientAnalytics() {
   return ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor'].includes(r) || !!(window.CU && window.CU.master);
 }
 function qLabel(q) { return `Q${q} / الربع ${['','الأول','الثاني','الثالث','الرابع'][q]||q}`; }
-// firestore.rules' canWriteState() allows unrestricted docId writes only for
-// pharmacy/pharmacy_director (and master, who takes on an effective role) —
-// inpatient_supervisor and the other roles permitted() lets VIEW this page
-// are restricted to a fixed docId pattern that does not include this new
-// setting key, so their write would be silently rejected server-side.
-function canEditSpikeThreshold() {
-  const r = String(window.fsEffectiveRole ? window.fsEffectiveRole() : (window.CU && window.CU.role) || '');
-  // window.CU.master alone misses the case where master is currently testing
-  // as another role (CU gets swapped, MASTER_ACTUAL preserves the real
-  // identity) — use the same canonical check module 07j already exposes for
-  // this exact scenario instead of a narrower ad-hoc one.
-  return ['pharmacy','pharmacy_director'].includes(r)
-    || (typeof window.isMasterActual === 'function' ? window.isMasterActual() : !!(window.CU && window.CU.master));
-}
 function selectedYear()    { const el = document.getElementById('analytics-report-year');    return Number(el && el.value) || new Date().getFullYear(); }
 function selectedQuarter() { const el = document.getElementById('analytics-report-quarter'); return String(el && el.value || 'all'); }
 function selectedDept()    { const el = document.getElementById('analytics-report-dept');    return String(el && el.value || ''); }
 window.saveAnalyticsSpikeThreshold = async function () {
   const input = document.getElementById('analytics-spike-threshold');
   if (!input || !canEditSpikeThreshold()) return;
-  const value = Math.round(Number(input.value));
-  if (!Number.isFinite(value) || value < 1 || value > 500) {
-    input.value = spikeThresholdPct();
-    if (window.toast) toast('Enter a threshold between 1 and 500%. / أدخل نسبة بين 1 و500%', 'err');
-    return;
-  }
-  try {
-    await S.s(SPIKE_THRESHOLD_KEY, value);
-    if (typeof window.auditAction === 'function') auditAction('analytics_spike_threshold_changed', { thresholdPct: value });
-    if (window.toast) toast('Threshold saved ✓ / تم حفظ النسبة ✓', 'succ');
-    window.renderAnalyticsReports();
-  } catch (error) {
-    if (window.toast) toast('Threshold was not saved. / لم يتم حفظ النسبة', 'err');
-  }
+  const saved = await saveSpikeThreshold(input.value, () => window.renderAnalyticsReports());
+  if (saved === null) input.value = spikeThresholdPct();
 };
 function pctArrow(pct) {
   if (pct === null) return '';
@@ -823,81 +777,6 @@ function crashCartList() {
 // print-trigger button that generated and printed a report before the
 // control was ever interactable. window.saveAnalyticsSpikeThreshold
 // already exists as a real global (assigned in that other IIFE) so it's
-// reused here rather than duplicated — only the role check and the HTML/
-// bind wiring needed a local copy for this IIFE's own render functions.
-function canEditSpikeThresholdShared() {
-  const r = currentRole();
-  return ['pharmacy','pharmacy_director'].includes(r)
-    || (typeof window.isMasterActual === 'function' ? window.isMasterActual() : isMaster());
-}
-function renderThresholdControl(idPrefix) {
-  const threshold = spikeThresholdPct();
-  const canEdit = canEditSpikeThresholdShared();
-  return `<span class="anl-threshold-ctl">Spike threshold / حد الارتفاع:
-    <input type="number" id="${idPrefix}-input" min="1" max="500" value="${threshold}"${canEdit ? '' : ' disabled title="Only pharmacy director / master can change this. / فقط مدير الصيدلية / الماستر يقدر يغيّرها"'}>%
-    ${canEdit ? `<button class="btn bg bsm" id="${idPrefix}-save">Save / حفظ</button>` : ''}
-  </span>`;
-}
-function bindThresholdControl(idPrefix, onSaved) {
-  const input = document.getElementById(idPrefix + '-input');
-  const btn = document.getElementById(idPrefix + '-save');
-  if (!btn || btn.dataset.bound) return;
-  btn.dataset.bound = '1';
-  btn.addEventListener('click', async () => {
-    const value = Math.round(Number(input.value));
-    if (!Number.isFinite(value) || value < 1 || value > 500) {
-      input.value = spikeThresholdPct();
-      if (window.toast) toast('Enter a threshold between 1 and 500%. / أدخل نسبة بين 1 و500%', 'err');
-      return;
-    }
-    try {
-      await S.s(SPIKE_THRESHOLD_KEY, value);
-      if (typeof window.auditAction === 'function') auditAction('analytics_spike_threshold_changed', { thresholdPct: value });
-      if (window.toast) toast('Threshold saved ✓ / تم حفظ النسبة ✓', 'succ');
-      onSaved();
-    } catch (error) {
-      if (window.toast) toast('Threshold was not saved. / لم يتم حفظ النسبة', 'err');
-    }
-  });
-}
-
-// Severity-by-share badges: unlike spikeBadge (YoY % change), this tiers a
-// value's share of a total (e.g. one medicine's share of all replacements),
-// reusing the same visual language (anl-spike-badge classes) for consistency
-// across every report in this module.
-const SHARE_TIERS = { mid: 15, high: 25, extreme: 40 };
-function shareBadgeClass(sharePct) {
-  if (sharePct >= SHARE_TIERS.extreme) return 'extreme';
-  if (sharePct >= SHARE_TIERS.high) return 'high';
-  if (sharePct >= SHARE_TIERS.mid) return 'mid';
-  return 'low';
-}
-function shareBadge(sharePct) {
-  const cls = shareBadgeClass(sharePct);
-  return `<span class="anl-spike-badge ${cls}">${sharePct}%</span>`;
-}
-// Fulfillment badges: inverse severity from shareBadge — here LOW % is bad
-// (a request that came up short), so the color ramp runs the other way.
-const FULFILL_TIERS = { good: 95, mid: 80, low: 60 };
-function fulfillBadgeClass(pct) {
-  if (pct >= FULFILL_TIERS.good) return 'good';
-  if (pct >= FULFILL_TIERS.mid) return 'mid';
-  if (pct >= FULFILL_TIERS.low) return 'high';
-  return 'extreme';
-}
-function fulfillBadge(pct) {
-  return `<span class="anl-spike-badge ${fulfillBadgeClass(pct)}">${pct}%</span>`;
-}
-function renderFulfillLegend() {
-  return `<div class="anl-legend">
-    <b>Legend / الدليل:</b>
-    <span><span class="anl-spike-badge good">${FULFILL_TIERS.good}%+</span> Fully fulfilled / تلبية كاملة</span>
-    <span><span class="anl-spike-badge mid">${FULFILL_TIERS.mid}–${FULFILL_TIERS.good - 1}%</span> Minor shortfall / نقص طفيف</span>
-    <span><span class="anl-spike-badge high">${FULFILL_TIERS.low}–${FULFILL_TIERS.mid - 1}%</span> Significant shortfall / نقص ملحوظ</span>
-    <span><span class="anl-spike-badge extreme">&lt;${FULFILL_TIERS.low}%</span> Severe shortfall / نقص حاد</span>
-  </div>`;
-}
-
 function fulfillmentRequests() {
   const live = (typeof window.gr === 'function' ? window.gr() : (window.S && typeof S.g === 'function' ? S.g('requests') : [])) || [];
   const archive = (window.S && typeof S.g === 'function' ? S.g('request_analytics_summary_v1') : []) || [];
@@ -1087,16 +966,6 @@ function renderFulfillment() {
     printBtn.dataset.bound = '1';
     printBtn.addEventListener('click', printFulfillmentReport);
   }
-}
-
-function renderShareLegend() {
-  return `<div class="anl-legend">
-    <b>Legend / الدليل:</b>
-    <span><span class="anl-spike-badge low">&lt;${SHARE_TIERS.mid}%</span> normal share</span>
-    <span><span class="anl-spike-badge mid">${SHARE_TIERS.mid}%</span> ${SHARE_TIERS.mid}–${SHARE_TIERS.high - 1}% of total</span>
-    <span><span class="anl-spike-badge high">${SHARE_TIERS.high}%</span> ${SHARE_TIERS.high}–${SHARE_TIERS.extreme - 1}% of total</span>
-    <span><span class="anl-spike-badge extreme">${SHARE_TIERS.extreme}%</span> ${SHARE_TIERS.extreme}%+ of total</span>
-  </div>`;
 }
 
 /* ── DRUG COMPARISON ACROSS DEPARTMENTS ──────────────────────────────────
