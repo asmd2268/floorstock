@@ -90,10 +90,6 @@ export function monthPartitionedKeyNames() {
   return [...registry.keys()];
 }
 
-export function isMonthPartitionDoc(docId) {
-  return monthPartitionedKeyNames().some(key => partitionPattern(key).test(String(docId || '')));
-}
-
 export function partitionPattern(key) {
   return new RegExp(`^${key}_${marker(monthPartitionSpec(key))}\\d{4}-\\d{2}(_p\\d+)?$`);
 }

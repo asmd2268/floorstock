@@ -3,9 +3,9 @@ import {
   appendMonthPartitionedRows,
   monthPartitionRows,
   partitionKeysInCache,
-} from './month-partitioned-store.js?v=aeb7b09869';
+} from './month-partitioned-store.js?v=9a4f8c0b46';
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
-import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
+import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
 import { CRASH_REPORT_LIVE_MONTHS as POLICY_LIVE_MONTHS } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* Crash Cart reports, kept affordable forever.

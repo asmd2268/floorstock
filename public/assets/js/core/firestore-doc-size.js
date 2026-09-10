@@ -63,10 +63,6 @@ export function estimateDocBytes(value) {
   return DOC_OVERHEAD + estimateValueBytes(value);
 }
 
-export function docFillPercent(value) {
-  return (estimateDocBytes(value) / FIRESTORE_DOC_LIMIT) * 100;
-}
-
 Object.assign(globalThis, {
   FIRESTORE_DOC_LIMIT,
   estimateValueBytes,

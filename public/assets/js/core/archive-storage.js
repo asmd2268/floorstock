@@ -100,13 +100,6 @@ export async function archiveDownloadUrl(path) {
   return service.ref(path).getDownloadURL();
 }
 
-export async function deleteStoredArchive(path) {
-  const service = storage();
-  if (!service) return false;
-  await service.ref(path).delete();
-  return true;
-}
-
 Object.assign(globalThis, {
   archiveStorageAvailable,
   uploadArchive,

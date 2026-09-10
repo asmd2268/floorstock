@@ -5,8 +5,8 @@ import {
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
   partitionKeysInCache,
-} from './month-partitioned-store.js?v=aeb7b09869';
-import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
+} from './month-partitioned-store.js?v=9a4f8c0b46';
+import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
 import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 
 /* Orders, one document per Gregorian month.
@@ -49,46 +49,6 @@ export function requestRows() {
 
 export function appendRequests(rows) {
   return appendMonthPartitionedRows(REQUESTS_KEY, rows);
-}
-
-export function saveRequest(row) {
-  return saveMonthPartitionedRow(REQUESTS_KEY, row);
-}
-
-export function deleteRequest(id) {
-  return deleteMonthPartitionedRow(REQUESTS_KEY, id);
-}
-
-/* Reconciles a whole desired array against what is held: saves what changed,
-   removes what is gone. The ten call sites that used to hand S.s() a filtered
-   copy of every order now go through here, so a single edit no longer rewrites
-   the entire order history. */
-export async function applyRequestChanges(nextRows) {
-  const next = (nextRows || []).filter((row) => row && row.id);
-  const current = requestRows();
-  const nextById = new Map(next.map((row) => [String(row.id), row]));
-  const currentById = new Map(current.map((row) => [String(row.id), row]));
-
-  const added = next.filter((row) => !currentById.has(String(row.id)));
-  const changed = next.filter((row) => {
-    const before = currentById.get(String(row.id));
-    return before && JSON.stringify(before) !== JSON.stringify(row);
-  });
-  const removed = current.filter((row) => !nextById.has(String(row.id)));
-
-  if (added.length) await appendRequests(added);
-  for (const row of changed) await saveRequest(row);
-  for (const row of removed) await deleteRequest(row.id);
-  return { added: added.length, changed: changed.length, removed: removed.length };
-}
-
-export function availableRequestMonths() {
-  const months = new Set();
-  partitionKeysInCache(REQUESTS_KEY).forEach((name) => {
-    const match = /_g(\d{4}-\d{2})(_p\d+)?$/.exec(name);
-    if (match) months.add(match[1]);
-  });
-  return [...months].sort().reverse();
 }
 
 /* One-time migration of the single requests document into Gregorian months.

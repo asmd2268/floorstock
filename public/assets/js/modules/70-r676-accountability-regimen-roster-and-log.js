@@ -170,7 +170,6 @@ function actor(){return String(user().email||user().name||'Pharmacy')}
 function toast(message,kind){if(window.toast)window.toast(message,kind||'succ')}
 function validDept(value){var scope=scopedDept();return !!value&&(!scope||String(scope)===String(value))}
 function catalog(dept){return rows(CATALOG).filter(function(row){return row&&String(row.deptId)===String(dept)})}
-function activeCatalog(dept){return catalog(dept).filter(function(row){return row.active!==false})}
 function activeVersion(regimen){return (regimen.versions||[]).find(function(v){return String(v.id)===String(regimen.activeVersionId)})||(regimen.versions||[])[0]||{}}
 function severity(value){return ({low:'Low / منخفضة',moderate:'Moderate / متوسطة',high:'High / عالية',critical:'Critical / حرجة'})[value]||String(value||'—')}
 function currentDept(){return UI.dept||scopedDept()||String((depts()[0]||{}).id||'')}

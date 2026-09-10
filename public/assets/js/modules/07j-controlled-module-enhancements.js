@@ -37,7 +37,6 @@ function ctlClassLabel(v){
     :'<span class="badge brd">Narcotic / مخدر</span>';
 }
 
-function ctlEarliestDays(batches){return earliestDays(batches)}
 function ctlStatus(m,w,p){return controlledStatus(m,w,p,ctlAlertDays())}
 
 // ── WAREHOUSE PDF RECEIPT IMPORT ─────────────────────────────
@@ -348,23 +347,6 @@ function masterRoleLabel(role){
     :role==='department'?'Department Employee / موظف قسم'
     :role||'Unknown role';
 }
-function ensureMasterRoleModal(){return typeof window.fsR6EnsureMasterModal==='function'?window.fsR6EnsureMasterModal():null}
-function masterRoleSelectionChanged(){
-  var role=el('master-role-select')?el('master-role-select').value:'pharmacy';
-  var wrap=el('master-dept-wrap');if(wrap)wrap.style.display=role==='department'?'block':'none';
-  masterPreviewRole();
-}
-function masterPreviewRole(){
-  var role=el('master-role-select')?el('master-role-select').value:'pharmacy';
-  var deptId=el('master-dept-select')?el('master-dept-select').value:'';
-  var dept=role==='department'?gd().find(function(d){return d.id===deptId}):null;
-  var preview=el('master-user-preview');if(!preview)return;
-  preview.innerHTML='<strong>Effective permissions:</strong> '+esc(masterRoleLabel(role))
-    +(role==='department'?'<br><strong>Department:</strong> '+esc(dept?dept.name:'No department selected'):'')
-    +'<br><strong>Actual signed-in user:</strong> '+esc((actualUser()||{}).email||(actualUser()||{}).username||'Master')+' (Master)';
-}
-
-
 // Master uniqueness is enforced directly by saveUser.
 
 // Bulk medication flags for any inventory.

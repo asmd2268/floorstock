@@ -1,5 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { getMonthlyReqCount as canonicalMonthlyReqCount } from '../core/schedule-limits.js?v=005b407b10';
+import { getNotes, setNotes } from '../core/department-note-store.js?v=5f9e2d95ff';
 
 // ── EXPIRY-STUB / ORDER RETENTION / PRINT / PUBLIC VIEW / NOTES /
 // CATEGORIES / BULK ACTIONS / SCHEDULE-STUB HELPERS ────────────────────
@@ -67,8 +68,8 @@ function renderMobileRequest(requestId){
 
 
 // ── NOTES / FEEDBACK ──────────────────────────────────────
-function getNotes(){return globalThis.asdhDepartmentNoteStore.getNotes()}
-function setNotes(arr){return globalThis.asdhDepartmentNoteStore.setNotes(arr)}
+/* Imported, not re-declared: core/department-note-store.js owns these, and a
+   local function of the same name is a second definition to keep in step. */
 
 function noteEsc(v){return globalThis.asdhDepartmentNoteUtils.noteEsc(v)}
 function noteStatus(v){return globalThis.asdhDepartmentNoteUtils.noteStatus(v)}

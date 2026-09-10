@@ -1,7 +1,7 @@
 import { hijriDateLabel, hijriMonthKey, hijriMonthLabelBilingual, hijriMonthsBetween } from './hijri-calendar.js?v=c5193ff179';
-import { partitionKey } from './month-partitioned-store.js?v=aeb7b09869';
-import { CONTROLLED_MOVES_KEY, controlledMoveRows } from './controlled-moves-store.js?v=a58b8592df';
-import { mayExportMonths, exportPermissionReason } from './export-grants.js?v=c3fc3bf86f';
+import { partitionKey } from './month-partitioned-store.js?v=9a4f8c0b46';
+import { CONTROLLED_MOVES_KEY, controlledMoveRows } from './controlled-moves-store.js?v=1b25213a95';
+import { mayExportMonths, exportPermissionReason } from './export-grants.js?v=4aabc71b26';
 import { buildArchiveManifest, archiveFileName } from './archive-manifest.js?v=3da5b8801d';
 
 /* Exporting the controlled ledger to Excel, one Hijri month or a range of them.

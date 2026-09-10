@@ -347,7 +347,12 @@ test('Hide and Frozen controls remain visible to inpatient supervisor, pharmacy 
   assert.equal(canWriteStateKey({ role: 'inpatient_supervisor' }, 'medication_visibility_rules_v3'), true);
   assert.equal(canWriteStateKey({ role: 'inpatient_supervisor' }, 'medication_freeze_rules_v3'), true);
   assert.match(requestSource, /CU\.master===true\|\|String\(CU\.role\|\|''\)==='pharmacy'/);
-  assert.match(startupRepairSource, /!window\.fsCanWriteStateKey\(NOREPI_MIGRATION_KEY_Z\)/);
+  /* The one-off norepinephrine repair that this guard protected is gone — it
+     was dead code, called from nowhere. The guarantee it stood for is now
+     absolute rather than conditional: nothing in the startup repair path writes
+     a migration marker at all. */
+  assert.doesNotMatch(startupRepairSource, /NOREPI_MIGRATION_KEY_Z/);
+  assert.doesNotMatch(startupRepairSource, /migration_crash_cart_norepinephrine/);
 });
 
 test('request editing follows the department current open window and stops after fulfillment', () => {

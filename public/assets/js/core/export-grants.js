@@ -150,18 +150,6 @@ export function grantsForDisplay() {
     .sort((a, b) => String(b.grantedAt || '').localeCompare(String(a.grantedAt || '')));
 }
 
-/* Drops grants that ended long ago. The key is small by nature, but it is still
-   one document and nothing should grow in it forever. */
-export async function pruneExpiredGrants() {
-  if (!isMaster()) return 0;
-  const cutoff = new Date(Date.now() - 90 * 86400000).toISOString();
-  const all = grants();
-  const kept = all.filter((grant) => String(grant.expiresAt || '') > cutoff || grantIsLive(grant));
-  if (kept.length === all.length) return 0;
-  await globalThis.S.s(EXPORT_GRANTS_KEY, kept);
-  return all.length - kept.length;
-}
-
 export function defaultGrantRange() {
   const current = currentHijriMonthKey();
   return { fromMonth: shiftHijriMonth(current, -2), toMonth: current };

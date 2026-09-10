@@ -8,8 +8,8 @@ import {
   deleteMonthPartitionedRow,
   partitionKeysInCache,
   partitionKey,
-} from './month-partitioned-store.js?v=aeb7b09869';
-import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
+} from './month-partitioned-store.js?v=9a4f8c0b46';
+import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.
 
@@ -69,11 +69,6 @@ export function availableControlledMonths() {
     if (match) months.add(match[1]);
   });
   return [...months].sort().reverse();
-}
-
-export function controlledMovesForMonths(monthKeys) {
-  const wanted = new Set(monthKeys || []);
-  return controlledMoveRows().filter((row) => wanted.has(hijriMonthKey(row && row.at)));
 }
 
 /* One-time migration to the Hijri-month partitions.

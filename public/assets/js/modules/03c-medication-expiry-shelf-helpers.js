@@ -36,7 +36,6 @@ window.fsR17RefreshMedicationReferences=async function(deptId,medId,oldName,newN
 // repairImportedDepartmentAliases, so this real implementation never runs.
 // Removed rather than kept unreachable; the disable-stub in module 40 is the
 // active, intentional policy enforcement.
-function fsR17Hash(v){var h=2166136261,s=String(v||'');for(var i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0).toString(36)}
 globalThis.FS_R18_EXPIRY_MIGRATION_PENDING = {};
 function fsR18ExpiryId(){return 'ex_'+Date.now().toString(36)+'_'+Math.random().toString(36).slice(2,9)}
 function fsR17NormalizeExpiryRow(deptId,row,index,usedIds){

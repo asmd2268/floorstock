@@ -3,8 +3,8 @@ import {
   appendMonthPartitionedRows,
   monthOf,
   monthPartitionSpec,
-} from './month-partitioned-store.js?v=aeb7b09869';
-import { registerStorageCleanup } from './storage-cleanup.js?v=71c9bbd831';
+} from './month-partitioned-store.js?v=9a4f8c0b46';
+import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
 import { legacyStateDoc } from './legacy-state-doc.js?v=95b728cbfc';
 
 /* The remaining append-forever records, filed by month like the ledgers.
@@ -113,10 +113,6 @@ const SPECS = Object.freeze([
 ]);
 
 SPECS.forEach((spec) => registerMonthPartitionedKey(spec));
-
-export function operationalPartitionSpecs() {
-  return SPECS;
-}
 
 // The raw legacy document, never S.g: after a migration S.g returns the rows
 // joined from the partitions, which made a finished migration look pending.

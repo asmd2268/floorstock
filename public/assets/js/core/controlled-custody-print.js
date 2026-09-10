@@ -31,7 +31,6 @@ function fsR5PublicUrl(dept){
   try{if(typeof window.ctlPublicUrl==='function')return window.ctlPublicUrl(dept)}catch(e){}
   var url=new URL(location.origin+location.pathname);url.searchParams.set('view','controlled-expiry');url.searchParams.set('dept',dept);var tenant=window.fsTenantId&&fsTenantId();if(tenant)url.searchParams.set('tenant',tenant);return url.toString();
 }
-function fsR5Logo(){try{if(typeof window.ctlLogo==='function')return window.ctlLogo()||''}catch(e){}return ''}
 function fsR5PrintSettings(dept){try{if(typeof window.ctlPrintSettings==='function')return window.ctlPrintSettings(dept)||{}}catch(e){}return {}}
 /* Arabic department name for the printed heading.
  *

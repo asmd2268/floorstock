@@ -53,17 +53,6 @@ export function fsR5SelectedOrders(ids){
   }).filter(Boolean);
 }
 
-export function fsR5OrderRow(row,index){
-  var nc='med-name'+(row.high?' high-alert':'')+(row.hazard?' hazard':'');
-  var qc='qty-box'+(row.cold?' refrigerated':'');
-  var inner='qty-value'+(row.lasa?' lasa':'');
-  return '<div class="medicine-item" data-positive="1">'+
-    '<span class="item-no">'+index+'</span>'+
-    '<span class="'+nc+'">'+fsEsc(row.name)+'</span>'+
-    '<span class="'+qc+'"><span class="'+inner+'">'+fsEsc(row.qty)+'</span></span>'+
-    '</div>';
-}
-
 /* Rows are grouped by category within an order, but printed as one flat list:
    the runtime draws the category heading when the category changes. */
 export function fsR5OrdersPrintData(orders){

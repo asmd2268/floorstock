@@ -1,4 +1,4 @@
-import { listStoredArchives, archiveDownloadUrl, archiveStorageAvailable } from './archive-storage.js?v=24b92dea32';
+import { listStoredArchives, archiveDownloadUrl, archiveStorageAvailable } from './archive-storage.js?v=9e3225446a';
 
 /* The list of archives held in the project, so the copies are visible and
    downloadable from inside the app rather than existing only as a folder on

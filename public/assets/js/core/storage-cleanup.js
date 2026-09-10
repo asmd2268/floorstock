@@ -39,10 +39,6 @@ export function storageCleanupFor(key) {
   return cleaners.get(String(key)) || null;
 }
 
-export function storageCleanupKeys() {
-  return [...cleaners.keys()];
-}
-
 /* The one-time moves that change where a record is STORED — orders into months,
    the ledgers into Hijri months, the legacy archive into the single one. They
    are safe to run one after another and none of them deletes anything until its

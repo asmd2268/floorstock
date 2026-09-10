@@ -1,4 +1,4 @@
-import { estimateDocBytes, FIRESTORE_DOC_LIMIT } from './firestore-doc-size.js?v=e36fbcceed';
+import { estimateDocBytes, FIRESTORE_DOC_LIMIT } from './firestore-doc-size.js?v=7dc5fd9f75';
 
 /* The general answer to "a record filled up and everything stopped".
 

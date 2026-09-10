@@ -1,5 +1,5 @@
 import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
-import { estimateDocBytes } from './firestore-doc-size.js?v=e36fbcceed';
+import { estimateDocBytes } from './firestore-doc-size.js?v=7dc5fd9f75';
 import { ROTATION_POLICIES } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* Ceilings that enforce themselves: the newest rows are kept, the oldest give
