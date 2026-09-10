@@ -7,6 +7,7 @@ import {
   piDaysToExpiry, piExpiryStatus, piExpiryLabel, PI_EXPIRY_WARN_DAYS
 } from '../core/pharmacy-inventory-model.js?v=37e70b3537';
 import { buildTxnRecords, applyNewLocations } from '../core/pharmacy-inventory-transactions.js?v=e2389f9994';
+import { visibleMedicines, filterMedicines, medicinesNeedingReorder } from '../core/pharmacy-inventory-filters.js?v=f97497c405';
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -348,9 +349,7 @@ window.piFilterByShelf=function(roomId,cabId,shelfId){
 // ══════════════════════════════════════════════════════════
 function piRenderMedsTab(host){
   var allowedRooms=piAllowedRooms();
-  var allMeds=allowedRooms.length
-    ? piMeds().filter(function(m){return (m.locations||[]).some(function(l){return allowedRooms.indexOf(l.roomId)>=0})})
-    : piMeds();
+  var allMeds=visibleMedicines(piMeds(),allowedRooms);
   var rooms=piRooms().filter(function(r){return piRoomAllowed(r.id)});
   var canEdit=piCanEdit();
   var canEditIntCls=piCanEditIntCls();
@@ -400,20 +399,14 @@ function piRenderMedsTab(host){
       '<button class="btn bg bxs" onclick="piMedClearFilters()">✕ Clear filters</button>':'')+
     '</div>';
 
-  // Filter meds
-  var meds=allMeds.slice();
-  if(PI_UI.medFilter){var q=PI_UI.medFilter.toLowerCase();meds=meds.filter(function(m){return (m.name||'').toLowerCase().indexOf(q)>=0||(m.mohCode||'').toLowerCase().indexOf(q)>=0||(m.nupcoCode||'').toLowerCase().indexOf(q)>=0})}
-  if(PI_UI.medFilterLoc){var locParts=PI_UI.medFilterLoc.split(':');meds=meds.filter(function(m){return (m.locations||[]).some(function(l){return l.roomId===locParts[0]&&l.cabId===locParts[1]&&(!locParts[2]||l.shelfId===locParts[2])})})}
-  if(PI_UI.medFilterCls)meds=meds.filter(function(m){return m.classification===PI_UI.medFilterCls});
-  if(PI_UI.medFilterExpiry)meds=meds.filter(function(m){return piExpiryStatus(m.expiry)===PI_UI.medFilterExpiry});
-  if(PI_UI.medFilterStatus)meds=meds.filter(function(m){return m.internalStatus===PI_UI.medFilterStatus});
-  if(PI_UI.medFilterUrgency)meds=meds.filter(function(m){return m.urgency===PI_UI.medFilterUrgency});
-  if(PI_UI.medFilterDosage)meds=meds.filter(function(m){return m.dosageForm===PI_UI.medFilterDosage});
-  if(PI_UI.medFilterMultiLoc)meds=meds.filter(function(m){return (m.locations||[]).length>1});
-  if(PI_UI.medFilterOOS)meds=meds.filter(function(m){return !!m.outOfStock});
+  var meds=filterMedicines(allMeds,{
+    search:PI_UI.medFilter, location:PI_UI.medFilterLoc, classification:PI_UI.medFilterCls,
+    expiry:PI_UI.medFilterExpiry, status:PI_UI.medFilterStatus, urgency:PI_UI.medFilterUrgency,
+    dosageForm:PI_UI.medFilterDosage, multiLocation:PI_UI.medFilterMultiLoc, outOfStock:PI_UI.medFilterOOS
+  });
 
   // Reorder list: out-of-stock or expiring soon (gated by permission)
-  var reorderMeds=piCanViewReorder()?allMeds.filter(function(m){return m.outOfStock||piExpiryStatus(m.expiry)==='expired'||piExpiryStatus(m.expiry)==='soon'}):[];
+  var reorderMeds=piCanViewReorder()?medicinesNeedingReorder(allMeds):[];
   var reorderHtml='';
   if(reorderMeds.length){
     reorderHtml='<div class="card" style="margin-bottom:14px;border-left:3px solid var(--rd)"><div class="ch"><span class="ct">📋 Reorder List / قائمة الطلب</span><span style="font-size:12px;opacity:.6">'+reorderMeds.length+' item(s) need attention</span></div><div class="cb">';
@@ -836,7 +829,10 @@ function piRenderPrintTab(host){
 // Print reorder list (out-of-stock + expiring soon)
 window.piPrintReorder=function(){
   var rooms=piRooms();var colors=piGetColors();
-  var reorderMeds=piMeds().filter(function(m){return m.outOfStock||piExpiryStatus(m.expiry)==='expired'||piExpiryStatus(m.expiry)==='soon'});
+  /* The same list the screen shows, under the same room restriction: this used
+     to read every medicine in the pharmacy, so a staff member assigned to two
+     rooms printed a reorder list covering rooms they cannot even see. */
+  var reorderMeds=medicinesNeedingReorder(visibleMedicines(piMeds(),piAllowedRooms()));
   if(!reorderMeds.length)return piToast('No items need reordering','info');
   var css=piPrintCss(colors)+'  .ro-section{margin-bottom:20px} .ro-title{font-size:16px;font-weight:700;border-bottom:2px solid #000;margin-bottom:8px;padding-bottom:4px} .ro-soon{color:#b45309} .ro-expired,.ro-oos{color:#dc2626;font-weight:600}';
   var rows=reorderMeds.map(function(m){
