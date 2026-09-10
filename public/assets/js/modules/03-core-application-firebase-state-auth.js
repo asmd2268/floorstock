@@ -1,3 +1,4 @@
+import { stateKeysForProfile, isPharmacyScopedProfile, uniqueKeys } from '../core/state-read-scope.js?v=af02f1361f';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=ae15f94c34';
@@ -395,51 +396,19 @@ globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1','user_activity_daily_v1',
   'crash_cart_min_seal_length','classification_lists_v1','page_visibility_overrides_v1','user_dept_restrictions_v1','classification_colors_v1'
 ]);
-function fsIsPharmacyScopedProfile(profile){
-  return !!profile&&['inpatient_supervisor','inpatient_pharmacy_supervisor','inpatient pharmacy supervisor','pharmacy_staff'].includes(String(profile.role||''));
-}
-/* Every role's key list ends here, so a key named twice — once in the role's
-   static list and once as a partitioned base key — is read once. */
-function fsUniqueKeys(keys){
-  var seen={};
-  return (keys||[]).filter(function(key){
-    if(seen[key])return false;
-    seen[key]=true;
-    return true;
-  });
-}
+var fsIsPharmacyScopedProfile=isPharmacyScopedProfile,fsUniqueKeys=uniqueKeys;
+/* The rules live in core/state-read-scope.js, where they are tested; the key
+   lists and the calendar-following month keys are supplied from here. */
 function fsStateKeysForProfile(profile){
-  var keys=fsStateKeysForProfileRaw(profile);
-  return keys?fsUniqueKeys(keys):keys;
-}
-function fsStateKeysForProfileRaw(profile){
-  if(!profile)return null;
-  if(profile.master===true)return null;
-  if(fsIsPharmacyScopedProfile(profile))return PHARMACY_SCOPED_STATE_KEYS.concat(fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
-  /* The audit months and the Hijri ledger months are appended at read time so the
-     lists follow the calendar instead of being frozen at deploy. A scoped role
-     cannot LIST the collection, so it has to name every document it reads; older
-     ledger months are fetched on demand by the export picker rather than being
-     loaded into every session. */
-  if(String(profile.role||'')==='controlled_pharmacy')return CONTROLLED_PHARMACY_BASE_KEYS.concat(fsRecentAuditLogKeys(1),fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
-  if(String(profile.role||'')==='warehouse')return WAREHOUSE_STATE_KEYS.concat(fsRecentAuditLogKeys(1),fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION));
-  if(!['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))return null;
-  var keys=DEPARTMENT_SHARED_STATE_KEYS.concat(fsRecentLedgerKeys(LEDGER_MONTHS_IN_SESSION)),deptId=String(profile.deptId||profile.departmentId||'').trim();
-  if(deptId){
-    ['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'].forEach(function(prefix){keys.push(prefix+deptId)});
-    // Every department may view its own controlled-custody list.  Editing and
-    // the shelf configuration remain restricted to the controlled custodian.
-    // controlled_settings_ (head nurse / controlled-medicines officer /
-    // pharmacy manager print signatures) is readable by every department —
-    // not just the custodian — because every department's own "My controlled
-    // list" print depends on it; gating it to controlledCustodian left those
-    // signature lines blank for any department account without that flag.
-    keys.push('controlled_dept_list_'+deptId,'controlled_settings_'+deptId);
-    if(profile.controlledCustodian===true){
-      keys.push('controlled_dept_shelves_'+deptId);
-    }
-  }
-  return keys;
+  return stateKeysForProfile(profile,{
+    pharmacyScoped:PHARMACY_SCOPED_STATE_KEYS,
+    controlledPharmacyBase:CONTROLLED_PHARMACY_BASE_KEYS,
+    warehouse:WAREHOUSE_STATE_KEYS,
+    departmentShared:DEPARTMENT_SHARED_STATE_KEYS,
+    auditKeys:fsRecentAuditLogKeys,
+    ledgerKeys:fsRecentLedgerKeys,
+    ledgerMonths:LEDGER_MONTHS_IN_SESSION
+  });
 }
 async function fsStateLoadDocumentViaRest(key){
   var url=fsStateRestBase()+'/'+fsRestPath(fsStateCollectionPath()+'/'+key)+'?key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);

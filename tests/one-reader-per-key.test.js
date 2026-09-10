@@ -61,7 +61,7 @@ test('the pending-custody badge and the page it counts read the same way', async
   assert.match(page, /function acc2Array\(key\)\{[\s\S]{0,400}?var value=S\.g\(key\)/);
 });
 
-test('a key resolves to the same place for every role', () => {
+test('a key resolves to the same place for every role', async () => {
   /* S.g decides where a key's rows live by asking whether the legacy document is
      in the session cache — so the answer used to depend on WHO was asking.
      Master lists the whole collection and held it, and read the legacy record; a
@@ -72,8 +72,11 @@ test('a key resolves to the same place for every role', () => {
   assert.match(stateModule, /keys\.push\(key\);\s*\n\s*keys=keys\.concat\(recentPartitionKeys\(key,months\)\)/);
   // Named twice — in a role's static list and as a partitioned base key — must
   // still be read once.
-  assert.match(stateModule, /function fsUniqueKeys\(keys\)/);
-  assert.match(stateModule, /return keys\?fsUniqueKeys\(keys\):keys/);
+  /* The de-duplication moved to core/state-read-scope.js with the rest of the
+     read-scope rules, where it is tested against real role fixtures. */
+  const readScope = await readFile(new URL('../public/assets/js/core/state-read-scope.js', import.meta.url), 'utf8');
+  assert.match(readScope, /export function uniqueKeys\(keys\)/);
+  assert.match(readScope, /uniqueKeys\(pharmacyScoped\.concat/);
 });
 
 test('a scoped session draws once its opening snapshots have landed', () => {

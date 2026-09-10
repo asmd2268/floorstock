@@ -818,8 +818,10 @@ test('subscription plans expose selected features and enforce read-only expiry',
 });
 
 test('scoped pharmacy roles load permitted state documents without collection list access', () => {
+  /* The role list moved to core/state-read-scope.js with the read-scope rules. */
+  const readScope = fs.readFileSync(new URL('../public/assets/js/core/state-read-scope.js', import.meta.url), 'utf8');
   for (const role of ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff']) {
-    assert.match(requestSource, new RegExp("'" + role + "'"));
+    assert.match(readScope, new RegExp("'" + role + "'"));
   }
   assert.match(requestSource, /function fsStateLoadPharmacyScoped\(/);
   assert.match(requestSource, /function fsPharmacyDepartmentStateKeys\(/);
