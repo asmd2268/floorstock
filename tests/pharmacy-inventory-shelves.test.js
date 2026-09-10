@@ -99,3 +99,33 @@ test('sixty days is the warning line, and past it is expired', () => {
   assert.match(piExpiryLabel(inDays(10)), /d left/);
   assert.equal(piExpiryLabel(inDays(400)), '', 'a medicine with months left needs no label');
 });
+
+test('a medicine expires when its earliest stock does, expired batches included', async () => {
+  const { medicineExpiryFromLocations } = await import('../public/assets/js/core/pharmacy-inventory-model.js');
+  /* Stock that has already expired is exactly what has to be found and pulled,
+     so it must keep colouring the medicine. Hiding it behind a later batch is
+     how expired stock stays on a shelf. */
+  assert.equal(
+    medicineExpiryFromLocations([{ expiry: '2027-01-01' }, { expiry: '2025-01-01' }, { expiry: '2026-06-01' }]),
+    '2025-01-01',
+  );
+});
+
+test('expiry dates are compared as dates, not as strings', async () => {
+  const { medicineExpiryFromLocations } = await import('../public/assets/js/core/pharmacy-inventory-model.js');
+  /* Sorting the raw strings is only correct while every one is YYYY-MM-DD; one
+     date typed the other way round quietly became the earliest of them all. */
+  assert.equal(
+    medicineExpiryFromLocations([{ expiry: '2026-01-01' }, { expiry: 'March 1, 2025' }]),
+    'March 1, 2025',
+  );
+  // Something that is not a date at all is ignored rather than winning.
+  assert.equal(medicineExpiryFromLocations([{ expiry: 'soon' }, { expiry: '2026-01-01' }]), '2026-01-01');
+});
+
+test('with no dated location, the medicine keeps the date that was typed for it', async () => {
+  const { medicineExpiryFromLocations } = await import('../public/assets/js/core/pharmacy-inventory-model.js');
+  assert.equal(medicineExpiryFromLocations([{ expiry: '' }, {}], '2026-05-05'), '2026-05-05');
+  assert.equal(medicineExpiryFromLocations([], ''), '');
+  assert.equal(medicineExpiryFromLocations(null, '  2026-05-05 '), '2026-05-05');
+});

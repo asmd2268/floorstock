@@ -82,3 +82,25 @@ export function piExpiryLabel(expiryStr){
   var d=piDaysToExpiry(expiryStr);if(d===null)return '';
   if(d<0)return '⛔ Expired';if(d<=PI_EXPIRY_WARN_DAYS)return '⚠ '+d+'d left';return '';
 }
+
+/* The medicine-level expiry, derived from where its stock actually sits.
+
+   The EARLIEST date across the locations wins, expired ones included. The line
+   this replaced said "soonest non-expired" while doing exactly this, and the
+   code was right: stock that has already expired is precisely what has to be
+   found and pulled, so it must keep colouring the medicine and keep it on the
+   reorder list. Hiding it behind a later batch is how expired stock stays on a
+   shelf.
+
+   Dates are compared as dates. The old line sorted the strings, which is only
+   correct while every one of them is written YYYY-MM-DD — one date typed the
+   other way round quietly became the "earliest" of all. */
+export function medicineExpiryFromLocations(locations, fallback = '') {
+  const dated = (Array.isArray(locations) ? locations : [])
+    .map((location) => String((location && location.expiry) || '').trim())
+    .filter(Boolean)
+    .map((expiry) => ({ expiry, at: new Date(expiry).getTime() }))
+    .filter((entry) => Number.isFinite(entry.at))
+    .sort((a, b) => a.at - b.at);
+  return dated.length ? dated[0].expiry : String(fallback || '').trim();
+}

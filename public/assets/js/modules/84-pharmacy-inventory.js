@@ -4,10 +4,11 @@ import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
 import {
   piParseShelfLine, piShelfLine, piShelfCells, piCellLabel, piFindShelf,
   piCellOptionsHtml, piShelfCmp, piShelvesOf,
-  piDaysToExpiry, piExpiryStatus, piExpiryLabel, PI_EXPIRY_WARN_DAYS
-} from '../core/pharmacy-inventory-model.js?v=37e70b3537';
+  piDaysToExpiry, piExpiryStatus, piExpiryLabel, medicineExpiryFromLocations, PI_EXPIRY_WARN_DAYS
+} from '../core/pharmacy-inventory-model.js?v=07dde66dde';
 import { buildTxnRecords, applyNewLocations } from '../core/pharmacy-inventory-transactions.js?v=e2389f9994';
-import { visibleMedicines, filterMedicines, medicinesNeedingReorder } from '../core/pharmacy-inventory-filters.js?v=f97497c405';
+import { visibleMedicines, filterMedicines, medicinesNeedingReorder } from '../core/pharmacy-inventory-filters.js?v=7762996f19';
+import { parseMedicineImport } from '../core/pharmacy-inventory-import.js?v=c5674b7fcb';
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -693,9 +694,7 @@ window.piSaveMed=async function(){
     var cell=parseInt(cellSel&&cellSel.value,10);
     locations.push({roomId:parts[0],cabId:parts[1],shelfId:parts[2],cell:cell>0?cell:null,expiry:expInput?expInput.value.trim():''});
   });
-  // Compute soonest non-expired location expiry as the medicine-level expiry for filtering/display
-  var allLocExpiries=locations.map(function(l){return l.expiry}).filter(Boolean).sort();
-  var computedExpiry=allLocExpiries.length?allLocExpiries[0]:String((piE('pi-med-expiry')||{}).value||'').trim();
+  var computedExpiry=medicineExpiryFromLocations(locations,(piE('pi-med-expiry')||{}).value);
   function piRadioVal(name){var sel=document.querySelector('input[name="'+name+'"]:checked');return sel?sel.value:'none'}
   var med={
     id:PI_UI.editMedId||piUid('med'),
@@ -1178,25 +1177,18 @@ function piRenderImportTab(host){
 window.piDoImport=async function(){
   var raw=String((piE('pi-import-data')||{}).value||'').trim();
   if(!raw)return piToast('Paste data first','err');
-  var cls=String((piE('pi-import-cls')||{}).value||'none');
-  var lines=raw.split('\n').map(function(l){return l.trim()}).filter(Boolean);
-  var imported=[];var skipped=[];
   var existingMeds=piClone(piMeds());
-  var existingNames={};existingMeds.forEach(function(m){existingNames[(m.name||'').toLowerCase()]=true});
-  lines.forEach(function(line,i){
-    var cols=line.indexOf('\t')>=0?line.split('\t'):line.split(',');
-    var name=String(cols[0]||'').trim();
-    var moh=String(cols[1]||'').trim();
-    var nupco=String(cols[2]||'').trim();
-    if(!name||i===0&&(name.toLowerCase()==='name'||name.toLowerCase()==='medicine name')){skipped.push('Row '+(i+1)+': header/empty');return}
-    if(existingNames[name.toLowerCase()]){skipped.push(name+' (duplicate)');return}
-    existingNames[name.toLowerCase()]=true;
-    imported.push({id:piUid('med'),name:name,mohCode:moh,nupcoCode:nupco,classification:cls,expiry:'',outOfStock:false,qrAlert:false,locations:[],updatedAt:piNow(),updatedBy:(window.CU&&CU.email)||''});
+  var parsed=parseMedicineImport(raw,{
+    existing:existingMeds,
+    classification:String((piE('pi-import-cls')||{}).value||'none'),
+    newId:function(){return piUid('med')},
+    now:piNow(),
+    actor:(window.CU&&(CU.email||CU.uid))||''
   });
-  if(!imported.length)return piToast('Nothing to import (all duplicates or empty)','err');
-  var next=existingMeds.concat(imported);
+  if(!parsed.imported.length)return piToast('Nothing to import (all duplicates or empty)','err');
+  var imported=parsed.imported,skipped=parsed.skipped;
   try{
-    await piSaveMeds(next);
+    await piSaveMeds(existingMeds.concat(imported));
     var res=piE('pi-import-result');
     if(res)res.innerHTML='<div class="alert-banner" style="background:var(--gnl2)">✓ Imported <b>'+imported.length+'</b> medicine(s).'+(skipped.length?' Skipped: '+skipped.join(', '):'')+'</div>';
     piToast('Imported '+imported.length,'succ');
