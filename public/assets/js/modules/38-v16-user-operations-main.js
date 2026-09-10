@@ -707,7 +707,7 @@ function role(){return window.fsEffectiveRole?window.fsEffectiveRole():String((w
    - زر فلتر: الكل / Fulfilled فقط / اليوم
    - نسخ renderPrint
 ══════════════════════════════════════════════════════════════ */
-var _v14PrintFilter='today'; /* default for all print users: fulfilled today */
+var _v14PrintFilter='fulfilled'; /* default: show all fulfilled */
 
 window.injectPrintTabBar=function(activePg){
   activePg=activePg||'pg-print';
