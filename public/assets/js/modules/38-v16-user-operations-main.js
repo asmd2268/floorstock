@@ -777,31 +777,13 @@ function renderPrintTable(){
   if(!tbl)return;
 
   /* إضافة شريط الفلتر فوق الجدول */
-  var card=tbl.closest('.card');
-  if(card){
-    var existFilter=E('v14-print-filter');
-    if(!existFilter){
-      var filterBar=document.createElement('div');filterBar.id='v14-print-filter';
-      filterBar.innerHTML=
-        '<span style="font-size:12px;font-weight:700;color:var(--tx2)">Show:</span>'
-        +'<button class="btn bg bsm" id="v14-pf-fulfilled" data-clickact="v14SetPrintFilter" data-a1="fulfilled">✅ Fulfilled</button>'
-        +'<button class="btn bg bsm" id="v14-pf-today" data-clickact="v14SetPrintFilter" data-a1="today">📅 Today\'s fulfilled</button>'
-        +'<button class="btn bg bsm" id="v14-pf-all" data-clickact="v14SetPrintFilter" data-a1="all">All requests</button>'
-        +'<span style="font-size:11px;color:var(--tx2);margin-inline-start:8px">'
-        +'✅ Fulfilled: '+fulfilled.length+' · 📅 Today: '+todayFulfilled.length+' · ⏳ Pending: '+pending.length
-        +'</span>';
-      card.querySelector('.ch').insertAdjacentElement('afterend',filterBar);
-    } else {
-      /* حدّث الأرقام */
-      var stat=existFilter.querySelector('span:last-child');
-      if(stat)stat.textContent='✅ Fulfilled: '+fulfilled.length+' · 📅 Today: '+todayFulfilled.length+' · ⏳ Pending: '+pending.length;
-    }
-    /* أضء الزر النشط */
-    ['fulfilled','today','all'].forEach(function(f){
-      var btn=E('v14-pf-'+f);if(!btn)return;
-      btn.classList.toggle('on',f===_v14PrintFilter);
-    });
-  }
+  /* الفلتر جزء من الـ HTML الثابت الآن — نحدّث الأرقام والزر النشط فقط */
+  var statsEl=E('v14-pf-stats');
+  if(statsEl)statsEl.textContent='✅ Fulfilled: '+fulfilled.length+' · 📅 Today: '+todayFulfilled.length+' · ⏳ Pending: '+pending.length;
+  ['fulfilled','today','all'].forEach(function(f){
+    var btn=E('v14-pf-'+f);if(!btn)return;
+    btn.classList.toggle('on',f===_v14PrintFilter);
+  });
 
   /* بناء الـ tbody */
   if(fRows||pRows){
