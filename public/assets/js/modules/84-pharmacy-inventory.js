@@ -9,6 +9,7 @@ import {
 import { buildTxnRecords, applyNewLocations } from '../core/pharmacy-inventory-transactions.js?v=e2389f9994';
 import { visibleMedicines, filterMedicines, medicinesNeedingReorder } from '../core/pharmacy-inventory-filters.js?v=7762996f19';
 import { parseMedicineImport } from '../core/pharmacy-inventory-import.js?v=c5674b7fcb';
+import { splitForPurge, validPurgeDays } from '../core/pharmacy-inventory-retention.js?v=a46a0a692a';
 'use strict';
 
 // ── Constants ──────────────────────────────────────────────────────────────
@@ -1500,17 +1501,16 @@ window.piDeleteTxn=async function(id){
 
 window.piPurgeTxns=async function(){
   if(!piIsMaster())return piToast('Master only.','err');
-  var settings=piTxnSettings();var cutoff=Date.now()-settings.purgeDays*864e5;
-  var remaining=piTxns().filter(function(t){return new Date(t.createdAt).getTime()>=cutoff});
-  var purged=piTxns().length-remaining.length;
-  if(!window.confirm('Permanently delete '+purged+' old record(s)? This cannot be undone. / حذف '+purged+' سجل قديم بشكل نهائي؟'))return;
-  try{await piSaveTxns(remaining);piToast('Purged '+purged+' record(s) ✓','succ');window.renderPharmInv()}catch(e){piToast(String(e&&e.message||e),'err')}
+  var split=splitForPurge(piTxns(),{purgeDays:piTxnSettings().purgeDays});
+  if(!split.purge.length)return piToast('Nothing is old enough to purge. / لا يوجد سجل قديم بما يكفي','info');
+  if(!window.confirm('Permanently delete '+split.purge.length+' old record(s)? This cannot be undone. / حذف '+split.purge.length+' سجل قديم بشكل نهائي؟'))return;
+  try{await piSaveTxns(split.keep);piToast('Purged '+split.purge.length+' record(s) ✓','succ');window.renderPharmInv()}catch(e){piToast(String(e&&e.message||e),'err')}
 };
 
 window.piSavePurgeDays=async function(){
   var inp=document.getElementById('pi-purge-days');if(!inp)return;
-  var days=parseInt(inp.value)||365;
-  if(days<30)return piToast('Minimum 30 days.','err');
+  var days=validPurgeDays(inp.value);
+  if(days===null)return piToast('Minimum 30 days. / الحد الأدنى 30 يوماً','err');
   try{await piSaveTxnSettings(Object.assign(piTxnSettings(),{purgeDays:days}));piToast('Saved ✓','succ')}catch(e){piToast(String(e&&e.message||e),'err')}
 };
 
