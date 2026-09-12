@@ -54,7 +54,9 @@ const CAPABILITIES = Object.freeze({
   'crashCart.operate': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
   'crashCart.configure': Object.freeze(['pharmacy', 'inpatient_supervisor']),
   'crashCart.delete': Object.freeze(['pharmacy']),
-  'accountability.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'department', 'controlled_pharmacy']),
+  /* outpatient_pharmacy_supervisor holds custody for the outpatient department
+     beneath them, so they read and manage it like any other supervisor. */
+  'accountability.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff', 'department', 'controlled_pharmacy']),
   'accountability.manage': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff']),
   'accountability.handover.create': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff']),
   'controlled.manage': Object.freeze(['pharmacy', 'controlled_pharmacy']),

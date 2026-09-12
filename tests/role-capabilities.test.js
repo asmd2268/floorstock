@@ -84,20 +84,33 @@ test('nav carries no per-role page list of its own', () => {
   assert.match(roleBranches, /canAccessPage\(\{role:rRole\}/);
 });
 
-test('outpatient supervisor does not get Medication Accountability, and the roles that should still do', () => {
-  assert.ok(!navFor('outpatient_pharmacy_supervisor').some((x) => x[0] === 'pg-med-accountability'));
-  assert.equal(canAccessPage({ role: 'outpatient_pharmacy_supervisor' }, 'pg-med-accountability'), false);
-  for (const role of ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff']) {
+test('every supervising role keeps Medication Accountability, outpatient included', () => {
+  /* The outpatient pharmacy supervisor holds custody for the outpatient
+     department beneath them, so they need this page. An earlier pass removed
+     it from them by misreading the report — the defect was never the page, it
+     was the badge counting rows the account cannot open (asserted below). */
+  for (const role of ['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']) {
     assert.ok(navFor(role).some((x) => x[0] === 'pg-med-accountability'), `${role} lost the page`);
     assert.equal(canAccessPage({ role }, 'pg-med-accountability'), true);
+    assert.equal(hasCapability({ role }, 'accountability.read'), true);
   }
-  // The page mirrors accountability.read rather than restating it.
-  assert.equal(hasCapability({ role: 'outpatient_pharmacy_supervisor' }, 'accountability.read'), false);
 });
 
-test('no other role’s navigation changed', () => {
+test('the accountability badge counts only rows the account may open', () => {
+  /* A ward with no custody of its own was shown "2" from other wards, on a page
+     that then said "No active custody medicines assigned". The crash-cart and
+     request badges beside it always scoped by fsCanAccessDepartment; this one
+     counted the whole tenant. */
+  assert.match(navSource, /_accScoped\s*=\s*function/);
+  assert.match(navSource, /fsCanAccessDepartment\(u\.deptId\)/);
+  // both reads still go through S.g by name, which one-reader-per-key also checks
+  assert.match(navSource, /_accScoped\(S\.g\('accountability_usage_v2'\)\)/);
+  assert.match(navSource, /_accScoped\(S\.g\('accountability_plan_usage_v1'\)\)/);
+});
+
+test('every role’s navigation is exactly what it was before the per-role arrays went away', () => {
   /* Every entry below is the list buildNav produced BEFORE the per-role arrays
-     were replaced. Only outpatient_pharmacy_supervisor lost a page. */
+     were replaced — every role, unchanged. */
   assert.deepEqual(navFor('pharmacy'), [
     ['pg-dash', 'Dashboard'], ['pg-inv', 'Inventory'], ['pg-pharm-inv', '🏥 Pharm Inventory'],
     ['pg-reqs', 'Requests'], ['pg-notes-ph', '📝 Notes'], ['pg-print', 'Print'],
@@ -111,7 +124,8 @@ test('no other role’s navigation changed', () => {
   assert.deepEqual(navFor('outpatient_pharmacy_supervisor'), [
     ['pg-dash', 'Dashboard'], ['pg-inv', 'Inventory'], ['pg-pharm-inv', '🏥 Pharm Inventory'],
     ['pg-reqs', 'Requests'], ['pg-notes-ph', '📝 Notes'], ['pg-print', 'Print'],
-    ['pg-crashcart', '🚑 Crash Carts']]);
+    ['pg-crashcart', '🚑 Crash Carts'],
+    ['pg-med-accountability', '🧾 Medication Accountability']]);
   assert.deepEqual(navFor('pharmacy_staff'), [
     ['pg-dash', 'Dashboard'], ['pg-inv', 'Inventory status / حالة الأدوية'],
     ['pg-pharm-inv', '🏥 Pharm Inventory'], ['pg-reqs', 'Requests'], ['pg-notes-ph', '📝 Notes'],

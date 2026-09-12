@@ -7,6 +7,7 @@ const upkeepCore = require('./upkeep-core');
 const accountabilityPartitions = require('./accountability-partitions-core');
 const { initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
+const { buildUserClaims } = require('./user-claims');
 const { getAppCheck } = require('firebase-admin/app-check');
 const { getFirestore, FieldValue, Timestamp } = require('firebase-admin/firestore');
 const { canCreateHandover, createToken, hashToken, tokenMatches, cleanIdentity, number, applyPartyConfirmation, pharmacyConfirmationFromAccount, completeHandoverState } = require('./accountability-handover-core');
@@ -372,6 +373,55 @@ exports.deleteManagedUser = onCall(CALLABLE_OPTIONS, async (request) => {
     master: target.master === true
   });
   return { ok: true };
+});
+
+/* Rewrites every managed user's Auth custom claims from their profile.
+
+   syncUserClaims only fires on a users/{uid} write, so a claim that was wrong
+   when it was written stays wrong until someone edits that user — which is why
+   correcting the `active` rule in sync-user-claims.js does not, by itself,
+   release an account already locked out by the old one. This re-derives every
+   claim from the profile through the same buildUserClaims() the trigger uses,
+   so the two can never disagree.
+
+   Only accounts whose claims actually change are touched, and only those have
+   their refresh tokens revoked — a correct session is not signed out to fix
+   someone else's. A revoked session re-authenticates and picks the corrected
+   claims up immediately instead of waiting for the ~1h token refresh.
+
+   يعيد بناء صلاحيات الحسابات من ملفاتها، ويمسّ فقط ما تغيّر فعلاً. */
+exports.resyncUserClaims = onCall(CALLABLE_OPTIONS, async (request) => {
+  const caller = await callerProfile(request);
+  requireMaster(caller);
+  const tenantId = String(caller.tenantId || '');
+  const snap = tenantId
+    ? await db.collection('users').where('tenantId', '==', tenantId).get()
+    : await db.collection('users').get();
+  const scoped = snap.docs.filter((doc) => (tenantId ? doc.data().tenantId === tenantId : !doc.data().tenantId));
+
+  let changed = 0;
+  const failures = [];
+  for (const doc of scoped) {
+    const next = buildUserClaims(doc.data() || {});
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const record = await auth.getUser(doc.id);
+      const current = record.customClaims || {};
+      const same = Object.keys(next).every((key) => current[key] === next[key]);
+      if (same) continue;
+      // eslint-disable-next-line no-await-in-loop
+      await auth.setCustomUserClaims(doc.id, next);
+      // eslint-disable-next-line no-await-in-loop
+      await auth.revokeRefreshTokens(doc.id);
+      changed += 1;
+    } catch (error) {
+      // A profile with no Authentication account is a legacy directory row, not a failure to report as one.
+      if (error && error.code === 'auth/user-not-found') continue;
+      failures.push({ uid: doc.id, message: String((error && error.message) || error) });
+    }
+  }
+  await audit('user.claims.resync', caller, caller.uid, { scanned: scoped.length, changed, failed: failures.length });
+  return { ok: true, scanned: scoped.length, changed, failures };
 });
 
 exports.setMasterAccess = onCall(CALLABLE_OPTIONS, async (request) => {

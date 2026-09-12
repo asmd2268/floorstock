@@ -1,7 +1,7 @@
 'use strict';
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { buildUserClaims } = require('./sync-user-claims.js');
+const { buildUserClaims } = require('./user-claims.js');
 
 /* firestore.rules branches on these claims: activeUser() is
    request.auth.token.get('active', false) == true whenever a role claim

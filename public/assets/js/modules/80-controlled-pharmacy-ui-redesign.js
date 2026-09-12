@@ -1,7 +1,7 @@
 import { deductReported, addDatedQuantity, removeFromExpiry } from '../core/crash-cart-batch-math.js?v=714f0a8e83';
 import { crashResponseRowIssue, itemPresent, itemStandard, dateKey, datedBatches, quantityAtExpiry } from '../core/crash-response-validation.js?v=ae90e3cb8e';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
-import { canAccessPage } from '../core/role-capabilities.js?v=5932633d41';
+import { canAccessPage } from '../core/role-capabilities.js?v=367322a8f2';
 /* R6.76.88 — Controlled Medicines: complete redesign (stock/cabinets/departments) + drug-list print fix */
 (function(){
 'use strict';
@@ -928,7 +928,7 @@ function ctlCmpPrint(){
     if(ab){ab.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});/* Both counts through S.g — the badge read the partitions directly, which is a
    second copy of the routing S.g already owns and disagrees with it whenever the
    legacy document is still the live record. */
-      var _accPending=(window.S&&typeof S.g==='function')?((S.g('accountability_usage_v2')||[]).filter(function(u){return u&&u.status==='pending_pharmacy'}).length+(S.g('accountability_plan_usage_v1')||[]).filter(function(u){return u&&u.status==='pending_pharmacy'}).length):0;if(_accPending)ab.insertAdjacentHTML('beforeend','<span class="cc-badge">'+_accPending+'</span>')}
+      var _accScoped=function(rows){return (rows||[]).filter(function(u){return u&&u.status==='pending_pharmacy'&&(typeof window.fsCanAccessDepartment!=='function'||window.fsCanAccessDepartment(u.deptId))})},_accPending=(window.S&&typeof S.g==='function')?(_accScoped(S.g('accountability_usage_v2')).length+_accScoped(S.g('accountability_plan_usage_v1')).length):0; /* scoped like the two badges above: a ward saw another ward's count on a page that said it had none */if(_accPending)ab.insertAdjacentHTML('beforeend','<span class="cc-badge">'+_accPending+'</span>')}
   }
   window.ccUpdateBadges=ccUpdateBadges;
 
