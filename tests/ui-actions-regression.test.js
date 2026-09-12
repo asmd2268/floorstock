@@ -274,52 +274,35 @@ test('Firebase App Check activates the Enterprise provider with token auto-refre
   );
 });
 
-test('legacy dynamic controls use a CSP-safe allowlisted bridge without eval', () => {
-  assert.match(cspBridgeSource, /var ALLOWED=new Set/);
-  assert.match(cspBridgeSource, /element\.removeAttribute\(attribute\)/);
-  assert.match(cspBridgeSource, /new MutationObserver/);
-  assert.doesNotMatch(cspBridgeSource, /\beval\s*\(|new Function\s*\(|['"]unsafe-inline['"]/);
-});
-
-test('every legacy inline action name in the module set is covered by the CSP bridge', () => {
-  const modulesDir = new URL('../public/assets/js/modules/', import.meta.url);
-  const ignored = new Set([
-    'if',
-    'setTimeout',
-    'clearTimeout',
-    'Math',
-    'min',
-    'max',
-    'getElementById',
-    'getAttribute',
-    'closest',
-    'remove',
-    'toggle',
-    'blur',
-    'esc',
-    'escA',
-    'escx',
-    'stringify',
-  ]);
-  const names = new Set();
-  for (const file of fs.readdirSync(modulesDir)) {
-    if (!file.endsWith('.js') || file === '59-r664-security-complete-runtime.js') continue;
-    const source = fs.readFileSync(new URL(file, modulesDir), 'utf8');
-    for (const handler of source.matchAll(/on(?:click|change|input|submit|keydown|keyup)=(["'])([\s\S]*?)\1/g)) {
-      // These handlers are built by string concatenation, so an attribute can
-      // contain '+fn(x)+' — a call made while building the markup, whose result is
-      // baked into the attribute. Only what survives into the emitted HTML is ever
-      // executed by the bridge, so drop the interpolated segments first; counting
-      // them produced false positives that would mask a genuinely missing name.
-      const emitted = handler[2].replace(/'\s*\+[\s\S]*?\+\s*'/g, '');
-      for (const call of emitted.matchAll(/(?:window\.)?([A-Za-z_$][\w$]*)\s*\(/g)) {
-        if (!ignored.has(call[1])) names.add(call[1]);
+test('no inline event handler survives anywhere — the bridge that rebound them is gone', () => {
+  /* The CSP bridge was removed once every inline handler became a delegated
+     action. This is the invariant that replaced it: reintroduce an onclick and
+     CSP will refuse to run it, with nothing left to rebind it. The two tests
+     that stood here described the bridge's own shape, and the second had already
+     gone quiet — it looked for inline handlers to check against the allowlist,
+     found none, and passed on an empty set. */
+  const offenders = [];
+  const roots = [new URL('../public/assets/js/modules/', import.meta.url), new URL('../public/assets/js/core/', import.meta.url)];
+  for (const dir of roots) {
+    for (const file of fs.readdirSync(dir)) {
+      if (!file.endsWith('.js')) continue;
+      /* The module that REPLACED the bridge quotes the legacy form in its own
+         documentation; that prose is the one place the string may still appear. */
+      if (file === 'delegated-actions.js') continue;
+      const source = fs.readFileSync(new URL(file, dir), 'utf8');
+      for (const hit of source.matchAll(/on(?:click|change|input|submit|keydown|keyup)=\\?["'][A-Za-z_$]/g)) {
+        offenders.push(`${file}: ${source.slice(hit.index, hit.index + 48)}`);
       }
     }
   }
-  const missing = [...names].filter((name) => !new RegExp(`\\b${name}\\b`).test(cspBridgeSource));
-  assert.deepEqual(missing, []);
+  const html = fs.readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  for (const hit of html.matchAll(/on(?:click|change|input|submit|keydown|keyup)=["'][A-Za-z_$]/g)) {
+    offenders.push(`index.html: ${html.slice(hit.index, hit.index + 48)}`);
+  }
+  assert.deepEqual(offenders, [], `inline handlers are unbindable now:\n  ${offenders.join('\n  ')}`);
 });
+
+assert.doesNotMatch(cspBridgeSource, /var ALLOWED=new Set|new MutationObserver/);
 
 test('Crash Cart boot is read-only and controlled custody loading is deduplicated', () => {
   assert.match(crashBootSource, /must never be changed merely by opening the page/);
