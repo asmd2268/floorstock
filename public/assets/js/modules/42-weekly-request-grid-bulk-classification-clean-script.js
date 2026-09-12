@@ -1,5 +1,6 @@
 import { DAYS_EN, DAYS_AR, allAllowed, allBlocked, normalizeGrid, cloneGrid, flattenGrid, unflattenGrid, hourLabel, timeToMinutes, rowRanges, nextAllowed, currentClose, weeklyAllowedRows, splitRange } from '../core/request-window-grid.js?v=488d488726';
 import { canEditRequestWhileWindowIsOpen, requestWindowDeadlineFromGrid } from '../core/request-edit-policy.js?v=5da8fb0f2c';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 (function(){
 'use strict';
@@ -149,9 +150,9 @@ function renderRequestGridOrphans(){
       var sources=record.sources.length?record.sources.join(' · '):'Unknown source';
       var userNote=record.userCount?'<span class="request-grid-orphan-warning">'+record.userCount+' linked user(s) — delete or reassign them first.</span>':'';
       var action=record.userCount
-        ?'<button class="btn bg bxs" type="button" onclick="showPg(\'pg-users\')">Manage users</button>'
+        ?'<button class="btn bg bxs" type="button" data-clickact="showPg" data-a1="pg-users">Manage users</button>'
         :'<button class="btn bd2c bxs" type="button" '+(canPurge?'':'disabled ')+
-          'onclick="purgeOrphanDepartment('+JSON.stringify(record.id).replace(/"/g,'&quot;')+')">Delete permanently</button>';
+          'data-clickact="purgeOrphanDept" data-dept-id="'+escH(record.id)+'">Delete permanently</button>';
       return '<div class="request-grid-orphan-row">'+
         '<div><b>'+escH(record.name||record.id)+'</b><code>'+escH(record.id)+'</code><small>'+escH(sources)+'</small>'+userNote+'</div>'+action+
       '</div>';
@@ -539,7 +540,7 @@ function renderTargets(depts){
     '</label>';
   }).join('');
 }
-function renderGrid(){var h=E('request-hour-grid');if(!h||!draft)return;var html='<div class="request-hour-grid"><div class="corner">Day / اليوم</div>';for(var hr=0;hr<24;hr++)html+='<div class="hour-head">'+String(hr).padStart(2,'0')+'</div>';for(var d=0;d<7;d++){var ranges=rowRanges(draft[d]);html+='<div class="day-label"><div>'+DAYS_EN[d]+'<br>'+DAYS_AR[d]+'<div class="request-grid-day-summary">'+(ranges.length?ranges.join(' · '):'Blocked all day / ممنوع طوال اليوم')+'</div></div><div class="day-actions"><button type="button" class="btn bg" onclick="setRequestGridDay('+d+',true)">24h</button><button type="button" class="btn bg" onclick="setRequestGridDay('+d+',false)">×</button></div></div>';for(var x=0;x<24;x++)html+='<button type="button" class="hour-cell '+(draft[d][x]?'allowed':'blocked')+'" data-day="'+d+'" data-hour="'+x+'" title="'+DAYS_EN[d]+' '+hourLabel(x)+'"></button>'}html+='</div>';h.innerHTML=html;h.querySelectorAll('.hour-cell').forEach(function(c){c.addEventListener('pointerdown',function(ev){ev.preventDefault();painting=true;var d=+this.dataset.day,hr=+this.dataset.hour;paintValue=!draft[d][hr];draft[d][hr]=paintValue;renderGrid()});c.addEventListener('pointerenter',function(){if(!painting)return;draft[+this.dataset.day][+this.dataset.hour]=paintValue;this.className='hour-cell '+(paintValue?'allowed':'blocked')})})}
+function renderGrid(){var h=E('request-hour-grid');if(!h||!draft)return;var html='<div class="request-hour-grid"><div class="corner">Day / اليوم</div>';for(var hr=0;hr<24;hr++)html+='<div class="hour-head">'+String(hr).padStart(2,'0')+'</div>';for(var d=0;d<7;d++){var ranges=rowRanges(draft[d]);html+='<div class="day-label"><div>'+DAYS_EN[d]+'<br>'+DAYS_AR[d]+'<div class="request-grid-day-summary">'+(ranges.length?ranges.join(' · '):'Blocked all day / ممنوع طوال اليوم')+'</div></div><div class="day-actions"><button type="button" class="btn bg" data-clickact="setGridDay" data-gday="'+d+'" data-on="1">24h</button><button type="button" class="btn bg" data-clickact="setGridDay" data-gday="'+d+'" data-on="0">×</button></div></div>';for(var x=0;x<24;x++)html+='<button type="button" class="hour-cell '+(draft[d][x]?'allowed':'blocked')+'" data-day="'+d+'" data-hour="'+x+'" title="'+DAYS_EN[d]+' '+hourLabel(x)+'"></button>'}html+='</div>';h.innerHTML=html;h.querySelectorAll('.hour-cell').forEach(function(c){c.addEventListener('pointerdown',function(ev){ev.preventDefault();painting=true;var d=+this.dataset.day,hr=+this.dataset.hour;paintValue=!draft[d][hr];draft[d][hr]=paintValue;renderGrid()});c.addEventListener('pointerenter',function(){if(!painting)return;draft[+this.dataset.day][+this.dataset.hour]=paintValue;this.className='hour-cell '+(paintValue?'allowed':'blocked')})})}
 document.addEventListener('pointerup',function(){painting=false});
 window.setRequestGridDay=function(d,on){if(!draft)return;draft[d]=Array(24).fill(!!on);renderGrid()};
 window.selectAllRequestGridTargets=function(on){
@@ -687,6 +688,9 @@ function activateSchedTab(tab){
 document.addEventListener('click',function(e){
   ['windows','slots','limits'].forEach(function(k){if(e.target.closest('#sched-tab-'+k)){activateSchedTab(k);}});
 });
+/* إجراءات مفوّضة لأزرار هذه الوحدة — every target is window-published, so the bodies
+   are reachable from this IIFE. showPg is owned by 03f and deliberately not re-registered. */
+installActions(document.body,{purgeOrphanDept:function(el){if(typeof window.purgeOrphanDepartment==='function')window.purgeOrphanDepartment(el.dataset.deptId)},setGridDay:function(el){if(typeof window.setRequestGridDay==='function')window.setRequestGridDay(Number(el.dataset.gday),el.dataset.on==='1')}},{event:'click',attribute:'clickact'});
 function boot(){if(E('pg-schedule'))window.renderRequestHourGridUI();if(window.CU&&String(CU.role)==='department')applyRequestLock()}
 boot();
 })();

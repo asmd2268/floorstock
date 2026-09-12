@@ -1,3 +1,5 @@
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+
 (function(){
 'use strict';
 /* Custody handover/return report — for when the controlled-medicines
@@ -105,7 +107,7 @@ function renderHistory(){
     return '<tr><td>'+esc3(new Date(r.at).toLocaleString())+'</td>'+
       '<td>'+(r.type==='return'?'Return / استلام عودة':'Handover / تسليم')+'</td>'+
       '<td>'+esc3(r.custodyOfficer||'')+'</td><td>'+esc3(r.recipient||'')+'</td><td>'+esc3(r.pharmacyManager||'')+'</td>'+
-      '<td><button class="btn bg bxs" type="button" data-log-id="'+esc3(r.id)+'" onclick="ctlReprintHandover(this.dataset.logId)">🖨 Reprint</button></td></tr>';
+      '<td><button class="btn bg bxs" type="button" data-log-id="'+esc3(r.id)+'" data-clickact="ctlReprintHandover">🖨 Reprint</button></td></tr>';
   }).join(''):'<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--tx2)">No handover/return records yet / لا توجد سجلات بعد</td></tr>';
 }
 
@@ -208,5 +210,7 @@ window.ctlOpenCustodyHandover=function(){
   setMode('handover');
   OM('mcustody-handover');
 };
+/* Registered from this IIFE — the scope that declares ctlReprintHandover / من نفس النطاق. */
+installActions(document.body,{ctlReprintHandover:function(el){return window.ctlReprintHandover(el.dataset.logId)}},{event:'click',attribute:'clickact'});
 })();
 export {};

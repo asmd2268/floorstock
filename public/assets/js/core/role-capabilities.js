@@ -62,6 +62,26 @@ const CAPABILITIES = Object.freeze({
   'users.manage': Object.freeze(['pharmacy'])
 });
 
+/* Which department id IS the outpatient department.
+
+   Two answers to that question had drifted apart. fsOutpatientDeptId() resolves
+   it by NAME (/outpatient department/i) and returns whatever id that department
+   actually carries — a Firestore auto-id in most tenants. This rule only ever
+   accepted the literal ids 'outpatient' / 'outpatient department'. So a
+   supervisor whose profile carries no deptId passed the caller's own dept
+   filter and was then rejected here, and every request, note and cart vanished
+   for them. Resolving it the same way is what keeps the two in agreement. */
+function isOutpatientDepartment(target) {
+  if (target === 'outpatient' || target === 'outpatient department') return true;
+  try {
+    const list = (globalThis.S && typeof globalThis.S.g === 'function') ? (globalThis.S.g('departments') || []) : [];
+    return list.some(function (d) {
+      if (String((d && d.id) || '').trim().toLowerCase() !== target) return false;
+      return /outpatient\s+department/i.test(String((d && (d.name || d.nameEn)) || ''));
+    });
+  } catch (e) { return false; } /* an optional source that is not loaded in this session */
+}
+
 export function canAccessDepartment(profile, departmentId) {
   const user = profile || {};
   const role = normalizeRole(user.role);
@@ -85,7 +105,7 @@ export function canAccessDepartment(profile, departmentId) {
   if (role === 'pharmacy_staff') return true;
   const own = String(user.deptId || user.departmentId || '').trim().toLowerCase();
   if (role === 'department') return !!own && own === target;
-  if (role === 'outpatient_pharmacy_supervisor') return target === 'outpatient' || target === 'outpatient department' || (!!own && own === target);
+  if (role === 'outpatient_pharmacy_supervisor') return isOutpatientDepartment(target) || (!!own && own === target);
   if (role === 'inpatient_supervisor') return true;
   return false;
 }

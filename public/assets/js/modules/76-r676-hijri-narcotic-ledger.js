@@ -1,3 +1,5 @@
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+
 (function(){
 'use strict';
 /* Hijri-calendar running ledger for the controlled-medicines officer's own
@@ -261,7 +263,7 @@ function renderLedger(){
       '<td style="font-family:var(--mono)">'+(e.dir==='in'?e.qty:'')+'</td>'+
       '<td style="font-family:var(--mono)">'+(e.dir==='out'?e.qty:'')+'</td>'+
       '<td style="font-family:var(--mono);font-weight:700">'+e.balance+'</td>'+
-      '<td>'+(isMasterUser()&&!e.aggregated&&e.id?'<button class="btn bg bxs" type="button" data-move-id="'+esc2(e.id)+'" onclick="ctlEditLedgerMove(this.dataset.moveId)">✏️ Edit</button>':(e.aggregated?'<span class="fhint">archived</span>':''))+'</td>'+
+      '<td>'+(isMasterUser()&&!e.aggregated&&e.id?'<button class="btn bg bxs" type="button" data-move-id="'+esc2(e.id)+'" data-clickact="ctlEditLedgerMove">✏️ Edit</button>':(e.aggregated?'<span class="fhint">archived</span>':''))+'</td>'+
     '</tr>';
   }).join(''):'<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--tx2)">No movements this month / لا توجد حركات هذا الشهر</td></tr>';
 }
@@ -483,5 +485,7 @@ window.ctlOpenHijriLedger=function(){
   OM('mhijri-ledger');
   renderLedger();
 };
+/* Registered from this IIFE — the scope that declares ctlEditLedgerMove / من نفس النطاق. */
+installActions(document.body,{ctlEditLedgerMove:function(el){return window.ctlEditLedgerMove(el.dataset.moveId)}},{event:'click',attribute:'clickact'});
 })();
 export {};

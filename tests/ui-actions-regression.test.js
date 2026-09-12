@@ -688,7 +688,7 @@ test('inventory name merge is explicitly authorized for inpatient supervisor and
   assert.equal(hasCapability({ role: 'master', master: true }, 'inventory.manage'), true);
   assert.match(inventoryStatusSource, /Not authorized to merge inventory names/);
   assert.match(inventoryStatusSource, /window\.openMergeInventoryNames=function\(\)\{if\(!manageAllowed\(\)\)/);
-  assert.match(inventoryStatusSource, /window\.confirmMergeInventoryNames=async function\(\)\{if\(!manageAllowed\(\)\)/);
+  assert.match(inventoryStatusSource, /async function confirmMergeInventoryNames\(\)\{if\(!manageAllowed\(\)\)/);
 });
 
 test('inpatient supervisor capabilities align across Inventory, Crash Cart, Accountability, and Firestore', () => {

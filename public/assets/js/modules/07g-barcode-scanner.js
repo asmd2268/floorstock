@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── BARCODE SCANNER (GS1/HIBC parsing, camera scan, manual entry) ──────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
@@ -202,7 +203,7 @@ async function startScanner(){
       el('scan-status').innerHTML=(zxingError
         ? '⚠ Automatic decoding is unavailable — capture the frame or type the barcode. / تعذّر تحميل القارئ التلقائي؛ التقط الصورة أو أدخل الباركود يدوياً. '
         : '⚠ ZXing library loading... ')
-        +'<button class="btn bg bxs" onclick="captureFrame()">📸 Capture Frame</button>';
+        +'<button class="btn bg bxs" data-clickact="scanCaptureFrame">📸 Capture Frame</button>';
     }
   }).catch(function(err){
     el('scan-status').textContent='❌ Camera error: '+err.message+' — use "Type Barcode" tab instead';
@@ -240,7 +241,7 @@ async function captureFrame(){
       var detector=new BarcodeDetector();
       var found=await detector.detect(video);
       if(found&&found.length&&found[0].rawValue){onScanSuccess(found[0].rawValue);return;}
-      if(status)status.innerHTML='No barcode detected in this frame. Hold it steady and <button class="btn bg bxs" onclick="captureFrame()">try again</button>.';
+      if(status)status.innerHTML='No barcode detected in this frame. Hold it steady and <button class="btn bg bxs" data-clickact="scanCaptureFrame">try again</button>.';
       return;
     }
     await ensureZXing();
@@ -252,7 +253,7 @@ async function captureFrame(){
 function onScanSuccess(raw){
   stopScanner();
   el('scan-line').style.display='none';
-  el('scan-status').innerHTML='✅ <b>Barcode detected!</b> <button class="btn bg bxs" onclick="restartScanner()">🔄 Scan Again</button>';
+  el('scan-status').innerHTML='✅ <b>Barcode detected!</b> <button class="btn bg bxs" data-clickact="scanRestart">🔄 Scan Again</button>';
   el('scan-raw-val').textContent=raw;
   _parsedScan=parseBarcode(raw);
   el('scan-parsed-fields').innerHTML=formatParsedFields(_parsedScan,'scan');
@@ -300,6 +301,15 @@ function applyTypedResult(){
 
 // ── Close scanner when modal closes ───────────────────────
 function CM(id){document.getElementById(id).classList.remove('on');if(id==='mexpiry')stopScanner();}
+
+/* Delegated actions for the scanner buttons drawn into #scan-status.
+   Registered here, in the scope that declares captureFrame/restartScanner, and
+   at module load — the markup is rewritten on every scan, so binding per render
+   would stack listeners. / أزرار الماسح تُسجَّل مرة واحدة عند تحميل الوحدة. */
+installActions(document.body,{
+  scanCaptureFrame:function(){captureFrame()},
+  scanRestart:function(){restartScanner()}
+},{event:'click',attribute:'clickact'});
 
 
 

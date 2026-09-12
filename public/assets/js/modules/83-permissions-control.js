@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── PERMISSIONS CONTROL (page visibility per role) ────────────────────────
 // Master-only page listing every existing page × every role that already
@@ -90,7 +91,7 @@ function plPageCard(pageId){
   var page=PL_PAGES[pageId],hidden=plData()[pageId]||[];
   var rolesHtml=page.roles.map(function(r){
     var visible=hidden.indexOf(r)<0;
-    return '<label class="cl-role-chk"><input type="checkbox" onchange="window.plToggle(this,\''+pageId+'\',\''+r+'\')" '+(visible?'checked':'')+'><span>'+esc(PL_ROLE_LABELS[r]||r)+'</span></label>';
+    return '<label class="cl-role-chk"><input type="checkbox" data-changeact="plToggle" data-pl-page="'+esc(pageId)+'" data-pl-role="'+esc(r)+'" '+(visible?'checked':'')+'><span>'+esc(PL_ROLE_LABELS[r]||r)+'</span></label>';
   }).join('');
   return '<div class="card" style="margin-bottom:12px"><div class="ch"><span class="ct">'+esc(page.label)+'</span></div><div class="cb"><div class="cl-roles-grid">'+rolesHtml+'</div></div></div>';
 }
@@ -136,7 +137,7 @@ function plPharmInvCard(){
     var current=perms[feat]||[];
     var roleChks=eligible.map(function(r){
       var checked=current.indexOf(r)>=0;
-      return '<label class="cl-role-chk"><input type="checkbox" data-pi-feat="'+esc2(feat)+'" data-pi-role="'+esc2(r)+'" '+(checked?'checked':'')+' onchange="plPharmFeatToggle(this)"><span>'+esc2(PL_ROLE_LABELS[r]||r)+'</span></label>';
+      return '<label class="cl-role-chk"><input type="checkbox" data-pi-feat="'+esc2(feat)+'" data-pi-role="'+esc2(r)+'" data-changeact="plPharmFeatToggle" '+(checked?'checked':'')+'><span>'+esc2(PL_ROLE_LABELS[r]||r)+'</span></label>';
     }).join('');
     return '<div style="margin-bottom:12px"><div style="font-weight:600;font-size:13px;margin-bottom:6px">'+esc2(PI_FEAT_LABELS[feat])+'</div><div class="cl-roles-grid">'+roleChks+'</div></div>';
   }).join('<hr style="margin:10px 0;border:0;border-top:1px solid var(--br)">');
@@ -155,7 +156,7 @@ function plPharmInvCard(){
       var userAssign=assign[email]||[];
       var roomChks=rooms.map(function(r){
         var chk=userAssign.indexOf(r.id)>=0;
-        return '<div style="text-align:center"><input type="checkbox" data-pi-email="'+esc2(email)+'" data-pi-room="'+esc2(r.id)+'" '+(chk?'checked':'')+' onchange="plRoomAssignToggle(this)"></div>';
+        return '<div style="text-align:center"><input type="checkbox" data-pi-email="'+esc2(email)+'" data-pi-room="'+esc2(r.id)+'" data-changeact="plRoomAssignToggle" '+(chk?'checked':'')+'></div>';
       }).join('');
       return '<div style="display:grid;grid-template-columns:200px '+rooms.map(function(){return '1fr'}).join(' ')+';gap:6px;align-items:center;margin-bottom:4px;font-size:12px"><div style="word-break:break-all">'+esc2(email)+'</div>'+roomChks+'</div>';
     }).join(''):('<div style="color:var(--tx2);font-size:13px">No pharmacy staff users found. / لا يوجد موظفو صيدلية.</div>');
@@ -243,6 +244,17 @@ document.addEventListener('asdh:real-load-complete',function(){
   if(typeof window.buildNav==='function'&&window.CU)window.buildNav();
 });
 
+/* Delegated change actions for every checkbox this IIFE draws / إجراءات التغيير المفوّضة.
+   Registered once at load time (not per render) from the same IIFE that declares
+   and publishes plToggle / plPharmFeatToggle / plRoomAssignToggle, so no bare
+   name is read across a sibling-IIFE boundary. Arguments ride on the element's
+   dataset instead of being escaped into an inline attribute. */
+installActions(document.body,{
+  plToggle:function(el){window.plToggle(el,el.dataset.plPage,el.dataset.plRole)},
+  plPharmFeatToggle:function(el){window.plPharmFeatToggle(el)},
+  plRoomAssignToggle:function(el){window.plRoomAssignToggle(el)}
+},{event:'change',attribute:'changeact'});
+
 publishLegacy("83-permissions-control.js", {
   plIsHiddenForCurrentRole: window.plIsHiddenForCurrentRole,
   renderPermissionsControl: window.renderPermissionsControl
@@ -318,7 +330,7 @@ export {};
         +'<input data-dept-ar="'+esc(id)+'" value="'+esc(current)+'" placeholder="'+esc(seed||'اسم عربي للطباعة')+'" dir="rtl" style="flex:1;min-width:150px;margin:0">'
         +'</div>';
     }).join('')
-      +'<div style="padding:10px 12px"><button class="btn bp bsm" type="button" onclick="saveDeptPrintNames()">💾 Save / حفظ</button></div>';
+      +'<div style="padding:10px 12px"><button class="btn bp bsm" type="button" data-clickact="saveDeptPrintNames">💾 Save / حفظ</button></div>';
   };
 
   window.saveDeptPrintNames=async function(){
@@ -343,4 +355,10 @@ export {};
   window.__showPgAfterExtensions.push(function(id){
     if(id==='pg-users')window.renderDeptPrintNames();
   });
+
+  /* Delegated action for the Arabic print-names card / إجراء مفوّض لبطاقة أسماء الطباعة العربية.
+     Registered from the IIFE that declares and publishes saveDeptPrintNames. */
+  installActions(document.body,{
+    saveDeptPrintNames:function(){if(typeof window.saveDeptPrintNames==='function')window.saveDeptPrintNames()}
+  },{event:'click',attribute:'clickact'});
 })();

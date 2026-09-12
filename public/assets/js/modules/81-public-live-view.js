@@ -3,6 +3,8 @@
 // with no login). Fully self-contained: only touches window.* globals
 // (E, FB_DB, fsTenantCollection, waitForFirebase), never anything from module 07's
 // own module-scope closure, so it can live in its own file safely.
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+
 (function(){
   const E=globalThis.E;
   function esc2(v){return typeof esc==='function'?esc(v==null?'':String(v)):String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
@@ -150,7 +152,7 @@
         '✔ هذه القائمة معتمدة إلكترونياً ولا تحتاج إلى ختم أو توقيع يدوي. | This list is electronically approved and does not require a stamp or manual signature.'+
       '</div>'+
       '<p style="text-align:center;font-size:7.5pt;color:#aaa">Reference: '+esc2(d.referenceName||'—')+'</p>'+
-      '<div style="text-align:center;margin-top:10px"><button onclick="window.print()" style="padding:8px 20px;font-size:13px;cursor:pointer">🖨 Print / طباعة</button></div>';
+      '<div style="text-align:center;margin-top:10px"><button type="button" data-clickact="printThisPage" style="padding:8px 20px;font-size:13px;cursor:pointer">🖨 Print / طباعة</button></div>';
   }
   async function liveClassification(type,tenant){
     var r=publicRoot();r.innerHTML='<p style="text-align:center;padding:40px">Loading… / جاري التحميل</p>';
@@ -188,6 +190,9 @@
     if(typeof unsub==='function')_publicLiveUnsub=unsub;
     return !!unsub;
   }
+  /* Delegated action for the public print button / إجراء مفوّض لزر الطباعة العام.
+     Prints the current public page itself — not a separate print window. */
+  installActions(document.body,{printThisPage:function(){window.print()}},{event:'click',attribute:'clickact'});
   window.clearPublicLiveSubscriptions=clearPublicLiveSubscriptions;
   window.addEventListener('pagehide',clearPublicLiveSubscriptions);
   startPublicLive();

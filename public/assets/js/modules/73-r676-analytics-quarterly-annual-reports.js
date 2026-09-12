@@ -26,6 +26,7 @@ import {
 import { crashCartStats } from '../core/analytics-crash-carts.js?v=33105767c7';
 import { narcoticStats } from '../core/analytics-narcotics.js?v=684e55b66c';
 import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 /* One stylesheet for every printed report.
  * Three near-identical copies had drifted apart — 16pt vs 17pt headings, 2px vs
@@ -340,7 +341,7 @@ function attach(root, stats) {
     <div class="anl-section-title">Department print pages / طباعة تقارير الأقسام</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;padding:4px 0">
       ${depts.map(([name]) =>
-        `<button type="button" class="btn bsm" onclick="_r676PrintDept('${esc(name).replace(/'/g, "\\'")}')">🖨 ${esc(name)}</button>`
+        `<button type="button" class="btn bsm" data-clickact="r676PrintDept" data-dept-name="${esc(name)}">🖨 ${esc(name)}</button>`
       ).join('')}
     </div>
   `;
@@ -352,6 +353,9 @@ window.addEventListener('floorstock:analytics-rendered', function (e) {
   const d = e.detail || {};
   attach(d.root, d.stats || {});
 });
+
+/* Department print launchers / أزرار طباعة الأقسام — registered from the IIFE that declares window._r676PrintDept. */
+installActions(document.body,{r676PrintDept:function(el){if(typeof window._r676PrintDept==='function')window._r676PrintDept(el.dataset.deptName)}},{event:'click',attribute:'clickact'});
 
 })();
 

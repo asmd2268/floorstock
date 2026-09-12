@@ -1,4 +1,5 @@
 import { printFullDocument } from '../core/print-window.js?v=7e3e2088a2';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 (function(){
 'use strict';
 function master(){try{return !!((window.CU&&CU.master===true)||(typeof isMasterActual==='function'&&isMasterActual())||(typeof masterOnly==='function'&&masterOnly()))}catch(e){return false}}
@@ -127,7 +128,7 @@ function ensureUI(){
 function removeUI(){var a=E('v13as-crash-tabs'),b=E('v13as-opening-log');if(a)a.remove();if(b)b.remove();var list=E('crash-list');if(list)list.style.display=''}
 function fillDepartments(){var s=E('v13as-log-dept');if(!s)return;var cur=s.value||'all',html='<option value="all">All Departments / جميع الأقسام</option>'+departments().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name||d.id)+'</option>'}).join('');if(s.innerHTML!==html)s.innerHTML=html;s.value=Array.from(s.options).some(function(o){return o.value===cur})?cur:'all'}
 function switchView(view){var list=E('crash-list'),filters=E('v13-crash-filters'),alerts=E('crash-open-alerts'),add=E('crash-add-btn'),log=E('v13as-opening-log');document.querySelectorAll('#v13as-crash-tabs .v13as-tab').forEach(function(b){b.classList.toggle('active',b.dataset.view===view)});var showLog=view==='log';if(list)list.style.display=showLog?'none':'';if(filters)filters.style.display=showLog?'none':'';if(alerts)alerts.style.display=showLog?'none':'';if(add&&add.parentElement)add.parentElement.style.display=showLog?'none':'';if(log)log.classList.toggle('on',showLog);if(showLog)renderLog()}
-function renderLog(){if(!allowed())return;fillDepartments();var rows=visibleReports(),body=E('v13as-log-body'),count=E('v13as-log-count');if(count)count.textContent=rows.length+' record(s)';if(!body)return;if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="v13as-empty">No opening records match the selected filters.<br>لا توجد سجلات فتح مطابقة للفلاتر.</div></td></tr>';return}body.innerHTML=rows.map(function(r,i){return '<tr><td>'+esc(fmtDate(r.openedAt))+'</td><td><b>'+esc(deptName(r.deptId))+'</b></td><td>'+esc(cartName(r.cartId))+'</td><td>'+esc(r.reason||'—')+'</td><td>'+esc(r.oldSeal||'—')+'</td><td>'+esc(r.newSeal||'—')+'</td><td><button class="btn bg bxs" data-log-id="'+esc(r.id||String(i))+'" onclick="v13asViewReport(this.dataset.logId)">👁 View</button></td></tr>'}).join('')}
+function renderLog(){if(!allowed())return;fillDepartments();var rows=visibleReports(),body=E('v13as-log-body'),count=E('v13as-log-count');if(count)count.textContent=rows.length+' record(s)';if(!body)return;if(!rows.length){body.innerHTML='<tr><td colspan="7"><div class="v13as-empty">No opening records match the selected filters.<br>لا توجد سجلات فتح مطابقة للفلاتر.</div></td></tr>';return}body.innerHTML=rows.map(function(r,i){return '<tr><td>'+esc(fmtDate(r.openedAt))+'</td><td><b>'+esc(deptName(r.deptId))+'</b></td><td>'+esc(cartName(r.cartId))+'</td><td>'+esc(r.reason||'—')+'</td><td>'+esc(r.oldSeal||'—')+'</td><td>'+esc(r.newSeal||'—')+'</td><td><button class="btn bg bxs" data-log-id="'+esc(r.id||String(i))+'" data-clickact="v13asViewReport">👁 View</button></td></tr>'}).join('')}
 window.v13asViewReport=function(id){
   var r=visibleReports().find(function(x){return String(x.id)===String(id)});
   if(!r)return;
@@ -156,12 +157,19 @@ window.v13asViewReport=function(id){
   modal.id='v13as-view-modal';
   modal.className='modal-bg on';
   modal.style.cssText='z-index:9999';
-  modal.innerHTML='<div class="modal" style="max-width:740px;max-height:85vh;overflow-y:auto"><div class="mh"><div class="mt">Crash Cart Report / بلاغ فتح العربة</div><button type="button" class="xbtn" onclick="document.getElementById(\'v13as-view-modal\').remove()">×</button></div>'+html+'</div>';
+  modal.innerHTML='<div class="modal" style="max-width:740px;max-height:85vh;overflow-y:auto"><div class="mh"><div class="mt">Crash Cart Report / بلاغ فتح العربة</div><button type="button" class="xbtn" data-clickact="closeEl" data-target-id="v13as-view-modal">×</button></div>'+html+'</div>';
   modal.addEventListener('click',function(ev){if(ev.target===modal)modal.remove()});
   document.body.appendChild(modal);
 };
 function printLog(){var rows=visibleReports();if(!rows.length)return window.toast&&toast('No opening records match the selected filters.','err');var dep=(E('v13as-log-dept')||{}).value||'all',month=(E('v13as-log-month')||{}).value||'';var titleDep=dep==='all'?'All Departments / جميع الأقسام':deptName(dep);var html='<!doctype html><html><head><meta charset="utf-8"><title>Crash Cart Opening Log</title><style>@page{size:A4 landscape;margin:8mm}*{box-sizing:border-box}html,body{height:auto!important;max-height:none!important;overflow:visible!important}body{font-family:Arial,sans-serif;margin:0;color:#111}.page{width:100%;height:auto!important;max-height:none!important;overflow:visible!important;transform:none!important}.head{text-align:center;margin-bottom:8px;page-break-inside:avoid;break-inside:avoid}.head h1{font-size:18px;margin:0 0 4px}.meta{font-size:10px;color:#444}.summary{display:flex;gap:8px;justify-content:center;margin:7px 0;font-size:10px;page-break-inside:avoid;break-inside:avoid}table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px;page-break-inside:auto;break-inside:auto}thead{display:table-header-group}tbody{display:table-row-group}tr{page-break-inside:avoid!important;break-inside:avoid!important}th,td{border:1px solid #444;padding:4px;vertical-align:top;word-break:break-word}th{background:#eee}.foot{margin-top:6px;text-align:center;font-size:8px;color:#555;page-break-inside:avoid;break-inside:avoid}.brand{text-align:right;font-size:7px;color:#94a3b8;margin-top:4px}@media print{html,body,.page{height:auto!important;max-height:none!important;overflow:visible!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}thead{display:table-header-group!important}tr{page-break-inside:avoid!important;break-inside:avoid!important}}</style></head><body><div class="page" id="p"><div class="head"><h1>Crash Cart Opening Log / سجل فتح عربات الطوارئ</h1><div class="meta">Department: '+esc(titleDep)+' &nbsp; | &nbsp; Month: '+esc(month||'All months / جميع الأشهر')+'</div></div><div class="summary">Total records: '+rows.length+'</div><table><thead><tr><th>Date opened<br>تاريخ الفتح</th><th>Department<br>القسم</th><th>Crash Cart<br>العربة</th><th>Reason<br>السبب</th><th>Opened seal<br>القفل المفتوح</th><th>New seal<br>القفل الجديد</th></tr></thead><tbody>'+rows.map(function(r){return '<tr><td>'+esc(fmtDate(r.openedAt))+'</td><td>'+esc(deptName(r.deptId))+'</td><td>'+esc(cartName(r.cartId))+'</td><td>'+esc(r.reason||'—')+'</td><td>'+esc(r.oldSeal||'—')+'</td><td>'+esc(r.newSeal||'—')+'</td></tr>'}).join('')+'</tbody></table><div class="foot">Printed '+esc(fmtDate(new Date().toISOString()))+'</div><div class="brand">By Ali Abudahash</div></div></body></html>';printFullDocument(html)}
 window.refreshCrashOpeningLogUi=ensureUI;
+/* Delegated actions for the opening log / إجراءات مفوّضة لسجل الفتح.
+   Registered from this IIFE because the log markup is generated here; both
+   targets are reachable (window-published / plain DOM). */
+installActions(document.body,{
+  v13asViewReport:function(el){if(typeof window.v13asViewReport==='function')window.v13asViewReport(el.dataset.logId)},
+  closeEl:function(el){var n=document.getElementById(el.dataset.targetId);if(n)n.remove()}
+},{event:'click',attribute:'clickact'});
 })();
 
 // Merged from 46-r664-private-crash-cart-source-only.js (Phase 6).
@@ -370,8 +378,16 @@ function renderSealPolicyToggle(){
     pg.insertBefore(container,pg.firstChild);
   }
   var on=getSealPolicy();
-  container.innerHTML='<b>⚙️ إعداد ماستر / Master Setting:</b><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" '+(on?'checked':'')+' onchange="window.setCrashSealPolicy(this.checked)"><span>'+(on?'✅ رقم القفل الجديد يجب أن يطابق القفل السابق / New seal must match the old seal':'☐ رقم القفل الجديد حر / New seal can be any unique number')+'</span></label>';
+  container.innerHTML='<b>⚙️ إعداد ماستر / Master Setting:</b><label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="checkbox" '+(on?'checked':'')+' data-changeact="setCrashSealPolicy"><span>'+(on?'✅ رقم القفل الجديد يجب أن يطابق القفل السابق / New seal must match the old seal':'☐ رقم القفل الجديد حر / New seal can be any unique number')+'</span></label>';
 }
+/* إجراء مفوّض لمفتاح سياسة القفل / Delegated action for the seal-policy toggle.
+   Registered from this IIFE — the scope that declares renderSealPolicyToggle and
+   draws the checkbox — at load time, not from inside the render. الحالة تُقرأ من
+   العنصر نفسه / the checked state is read off the element, never from source in
+   the attribute. */
+installActions(document.body,{
+  setCrashSealPolicy:function(el){if(typeof window.setCrashSealPolicy==='function')window.setCrashSealPolicy(el.checked)}
+},{event:'change',attribute:'changeact'});
 
 // Module 52 loads before module 80, which owns the real ccSavePharmacyResponse
 // and overwrites window.ccSavePharmacyResponse unconditionally — this wrapper's
@@ -468,7 +484,7 @@ window.renderCCNoConsumptionSettings=function(){
     var cartLimit=s.cartLimits[String(c.id)]!=null?s.cartLimits[String(c.id)]:'';
     return '<tr><td style="padding:4px 8px"><b>'+esc(c.name||c.id)+'</b><div class="fhint">'+esc(typeof deptName==='function'?deptName(c.deptId):c.deptId)+'</div></td><td style="padding:4px 8px"><input class="cc-nc-cart-limit" data-cart-id="'+esc(String(c.id))+'" type="number" min="1" max="20" placeholder="'+s.defaultLimit+'" value="'+esc(String(cartLimit))+'" style="width:70px"></td></tr>';
   }).join('');
-  el.innerHTML='<div class="card"><div class="ch"><span class="ct">No-Consumption Report Limits / حدود بلاغات عدم الاستهلاك</span></div><div class="cb"><div class="fg" style="max-width:320px;margin-bottom:12px"><label>Default monthly limit (applies to all carts without a specific limit) / الحد الشهري الافتراضي</label><input id="cc-nc-default-limit" type="number" min="1" max="20" value="'+s.defaultLimit+'"></div>'+(cartRows?'<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:4px 8px;text-align:left">Cart / العربة</th><th style="padding:4px 8px;text-align:left">Monthly limit (blank = default) / الحد الشهري</th></tr></thead><tbody>'+cartRows+'</tbody></table>':'<div class="fhint">No carts configured yet.</div>')+'<button class="btn bp bsm" style="margin-top:12px" onclick="ccSaveNCSettings()">Save / حفظ</button></div></div>';
+  el.innerHTML='<div class="card"><div class="ch"><span class="ct">No-Consumption Report Limits / حدود بلاغات عدم الاستهلاك</span></div><div class="cb"><div class="fg" style="max-width:320px;margin-bottom:12px"><label>Default monthly limit (applies to all carts without a specific limit) / الحد الشهري الافتراضي</label><input id="cc-nc-default-limit" type="number" min="1" max="20" value="'+s.defaultLimit+'"></div>'+(cartRows?'<table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:4px 8px;text-align:left">Cart / العربة</th><th style="padding:4px 8px;text-align:left">Monthly limit (blank = default) / الحد الشهري</th></tr></thead><tbody>'+cartRows+'</tbody></table>':'<div class="fhint">No carts configured yet.</div>')+'<button class="btn bp bsm" style="margin-top:12px" data-clickact="ccSaveNCSettings">Save / حفظ</button></div></div>';
 };
 window.ccSaveNCSettings=async function(){
   if(!window.CU||!CU.master)return;
@@ -480,5 +496,12 @@ window.ccSaveNCSettings=async function(){
   });
   try{await S.s(CC_NC_SETTINGS_KEY,{defaultLimit:defaultLimit,cartLimits:cartLimits});if(typeof toast==='function')toast('No-consumption limits saved ✓','succ')}catch(e){if(typeof toast==='function')toast(String(e&&e.message||e),'err')}
 };
+
+/* Delegated action for the no-consumption settings card / إجراء مفوّض لبطاقة حدود عدم الاستهلاك.
+   Registered at module top level — the same scope that declares
+   renderCCNoConsumptionSettings and ccSaveNCSettings (after the last IIFE). */
+installActions(document.body,{
+  ccSaveNCSettings:function(){if(typeof window.ccSaveNCSettings==='function')window.ccSaveNCSettings()}
+},{event:'click',attribute:'clickact'});
 
 export {};

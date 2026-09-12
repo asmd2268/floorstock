@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── SHELVES ──────────────────────────────────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
@@ -27,8 +28,8 @@ function renderShelves(){
         +'<td style="color:var(--tx2);font-size:12px">'+(s.desc||'—')+'</td>'
         +'<td style="font-family:var(--mono)">'+(shelfCounts[s.id]||0)+' meds</td>'
         +'<td style="white-space:nowrap">'
-          +'<button class="btn bg bxs" data-sid="'+s.id+'" data-name="'+s.name+'" data-desc="'+(s.desc||'')+'" onclick="openEditShelf(this)">✏</button> '
-          +'<button class="btn bd2c bxs" data-sid="'+s.id+'" onclick="removeShelf(this.getAttribute(&#x27;data-sid&#x27;))">✕</button>'
+          +'<button class="btn bg bxs" data-sid="'+s.id+'" data-name="'+s.name+'" data-desc="'+(s.desc||'')+'" data-clickact="shelfEdit">✏</button> '
+          +'<button class="btn bd2c bxs" data-sid="'+s.id+'" data-clickact="shelfRemove">✕</button>'
         +'</td></tr>';
     }).join('')
     :'<tr><td colspan="4" style="text-align:center;padding:20px;color:var(--tx2)">No shelves yet — click + Add Shelf</td></tr>';
@@ -191,6 +192,14 @@ function printShelfList(){
   return true;
 }
 
+
+/* Delegated actions for the shelves table. Registered at module load from the
+   scope that declares openEditShelf; removeShelf is owned by another module and
+   published on globalThis. / أزرار جدول الأرفف تُسجَّل مرة واحدة عند التحميل. */
+installActions(document.body,{
+  shelfEdit:function(el){openEditShelf(el)},
+  shelfRemove:function(el){if(typeof window.removeShelf==='function')window.removeShelf(el.dataset.sid)}
+},{event:'click',attribute:'clickact'});
 
 publishLegacy("07f-shelves.js", {
   renderShelves,

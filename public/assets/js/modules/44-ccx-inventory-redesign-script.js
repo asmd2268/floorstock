@@ -294,7 +294,7 @@ window.ccxRenderDashboardAlerts=function(){
     box.innerHTML=ordered.map(function(c,i){
       var q=String(c).replace(/\\/g,'\\\\').replace(/'/g,"\\'"),locked=isSolutionsCategory(c),lastMovable=ordered.length-(ordered.some(isSolutionsCategory)?2:1);
       return '<div class="category-manage-row" style="display:grid;grid-template-columns:minmax(180px,1fr) auto auto;align-items:center;gap:8px;padding:9px 4px;border-bottom:1px solid var(--bd)" data-cat="'+esc(c)+'">'
-       +'<input value="'+esc(c)+'" '+(locked?'disabled title="Solutions is fixed at the bottom"':'')+' style="margin:0;padding:7px 9px;font-weight:600" data-changeact="renameManagedCategory" data-a1="'+q+'" onkeydown="if(event.key===\'Enter\'){this.blur()}">'
+       +'<input value="'+esc(c)+'" '+(locked?'disabled title="Solutions is fixed at the bottom"':'')+' style="margin:0;padding:7px 9px;font-weight:600" data-changeact="renameManagedCategory" data-a1="'+q+'" data-keydownact="blurOnEnter">'
        +'<div style="display:flex;gap:5px"><button type="button" class="btn bg bsm" title="Move up" '+(locked||i===0?'disabled':'')+' data-clickact="moveManagedCategory" data-a1="'+q+'">↑</button><button type="button" class="btn bg bsm" title="Move down" '+(locked||i>=lastMovable?'disabled':'')+' data-clickact="moveManagedCategory" data-a1="'+q+'">↓</button></div>'
        +(locked?'<span class="badge bgr" title="Always last">Fixed last</span>':'<button type="button" class="btn bd2c bsm" data-clickact="removeManagedCategory" data-a1="'+q+'">Delete</button>')+'</div>';
     }).join('');
@@ -343,6 +343,13 @@ window.ccxRenderDashboardAlerts=function(){
     var b=document.querySelector('#pg-inv button[data-clickact="openManageCats"]');if(b)b.style.display=canManageCategoryNames()?'inline-flex':'none';
   }
   window.refreshCategoryManagementUi=function(){enforceButton();refreshDeptCategorySelectors();};
+  /* Enter يخرج التركيز من حقل اسم التصنيف فيُطلق change فيُحفظ الاسم / Enter blurs the category
+     name input, which fires change and saves it. Registered at IIFE load time — not from a render —
+     because the row markup is generated here and the input can exist before any render re-runs.
+     الجسم لا يستدعي أي اسم من نطاق آخر / body touches nothing outside this scope (el.blur only). */
+  installActions(document.body,{
+    blurOnEnter:function(el,event){if(event.key!=='Enter')return;el.blur()}
+  },{event:'keydown',attribute:'keydownact'});
 
 })();
 

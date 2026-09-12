@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
@@ -181,6 +182,14 @@ globalThis.MR_PERIOD='month';globalThis.MR_SEARCH='';
 function mrPeriodCutoff(p){var n=new Date();if(p==='month')return new Date(n.getFullYear(),n.getMonth(),1).getTime();if(p==='quarter')return new Date(n.getFullYear(),Math.floor(n.getMonth()/3)*3,1).getTime();if(p==='year')return new Date(n.getFullYear(),0,1).getTime();return 0;}
 window.mrSetPeriod=function(p,btn){MR_PERIOD=p;document.querySelectorAll('.mr-fbtn').forEach(function(b){b.classList.remove('on')});if(btn)btn.classList.add('on');renderMyReqs();};
 window.mrSetSearch=function(v){MR_SEARCH=v;renderMyReqs();};
+/* My-Requests period filter. Registered at module load from the scope that
+   declares mrSetPeriod; the button itself is passed through as the second
+   argument so the `on` class still lands on the clicked one.
+   / أزرار الفترة في "طلباتي" تُسجَّل مرة واحدة عند تحميل الوحدة. */
+installActions(document.body,{
+  mrSetPeriod:function(el){window.mrSetPeriod(el.dataset.period,el)}
+},{event:'click',attribute:'clickact'});
+
 function renderMyReqs(){
   var scoped=typeof globalThis.scopeRequestsToDepartment==='function'?globalThis.scopeRequestsToDepartment(gr(),CU.deptId):gr().filter(function(r){return r.deptId===CU.deptId});
   var rs=scoped.slice().reverse();
@@ -189,7 +198,7 @@ function renderMyReqs(){
   var periods=[['month','📅 هذا الشهر / This Month'],['quarter','📊 هذا الربع / This Quarter'],['year','🗓 هذه السنة / This Year'],['all','📋 الكل / All']];
   var filterBar='<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:12px">'
     +'<span style="font-size:12px;color:var(--tx2);white-space:nowrap">Show:</span>'
-    +periods.map(function(pv){return '<button class="tbtn mr-fbtn'+(MR_PERIOD===pv[0]?' on':'')+'" onclick="mrSetPeriod(\''+pv[0]+'\',this)">'+pv[1]+'</button>';}).join('')
+    +periods.map(function(pv){return '<button class="tbtn mr-fbtn'+(MR_PERIOD===pv[0]?' on':'')+'" data-period="'+pv[0]+'" data-clickact="mrSetPeriod">'+pv[1]+'</button>';}).join('')
     +'</div>';
   var listHtml=rs.length?rs.map(function(r){return rcard(r,false)}).join('')
     :'<div style="text-align:center;padding:44px;color:var(--tx2)"><div style="font-size:36px">📋</div><div style="margin:10px 0 4px;font-size:15px;font-weight:600;color:var(--tx)">No requests / لا توجد طلبات</div></div>';

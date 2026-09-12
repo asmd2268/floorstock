@@ -124,7 +124,7 @@ function clMasterTypeCard(type){
   var medCount=entry?(entry.medicines||[]).length:0;
   var visibleRoles=(entry&&entry.visibleRoles)||[];
   var rolesHtml=CL_ALL_ROLES.map(function(r){
-    return '<label class="cl-role-chk"><input type="checkbox" onchange="window.clToggleRole(this,\''+type+'\',\''+r+'\')" '+(visibleRoles.indexOf(r)>=0?'checked':'')+'><span>'+esc(CL_ROLE_LABELS[r])+'</span></label>';
+    return '<label class="cl-role-chk"><input type="checkbox" data-changeact="clToggleRole" data-cl-type="'+esc(type)+'" data-cl-role="'+esc(r)+'" '+(visibleRoles.indexOf(r)>=0?'checked':'')+'><span>'+esc(CL_ROLE_LABELS[r])+'</span></label>';
   }).join('');
   var reviewHtml='';
   if(st){
@@ -158,7 +158,7 @@ function clMasterTypeCard(type){
     '</div>'+
     '<div class="fhint">'+medCount+' medicine(s) currently on this list'+(entry&&entry.approvedAt?(' · Approved '+esc((entry.approvedAt||'').slice(0,10))+' · Effective '+esc((entry.effectiveAt||'').slice(0,10))):'')+'</div>'+
     '<div class="fl g8" style="margin-top:8px"><button class="btn bp bsm" data-act="generate" data-type="'+esc(type)+'">🔄 Generate / Refresh from all departments</button><button class="btn bg bsm" data-act="print" data-type="'+esc(type)+'" '+(medCount?'':'disabled')+'>🖨 Print</button></div>'+
-    '<label class="cl-role-chk" style="margin-top:10px;max-width:420px"><input type="checkbox" onchange="window.clTogglePerDeptFilter(this,\''+type+'\')" '+(entry&&entry.perDepartmentFilter===true?'checked':'')+'><span>Departments each see only their own medicines on this list / كل قسم يشوف أدويته فقط بهذي القائمة</span></label>'+
+    '<label class="cl-role-chk" style="margin-top:10px;max-width:420px"><input type="checkbox" data-changeact="clPerDeptFilter" data-cl-type="'+esc(type)+'" '+(entry&&entry.perDepartmentFilter===true?'checked':'')+'><span>Departments each see only their own medicines on this list / كل قسم يشوف أدويته فقط بهذي القائمة</span></label>'+
     '<div class="fhint" style="margin-top:10px"><b>Visible to / تظهر لـ:</b></div><div class="cl-roles-grid">'+rolesHtml+'</div>'+
     reviewHtml+
   '</div></div>';
@@ -319,6 +319,16 @@ window.clToggleRole=function(checkbox,type,role){
 document.addEventListener('asdh:real-load-complete',function(){
   if(typeof window.buildNav==='function'&&window.CU)window.buildNav();
 });
+
+/* Delegated change actions for the master visibility checkboxes / إجراءات التغيير المفوّضة.
+   Registered once at load time on document.body — not from renderClassificationLists,
+   whose early-return paths would otherwise leave the boxes dead — and from the same
+   (only) IIFE that declares clToggleRole / clTogglePerDeptFilter. The list type and
+   role now ride on the element's dataset instead of being escaped into an attribute. */
+installActions(document.body,{
+  clToggleRole:function(el){window.clToggleRole(el,el.dataset.clType,el.dataset.clRole)},
+  clPerDeptFilter:function(el){window.clTogglePerDeptFilter(el,el.dataset.clType)}
+},{event:'change',attribute:'changeact'});
 
 publishLegacy("82-classification-lists.js", {
   clHasVisibleLists: window.clHasVisibleLists,

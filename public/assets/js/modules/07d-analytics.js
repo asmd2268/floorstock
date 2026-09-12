@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── ANALYTICS ────────────────────────────────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
@@ -50,7 +51,7 @@ function renderAccAnalytics(){
   var months=[];for(var mi=5;mi>=0;mi--){var md=new Date();md.setMonth(md.getMonth()-mi);var mym=md.toISOString().slice(0,7),mlbl=md.toLocaleDateString('en',{month:'short',year:'2-digit'}),mtot=usage.filter(function(u){return(u.consumptionDate||'').slice(0,7)===mym}).reduce(function(s,u){return s+acc2Num(u.units)},0);months.push({label:mlbl,total:mtot})}
   var maxMonth=Math.max.apply(null,months.map(function(m){return m.total}).concat([1]));
   var html='<div style="padding:4px 0 16px">'
-    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 class="anl-section-title" style="margin:0;border:none;background:none;padding:0;font-size:15px">📋 Accountability Analytics / إحصاء العهدة والخطط العلاجية</h3><button class="btn bp bsm" onclick="anlPrintAccountability()">🖨 Print / طباعة</button></div>'
+    +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><h3 class="anl-section-title" style="margin:0;border:none;background:none;padding:0;font-size:15px">📋 Accountability Analytics / إحصاء العهدة والخطط العلاجية</h3><button class="btn bp bsm" data-clickact="anlPrintAccountability">🖨 Print / طباعة</button></div>'
     +'<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:18px">'
       +kpi('Approved custody / إجمالي العهدة',totalQuota,activeAssign.length+' medicines','#3b82f6')
       +kpi('Current balance / الرصيد المتاح',totalBalance,Math.round(totalBalance/(totalQuota||1)*100)+'% remaining',totalBalance>0?'#10b981':'#ef4444')
@@ -79,7 +80,6 @@ function renderAccAnalytics(){
       +'</div></div></div>':'')
     +'</div>';
   host.innerHTML=html;
-  var printBtn=host.querySelector('button[onclick]');if(printBtn&&!printBtn.dataset.bound){printBtn.dataset.bound='1';printBtn.addEventListener('click',window.anlPrintAccountability)}
 }
 function renderAn(){
   if(!el('anl-tabs').__anlBound){el('anl-tabs').__anlBound=true;el('anl-tabs').addEventListener('click',function(ev){var b=ev.target.closest('.anl-tab');if(b)anlSwitchTab(b.dataset.anl)})}
@@ -296,6 +296,13 @@ window.anlPrintAccountability=function(){
   var host=el('anl-panel-accountability');if(!host)return;
   if(typeof window.fsOfficialPrint==='function')window.fsOfficialPrint({title:'Accountability Analytics / إحصاء العهدة',html:host.innerHTML,css:'body{font:13px Arial,sans-serif;color:#111}button{display:none!important}.anl-kpi-delta{font-size:11px;opacity:.6}'});
 };
+
+/* Print button of the accountability panel. Registered at module load; the
+   panel's innerHTML is rebuilt on every tab switch, so the old per-render
+   addEventListener re-bind is no longer needed. / زر الطباعة يُسجَّل مرة واحدة. */
+installActions(document.body,{
+  anlPrintAccountability:function(){if(typeof window.anlPrintAccountability==='function')window.anlPrintAccountability()}
+},{event:'click',attribute:'clickact'});
 
 publishLegacy("07d-analytics.js", {
   renderAn,

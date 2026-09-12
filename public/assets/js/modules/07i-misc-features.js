@@ -125,8 +125,8 @@ function legacyRenderPharmNotes(){
         +'<div class="fl ic g8">'
           +'<span class="badge '+statusBadgeCls+'">'+noteEsc(safeStatus)+'</span>'
           +(n.priority==='urgent'?'<span class="badge brd">🚨 Urgent</span>':'')
-          +'<button class="btn bp bxs" data-nid="'+safeId+'" onclick="openNoteReply(this.getAttribute(&#x27;data-nid&#x27;))">✏ Reply</button>'
-          +(safeStatus!=='resolved'?'<button class="btn bs bxs" data-nid="'+safeId+'" onclick="quickResolve(this.getAttribute(&#x27;data-nid&#x27;))">✓ Resolve</button>':'')
+          +'<button class="btn bp bxs" data-nid="'+safeId+'" data-clickact="noteReply">✏ Reply</button>'
+          +(safeStatus!=='resolved'?'<button class="btn bs bxs" data-nid="'+safeId+'" data-clickact="noteResolve">✓ Resolve</button>':'')
         +'</div>'
       +'</div>'
       +'<div style="margin-top:8px;color:var(--tx)">'+noteEsc(String(n.body||'').length>200?String(n.body||'').slice(0,200)+'...':n.body)+'</div>'
@@ -237,9 +237,19 @@ function getMonthlyReqCount(deptId){return canonicalMonthlyReqCount(deptId)}
 
 function schedInstallActions(root){if(!root)return;installActions(root,{editReqWindow:function(el){if(typeof window.editReqWindow==='function')window.editReqWindow(Number(el.dataset.i))},toggleWindow:function(el){if(typeof window.toggleWindow==='function')window.toggleWindow(Number(el.dataset.i))},delWindow:function(el){if(typeof window.delWindow==='function')window.delWindow(Number(el.dataset.i))},editDispSlot:function(el){if(typeof window.editDispSlot==='function')window.editDispSlot(Number(el.dataset.i))},delSlot:function(el){if(typeof window.delSlot==='function')window.delSlot(Number(el.dataset.i))}},{event:'click',attribute:'clickact'});}
 
+function notesInstallActions(root){if(!root)return;installActions(root,{
+  noteReply:function(el){openNoteReply(el.dataset.nid)},
+  noteResolve:function(el){if(typeof window.quickResolve==='function')window.quickResolve(el.dataset.nid)}
+},{event:'click',attribute:'clickact'});}
+
+/* Registered at module load, not from a render: the listener is per-root and
+   idempotent, and binding it here means a screen that never calls its render
+   path still has working buttons. / التسجيل عند تحميل الوحدة لا داخل الرسم. */
+schedInstallActions(document.body);
+notesInstallActions(document.body);
+
 // ── RENDER schedule page ──────────────────────────────────
 function renderSchedule(){
-  schedInstallActions(document.body);
   // Populate dept dropdowns in modals
   var deptOpts=globalThis.scheduleDepartmentOptions();
   var rwDept=el('rwin-dept');if(rwDept)rwDept.innerHTML=deptOpts;

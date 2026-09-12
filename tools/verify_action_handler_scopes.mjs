@@ -116,12 +116,80 @@ for (const file of files) {
   });
 }
 
+/* ── Check 2: an attribute nobody registered ──────────────────────────────
+   installActions silently returns when a name has no handler (`typeof handler
+   !== 'function'`), so a misspelt or never-registered data-act value is a
+   button that does nothing, with no error anywhere. */
+const markupFiles = [...files, join(ROOT, '../../index.html')];
+
+function objectKeysAt(src, open) {
+  let depth = 0, close = open;
+  while (close < src.length) {
+    const c = src[close];
+    if (c === '{' || c === '[' || c === '(') depth++;
+    else if (c === '}' || c === ']' || c === ')') { depth--; if (depth === 0) break; }
+    close++;
+  }
+  const body = src.slice(open + 1, close);
+  const keys = [];
+  for (const m of body.matchAll(/(?:^|,)\s*([A-Za-z_$][\w$]*)\s*:/g)) {
+    const before = body.slice(0, m.index);
+    const bal = (s, a, b) => s.split(a).length - s.split(b).length;
+    if (bal(before, '{', '}') === 0 && bal(before, '[', ']') === 0 && bal(before, '(', ')') === 0) keys.push(m[1]);
+  }
+  return { keys, close };
+}
+
+const registeredByAttr = new Map();
+for (const file of files) {
+  const src = readFileSync(file, 'utf8');
+  for (const m of src.matchAll(/installActions\(/g)) {
+    const open = src.indexOf('{', m.index + m[0].length);
+    if (open < 0) continue;
+    const { keys, close } = objectKeysAt(src, open);
+    const attr = (/attribute:\s*'([^']+)'/.exec(src.slice(close, close + 200)) || [, 'act'])[1];
+    if (!registeredByAttr.has(attr)) registeredByAttr.set(attr, new Set());
+    for (const k of keys) registeredByAttr.get(attr).add(k);
+  }
+}
+
+for (const file of markupFiles) {
+  let src;
+  try { src = readFileSync(file, 'utf8'); } catch { continue; }
+  const seen = new Set();
+  for (const m of src.matchAll(/data-(clickact|changeact|inputact|keydownact|act)=\\?["']([A-Za-z_$][\w$]*)/g)) seen.add(`${m[1]}\u0000${m[2]}`);
+  for (const m of src.matchAll(/dataset\.(clickact|changeact|inputact|keydownact|act)\s*=\s*['"]([A-Za-z_$][\w$]*)/g)) seen.add(`${m[1]}\u0000${m[2]}`);
+  for (const entry of seen) {
+    const [attr, name] = entry.split('\u0000');
+    if (!(registeredByAttr.get(attr) || new Set()).has(name)) {
+      problems.push(`${file.replace(ROOT, '')}  data-${attr}="${name}" has no registered handler — the control silently does nothing`);
+    }
+  }
+}
+
+/* ── Check 3: an argument that kept its quotes ────────────────────────────
+   Converting `onclick="CM('mctlbatches')"` by hand leaves
+   `data-a1="'mctlbatches'"`, so the handler runs but receives "'mctlbatches'"
+   and looks up an element that does not exist. A real value is either a plain
+   literal or a JS concatenation, which always reads data-aN="'+ — a quote NOT
+   followed by + is the botched form. Two Cancel buttons shipped dead this way. */
+for (const file of markupFiles) {
+  let src;
+  try { src = readFileSync(file, 'utf8'); } catch { continue; }
+  const lines = src.split('\n');
+  lines.forEach((line, i) => {
+    for (const m of line.matchAll(/data-a\d+=\\?"'(?!\+)([^"']*)/g)) {
+      problems.push(`${file.replace(ROOT, '')}:${i + 1}  data-a…="'${m[1]}'" keeps its literal quotes — the handler receives the quotes as part of the value`);
+    }
+  });
+}
+
 if (problems.length) {
-  console.error('FAIL: delegated-action handlers registered from a scope that cannot see them:\n');
+  console.error('FAIL: delegated-action wiring is broken:\n');
   for (const p of problems) console.error('  ' + p);
-  console.error(`\n${problems.length} cross-scope handler registration(s).`);
+  console.error(`\n${problems.length} problem(s).`);
   console.error('Register each name from the IIFE that declares it — installActions merges by name onto one listener.');
   process.exit(1);
 }
 
-console.log('PASS: every delegated-action handler is registered from a scope that can reach it.');
+console.log('PASS: delegated-action handlers are in reachable scopes, every attribute has a handler, and no argument kept its quotes.');

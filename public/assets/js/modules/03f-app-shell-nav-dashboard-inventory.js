@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
-import { normalizeRole } from '../core/role-capabilities.js?v=ae15f94c34';
+import { normalizeRole } from '../core/role-capabilities.js?v=74dfed287c';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c8beef9722';
 import { fsNorm } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
@@ -386,7 +386,6 @@ function populateInvDeptSel(){
 
 // ── DASHBOARD ────────────────────────────────────────────
 function renderDash(){
-  f03InstallActions(document.body);
   var allDs=gd(),ds=typeof window.fsRoleScopedDepts==='function'?window.fsRoleScopedDepts(allDs):allDs;
   if(typeof window.fsCanAccessDepartment==='function')ds=ds.filter(function(d){return window.fsCanAccessDepartment(d.id)});
   var allowedDash={};ds.forEach(function(d){allowedDash[String(d.id)]=true});
@@ -453,7 +452,6 @@ el('dact').innerHTML=rs.slice().reverse().slice(0,20).map(function(r){
 
 // ── INVENTORY (per dept) ──────────────────────────────────
 function renderInv(){
-  f03InstallActions(document.body);
   var specialControl=el('inv-special-filter'),zeroDaysControl=el('inv-zero-days');if(specialControl&&!specialControl.dataset.bound){specialControl.dataset.bound='1';specialControl.addEventListener('change',renderInv)}if(zeroDaysControl&&!zeroDaysControl.dataset.bound){zeroDaysControl.dataset.bound='1';zeroDaysControl.addEventListener('input',renderInv)}if(zeroDaysControl)zeroDaysControl.style.display=specialControl&&specialControl.value==='__zero_duration__'?'inline-block':'none';
   populateInvDeptSel();
   // Auto-select first valid dept
@@ -544,7 +542,7 @@ function renderInv(){
     items.forEach(function(m){
       medNumber++;
       html+='<tr class="'+rowCls(m)+'" id="inv-row-'+m.id+'">'
-        +'<td style="padding:4px 8px"><input type="checkbox" class="inv-chk" data-id="'+m.id+'" onchange="onInvCheck()"></td>'
+        +'<td style="padding:4px 8px"><input type="checkbox" class="inv-chk" data-id="'+m.id+'" data-changeact="onInvCheck"></td>'
         +'<td style="text-align:center;font-family:var(--mono);font-weight:600">'+medNumber+'</td>'
         +'<td style="font-weight:500">'+m.name+'</td>'
         +'<td><span class="chip">'+m.category+'</span></td>'
@@ -662,7 +660,14 @@ async function deleteSelected(){
 }
 
 
-function f03InstallActions(root){if(!root)return;installActions(root,{showPg:function(el){if(typeof showPg==='function')showPg(el.dataset.a1)},moveDrugOrderUp:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,-1)},moveDrugOrderDown:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,1)},openEditDrug:function(el){openEditDrug(el.dataset.id,el.dataset.dept)},delDrug:function(el){delDrug(el.dataset.id,el.dataset.dept)}},{event:'click',attribute:'clickact'});}
+/* Installed once at module load — a render-time install leaves the control dead
+   on any screen reached without that render. This module owns the showPg action. */
+function f03InstallActions(root){if(!root)return;installActions(root,{showPg:function(el){if(typeof showPg==='function')showPg(el.dataset.a1)},moveDrugOrderUp:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,-1)},moveDrugOrderDown:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,1)},openEditDrug:function(el){openEditDrug(el.dataset.id,el.dataset.dept)},delDrug:function(el){delDrug(el.dataset.id,el.dataset.dept)}},{event:'click',attribute:'clickact'});
+/* onInvCheck معرَّفة في 07i — declared in 07i-misc-features.js, a different module
+   scope, so it is reached through window (published there) and never as a bare name. */
+installActions(root,{onInvCheck:function(){if(typeof window.onInvCheck==='function')window.onInvCheck()}},{event:'change',attribute:'changeact'});}
+
+f03InstallActions(document.body);
 
 publishLegacy("03f-app-shell-nav-dashboard-inventory.js", {
   getAppUrl,

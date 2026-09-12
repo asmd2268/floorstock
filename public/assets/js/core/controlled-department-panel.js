@@ -16,6 +16,17 @@ import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
 import { uiToast } from './module-ui-helpers.js?v=3657403ad7';
 import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=e629c424f7';
 import { fsR5DMY, fsR12BatchSummaryHtml, fsR5Class, fsR5ExpiryDays, fsR5NearDays } from './controlled-expiry-format.js?v=7370bbb9a3';
+import { installActions } from './delegated-actions.js?v=078b8d25e6';
+
+/* One listener for the panel's own buttons, installed at module load — the four
+   functions it calls are the window.* ones this file publishes below, so the
+   bare-name/global boundary never matters here / مستمع واحد لأزرار اللوحة. */
+installActions(document.body,{
+  ctlDeptFinalApply:function(){return window.ctlDeptFinalApply()},
+  ctlDeptFinalToggle:function(){return window.ctlDeptFinalToggle()},
+  ctlConfirmDepartmentPrint:function(el,event){return window.ctlConfirmDepartmentPrint(event)},
+  renderDepartmentControlledPanel:function(){return window.renderDepartmentControlledPanel()}
+},{event:'click',attribute:'clickact'});
 
 window.ctlDeptFinalApply=function(){
   var dept=fsR5ControlledDept(),input=fsE('ctl-dept-final-days'),days=Math.floor(fsNum(input&&input.value));
@@ -109,12 +120,12 @@ window.renderDepartmentControlledPanel=async function(){
       '<div class="card"><div class="cb"><div class="ctl-rulebar">'+
         '<div class="fg"><label>Near-expiry rule (days)</label>'+
           '<input id="ctl-dept-final-days" type="number" min="1" value="'+days+'"></div>'+
-        '<button class="btn bp" onclick="ctlDeptFinalApply()">Apply rule</button>'+
-        '<button class="btn bg" onclick="ctlDeptFinalToggle()">'+
+        '<button class="btn bp" type="button" data-clickact="ctlDeptFinalApply">Apply rule</button>'+
+        '<button class="btn bg" type="button" data-clickact="ctlDeptFinalToggle">'+
           (window.CTL_DEPT_ONLY_SOON?'Show all medicines':'Show near-expiry only')+
         '</button>'+
-        '<button class="btn bp" id="ctl-dept-authoritative-print-btn" '+
-          'onclick="ctlConfirmDepartmentPrint(event)">🖨 Print My controlled list / طباعة عهدتي</button>'+
+        '<button class="btn bp" type="button" id="ctl-dept-authoritative-print-btn" '+
+          'data-clickact="ctlConfirmDepartmentPrint">🖨 Print My controlled list / طباعة عهدتي</button>'+
       '</div>'+
       '<div class="ctl-summary">'+
         '<div class="sc"><div class="sl">Total medicines</div><div class="sv">'+rows.length+'</div></div>'+
@@ -151,7 +162,7 @@ window.renderDepartmentControlledPanel=async function(){
     host.innerHTML='<div class="card"><div class="cb">'+
       '<div class="alert-banner">Controlled custody could not be loaded / تعذر تحميل عهدة القسم</div>'+
       '<p style="margin-top:10px">'+fsEsc(error&&error.message||error)+'</p>'+
-      '<button class="btn bp" type="button" onclick="renderDepartmentControlledPanel()">'+
+      '<button class="btn bp" type="button" data-clickact="renderDepartmentControlledPanel">'+
         'Retry / إعادة المحاولة</button></div></div>';
     delete host.dataset.controlledLoading;
     return false;

@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── CONTROLLED & PSYCHOTROPIC MEDICINES ────────────────────────────────
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module
@@ -46,9 +47,13 @@ function ctlBatchText(batches){return (batches||[]).length?(batches||[]).map(fun
 function ctlCurrentDept(){var s=el('ctl-dept');return s&&s.value?s.value:(CU.deptId||'')}
 
 
+/* One listener for the pending-delivery buttons, installed at module load from
+   the same (module top-level) scope that declares ctlReceiveDelivery / مستمع واحد. */
+installActions(document.body,{ctlReceiveDelivery:function(el){return ctlReceiveDelivery(el.dataset.id,el.dataset.accept==='1')}},{event:'click',attribute:'clickact'});
+
 function renderCtlPending(){
   if(!el('ctl-pending'))return;var pending=ctlMoves().filter(function(x){return x.type==='warehouse_send'&&x.status==='pending'});
-  el('ctl-pending').innerHTML=pending.length?pending.map(function(x){var m=ctlMedicine(x.medId)||{};return '<div class="limit-row"><span><b>'+esc(m.name||'')+'</b> — Qty: '+ctlNum(x.qty)+(x.expiry?' · Exp: '+fmtDate(x.expiry):'')+'</span>'+(ctlIsOfficer()?'<span><button class="btn bs bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,true)">Accept</button> <button class="btn bd2c bxs" data-id="'+x.id+'" onclick="ctlReceiveDelivery(this.dataset.id,false)">Reject</button></span>':'<span class="chip">Awaiting pharmacy officer</span>')+'</div>'}).join(''):'<div style="color:var(--tx2)">No pending deliveries.</div>';
+  el('ctl-pending').innerHTML=pending.length?pending.map(function(x){var m=ctlMedicine(x.medId)||{};return '<div class="limit-row"><span><b>'+esc(m.name||'')+'</b> — Qty: '+ctlNum(x.qty)+(x.expiry?' · Exp: '+fmtDate(x.expiry):'')+'</span>'+(ctlIsOfficer()?'<span><button class="btn bs bxs" data-id="'+x.id+'" data-accept="1" data-clickact="ctlReceiveDelivery">Accept</button> <button class="btn bd2c bxs" data-id="'+x.id+'" data-accept="0" data-clickact="ctlReceiveDelivery">Reject</button></span>':'<span class="chip">Awaiting pharmacy officer</span>')+'</div>'}).join(''):'<div style="color:var(--tx2)">No pending deliveries.</div>';
 }
 function renderCtlLog(filters){
   if(!el('ctl-log'))return;

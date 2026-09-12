@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── INVENTORY IMPORT (Excel / CSV / paste) ──────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
@@ -281,15 +282,15 @@ function renderImportPreview(hasHeader,headerIdx,skipped,warnMsg){
               r.high_alert?'background:rgba(218,54,51,.07)':
               r.hazard?'background:rgba(210,153,34,.06)':'';
     return '<tr id="irow-'+r._i+'" style="'+rowBg+'">'
-      +'<td style="padding:4px 8px"><input type="checkbox" class="imp-del-chk" data-idx="'+r._i+'"'+(r._del?'':' checked')+' onchange="impToggleRow(this)"></td>'
-      +'<td style="padding:3px 4px;min-width:200px"><input class="imp-edit-input" data-idx="'+r._i+'" data-f="name" value="'+esc(r.name)+'" oninput="impEdit(this)" style="min-width:180px"></td>'
-      +'<td style="padding:3px 4px"><select class="imp-edit-input" data-idx="'+r._i+'" data-f="category" onchange="impEdit(this)" style="font-size:11px;padding:3px 4px;min-width:90px">'+catOpts+'</select></td>'
-      +'<td style="padding:3px 4px"><input class="imp-edit-input" type="number" data-idx="'+r._i+'" data-f="min" value="'+r.min+'" oninput="impEdit(this)" style="width:50px;text-align:center"></td>'
-      +'<td style="padding:3px 4px"><input class="imp-edit-input" type="number" data-idx="'+r._i+'" data-f="max" value="'+r.max+'" oninput="impEdit(this)" style="width:50px;text-align:center"></td>'
+      +'<td style="padding:4px 8px"><input type="checkbox" class="imp-del-chk" data-idx="'+r._i+'"'+(r._del?'':' checked')+' data-changeact="impToggleRow"></td>'
+      +'<td style="padding:3px 4px;min-width:200px"><input class="imp-edit-input" data-idx="'+r._i+'" data-f="name" value="'+esc(r.name)+'" data-inputact="impEdit" style="min-width:180px"></td>'
+      +'<td style="padding:3px 4px"><select class="imp-edit-input" data-idx="'+r._i+'" data-f="category" data-changeact="impEdit" style="font-size:11px;padding:3px 4px;min-width:90px">'+catOpts+'</select></td>'
+      +'<td style="padding:3px 4px"><input class="imp-edit-input" type="number" data-idx="'+r._i+'" data-f="min" value="'+r.min+'" data-inputact="impEdit" style="width:50px;text-align:center"></td>'
+      +'<td style="padding:3px 4px"><input class="imp-edit-input" type="number" data-idx="'+r._i+'" data-f="max" value="'+r.max+'" data-inputact="impEdit" style="width:50px;text-align:center"></td>'
       +'<td style="padding:3px 4px;white-space:nowrap">'
-        +'<label title="High Alert" style="cursor:pointer"><input type="checkbox" data-idx="'+r._i+'" data-f="high_alert"'+(r.high_alert?' checked':'')+' onchange="impEdit(this)" style="width:auto;margin:0"> 🔴</label> '
-        +'<label title="Hazard" style="cursor:pointer"><input type="checkbox" data-idx="'+r._i+'" data-f="hazard"'+(r.hazard?' checked':'')+' onchange="impEdit(this)" style="width:auto;margin:0"> 🟡</label> '
-        +'<label title="LASA" style="cursor:pointer"><input type="checkbox" data-idx="'+r._i+'" data-f="lasa"'+(r.lasa?' checked':'')+' onchange="impEdit(this)" style="width:auto;margin:0"> 🟣</label>'
+        +'<label title="High Alert" style="cursor:pointer"><input type="checkbox" data-idx="'+r._i+'" data-f="high_alert"'+(r.high_alert?' checked':'')+' data-changeact="impEdit" style="width:auto;margin:0"> 🔴</label> '
+        +'<label title="Hazard" style="cursor:pointer"><input type="checkbox" data-idx="'+r._i+'" data-f="hazard"'+(r.hazard?' checked':'')+' data-changeact="impEdit" style="width:auto;margin:0"> 🟡</label> '
+        +'<label title="LASA" style="cursor:pointer"><input type="checkbox" data-idx="'+r._i+'" data-f="lasa"'+(r.lasa?' checked':'')+' data-changeact="impEdit" style="width:auto;margin:0"> 🟣</label>'
       +'</td>'
       +'<td style="padding:3px 6px">'+(dup&&!r._del?'<span class="badge byl">Update</span>':r._del?'<span class="badge bgr">Skip</span>':'<span class="badge bgn">New</span>')+'</td>'
       +'</tr>';
@@ -360,6 +361,18 @@ async function confirmImport(){
   var ia=el('imp-actions');if(ia)ia.style.cssText='display:none';
 }
 
+
+/* مسجَّل مرة واحدة عند تحميل الوحدة — Registered once at module load: ES modules
+   are deferred so document.body exists, and a render-time install would leave the
+   preview rows dead on any path that reaches the markup without renderImportPreview
+   having run. impEdit/impToggleRow are declared in this same module scope. */
+function f07bInstallActions(root){
+  if(!root)return;
+  installActions(root,{impEdit:function(el){impEdit(el)},impToggleRow:function(el){impToggleRow(el)}},{event:'change',attribute:'changeact'});
+  installActions(root,{impEdit:function(el){impEdit(el)}},{event:'input',attribute:'inputact'});
+}
+
+f07bInstallActions(document.body);
 
 publishLegacy("07b-inventory-import.js", {
   renderImport,

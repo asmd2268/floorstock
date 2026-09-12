@@ -1,4 +1,4 @@
-import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=ae15f94c34';
+import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=74dfed287c';
 (function(){
 'use strict';
 
@@ -336,7 +336,7 @@ var ALLOWED=new Set((
   ' _r676PrintDept '+
   'aaFinalSaveExpiryRules '+
   ' updateAllInventoryMergeCount v13ApplyBulkClassification openMergeInventoryNames undoLatestInventoryNameMerge '+
-  'v13XSaveStock valQ v16ToggleMultiApplicable v16ApplyMultiClean '+
+  'v13XSaveStock valQ '+
   'whBulkResolveRow whBulkReceiveOpen whBulkDispenseOpen whReceiveOpen whReceiveSelect confirmMergeInventoryNames purgeOrphanDepartment print '+
   'clToggleRole clTogglePerDeptFilter plToggle plPharmFeatToggle plRoomAssignToggle '+
   ' '+
