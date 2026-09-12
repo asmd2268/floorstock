@@ -22,19 +22,19 @@ import { installActions } from './delegated-actions.js?v=078b8d25e6';
    functions it calls are the window.* ones this file publishes below, so the
    bare-name/global boundary never matters here / مستمع واحد لأزرار اللوحة. */
 installActions(document.body,{
-  ctlDeptFinalApply:function(){return window.ctlDeptFinalApply()},
-  ctlDeptFinalToggle:function(){return window.ctlDeptFinalToggle()},
+  ctlDeptFinalApply:function(){return ctlDeptFinalApply()},
+  ctlDeptFinalToggle:function(){return ctlDeptFinalToggle()},
   ctlConfirmDepartmentPrint:function(el,event){return window.ctlConfirmDepartmentPrint(event)},
   renderDepartmentControlledPanel:function(){return window.renderDepartmentControlledPanel()}
 },{event:'click',attribute:'clickact'});
 
-window.ctlDeptFinalApply=function(){
+function ctlDeptFinalApply(){
   var dept=fsR5ControlledDept(),input=fsE('ctl-dept-final-days'),days=Math.floor(fsNum(input&&input.value));
   if(days<1)return uiToast('Enter a valid number of days / أدخل عدد أيام صحيحًا','err');
   try{sessionStorage.setItem('asdhealth-controlled-near-days-'+dept,String(days))}catch(e){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
   return Promise.resolve(window.renderDepartmentControlledPanel()).catch(function(e){console.error('Controlled department render failed',e);if(typeof toast==='function')toast('Unable to render controlled department panel.','err');throw e});
 };
-window.ctlDeptFinalToggle=function(){
+function ctlDeptFinalToggle(){
   window.CTL_DEPT_ONLY_SOON=!window.CTL_DEPT_ONLY_SOON;
   return Promise.resolve(window.renderDepartmentControlledPanel()).catch(function(e){console.error('Controlled department render failed',e);if(typeof toast==='function')toast('Unable to render controlled department panel.','err');throw e});
 };

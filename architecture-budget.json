@@ -1,5 +1,5 @@
 {
-  "globals": 906,
+  "globals": 898,
   "modules": {
     "core/event-bindings.js": 1133,
     "modules/03-core-application-firebase-state-auth.js": 1716,

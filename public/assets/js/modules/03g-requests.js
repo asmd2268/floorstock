@@ -180,13 +180,13 @@ function cntItems(){
 // ── MY REQUESTS ──────────────────────────────────────────
 globalThis.MR_PERIOD='month';globalThis.MR_SEARCH='';
 function mrPeriodCutoff(p){var n=new Date();if(p==='month')return new Date(n.getFullYear(),n.getMonth(),1).getTime();if(p==='quarter')return new Date(n.getFullYear(),Math.floor(n.getMonth()/3)*3,1).getTime();if(p==='year')return new Date(n.getFullYear(),0,1).getTime();return 0;}
-window.mrSetPeriod=function(p,btn){MR_PERIOD=p;document.querySelectorAll('.mr-fbtn').forEach(function(b){b.classList.remove('on')});if(btn)btn.classList.add('on');renderMyReqs();};
+function mrSetPeriod(p,btn){MR_PERIOD=p;document.querySelectorAll('.mr-fbtn').forEach(function(b){b.classList.remove('on')});if(btn)btn.classList.add('on');renderMyReqs();};
 /* My-Requests period filter. Registered at module load from the scope that
    declares mrSetPeriod; the button itself is passed through as the second
    argument so the `on` class still lands on the clicked one.
    / أزرار الفترة في "طلباتي" تُسجَّل مرة واحدة عند تحميل الوحدة. */
 installActions(document.body,{
-  mrSetPeriod:function(el){window.mrSetPeriod(el.dataset.period,el)}
+  mrSetPeriod:function(el){mrSetPeriod(el.dataset.period,el)}
 },{event:'click',attribute:'clickact'});
 
 function renderMyReqs(){

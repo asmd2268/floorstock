@@ -53,13 +53,13 @@ function fsR6EnsureMasterModal(){
     else if(action==='exit')window.masterResetRole();
     else if(action==='apply')window.masterApplyRole();
   });
-  fsE('fsr6-master-mode').onchange=window.masterPreviewUser;
-  fsE('fsr6-master-user').onchange=window.masterPreviewUser;
-  fsE('fsr6-master-role').onchange=window.masterPreviewUser;
-  fsE('fsr6-master-dept').onchange=window.masterPreviewUser;
+  fsE('fsr6-master-mode').onchange=masterPreviewUser;
+  fsE('fsr6-master-user').onchange=masterPreviewUser;
+  fsE('fsr6-master-role').onchange=masterPreviewUser;
+  fsE('fsr6-master-dept').onchange=masterPreviewUser;
   return fsE('mmaster-role-r6');
 }
-window.masterPreviewUser=function(){
+function masterPreviewUser(){
   fsR6EnsureMasterModal();
   var mode=fsE('fsr6-master-mode').value,userWrap=fsE('fsr6-master-user-wrap'),roleWrap=fsE('fsr6-master-role-wrap');
   userWrap.style.display=mode==='user'?'block':'none';roleWrap.style.display=mode==='role'?'block':'none';
@@ -95,14 +95,14 @@ window.openMasterRoleSwitch=function(){
     var outpatient=roleSelect&&roleSelect.value==='outpatient_pharmacy_supervisor';
     if(outpatient&&outpatientDept){deptSelect.innerHTML='<option value="'+fsEsc(outpatientDept.id)+'">'+fsEsc(window.floorstockDepartmentName?window.floorstockDepartmentName(outpatientDept):outpatientDept.name||outpatientDept.id)+'</option>';deptSelect.value=String(outpatientDept.id)}
     else if(!outpatient){deptSelect.innerHTML=deps.map(function(d){return '<option value="'+fsEsc(d.id)+'">'+fsEsc(window.floorstockDepartmentName?window.floorstockDepartmentName(d):d.name||d.id)+'</option>'}).join('')}
-    window.masterPreviewUser();
+    masterPreviewUser();
   }
   if(roleSelect&&!roleSelect.dataset.outpatientScopeBound){roleSelect.dataset.outpatientScopeBound='1';roleSelect.addEventListener('change',constrainOutpatientDepartment)}
   constrainOutpatientDepartment();
   fsE('fsr6-master-exit').style.display=window.MASTER_EFFECTIVE?'inline-flex':'none';
-  window.masterPreviewUser();uiOpenModal('mmaster-role-r6');
+  masterPreviewUser();uiOpenModal('mmaster-role-r6');
 };
-window.fsR6ApplyMasterTestProfile=function(profile,meta){
+function fsR6ApplyMasterTestProfile(profile,meta){
   var actual=fsR6ActualMaster();
   if(!actual)throw new Error('Actual Master profile is unavailable.');
   if(!window.MASTER_ACTUAL)window.MASTER_ACTUAL=Object.assign({},actual);
@@ -153,7 +153,7 @@ window.masterApplyRole=function(){
     var role=fsE('fsr6-master-role').value,dept=(role==='department'||role==='outpatient_pharmacy_supervisor')?fsE('fsr6-master-dept').value:'';
     profile={id:'role:'+role,role:role,deptId:dept,username:'Role preview — '+fsR6RoleLabel(role),email:''};
   }
-  try{return window.fsR6ApplyMasterTestProfile(profile,{mode:mode})}
+  try{return fsR6ApplyMasterTestProfile(profile,{mode:mode})}
   catch(e){return uiToast(e&&e.message||String(e),'err')}
 };
 window.masterResetRole=function(){

@@ -188,7 +188,7 @@ window.refreshCrashBulkUi=function(){
       toolbar.appendChild(actions);
       fsE('fsr6-crash-select-all').onclick=fsR6CrashSelectAllFiltered;
       fsE('fsr6-crash-clear').onclick=fsR6CrashClearSelection;
-      fsE('fsr6-crash-open').onclick=window.openCrashCartSmartBulkReplacement;
+      fsE('fsr6-crash-open').onclick=openCrashCartSmartBulkReplacement;
     }
   }
   if(!fsR6CrashSelectionAllowed(filter)||!fsR6CrashCanBulk()){fsR6CrashUpdateButton();return}
@@ -508,7 +508,7 @@ function fsR6CrashVerifyPersisted(result,compiled){
   }
   return true;
 }
-window.openCrashCartSmartBulkReplacement=function(){
+function openCrashCartSmartBulkReplacement(){
   if(!fsR6CrashCanBulk())return;
   var level=fsR6CrashFilter();if(!fsR6CrashSelectionAllowed(level))return uiToast('Choose Expired, Urgent, or Near-expiry filter first.','info');
   var templates=fsR6CrashSeedTemplates();if(!templates.length)return uiToast('Select one or more medicines with a dated batch.','err');
@@ -520,7 +520,7 @@ window.openCrashCartSmartBulkReplacement=function(){
     '<div class="fsr6-body"><div class="fsr6-seeds">'+seeds+'</div><div class="fsr6-workflow-note"><b>Workflow:</b> configure replacement dates under each medicine; select carts and any cart-specific exceptions; then enter one new unique seal for each cart below. A valid seal completes the review automatically.</div><div id="fsr6-plan-host"></div><div class="fsr6-review-title">Final cart review / المراجعة النهائية للعربات</div><div class="fhint" style="margin-bottom:8px">Read-only medicine summary. Enter a new unique seal for every cart; the window closes automatically only after the save and read-back verification succeed.</div><div id="fsr6-review-host"></div></div>'+
     '<div class="fsr6-footer"><div><label>Pharmacy note / ملاحظة الصيدلية</label><textarea id="fsr6-note" placeholder="Optional note"></textarea></div><div class="fsr6-actions"><span class="fsr6-status" id="fsr6-status"></span><button class="btn bg" id="fsr6-cancel" type="button">Cancel</button><button class="btn bs" id="fsr6-save" type="button">Validate and save / تحقق وحفظ</button></div></div></div></div>';
   document.body.insertAdjacentHTML('beforeend',html);fsR6EnsureStyles();fsR6CrashRenderWorkflow();
-  fsE('fsr6-close').onclick=fsR6CrashCloseModal;fsE('fsr6-cancel').onclick=fsR6CrashCloseModal;fsE('fsr6-save').onclick=window.saveCrashCartSmartBulkReplacement;
+  fsE('fsr6-close').onclick=fsR6CrashCloseModal;fsE('fsr6-cancel').onclick=fsR6CrashCloseModal;fsE('fsr6-save').onclick=saveCrashCartSmartBulkReplacement;
   fsE('fsr6-note').oninput=function(){if(FS_R6_CRASH_WORKFLOW)FS_R6_CRASH_WORKFLOW.note=this.value};
   fsE('fsr6-plan-host').addEventListener('click',function(ev){var b=ev.target.closest('[data-action]');if(b)fsR6CrashHandlePlanAction(b)});
   fsE('fsr6-plan-host').addEventListener('change',function(ev){if(ev.target.matches('input,select'))fsR6CrashHandlePlanInput(ev.target)});
@@ -528,7 +528,7 @@ window.openCrashCartSmartBulkReplacement=function(){
   fsE('fsr6-review-host').addEventListener('input',function(ev){var card=ev.target.closest('[data-cart]');if(!card||!FS_R6_CRASH_WORKFLOW)return;var review=FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]||(FS_R6_CRASH_WORKFLOW.review[card.dataset.cart]={confirmed:true,newSeal:''});if(ev.target.classList.contains('fsr6-seal-input'))review.newSeal=ev.target.value;fsR6CrashValidateReview(false)});
   fsE('fsr6-crash-modal').onclick=function(ev){if(ev.target===this)fsR6CrashCloseModal()};
 };
-window.saveCrashCartSmartBulkReplacement=async function(){
+async function saveCrashCartSmartBulkReplacement(){
   var save=fsE('fsr6-save'),compiled=fsR6CrashCompileWorkflow();
   if(!compiled.ok)return fsR6CrashStatus(compiled.errors[0]||'The replacement plan is incomplete.','err');
   if(save){save.disabled=true;save.textContent='Saving… / جاري الحفظ'}fsR6CrashStatus('Validating exact dates, replacing, resealing and verifying persistence…','');

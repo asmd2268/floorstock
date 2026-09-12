@@ -633,7 +633,7 @@ function crashCart(id){return crashCarts().find(function(c){return c.id===id})}
 
 
 // One-time migration: fill missing fields in crash reports stored before schema additions.
-window.migrateCrashReports=async function(){
+async function migrateCrashReports(){
   if(typeof isMaster==='function'&&!isMaster())return window.toast&&toast('Master permission required.','err');
   var reports=crashReports();
   if(!reports.length)return window.toast&&toast('No crash reports found.','info');
