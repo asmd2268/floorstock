@@ -122,7 +122,7 @@ window.saveExpiry=async function(){
   // toast either way.
   var button=el('exp-save-btn');
   try{
-    var medEl=el('exp-med-sel'),dateEl=el('exp-date-inp'),editEl=el('exp-edit-id'),lotEl=el('exp-batch-inp');
+    var medEl=el('exp-med-sel'),dateEl=el('exp-date-inp'),editEl=el('exp-edit-id'),lotEl=el('exp-batch-inp'),qtyEl=el('exp-qty-inp');
     if(!medEl||!dateEl||!editEl||!lotEl)return toast('The expiry form was not ready — close and reopen it. / النموذج لم يكن جاهزًا، أغلقه وأعد فتحه.','err');
     var medId=medEl.value;
     var date=dateEl.value;
@@ -135,12 +135,13 @@ window.saveExpiry=async function(){
 
     var editId=editEl.value;
     var lot=lotEl.value.trim();
+    var qtyRaw=qtyEl?String(qtyEl.value).trim():''; /* Blank is UNRECORDED, never 0 — on a pharmacy register 0 asserts "none left" about stock the ward holds; the publisher already keeps the two apart. الفارغ غير مسجل ولا يُحفظ صفراً. */
     var row={
       medId:medId,
       batch:lot,
       lot:lot,
       date:date,
-      expiry:date
+      expiry:date,qty:qtyRaw===''?null:Math.max(0,Number(qtyRaw)||0)
     };
 
     if(button)button.disabled=true;

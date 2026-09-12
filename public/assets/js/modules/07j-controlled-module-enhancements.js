@@ -414,7 +414,7 @@ function shelfExpiryCell(medId){
     }
     return '<div class="'+cls+'" style="display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:4px">'
       +'<span><b>'+esc(fmtDate(b.date))+'</b>'+(b.batch?' · '+esc(b.batch):'')+' <small>('+label+')</small></span>'
-      +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" data-clickact="openEditExpiry">✎</button> '
+      +'<span style="white-space:nowrap"><button class="btn bg bxs" data-bid="'+b.id+'" data-mid="'+medId+'" data-batch="'+esc(b.batch||'')+'" data-date="'+esc(b.date||'')+'" data-qty="'+(b.qty==null?'':esc(String(b.qty)))+'" data-clickact="openEditExpiry">✎</button> '
       +'<button class="btn bd2c bxs" data-bid="'+b.id+'" data-clickact="delBatch">×</button></span></div>';
   }).join('');
   return (rows||'<span style="color:var(--tx3)">No expiry batches</span>')

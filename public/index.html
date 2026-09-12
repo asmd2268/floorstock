@@ -1117,6 +1117,7 @@ Furosemide 40mg tab	5	20</pre>
 <div class="frow">
 <div class="fg"><label>Batch / Lot No. (optional)</label><input id="exp-batch-inp" placeholder="e.g. LOT-2024-A" type="text"/></div>
 <div class="fg"><label>Expiry Date / تاريخ الانتهاء</label><input id="exp-date-inp" type="date"/></div>
+<div class="fg"><label>Quantity / الكمية (optional)</label><input id="exp-qty-inp" type="number" min="0" step="1" placeholder="Leave blank if not counted / اتركه فارغاً إن لم تُعد"/></div>
 </div>
 </div>
 <div id="tab-scan" style="display:none">
@@ -1590,7 +1591,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <!-- Public-snapshot Crash Cart recovery removed in the hardened production build.
      Operational carts are loaded only from authenticated floorstock_state/crash_carts. -->
 <script src="./assets/js/vendor/qrcode-generator.js?v=79ec86f828"></script>
-<script type="module" src="./assets/js/auth-bootstrap.js?v=65321a3c55"></script>
+<script type="module" src="./assets/js/auth-bootstrap.js?v=ef07170830"></script>
 <script src="./assets/js/register-sw.js?v=9d32c584b2"></script>
 </body>
 </html>
