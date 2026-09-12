@@ -12,7 +12,11 @@ const functionsPackage = JSON.parse(fs.readFileSync(new URL('../functions/packag
 // the scoped crash_carts array directly from the browser.
 test('Crash Cart department reporting uses the authenticated callable and updates local cache only after server confirmation', () => {
   assert.match(clientSource, /fsCallFunction\('submitCrashCartReport'/);
-  const submitBody = clientSource.match(/window\.ccSubmitReport=async function\(\)\{([\s\S]*?)\n\};\nwindow\.ccSubmitReport\.__r676SecureCallable/);
+  /* The body used to be sliced at window.ccSubmitReport.__r676SecureCallable,
+     a marker nothing ever read and which has since been deleted. The end of the
+     function is the real boundary, so the assertion no longer depends on a flag
+     being kept alive to hold a regex together. */
+  const submitBody = clientSource.match(/window\.ccSubmitReport=async function\(\)\{([\s\S]*?)\n\};\n/);
   assert.ok(submitBody);
   assert.doesNotMatch(submitBody[1], /setCrashCarts\s*\(/);
   assert.match(submitBody[1], /replaceCachedCrashState\(data\.cart,data\.report\)/);

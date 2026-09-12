@@ -296,7 +296,6 @@ window.ccSubmitReport=async function(){
     crashReportSaving=false;if(button){button.disabled=false;button.textContent=oldText||'Submit report / إرسال البلاغ'}
   }
 };
-window.ccSubmitReport.__r676SecureCallable=true;
 
 // Phase 7a: Pharmacy accepts a pending crash cart report — triggers deduction.
 var crashAccepting=false;
@@ -324,7 +323,6 @@ window.ccAcceptReport=async function(reportId){
     return false;
   }finally{crashAccepting=false}
 };
-window.ccAcceptReport.__r676SecureCallable=true;
 
 // Phase 7a: Pharmacy rejects a pending crash cart report — no inventory change.
 var crashRejecting=false;
@@ -353,7 +351,6 @@ window.ccRejectReport=async function(reportId){
     return false;
   }finally{crashRejecting=false}
 };
-window.ccRejectReport.__r676SecureCallable=true;
 
 // Seal-must-match policy (master-only toggle)
 function getSealPolicy(){return !!(window.S&&typeof S.g==='function'&&S.g('crash_cart_seal_must_match'))}
