@@ -31,8 +31,4 @@ export function isRowMergedKey(key) {
   return EXACT.has(name) || PREFIXES.some((prefix) => name.startsWith(prefix));
 }
 
-export function rowMergedKeyNames() {
-  return { exact: [...EXACT], prefixes: [...PREFIXES] };
-}
-
-Object.assign(globalThis, { isRowMergedKey, rowMergedKeyNames });
+Object.assign(globalThis, { isRowMergedKey});

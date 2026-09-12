@@ -48,8 +48,8 @@ export async function resolveMasterFromUser(user, profile) {
   return {
     master: resolveMasterFlag(result && result.claims, profile),
     claims: (result && result.claims) || null,
-    stale: masterClaimIsStale(result && result.claims, profile),
+    stale: masterClaimIsStale(result && result.claims, profile)
   };
 }
 
-Object.assign(globalThis, { resolveMasterFlag, masterClaimIsStale, claimsCarryRole, resolveMasterFromUser });
+Object.assign(globalThis, { resolveMasterFromUser });

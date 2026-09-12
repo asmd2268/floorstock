@@ -113,12 +113,12 @@ export async function grantExportPermission({ userKey, fromMonth, toMonth, hours
     grantedAt: new Date(issuedAt).toISOString(),
     grantedBy: String((globalThis.CU && (globalThis.CU.username || globalThis.CU.email)) || 'Master'),
     expiresAt: new Date(issuedAt + validHours * 3600 * 1000).toISOString(),
-    revokedAt: '',
+    revokedAt: ''
   };
   await globalThis.S.s(EXPORT_GRANTS_KEY, grants().concat([grant]));
   if (typeof globalThis.auditAction === 'function') {
     await Promise.resolve(globalThis.auditAction('controlled_export_permission_granted', {
-      grantId: grant.id, userKey: key, fromMonth: from, toMonth: to, hours: validHours,
+      grantId: grant.id, userKey: key, fromMonth: from, toMonth: to, hours: validHours
     })).catch(() => {});
   }
   globalThis.toast(`Export permission granted for ${validHours}h. / تم منح إذن التصدير لمدة ${validHours} ساعة.`, 'succ');
@@ -156,7 +156,6 @@ export function defaultGrantRange() {
 }
 
 Object.assign(globalThis, {
-  EXPORT_GRANTS_KEY,
   liveGrantsFor,
   mayExportMonths,
   exportPermissionReason,
@@ -164,5 +163,4 @@ Object.assign(globalThis, {
   revokeExportPermission,
   grantsForDisplay,
   defaultGrantRange,
-  grantIsLive,
-});
+  grantIsLive});

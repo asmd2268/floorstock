@@ -381,10 +381,7 @@ publishLegacy("07b-inventory-import.js", {
   handleXlsxFile,
   parseImport,
   renderImportPreview,
-  impEdit,
-  impToggleRow,
   impSelectAll,
-  confirmImport,
-});
+  confirmImport});
 
 export {};

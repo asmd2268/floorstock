@@ -2,10 +2,10 @@ import {
   registerMonthPartitionedKey,
   appendMonthPartitionedRows,
   monthPartitionRows,
-  partitionKeysInCache,
+  partitionKeysInCache
 } from './month-partitioned-store.js?v=9a4f8c0b46';
-import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
+import { registerAutoMaintenance } from './state-maintenance.js?v=e1eea9265d';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 import { CRASH_REPORT_LIVE_MONTHS as POLICY_LIVE_MONTHS } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* Crash Cart reports, kept affordable forever.
@@ -42,7 +42,7 @@ registerMonthPartitionedKey({
   sortField: 'openedAt',
   // A pharmacy screen shows recent activity; older months are for the yearly
   // reports a master runs, and master lists the whole state collection anyway.
-  sessionMonths: 2,
+  sessionMonths: 2
 });
 
 function isMaster() {
@@ -117,7 +117,7 @@ export async function archiveOldCrashReports({ silent } = {}) {
 registerAutoMaintenance({
   key: CRASH_REPORT_ARCHIVE_KEY,
   describe: (result) => `${result.archived} closed Crash Cart report(s) filed by month`,
-  run: () => archiveOldCrashReports({ silent: true }),
+  run: () => archiveOldCrashReports({ silent: true })
 });
 
 registerStorageCleanup({
@@ -125,11 +125,8 @@ registerStorageCleanup({
   label: 'Archive closed reports / أرشفة البلاغات المغلقة',
   hint: `Files closed reports older than ${CRASH_REPORT_LIVE_MONTHS} months into one record per month, so the number of documents a session reads stops growing. Every field is kept.`,
   run: () => archiveOldCrashReports({}),
-  canRun: () => isMaster(),
+  canRun: () => isMaster()
 });
 
 Object.assign(globalThis, {
-  CRASH_REPORT_ARCHIVE_KEY,
-  allCrashReports,
-  reportsReadyToArchive,
-});
+  allCrashReports});

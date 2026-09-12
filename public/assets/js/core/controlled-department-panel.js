@@ -14,7 +14,7 @@
 import { fsE, fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
 import { uiToast } from './module-ui-helpers.js?v=3657403ad7';
-import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=995b32b44b';
+import { fsR5ControlledDept, fsR5ControlledRows } from './controlled-custody-data.js?v=d6e06a3ad2';
 import { fsR5DMY, fsR12BatchSummaryHtml, fsR5Class, fsR5ExpiryDays, fsR5NearDays } from './controlled-expiry-format.js?v=7370bbb9a3';
 import { installActions } from './delegated-actions.js?v=078b8d25e6';
 

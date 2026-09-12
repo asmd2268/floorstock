@@ -1,8 +1,8 @@
-import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
+import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=a49cce5499';
 import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
-import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=3da5b8801d';
-import { uploadArchive } from './archive-storage.js?v=9e3225446a';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=7167c7814a';
+import { uploadArchive } from './archive-storage.js?v=e94ffce8a5';
 import { hijriMonthKey, hijriMonthLabelBilingual, hijriRetentionCutoffMonth, isPastHijriRetention } from './hijri-calendar.js?v=c5193ff179';
 import { registerMonthPartitionedKey, appendMonthPartitionedRows } from './month-partitioned-store.js?v=9a4f8c0b46';
 
@@ -45,7 +45,7 @@ const USAGE_KEY = 'accountability_usage_v2';
 registerMonthPartitionedKey({
   key: USAGE_KEY,
   dateField: ['submittedAt', 'consumptionDate'],
-  sortField: 'submittedAt',
+  sortField: 'submittedAt'
 });
 
 export function usageRows() {
@@ -104,7 +104,7 @@ export function buildAccountabilityUsageAggregates(oldUsage) {
         medName: row.medName || '',
         units: 0,
         entryCount: 0,
-        statusCounts: {},
+        statusCounts: {}
       };
     }
     const group = groups[groupKey];
@@ -128,7 +128,7 @@ export function buildAccountabilityUsageAggregates(oldUsage) {
       consumptionDate: group.month + '-01',
       submittedAt: monthStart,
       status: 'archived',
-      __aggregated: true,
+      __aggregated: true
     };
   });
 }
@@ -149,7 +149,7 @@ export function mergeAccountabilityAggregates(existing, incoming) {
     byId[row.id] = Object.assign({}, current, {
       units: (Number(current.units) || 0) + (Number(row.units) || 0),
       entryCount: (Number(current.entryCount) || 0) + (Number(row.entryCount) || 0),
-      statusCounts,
+      statusCounts
     });
   });
   return Object.values(byId);
@@ -188,7 +188,7 @@ export async function archiveAccountabilityHistory() {
     kind: 'Custody-History',
     rows: removedUsage.concat(removedReceipts),
     dateFields: ['submittedAt', 'consumptionDate', 'receivedAt', 'createdAt'],
-    note: `Custody usage and receipts past the ${ACCOUNTABILITY_RETENTION_YEARS}-Hijri-year retention floor.`,
+    note: `Custody usage and receipts past the ${ACCOUNTABILITY_RETENTION_YEARS}-Hijri-year retention floor.`
   });
   const fileName = archiveFileName(manifest, 'json');
   const exportPayload = {
@@ -199,7 +199,7 @@ export async function archiveAccountabilityHistory() {
     usageCount: removedUsage.length,
     receiptCount: removedReceipts.length,
     usage: removedUsage,
-    receipts: removedReceipts,
+    receipts: removedReceipts
   };
   downloadJsonFile(exportPayload, fileName);
   try {
@@ -274,7 +274,7 @@ export async function archiveAccountabilityHistory() {
       olderThanHijriYears: ACCOUNTABILITY_RETENTION_YEARS,
       removedUsage: removedUsage.length,
       removedReceipts: removedReceipts.length,
-      summaryRows: summary.length,
+      summaryRows: summary.length
     })).catch((error) => console.warn('Accountability retention audit warning', error));
   }
   globalThis.toast(`${removedUsage.length + removedReceipts.length} accountability record(s) archived; monthly totals preserved for reports. ✓`, 'succ');
@@ -332,7 +332,7 @@ registerStorageCleanup({
   label: 'File custody by Hijri month / ترحيل سجل العهد',
   hint: 'Files custody usage into one record per Hijri month, removing the size limit that stopped it holding five years.',
   run: (options) => migrateAccountabilityUsageToMonths(options),
-  canRun: () => isActualMaster() && legacyStateDocExists(USAGE_KEY),
+  canRun: () => isActualMaster() && legacyStateDocExists(USAGE_KEY)
 });
 
 registerStorageCleanup({
@@ -340,15 +340,10 @@ registerStorageCleanup({
   label: 'Archive history > 6 Hijri years / أرشفة سجل العهد',
   hint: 'Optional. Downloads full detail as JSON + Excel, keeps monthly totals per department and medicine, then removes entries past the 6-Hijri-year regulatory floor.',
   run: () => archiveAccountabilityHistory(),
-  canRun: () => isActualMaster(),
+  canRun: () => isActualMaster()
 });
 
 Object.assign(globalThis, {
   ACCOUNTABILITY_RETENTION_YEARS,
-  buildAccountabilityUsageAggregates,
-  mergeAccountabilityAggregates,
   archiveAccountabilityHistory,
-  migrateAccountabilityUsageToMonths,
-  usageRows,
-  olderThanRetention,
-});
+  olderThanRetention});

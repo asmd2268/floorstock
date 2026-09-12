@@ -1,8 +1,8 @@
-import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
+import { downloadJsonFile, downloadExcelFile, localArchiveDbSave } from './local-archive-utils.js?v=a49cce5499';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 import { hijriRetentionCutoffMonth, isPastHijriRetention, hijriMonthLabelBilingual } from './hijri-calendar.js?v=c5193ff179';
-import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=3da5b8801d';
-import { uploadArchive } from './archive-storage.js?v=9e3225446a';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=7167c7814a';
+import { uploadArchive } from './archive-storage.js?v=e94ffce8a5';
 
 /* Controlled/narcotic movement log retention.
 

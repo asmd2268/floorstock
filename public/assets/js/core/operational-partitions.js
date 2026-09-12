@@ -2,9 +2,9 @@ import {
   registerMonthPartitionedKey,
   appendMonthPartitionedRows,
   monthOf,
-  monthPartitionSpec,
+  monthPartitionSpec
 } from './month-partitioned-store.js?v=9a4f8c0b46';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 import { legacyStateDoc } from './legacy-state-doc.js?v=95b728cbfc';
 
 /* The remaining append-forever records, filed by month like the ledgers.
@@ -51,7 +51,7 @@ const SPECS = Object.freeze([
     label: 'File activity by month / ترحيل النشاط للأشهر',
     hint: 'Files staff activity into one record per month; each flush then writes a single row instead of the whole history.',
     noun: 'activity row',
-    nounAr: 'سجل نشاط',
+    nounAr: 'سجل نشاط'
   },
   {
     key: 'deleted_request_audit_v4',
@@ -62,7 +62,7 @@ const SPECS = Object.freeze([
     label: 'File deletion audit by month / ترحيل سجل الحذف للأشهر',
     hint: 'Files the deleted-order audit into one record per month. Each entry carries a full copy of the order, so this is the heaviest record in the app.',
     noun: 'deletion record',
-    nounAr: 'سجل حذف',
+    nounAr: 'سجل حذف'
   },
   {
     key: 'department_request_notifications_v1',
@@ -73,7 +73,7 @@ const SPECS = Object.freeze([
     label: 'File notifications by month / ترحيل الإشعارات للأشهر',
     hint: 'Files department notifications into one record per month.',
     noun: 'notification',
-    nounAr: 'إشعار',
+    nounAr: 'إشعار'
   },
   {
     key: 'dept_notes',
@@ -84,7 +84,7 @@ const SPECS = Object.freeze([
     label: 'File notes by month / ترحيل الملاحظات للأشهر',
     hint: 'Files department notes into one record per month, so notes can never stop being submitted.',
     noun: 'note',
-    nounAr: 'ملاحظة',
+    nounAr: 'ملاحظة'
   },
   {
     key: 'accountability_receipts_v2',
@@ -97,7 +97,7 @@ const SPECS = Object.freeze([
     label: 'File handovers by Hijri month / ترحيل الاستلامات للأشهر',
     hint: 'Files completed custody handovers into one record per Hijri month, the months the custody register is reported in.',
     noun: 'completed handover',
-    nounAr: 'استلام مكتمل',
+    nounAr: 'استلام مكتمل'
   },
   {
     key: 'controlled_pdf_receipts',
@@ -108,7 +108,7 @@ const SPECS = Object.freeze([
     label: 'File PDF receipts by Hijri month / ترحيل استلامات PDF للأشهر',
     hint: 'Files approved warehouse receipts into one record per Hijri month, the same months the controlled register uses.',
     noun: 'receipt',
-    nounAr: 'استلام',
+    nounAr: 'استلام'
   },
 ]);
 
@@ -180,7 +180,7 @@ SPECS.forEach((spec) => registerStorageCleanup({
   label: spec.label,
   hint: spec.hint,
   run: (options) => migrateKeyToMonths(spec.key, options),
-  canRun: () => !!(globalThis.CU && globalThis.CU.master === true) && !!legacyRows(spec.key),
+  canRun: () => !!(globalThis.CU && globalThis.CU.master === true) && !!legacyRows(spec.key)
 }));
 
-Object.assign(globalThis, { migrateKeyToMonths });
+Object.assign(globalThis, {});

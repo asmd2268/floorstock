@@ -1,5 +1,5 @@
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
-import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
+import { registerAutoMaintenance } from './state-maintenance.js?v=e1eea9265d';
 import { MERGE_HISTORY_POLICIES } from './upkeep-policy.js?v=fc7bd6e72a';
 
 /* The undo history behind an inventory-name merge, kept under a byte budget
@@ -31,7 +31,7 @@ export const MERGE_HISTORY_BUDGET_BYTES = MERGE_HISTORY_POLICIES[0].maxBytes;
 
 const KEYS = Object.freeze({
   inventory: 'inventory_name_merge_history',
-  manual: 'manual_medicine_merge_history_v1',
+  manual: 'manual_medicine_merge_history_v1'
 });
 
 function byteLength(value) {
@@ -124,7 +124,7 @@ Object.values(KEYS).forEach((key) => registerAutoMaintenance({
     if (trimmed.length === rows.length && byteLength(rows) === byteLength(trimmed)) return null;
     await globalThis.S.s(key, trimmed);
     return { kept: trimmed.length, dropped: rows.length - trimmed.length };
-  },
+  }
 }));
 
 registerStorageCleanup({
@@ -132,7 +132,7 @@ registerStorageCleanup({
   label: 'Trim merge undo history / تقليص سجل التراجع',
   hint: 'Each undo point stores a full copy of every affected department’s medicine and expiry lists, so a few of them fill the document. Keeps the newest that fit; undo uses the newest.',
   run: () => trimNow(KEYS.inventory, 'The inventory merge history'),
-  canRun: () => !!(globalThis.CU && globalThis.CU.master === true),
+  canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
 });
 
 registerStorageCleanup({
@@ -140,12 +140,9 @@ registerStorageCleanup({
   label: 'Trim merge undo history / تقليص سجل التراجع',
   hint: 'Keeps the newest manual-merge undo points that fit under the document limit.',
   run: () => trimNow(KEYS.manual, 'The manual merge history'),
-  canRun: () => !!(globalThis.CU && globalThis.CU.master === true),
+  canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
 });
 
 Object.assign(globalThis, {
-  MERGE_HISTORY_BUDGET_BYTES,
-  trimMergeHistory,
   saveInventoryMergeHistory,
-  saveManualMergeHistory,
-});
+  saveManualMergeHistory});

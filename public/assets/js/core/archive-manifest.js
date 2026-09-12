@@ -53,7 +53,7 @@ export function coverageOf(rows, dateFields) {
     fromDay: isoDay(earliest),
     toDay: isoDay(latest),
     fromHijri: hijriMonthKey(earliest),
-    toHijri: hijriMonthKey(latest),
+    toHijri: hijriMonthKey(latest)
   };
 }
 
@@ -85,7 +85,7 @@ export function buildArchiveManifest({ kind, rows, dateFields, note }) {
     // So a file found later can be traced back to the installation it came from.
     project: String((globalThis.FIREBASE_CONFIG && globalThis.FIREBASE_CONFIG.projectId) || ''),
     tenantId: String((globalThis.CU && globalThis.CU.tenantId) || ''),
-    note: note || '',
+    note: note || ''
   };
 }
 
@@ -133,14 +133,12 @@ export function localArchiveEntry(manifest, payload) {
     savedOn: manifest.savedOn,
     savedOnHijri: manifest.savedOnHijri,
     savedBy: manifest.savedBy,
-    payload,
+    payload
   };
 }
 
 Object.assign(globalThis, {
-  coverageOf,
   buildArchiveManifest,
   archiveFileName,
   describeArchive,
-  localArchiveEntry,
-});
+  localArchiveEntry});

@@ -83,4 +83,4 @@ globalThis.__startAppExtensions.push(function () {
   }, UPKEEP_INTERVAL_MS);
 });
 
-Object.assign(globalThis, { registerAutoMaintenance, runAutoMaintenance, autoMaintenanceKeys });
+Object.assign(globalThis, { registerAutoMaintenance});

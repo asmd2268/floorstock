@@ -7,9 +7,9 @@ import {
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
   partitionKeysInCache,
-  partitionKey,
+  partitionKey
 } from './month-partitioned-store.js?v=9a4f8c0b46';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 
 /* The controlled / narcotic movement ledger, one document per HIJRI month.
 
@@ -39,7 +39,7 @@ export const CONTROLLED_MOVES_KEY = 'controlled_moves';
 registerMonthPartitionedKey({
   key: CONTROLLED_MOVES_KEY,
   dateField: ['at'],
-  sortField: 'at',
+  sortField: 'at'
 });
 
 export function controlledMoveRows() {
@@ -97,7 +97,7 @@ export async function migrateControlledMovesToMonths(options) {
 
   const dated = legacyRows.map((row, index) => Object.assign({}, row, {
     id: String((row && row.id) || `ctl_migrated_${index}_${Math.random().toString(36).slice(2, 9)}`),
-    at: (row && row.at) || new Date().toISOString(),
+    at: (row && row.at) || new Date().toISOString()
   }));
   const months = [...new Set(dated.map((row) => hijriMonthKey(row.at)).filter(Boolean))].sort();
 
@@ -131,7 +131,7 @@ registerStorageCleanup({
   hint: 'Files the movement ledger into one record per Hijri month, removing its size limit and making a month cost one read.',
   run: (options) => migrateControlledMovesToMonths(options),
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
-    && legacyStateDocExists(CONTROLLED_MOVES_KEY),
+    && legacyStateDocExists(CONTROLLED_MOVES_KEY)
 });
 
 Object.assign(globalThis, {
@@ -141,6 +141,4 @@ Object.assign(globalThis, {
   saveControlledMove,
   deleteControlledMove,
   availableControlledMonths,
-  migrateControlledMovesToMonths,
-  controlledMovePartitionKey: (month, part) => partitionKey(CONTROLLED_MOVES_KEY, month, part),
-});
+  controlledMovePartitionKey: (month, part) => partitionKey(CONTROLLED_MOVES_KEY, month, part)});

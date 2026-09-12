@@ -1,4 +1,4 @@
-import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
+import { registerAutoMaintenance } from './state-maintenance.js?v=e1eea9265d';
 
 /* Storage cleanup registry — one owner, one registry, no wrappers.
 

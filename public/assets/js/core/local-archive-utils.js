@@ -76,5 +76,5 @@ async function localArchiveDbList(store){
   }
 }
 
-Object.assign(globalThis,{downloadJsonFile,downloadExcelFile,localArchiveDbSave,localArchiveDbList});
+Object.assign(globalThis,{downloadJsonFile,downloadExcelFile,localArchiveDbSave});
 export {downloadJsonFile,downloadExcelFile,localArchiveDbSave,localArchiveDbList};

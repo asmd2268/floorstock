@@ -225,8 +225,6 @@ publishLegacy("07f-shelves.js", {
   renderShelves,
   getShelfName,
   openAddShelf,
-  openEditShelf,
-  printShelfList,
-});
+  printShelfList});
 
 export {};

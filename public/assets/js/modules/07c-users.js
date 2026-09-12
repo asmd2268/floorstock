@@ -266,10 +266,7 @@ publishLegacy("07c-users.js", {
   renderUsers,
   updateUserRoleFields,
   openAddUser,
-  saveUser,
-  delUser,
-  toggleMasterUser,
-});
+  saveUser});
 
 export {};
 

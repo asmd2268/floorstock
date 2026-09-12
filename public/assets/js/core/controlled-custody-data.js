@@ -233,4 +233,4 @@ export async function fsR5ControlledRows(dept){
 }
 
 /* modules/51 and the crash-cart print still call these by name. */
-Object.assign(globalThis,{ fsR5ControlledDept, fsR5ControlledMedicine, fsR5NormalizeControlled, fsR5ControlledRows });
+Object.assign(globalThis,{ fsR5ControlledDept, fsR5ControlledRows });

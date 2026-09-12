@@ -1,8 +1,8 @@
-import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=0f0cdae475';
+import { downloadJsonFile, localArchiveDbSave } from './local-archive-utils.js?v=a49cce5499';
 import { legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
-import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=3da5b8801d';
-import { uploadArchive } from './archive-storage.js?v=9e3225446a';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
+import { buildArchiveManifest, archiveFileName, describeArchive, localArchiveEntry } from './archive-manifest.js?v=7167c7814a';
+import { uploadArchive } from './archive-storage.js?v=e94ffce8a5';
 
 /* Order retention: keep Firestore from growing without bound as fulfilled
    requests age past 6 months, without silently breaking historical

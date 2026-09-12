@@ -1,6 +1,6 @@
 import { dedupeMonthPartitions, monthPartitionedKeyNames } from './month-partitioned-store.js?v=9a4f8c0b46';
-import { registerAutoMaintenance } from './state-maintenance.js?v=8ef0a9d17f';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
+import { registerAutoMaintenance } from './state-maintenance.js?v=e1eea9265d';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 
 /* Repairs rows a re-run migration duplicated.
 
@@ -53,7 +53,7 @@ export async function repairDuplicatedPartitions({ silent } = {}) {
 registerAutoMaintenance({
   key: 'partition_duplicate_repair',
   describe: (result) => result.detail,
-  run: () => repairDuplicatedPartitions({ silent: true }),
+  run: () => repairDuplicatedPartitions({ silent: true })
 });
 
 registerStorageCleanup({
@@ -61,7 +61,7 @@ registerStorageCleanup({
   label: 'Remove duplicated rows / إزالة الصفوف المكررة',
   hint: 'Removes rows a re-run migration wrote twice. An id addresses one row, so the second copy is the same row and dropping it loses nothing.',
   run: () => repairDuplicatedPartitions({}),
-  canRun: () => isMaster(),
+  canRun: () => isMaster()
 });
 
-Object.assign(globalThis, { repairDuplicatedPartitions });
+Object.assign(globalThis, {});

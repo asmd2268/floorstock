@@ -3,7 +3,7 @@ import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
-  fulfillmentEditReason,
+  fulfillmentEditReason
 } from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
 
 // ── REQUESTS / DEPT REQUEST FORM / MY REQUESTS ──────────────────────────
@@ -250,11 +250,8 @@ window.requestScheduledDispenseBlocked=requestScheduledDispenseBlocked;
 publishLegacy("03g-requests.js", {
   filterR,
   renderReqs,
-  viewReq,
-  openFulfill,
   valQ,
   cntItems,
-  renderMyReqs,
-});
+  renderMyReqs});
 
 export {};

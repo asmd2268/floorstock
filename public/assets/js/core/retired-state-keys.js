@@ -1,4 +1,4 @@
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 
 /* Documents left behind by features that no longer exist.
 
@@ -28,7 +28,7 @@ const RETIRED = Object.freeze([
        far more than it recovered. */
     hint: 'Left over from the July 2026 inventory-name rollback. The feature that wrote it no longer exists and nothing reads it.',
     what: 'the pre-rollback inventory snapshots from July 2026',
-    whatAr: 'نسخ المخزون قبل التراجع في يوليو ٢٠٢٦',
+    whatAr: 'نسخ المخزون قبل التراجع في يوليو ٢٠٢٦'
   },
 ]);
 
@@ -62,7 +62,7 @@ RETIRED.forEach((entry) => registerStorageCleanup({
   label: entry.label,
   hint: entry.hint,
   run: () => deleteRetired(entry),
-  canRun: () => isMaster(),
+  canRun: () => isMaster()
 }));
 
-Object.assign(globalThis, { retiredStateKeys });
+Object.assign(globalThis, {});

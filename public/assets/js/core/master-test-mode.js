@@ -52,7 +52,7 @@ export function buildTestSession({ actual, profile, meta, deptName } = {}) {
     email: source.email || source.username || source.displayName || '',
     role,
     deptId: deptId || null,
-    deptName: deptId ? text(deptName, '') : '',
+    deptName: deptId ? text(deptName, '') : ''
   };
 
   const user = Object.assign({}, source, {
@@ -68,7 +68,7 @@ export function buildTestSession({ actual, profile, meta, deptName } = {}) {
     deptId: deptId || null,
     departmentId: deptId || null,
     deptName: deptId ? text(deptName, '') : '',
-    username: source.username || source.displayName || source.email || role,
+    username: source.username || source.displayName || source.email || role
   });
 
   return { user, testMode };
@@ -86,4 +86,4 @@ export function isTestingAnotherRole(testMode) {
   return !!(testMode && testMode.role);
 }
 
-Object.assign(globalThis, { buildTestSession, restoreActualSession, isTestingAnotherRole });
+Object.assign(globalThis, { buildTestSession, restoreActualSession});

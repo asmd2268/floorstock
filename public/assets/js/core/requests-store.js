@@ -4,9 +4,9 @@ import {
   appendMonthPartitionedRows,
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
-  partitionKeysInCache,
+  partitionKeysInCache
 } from './month-partitioned-store.js?v=9a4f8c0b46';
-import { registerStorageCleanup } from './storage-cleanup.js?v=11c6be7dda';
+import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 import { legacyStateDoc, legacyStateDocExists } from './legacy-state-doc.js?v=95b728cbfc';
 
 /* Orders, one document per Gregorian month.
@@ -40,7 +40,7 @@ registerMonthPartitionedKey({
      department's working view is the last few weeks, so a short window keeps the
      read cost down. Older months stay reachable by a master, who lists the whole
      collection rather than naming documents. */
-  sessionMonths: 3,
+  sessionMonths: 3
 });
 
 export function requestRows() {
@@ -76,7 +76,7 @@ export async function migrateRequestsToMonths(options) {
     /* Derived from the row's own content, never random: importing the same
        order twice must produce the same id and land on the row already there. */
     id: String((row && row.id) || stableRowId('req', row)),
-    created: (row && (row.created || row.fulfilledAt)) || new Date().toISOString(),
+    created: (row && (row.created || row.fulfilledAt)) || new Date().toISOString()
   }));
   const months = [...new Set(dated.map((row) => String(row.created).slice(0, 7)))].sort();
 
@@ -101,11 +101,8 @@ registerStorageCleanup({
   hint: 'Files orders into one record per month, removing the size limit that could stop departments submitting orders.',
   run: (options) => migrateRequestsToMonths(options),
   canRun: () => !!(globalThis.CU && globalThis.CU.master === true)
-    && legacyStateDocExists(REQUESTS_KEY),
+    && legacyStateDocExists(REQUESTS_KEY)
 });
 
 Object.assign(globalThis, {
-  REQUESTS_KEY,
-  requestRows,
-  migrateRequestsToMonths,
-});
+  requestRows});

@@ -12,5 +12,5 @@ function resetPrintPageState() {
   document.querySelectorAll('.ppp-btn').forEach(function (b) { b.classList.remove('on'); });
 }
 
-Object.assign(globalThis, { setPPP, resetPrintPageState });
+Object.assign(globalThis, { resetPrintPageState });
 export { setPPP, resetPrintPageState };

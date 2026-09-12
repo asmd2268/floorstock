@@ -65,6 +65,4 @@ export function estimateDocBytes(value) {
 
 Object.assign(globalThis, {
   FIRESTORE_DOC_LIMIT,
-  estimateValueBytes,
-  estimateDocBytes,
-});
+  estimateDocBytes});

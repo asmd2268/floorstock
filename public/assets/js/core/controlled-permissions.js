@@ -29,6 +29,6 @@ export { ctlIsMaster, ctlIsOfficer, ctlIsWarehouse, ctlCanManage, ctlCanEditCata
 
 /* The legacy modules and the HTML call these by name. */
 Object.assign(globalThis,{
-  ctlIsMaster, ctlIsOfficer, ctlIsWarehouse, ctlCanManage,
+  ctlIsMaster, ctlIsOfficer, ctlIsWarehouse,
   ctlCanEditCatalog, ctlCanAddCatalog, ctlCanEditDept, ctlCanEditWarehouse
 });

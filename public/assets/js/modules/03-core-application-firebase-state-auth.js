@@ -1,12 +1,12 @@
 import { stateKeysForProfile, isPharmacyScopedProfile, uniqueKeys } from '../core/state-read-scope.js?v=af02f1361f';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=367322a8f2';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=8775074cc7';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
   canEditFulfillment,
-  fulfillmentEditReason,
+  fulfillmentEditReason
 } from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
 import { loadScriptOnce } from '../core/script-loader.js?v=5e8c0b2d04';
 import { debounce } from '../core/timing.js?v=e4cf678c0c';
@@ -16,7 +16,7 @@ import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=eec5742551';
 import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=7a75e3ae82';
-import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=4510baaaca';
+import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=58354d0a19';
 import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
 
@@ -1695,47 +1695,30 @@ export {
   _trackSave,
   fsStateToken,
   fsStateCollectionPath,
-  fsStateSdkCollection,
   fsStateRestRequest,
   fsStateRestListCollection,
-  fsStateLoadFloorstockViaRest,
   fsIsPharmacyScopedProfile,
   fsStateKeysForProfile,
   fsStateLoadDocumentViaRest,
   fsStateLoadDocumentViaSdk,
-  fsStateLoadCollectionViaRest,
-  fsStateMergeCollectionKeys,
   fsStateScopeCacheForProfile,
-  fsStateLoadScoped,
   fsControlledPharmacyDeptKeys,
   fsStateLoadControlledPharmacyScoped,
-  fsPharmacyDepartmentStateKeys,
-  fsStateLoadPharmacyScoped,
   fsStateLoadFloorstockForProfileViaRest,
   fsStateLoadFloorstockForProfileViaSdk,
-  fsStateLoadUsersViaRest,
   fsStateLoadFloorstockViaSdk,
   fsHydrateDepartmentDirectoryForLogin,
-  fsStateLoadUsersViaSdk,
-  fsStateLoadUsersViaCallable,
   fsStateIsLegacyMasterProfile,
-  fsStateLoadLegacyUserDirectory,
-  fsStateFirstSuccess,
   fsStateRestSetDocument,
   fsStateRestDeleteDocument,
   fsStateSdkSetDocument,
   fsStateSdkDeleteDocument,
-  fsStateSetSmart,
-  fsStateDeleteSmart,
-  fsStateApplyCache,
-  fsStateScheduleManagedUserLoad,
   warnPublicSync,
   syncPublicExpiry,
   fmtDate,
   fmtDateTime,
   daysUntil,
   todayISO,
-  nowISO,
-};
+  nowISO};
 export const legacyVariableNames = Object.freeze(["FB_APP", "FB_AUTH", "FB_DB", "FB_FUNCTIONS", "FB_APPCHECK", "_lazyScripts", "renderInvDebounced", "renderReqFormDebounced", "renderControlledDebounced", "_firebasePersistenceAttempted", "_firebaseReadyPromise", "_pendingWrites", "_trackedSaves", "_lastSaveFailure", "fsTenantId", "DEPARTMENT_SHARED_STATE_KEYS", "PHARMACY_SCOPED_STATE_KEYS", "CONTROLLED_PHARMACY_BASE_KEYS", "WAREHOUSE_STATE_KEYS", "S", "_publicSyncWarningAt", "FS_R17_MED_MIGRATION_PENDING", "FS_R18_EXPIRY_MIGRATION_PENDING", "_gdRawRef", "_gdDeletedRef", "_gdFiltered", "_deletedDeptRepairBusy", "MEDS", "esc", "CU", "RFS", "EDID", "FRID", "IROWS", "SROLE", "fsLoginTimeout", "logoutBusy", "CTL_VIEW"]);
 export default __asdhLegacyApi;

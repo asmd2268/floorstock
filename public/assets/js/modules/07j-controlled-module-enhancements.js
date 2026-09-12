@@ -168,7 +168,6 @@ async function ctlSaveBatchEditor(){
 }
 function ctlOpenDispense(id){if(!ctlCanDispense())return;ctlEnsureV6UI();var m=ctlMedicine(id)||{};el('ctld-med').value=id;el('ctld-name').value=m.name||'';el('ctld-qty').value='';el('ctld-recipient').value='';el('ctld-note').value='';el('ctld-dept').innerHTML=gd().map(function(d){return '<option value="'+esc(d.id)+'">'+esc(d.name)+'</option>'}).join('');ctlDispTypeChanged();OM('mctldisp')}
 function ctlDispTypeChanged(){var t=el('ctld-type').value;el('ctld-dept-wrap').style.display=(t==='inpatient'||t==='internal')?'block':'none'}
-function ctlLogo(){return S.g('controlled_print_logo')||''}
 function ctlChooseLogo(){ctlEnsureV6UI();el('ctl-logo-file').click()}
 async function ctlSavePrintLogo(file){if(!file)return;try{var data=await window.fsPrepareImageDataUrl(file);await S.s('controlled_print_logo',data);toast('Print logo saved ✓','succ')}catch(error){var input=el('ctl-logo-file');if(input)input.value='';toast(String(error&&error.message||error),'err')}}
 function ctlPrintSettings(dept){return S.g('controlled_settings_'+dept)||{}}
@@ -669,7 +668,6 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   ctlFmtDMY,
   ctlCanDispense,
   ctlOpenDispense,
-  ctlLogo,
   ctlChooseLogo,
   ctlPrintSettings,
   ctlPublicUrl,
@@ -690,7 +688,6 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   canManageUsers,
   masterRoleLabel,
   bulkSetMedicationFlag,
-  openAddExpiryForMed,
   renderShelfMedicationDatabase,
   toggleAllShelfMedications,
   clearShelfMedicationSelection,
@@ -700,7 +697,6 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   saveCrashReport,
   deleteCrashReport,
   crashCart,
-  ctlSettingsGlobal,
-});
+  ctlSettingsGlobal});
 
 export {};

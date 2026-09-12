@@ -318,11 +318,9 @@ publishLegacy("07g-barcode-scanner.js", {
   switchCamera,
   stopScanner,
   restartScanner,
-  captureFrame,
   applyScanResult,
   parseTypedBarcode,
   applyTypedResult,
-  CM,
-});
+  CM});
 
 export {};

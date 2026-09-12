@@ -92,4 +92,4 @@ export async function saveRowsMerging(key, nextRows, { baseline, fallback } = {}
   return merged;
 }
 
-Object.assign(globalThis, { rowIntent, applyIntent, saveRowsMerging });
+Object.assign(globalThis, { saveRowsMerging });

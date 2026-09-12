@@ -20,16 +20,12 @@ const state = {
   // Which transport writes go over. Reads pick per call; writes are sticky,
   // because once the SDK has rejected a write it will usually keep rejecting.
   writeTransport: 'sdk',
-  onFallback: null,
+  onFallback: null
 };
 
 export function registerStateTransport(name, implementation) {
   if (name !== 'rest' && name !== 'sdk') throw new Error(`Unknown state transport: ${name}`);
   implementations[name] = implementation;
-}
-
-export function stateTransportReady() {
-  return !!implementations.rest;
 }
 
 export function writeTransportName() {
@@ -96,11 +92,9 @@ export async function loadState(profile, timeout) {
 
 Object.assign(globalThis, {
   registerStateTransport,
-  stateTransportReady,
   writeTransportName,
   onTransportFallback,
   resetWriteTransport,
   setState,
   removeState,
-  loadState,
-});
+  loadState});

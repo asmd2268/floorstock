@@ -306,9 +306,7 @@ installActions(document.body,{
 
 publishLegacy("07d-analytics.js", {
   renderAn,
-  renderAccAnalytics,
   hideSelectedZeroDispense: window.hideSelectedZeroDispense,
-  anlPrintAccountability: window.anlPrintAccountability,
-});
+  anlPrintAccountability: window.anlPrintAccountability});
 
 export {};

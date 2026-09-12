@@ -50,8 +50,4 @@ export function baseStateKey(docId) {
   return spread !== id ? spread : id;
 }
 
-export function isPartitionedStateKey(key) {
-  return PARTITIONED_STATE_KEYS.includes(String(key || ''));
-}
-
-Object.assign(globalThis, { PARTITIONED_STATE_KEYS, baseStateKey, isPartitionedStateKey });
+Object.assign(globalThis, { baseStateKey});

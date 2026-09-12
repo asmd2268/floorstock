@@ -196,7 +196,6 @@ publishLegacy("03c-medication-expiry-shelf-helpers.js", {
   delExpBatch,
   updExpBatch,
   getShelves,
-  setShelves,
   addShelf,
   delShelf,
   updShelf,
@@ -205,7 +204,6 @@ publishLegacy("03c-medication-expiry-shelf-helpers.js", {
   gd,
   repairDeletedDepartments,
   gu,
-  gr,
-});
+  gr});
 
 export {};
