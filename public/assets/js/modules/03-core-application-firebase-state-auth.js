@@ -256,15 +256,6 @@ function _trackSave(promise,label){
   p.finally(function(){_pendingWrites=Math.max(0,_pendingWrites-1);_trackedSaves.delete(p)}).catch(function(){});
   return p;
 }
-window.asdhWaitForAllSaves=async function(timeoutMs){
-  timeoutMs=Number(timeoutMs)||20000;var started=Date.now();
-  while(_trackedSaves.size){
-    await Promise.allSettled(Array.from(_trackedSaves));
-    if(Date.now()-started>timeoutMs)throw new Error('Timed out while waiting for database saves.');
-  }
-  if(_lastSaveFailure){var f=_lastSaveFailure;_lastSaveFailure=null;throw (f.error||new Error('A database save failed: '+f.label))}
-  return true;
-};
 async function fsStateToken(forceRefresh){
   if(!FB_AUTH||!FB_AUTH.currentUser)throw new Error('The authenticated Firebase session is unavailable.');
   return fsLoginTimeout(

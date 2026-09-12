@@ -593,7 +593,6 @@ window.__r17CrashExecuteBulkExtensions.push(function(){var after=(typeof crashRe
 // wrapper here would always find window.crashCloseReport undefined and never run.
 // Left removed rather than kept as unreachable code (confirmed dead via
 // TRACE_COMPENSATION_NOTICE_DUP.md investigation).
-window.clearFloorstockFormDraft=function(type){clear(type)};
 })();
 
 // --- Merged from 48-asdh-final-request-completion-script.js (Phase 6 consolidation) ---

@@ -481,8 +481,6 @@ window.ctlConfirmDepartmentPrint=async function(event){
   if(!dept)return uiToast('Department is not assigned / لم يتم تحديد القسم','err');
   return window.printDepartmentCustodyExact(dept,{});
 };
-window.printControlledCurrent=function(){return window.ctlConfirmDepartmentPrint()};
-window.finalControlledPrintRun=function(){return window.ctlConfirmDepartmentPrint()};
 window.ctlOpenDepartmentPrintOptions=function(){return window.ctlConfirmDepartmentPrint()};
 
 /* Bound in HTML and called by other modules under all four names. */

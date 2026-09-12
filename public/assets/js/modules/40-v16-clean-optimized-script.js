@@ -60,7 +60,6 @@ window.openHide=function(){openInvModalC('hide')};window.openFreeze=function(){o
 document.addEventListener('keydown',function(ev){if(ev.key==='Escape'){if(E('v16-hide-modal'))closeInvModalC('v16-hide-modal');if(E('v16-freeze-modal'))closeInvModalC('v16-freeze-modal')}});
 
 /* ── One controlled-stock page. Separate Shared Catalogue page is removed. ── */
-window.ctlOwnerSource=function(){return ctlCanDispense()?'pharmacy':''};
 /* ctlTabs and ctlSetView belong to module 80, which builds the tab set this
    page actually shows. They used to be defined here as well — dead code that
    module 80 overwrote — and worse, module 80 POLLED for them on a timer as a
@@ -738,7 +737,6 @@ window.undoLatestInventorySafetySnapshot=async function(){
 window.seed=async function(){return {status:'disabled-on-login'}};
 window.repairImportedDepartmentAliases=async function(){return {status:'disabled-on-login'}};
 window.fsR17MigrateMedicationIdentity=async function(){return {status:'disabled-on-login'}};
-window.repairLatestInventoryMergeCollateral=async function(){return {status:'removed-in-r661'}};
 function disableUnsafeMergeButtons(){
   document.querySelectorAll('.sim-manual-merge-btn,.sim-merge-btn').forEach(function(b){b.disabled=true;b.classList.add('r661-merge-disabled');b.title='Disabled by R6.76.50 inventory safety. Use exact selected-name merge with preview.'})
 }
