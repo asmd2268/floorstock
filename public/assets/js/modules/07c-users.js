@@ -1,4 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── USERS ─────────────────────────────────────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
@@ -24,6 +25,15 @@ function injectUsersTabBar(activePg){
   if(!pg||pg.querySelector('.usr-tab-bar'))return;
   if(!(typeof window.isMasterActual==='function'&&window.isMasterActual()))return;
   var bar=document.createElement('div');bar.className='usr-tab-bar';bar.style.cssText='display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  /* Auth claims are rewritten only when a users/{uid} document is written, so a
+     claim that was wrong when it was written stays wrong until someone edits
+     that user — correcting the rule in the function does not by itself release
+     an account already locked out by the old one. This is the button that does.
+     صلاحيات الدخول تُعاد من الملفات: يمسّ فقط ما تغيّر فعلاً. */
+  var resyncBtn=document.createElement('button');
+  resyncBtn.className='btn bg bsm';resyncBtn.id='usr-resync-claims';resyncBtn.type='button';
+  resyncBtn.dataset.clickact='usrResyncClaims';
+  resyncBtn.innerHTML='🔑 Rebuild sign-in permissions / إعادة بناء صلاحيات الدخول';
   var tabs=[
     ['pg-users','👤 Users',function(){showPg('pg-users')}],
     ['pg-import','⬇ Import',function(){showPg('pg-import')}],
@@ -37,6 +47,7 @@ function injectUsersTabBar(activePg){
     if(!on)b.onclick=t[2];
     bar.appendChild(b);
   });
+  bar.appendChild(resyncBtn);
   pg.insertBefore(bar,pg.firstChild);
 }
 window.injectUsersTabBar=injectUsersTabBar;
@@ -261,3 +272,18 @@ publishLegacy("07c-users.js", {
 });
 
 export {};
+
+/* Owned by this module: the Users page is where account access is managed. */
+installActions(document.body,{usrResyncClaims:function(el){
+  if(!(window.CU&&CU.master===true))return typeof toast==='function'?toast('Master only.','err'):null;
+  el.disabled=true;var was=el.innerHTML;el.innerHTML='Rebuilding… / جارٍ…';
+  Promise.resolve(typeof window.fsCallFunction==='function'?window.fsCallFunction('resyncUserClaims',{}):Promise.reject(new Error('Function bridge unavailable.')))
+    .then(function(r){
+      var changed=(r&&r.changed)||0,scanned=(r&&r.scanned)||0,failed=(r&&r.failures&&r.failures.length)||0;
+      /* Named plainly: "changed" accounts must sign in again, and saying so is the
+         difference between a reassuring number and an actionable one. */
+      if(typeof toast==='function')toast(changed?('Rebuilt '+changed+' of '+scanned+' account(s); they must sign in again / أُعيد بناء '+changed+' حساب، يلزمها تسجيل دخول جديد'+(failed?(' — '+failed+' failed'):'')):('All '+scanned+' account(s) were already correct / كل الحسابات سليمة'),failed?'err':'succ');
+    })
+    .catch(function(e){if(typeof toast==='function')toast(String((e&&e.message)||e).replace(/^FirebaseError:\s*/,''),'err')})
+    .then(function(){el.disabled=false;el.innerHTML=was});
+}},{event:'click',attribute:'clickact'});

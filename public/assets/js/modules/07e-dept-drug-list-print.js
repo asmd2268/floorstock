@@ -131,7 +131,7 @@ async function doDeptPrint(){
       +'<div class="page-sub">Print Date / تاريخ الطباعة: <b>'+today+'</b> &nbsp;|&nbsp; Total / الإجمالي: <b>'+ms.length+'</b> &nbsp;|&nbsp; By / بواسطة: <b>'+userName+'</b></div>'
       +'<div style="font-size:7pt;color:#666;margin-top:3px">Developed by Ali Abudahash | ASDHealth System</div>'
       +'</div>'
-      +'<div style="position:absolute;top:0;right:0;text-align:center"><img src="'+qrUrl+'" width="150" height="150" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'
+      +'<div style="position:absolute;top:0;right:0;text-align:center"><img class="asd-qr-image" src="'+qrUrl+'" width="150" height="150" alt="System"><div style="font-size:5.5pt;color:#888">System</div></div>'
       +'</div>'
       +'<table><thead><tr>'
       +'<th class="c">#</th>'
@@ -144,9 +144,10 @@ async function doDeptPrint(){
       +expiryPrintBlock
       +'<div id="footer" style="margin-top:20px;padding-top:8px;border-top:1px solid #ccc;font-size:7pt;color:#555;display:flex;justify-content:space-between;align-items:center">'
       +'<span>'+footerNote+'</span>'
-      +'<img src="'+qrUrl+'" width="76" height="76" alt="QR">'
+      +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76" alt="QR">'
       +'</div>'
-      +'<script>(function(){var done=false;function go(){if(done)return;done=true;if(!('+fitOne+')){var s=document.createElement("style");s.textContent="@media print{#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}}";document.head.appendChild(s)}window.focus();window.print()}if(document.readyState==="complete")setTimeout(go,300);else window.addEventListener("load",function(){setTimeout(go,300)},{once:true})})()</sc'+'ript>'
+      +'<script>(function(){var done=false;function fit(){if(done)return;done=true;if(!('+fitOne+')){var s=document.createElement("style");s.textContent="@media print{#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}}";document.head.appendChild(s)}}if(document.readyState==="complete")fit();else window.addEventListener("load",fit,{once:true})})()</sc'+'ript>'
+      +'<script>'+(window.ASD_QR&&typeof window.ASD_QR.printRuntimeScript==='function'?window.ASD_QR.printRuntimeScript({}):'window.focus();window.print();')+'</sc'+'ript>'
       +'</body></html>';
     var pw=openBlobPrint(dpHtml);
     if(!pw){toast('Allow pop-ups to print the department drug list.','err');return false;}
