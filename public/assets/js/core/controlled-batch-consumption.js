@@ -56,3 +56,54 @@ export function mergeBatches(existing, incoming) {
   });
   return order.map((key) => byKey[key]).filter((batch) => batch.qty > 0);
 }
+
+/* The one rule every custody write has to satisfy: the batch lines add up to the
+   quantity the row says is held. A register whose lines and total disagree is a
+   discrepancy to resolve at the cupboard, not a display detail to round away.
+
+   A quantity is inferred in exactly one case — a single dated batch, which can
+   only be holding all of it. Everything else that does not add up is REFUSED and
+   returned as a message, because the alternative the bulk department editor used
+   to take (write the blank as 0) records "this lot is empty" about a lot that is
+   not empty.
+
+   كميات الدفعات يجب أن تساوي الكمية الفعلية، وإلا يُرفض الحفظ. */
+export function reconcileBatchQuantities(actual, batches) {
+  const total = num(actual);
+  if (total < 0) return { error: 'Actual quantity cannot be negative / الكمية الفعلية لا يمكن أن تكون سالبة' };
+  const rows = (Array.isArray(batches) ? batches : []).map((batch) => Object.assign({}, batch));
+  if (total === 0) return { batches: [] };
+  if (!rows.length) return { error: 'At least one expiry date is required when quantity is positive. Batch/Lot is optional / تاريخ الانتهاء مطلوب للكمية الموجبة، ورقم التشغيلة اختياري' };
+  if (rows.length === 1 && rows[0].expiry && !(num(rows[0].qty) > 0)) rows[0].qty = total;
+  for (const row of rows) {
+    if (!(num(row.qty) > 0)) return { error: 'Every expiry row requires a quantity greater than zero / كل تاريخ يحتاج كمية أكبر من صفر' };
+    if (!row.expiry) return { error: 'Expiry date is required for every entered quantity; Batch/Lot remains optional / التاريخ مطلوب لكل كمية ورقم التشغيلة اختياري' };
+  }
+  const sum = rows.reduce((carried, row) => carried + num(row.qty), 0);
+  if (sum !== total) return { error: 'Expiry quantities must equal the actual quantity. Total: ' + sum + ' / Actual: ' + total };
+  return { batches: rows };
+}
+
+/* What each batch actually RECORDS, for anyone republishing or printing it.
+
+   A quantity nobody entered comes back as '' — unknown — never as 0. The two
+   claims are not the same: 0 says the lot is empty, and a department reading
+   "0 → 31/08/2028" under a medicine it is holding three of has been told
+   something false about a narcotic.
+
+   Rows written before per-batch counting carry the whole amount on the row with
+   every batch left at zero; when the lines add to nothing and the row still
+   holds stock, every line is unknown rather than empty.
+
+   الكمية غير المسجلة تبقى غير معروفة، ولا تُنشر صفراً. */
+export function recordedBatchQuantities(batches, actualTotal) {
+  const rows = Array.isArray(batches) ? batches : [];
+  const known = rows.map((batch) => {
+    const raw = batch && batch.qty;
+    return raw === '' || raw == null || !Number.isFinite(Number(raw)) ? null : num(raw);
+  });
+  const sum = known.reduce((carried, value) => carried + (value || 0), 0);
+  const total = actualTotal === '' || actualTotal == null ? null : num(actualTotal);
+  if (sum === 0 && total !== null && total > 0) return rows.map(() => '');
+  return known.map((value) => (value === null ? '' : value));
+}

@@ -4,8 +4,9 @@ import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 // ── SHELVES ──────────────────────────────────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module
 // split). Everything referenced here that isn't declared in this file
-// (S, CU, esc, el, gd, getMeds, deptName, officialPrintHeaderHTML,
-// openBlobPrint) is already published to globalThis by its owning module.
+// (S, CU, esc, el, gd, getMeds, getExpiry, deptName, syncPublicExpiry,
+// warnPublicSync, officialPrintHeaderHTML, openBlobPrint) is already published
+// to globalThis by its owning module.
 function renderShelves(){
   renderShelfAlertSettings();
   var profile=(window.fsEffectiveUser&&window.fsEffectiveUser())||CU||{},shelfRole=window.fsEffectiveRole?window.fsEffectiveRole():String(profile.role||''),shelfDept=String(profile.deptId||profile.departmentId||'');
@@ -66,9 +67,24 @@ function openEditShelf(btn){
   el('shelf-edit-id').value=btn.dataset.sid||'';
   OM('mshelf');
 }
-function printShelfList(){
+/* The sheet carries a QR onto the drawer, and that QR is only as good as the
+   published expiry document behind it. Nothing in this flow used to publish:
+   public_expiry/<dept> is written when an expiry row is saved and by the drug
+   list print, so a drawer created or re-stocked since the last expiry save was
+   missing from it entirely — scanning the drawer's own QR opened an empty list,
+   or "Public expiry list was not found" for a department that had never saved
+   an expiry at all. Published before the sheet is built, so the code printed on
+   the paper and the data behind it are the same moment.
+   يُنشر سجل الصلاحية قبل الطباعة حتى يعمل رمز QR الملصق على الدرج. */
+async function printShelfList(){
   var profile=(window.fsEffectiveUser&&window.fsEffectiveUser())||CU||{},printRole=window.fsEffectiveRole?window.fsEffectiveRole():String(profile.role||''),deptId=String(profile.deptId||profile.departmentId||'');
   if(printRole!=='department'||!deptId)return toast('Shelf printing is available to department accounts for their own department. / طباعة الأرفف متاحة لحساب القسم لقسمه فقط.','err');
+  try{
+    var published=typeof syncPublicExpiry==='function'&&typeof getExpiry==='function'
+      ?await syncPublicExpiry(deptId,getExpiry(deptId)||[])
+      :false;
+    if(!published)warnPublicSync('Shelf list QR',new Error('Firebase authentication is unavailable.'));
+  }catch(syncError){warnPublicSync('Shelf list QR',syncError)}
   var shelfId=el('print-shelf-sel').value;
   var clsFilter=el('print-shelf-cls').value;
   var ms=getMeds(deptId);
@@ -170,8 +186,8 @@ function printShelfList(){
     +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+(profile.username||profile.email||'Department')+' &nbsp;|&nbsp; Developed by Ali Abudahash | ASDHealth</div>'
     +'</div>'
     +'<div style="position:absolute;top:0;right:0;display:flex;gap:8px">'
-    +'<div style="text-align:center"><img src="'+qrSiteUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">System</div></div>'
-    +'<div style="text-align:center"><img src="'+qrUrl+'" width="90" height="90"><div style="font-size:5.5pt;color:#888">Expiry Monitor'+(shelfId&&shelfId!=='all'?' — '+shelfLabel:'')+'</div></div>'
+    +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrSiteUrl+'" width="90" height="90" alt="System QR code"><div style="font-size:5.5pt;color:#888">System</div></div>'
+    +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrUrl+'" width="90" height="90" alt="Expiry monitor QR code"><div style="font-size:5.5pt;color:#888">Expiry Monitor'+(shelfId&&shelfId!=='all'?' — '+shelfLabel:'')+'</div></div>'
     +'</div>'
     +'</div>'
     +'<table>'
@@ -184,9 +200,13 @@ function printShelfList(){
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
     +'<div id="footer">'
     +'<span>'+deptName+' — Floor Stock — '+today+' — By Ali Abudahash</span>'
-    +'<img src="'+qrUrl+'" width="76" height="76">'
+    +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76" alt="Expiry monitor QR code">'
     +'</div>'
-    +'<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(g,300);else window.addEventListener("load",function(){setTimeout(g,300)},{once:true})})()</sc'+'ript></body></html>';
+    /* The shared print runtime, not a timer: it waits for every QR image to
+       decode and refuses to print a sheet whose QR came back as the
+       "QR unavailable" placeholder, which would go onto a drawer looking like a
+       code and scan as nothing. / لا تُطبع ورقة برمز QR غير قابل للمسح. */
+    +'<script>'+window.ASD_QR.printRuntimeScript({})+'</sc'+'ript></body></html>';
   var pw=openBlobPrint(slHtml);
   if(!pw){toast('Allow pop-ups to print the shelf list.','err');return false;}
   return true;

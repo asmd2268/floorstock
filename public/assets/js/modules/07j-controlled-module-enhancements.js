@@ -1,6 +1,7 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { earliestDays, controlledStatus } from '../core/controlled-stock-status.js?v=4caae09948';
 import { normalizeCode, rowsFromTextItems, dedupeRows, findMedicineByCode } from '../core/receipt-pdf-rows.js?v=cbbd054b27';
+import { recordedBatchQuantities, reconcileBatchQuantities } from '../core/controlled-batch-consumption.js?v=80230e0fce';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, PDF receipt import,
@@ -156,13 +157,8 @@ async function ctlSaveBatchEditor(){
   if(!CTL_BATCH_CTX)return;
   var src=CTL_BATCH_CTX.source,id=CTL_BATCH_CTX.id,rows=Array.from(el('mctlb-list').querySelectorAll('.batch-editor-row')).map(function(r){return {qty:ctlNum(r.querySelector('.be-qty').value),expiry:r.querySelector('.be-exp').value,lot:r.querySelector('.be-lot').value.trim()}}).filter(function(b){return b.qty||b.expiry||b.lot}),actual=0;
   if(src==='pharmacy'){var curp=ctlPharmacy()[id]||{};actual=ctlNum(curp.actualQty!=null?curp.actualQty:curp.qty)}else if(src==='warehouse'){var curw=ctlWarehouse()[id]||{};actual=ctlNum(curw.system)+ctlNum(curw.outside)}
-  if(actual<0)return toast('Actual quantity cannot be negative.','err');
-  if(actual===0)rows=[];else{
-    if(!rows.length)return toast('At least one expiry date is required when the actual quantity is greater than zero.','err');
-    if(rows.length===1&&rows[0].expiry&&!(rows[0].qty>0))rows[0].qty=actual;
-    for(var i=0;i<rows.length;i++){if(!(rows[i].qty>0))return toast('Every expiry row must have a quantity greater than zero.','err');if(!rows[i].expiry)return toast('Expiry date is required for each entered expiry quantity.','err')}
-    var total=rows.reduce(function(a,b){return a+ctlNum(b.qty)},0);if(total!==actual)return toast('Expiry quantities must equal the actual quantity. Total: '+total+' / Actual: '+actual,'err')
-  }
+  /* The same rule the department editors answer to, stated once in core rather than re-typed here / نفس القاعدة المشتركة. */
+  var check=reconcileBatchQuantities(actual,rows);if(check.error)return toast(check.error,'err');rows=check.batches;
   try{
     if(src==='warehouse'){var all=Object.assign({},ctlWarehouse()),x=Object.assign({},all[id]||{});x.batches=rows;all[id]=x;await ctlSetWarehouse(all)}
     else{var all2=Object.assign({},ctlPharmacy()),x2=Object.assign({},all2[id]||{});x2.batches=rows;x2.qty=actual;all2[id]=x2;await ctlSetPharmacy(all2)}
@@ -180,7 +176,7 @@ function ctlPublicUrl(dept){var u=new URL(window.location.href);u.search='';u.ha
 async function ctlPublishDept(dept){
   if(!window.FB_DB)throw new Error('Firebase is not initialized');
   var d=(typeof gd==='function'?(gd()||[]):[]).find(function(x){return x.id===dept})||{};
-  var items=(typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{};return {name:m.name||'',classification:m.classification||'narcotic',qty:ctlNum(x.qty),batches:(x.batches||[]).map(function(b){return {expiry:b.expiry||'',qty:b.qty==null?'':ctlNum(b.qty)}})}});
+  var items=(typeof ctlDeptList==='function'?ctlDeptList(dept):[]).map(function(x){var m=typeof ctlMedicine==='function'?(ctlMedicine(x.medId)||{}):{},qty=ctlNum(x.qty),batchQtys=recordedBatchQuantities(x.batches,qty);return {name:x.name||m.name||'',classification:x.classification||m.classification||'narcotic',qty:qty,batches:(x.batches||[]).map(function(b,i){return {expiry:b.expiry||'',qty:batchQtys[i]}})}}); /* The custody row is the record, the catalogue only a lookup: publishing names from the catalogue alone left the public MEDICINE column empty in any session that cannot read controlled_catalog, and an unrecorded batch quantity stays unknown rather than being rounded into a "0" that reads as an empty lot / الاسم من سجل العهدة أولاً، والكمية غير المسجلة لا تُنشر صفراً. */
   var alertDays=((typeof ctlSettingsGlobal==='function'?(ctlSettingsGlobal()||{}):{}).expiryAlertDays||30);
   var collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');
   await collection.doc(dept).set({departmentId:dept,departmentName:d.name||((window.CU&&CU.deptId===dept)?CU.deptName:'')||dept,alertDays:Number(alertDays)||30,items:items,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:false});
@@ -275,7 +271,7 @@ function renderCtlDepartments(){ctlEnhInstallActions(document.body);
   list.forEach(function(x){
     (x.batches||[]).forEach(function(b){
       var d=daysUntil(b.expiry);
-      if(d!==null&&d<=ctlAlertDays())alerts.push({name:(ctlMedicine(x.medId)||{}).name||'',days:d});
+      if(d!==null&&d<=ctlAlertDays())alerts.push({name:x.name||(ctlMedicine(x.medId)||{}).name||'',days:d});
     });
   });
   el('ctl-dept-alerts').innerHTML=alerts.length

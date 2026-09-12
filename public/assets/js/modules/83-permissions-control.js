@@ -36,6 +36,12 @@ var PL_ROLE_LABELS={
 // Mirrors window.buildNav's per-role arrays exactly (module 80). Does NOT
 // include pg-classification-lists — that feature already has its own
 // dedicated per-list visibility control.
+/* Labels and ORDER for the master's page-hiding checkboxes. The `roles` here
+   say which checkboxes to draw, not who may open a page — canAccessPage in
+   core/role-capabilities.js owns that, and module 80's nav reads it. Keep the
+   two in agreement: a role listed here that core denies draws a checkbox that
+   controls nothing. (outpatient_pharmacy_supervisor was listed on
+   pg-med-accountability while core's accountability.read never granted it.) */
 var PL_PAGES={
   'pg-dash':{label:'Dashboard',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff']},
   'pg-inv':{label:'Inventory / حالة الأدوية',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff']},
@@ -48,7 +54,7 @@ var PL_PAGES={
   'pg-ctl-analytics':{label:'Controlled Analytics / تحليلات الأدوية المخدرة',roles:['pharmacy','controlled_pharmacy','warehouse']},
   'pg-crashcart':{label:'Crash Cart(s) / عربة الطوارئ',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff','department']},
   'pg-crash-ops':{label:'Crash Cart Operations / عمليات عربة الطوارئ',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff']},
-  'pg-med-accountability':{label:'Medication Accountability / عهدة الأدوية',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff','department']},
+  'pg-med-accountability':{label:'Medication Accountability / عهدة الأدوية',roles:['pharmacy','inpatient_supervisor','pharmacy_staff','department']},
   'pg-users':{label:'Users / المستخدمون',roles:['pharmacy']},
   'pg-zebra-labels':{label:'Zebra Labels / ملصقات زيبرا',roles:['pharmacy']},
   'pg-controlled':{label:'Controlled Custody / عهدة الأدوية المخدرة',roles:['controlled_pharmacy','warehouse','department']},

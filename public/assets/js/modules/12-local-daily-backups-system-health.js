@@ -1,3 +1,4 @@
+import { canAccessPage } from '../core/role-capabilities.js?v=5932633d41';
 /* ASDHealth pilot protection: free daily IndexedDB backups + System Health. */
 (function(){
   var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365,AH_TRANSIENT=null;
@@ -449,7 +450,13 @@ function encodeValue(v){
   function strictRestrictedShow(id){var allowed=restrictedPages(role());if(allowed.indexOf(id)<0)id=fallbackFor(role());activatePage(id,true);rebuildRestrictedNav();syncActiveNav();removeMasterOnlyForNonMaster()}
   function enforce(){setRoleClass();var restricted=rebuildRestrictedNav();removeMasterOnlyForNonMaster();if(!restricted)ensureMasterHealth();var allowed=restrictedPages(role()),active=document.querySelector('.pg.on');if(allowed.length&&(!active||allowed.indexOf(active.id)<0))activatePage(fallbackFor(role()),true);syncActiveNav()}
   var EXTRA_ALLOWED={'controlled_pharmacy':['pg-ctl-analytics'],'warehouse':['pg-ctl-analytics']};
-  function allowedTarget(id){if((id==='pg-system-health'||id==='pg-backup-restore'||id==='pg-zebra-labels')&&!realMaster())return fallbackFor(role());var allowed=restrictedPages(role());var extra=(EXTRA_ALLOWED[role()]||[]);if(allowed.length&&allowed.indexOf(id)<0&&extra.indexOf(id)<0)return fallbackFor(role());return id}
+  /* The roles whose nav module 80 builds from the shared page policy. Hiding a
+     button is cosmetic on its own — showPg() is called directly from many
+     places — so the same policy decides the target here. Roles outside this list
+     keep their existing routing: their nav is not built from that catalogue.
+     نفس مصدر الصلاحية يحكم التنقّل المباشر */
+  var NAV_POLICY_ROLES=['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'];
+  function allowedTarget(id){if((id==='pg-system-health'||id==='pg-backup-restore'||id==='pg-zebra-labels')&&!realMaster())return fallbackFor(role());if(!realMaster()&&NAV_POLICY_ROLES.indexOf(role())>=0&&!canAccessPage({role:role()},id))return fallbackFor(role());var allowed=restrictedPages(role());var extra=(EXTRA_ALLOWED[role()]||[]);if(allowed.length&&allowed.indexOf(id)<0&&extra.indexOf(id)<0)return fallbackFor(role());return id}
 
   window.resolveAllowedPageTarget=allowedTarget;
   window.handleRestrictedPage=function(id){if(specFor(role())){strictRestrictedShow(id);return true}if(id==='pg-system-health'&&realMaster()){activatePage(id,false);return true}return false};

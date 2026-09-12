@@ -4,6 +4,7 @@
 // (E, FB_DB, fsTenantCollection, waitForFirebase), never anything from module 07's
 // own module-scope closure, so it can live in its own file safely.
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+import { expiryBatchesForShelf, groupExpiryByMedication, expiryBatchStatus, expiryQtyLabel } from '../core/public-expiry-view.js?v=6df94dc7a9';
 
 (function(){
   const E=globalThis.E;
@@ -18,7 +19,7 @@ import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
   }
   function renderCrash(d){var r=publicRoot(),rows=(d.items||[]).map(function(it,i){var st=it.status||((n2(it.available)<=0)?'Out of stock':(n2(it.available)<n2(it.required)?'Less than required':'Available')),cls=st==='Out of stock'?'status-out':(st==='Less than required'?'status-low':'status-ok');return '<tr><td>'+(i+1)+'</td><td><b>'+esc2(it.name||'')+'</b></td><td>'+esc2(it.strength||it.concentration||'—')+'</td><td>'+n2(it.required)+'</td><td>'+n2(it.available)+'</td><td class="'+cls+'">'+esc2(st)+'</td><td>'+((it.batches||[]).map(function(b){return dateOnly(b.expiry)+' → '+esc2(b.qty===''?'—':b.qty)}).join('<br>')||'—')+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>'+esc2(d.name||'Crash Cart')+'</h1><h2>'+esc2(d.department||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last verification:</b> '+dateTime(d.lastClosedAt)+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill"><b>Expiry Track:</b> Urgent ≤ '+n2((d.expiryRules||{}).urgentDays||7)+' days · Near expiry ≤ '+n2((d.expiryRules||{}).nearDays||30)+' days</span><span class="live-pill live-ok">● Live public view — no login</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Generic name</th><th>Concentration</th><th>Standard quantity</th><th>Present</th><th>Status</th><th>Expiry date → Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveCrash(id){var r=publicRoot(),collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');r.innerHTML='<h2>Loading latest Crash Cart information…</h2>';return collection.doc('crash_'+id).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public Crash Cart record was not found.</h2><p>Print a new QR once from the system.</p>';return}renderCrash(s.data()||{})},function(e){r.innerHTML='<h2>Could not load the public Crash Cart page.</h2><p>'+esc2(e.message||e)+'</p>'})}
-  function renderControlled(d){var r=publicRoot(),limit=Number(d.alertDays)||30,soonCount=0,expiredCount=0,rows=(d.items||[]).map(function(x,i){var itemSoon=false,itemExpired=false,bs=(x.batches||[]).map(function(b){var raw=b.expiry||'',dt=new Date(raw),days=isNaN(dt)?null:Math.ceil((dt-new Date())/86400000),cls='status-ok',label='';if(days!==null&&days<0){cls='status-out';label='Expired';itemExpired=true}else if(days!==null&&days<=limit){cls='status-low';label='Near expiry';itemSoon=true}else if(days!==null){label=days+' days'}return '<div class="'+cls+'">'+(b.qty!=null?esc2(b.qty)+' → ':'')+dateOnly(raw)+(label?' <b>('+esc2(label)+')</b>':'')+'</div>'}).join('')||'—';if(itemExpired)expiredCount++;else if(itemSoon)soonCount++;var rowCls=itemExpired?'status-out':(itemSoon?'status-low':'');return '<tr class="'+rowCls+'"><td>'+(i+1)+'</td><td><b>'+esc2(x.name||'')+'</b></td><td>'+esc2(x.classification||'—')+'</td><td>'+n2(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Controlled Medicines List</h1><h2>'+esc2(d.departmentName||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Near-expiry rule:</b> '+limit+' days</span><span class="live-pill status-low"><b>Near expiry:</b> '+soonCount+'</span><span class="live-pill status-out"><b>Expired:</b> '+expiredCount+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches and status</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+  function renderControlled(d){var r=publicRoot(),limit=Number(d.alertDays)||30,soonCount=0,expiredCount=0,rows=(d.items||[]).map(function(x,i){var itemSoon=false,itemExpired=false,bs=(x.batches||[]).map(function(b){var raw=b.expiry||'',dt=new Date(raw),days=isNaN(dt)?null:Math.ceil((dt-new Date())/86400000),cls='status-ok',label='';if(days!==null&&days<0){cls='status-out';label='Expired';itemExpired=true}else if(days!==null&&days<=limit){cls='status-low';label='Near expiry';itemSoon=true}else if(days!==null){label=days+' days'}var shown=b.qty===''||b.qty==null||!isFinite(Number(b.qty))?null:Number(b.qty);return '<div class="'+cls+'">'+(shown!=null?esc2(shown)+' → ':'')+dateOnly(raw)+(label?' <b>('+esc2(label)+')</b>':'')+'</div>'}).join('')||'—';if(itemExpired)expiredCount++;else if(itemSoon)soonCount++;var rowCls=itemExpired?'status-out':(itemSoon?'status-low':'');return '<tr class="'+rowCls+'"><td>'+(i+1)+'</td><td><b>'+esc2(x.name||'')+'</b></td><td>'+esc2(x.classification||'—')+'</td><td>'+n2(x.qty)+'</td><td>'+bs+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Controlled Medicines List</h1><h2>'+esc2(d.departmentName||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Near-expiry rule:</b> '+limit+' days</span><span class="live-pill status-low"><b>Near expiry:</b> '+soonCount+'</span><span class="live-pill status-out"><b>Expired:</b> '+expiredCount+'</span><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medicine</th><th>Class</th><th>Qty</th><th>Expiry batches and status</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveControlled(dept){var r=publicRoot(),collection=window.fsTenantCollection?fsTenantCollection('public_controlled_expiry'):FB_DB.collection('public_controlled_expiry');r.innerHTML='<h2>Loading latest controlled-medicine list…</h2>';return collection.doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public list was not found.</h2>';return}renderControlled(s.data()||{})},function(e){r.innerHTML='<h2>Could not load the public list.</h2><p>'+esc2(e.message||e)+'</p>'})}
   /* Rows are tinted by classification and list every class that applies, matching
      the departmental printouts. The flags ride along on each published batch;
@@ -40,20 +41,41 @@ import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
   function expiryShelfFilter(){
     try{return String(new URLSearchParams(location.search).get('shelf')||'').trim()}catch(e){return ''}
   }
-  function renderExpiry(d,dept){var r=publicRoot(),all=d.batches||[];
+  /* One row per medicine listing every date registered for it, not one row per
+     batch: the published document holds a batch at a time, so a medicine with
+     three dates used to be three rows scattered down the page and the list read
+     as one date per medicine. Dates and quantities are emitted as one line each,
+     in the same order, so the two columns stay aligned.
+     صف واحد لكل دواء يعرض جميع تواريخ الصلاحية المسجلة له. */
+  function renderExpiry(d,dept){var r=publicRoot();
     var wantShelf=expiryShelfFilter();
-    var b=wantShelf?all.filter(function(x){return (x.shelfIds||[]).map(String).indexOf(wantShelf)>=0}):all;
-    var rows=b.map(function(x,i){var dt=x.date||x.expiry||'';
+    var today=new Date().toISOString().slice(0,10);
+    var groups=groupExpiryByMedication(expiryBatchesForShelf(d.batches||[],wantShelf));
+    var rows=groups.map(function(g,i){var x=g.first;
     var cls=expiryClasses(x);
     var bg=x.highAlert?'#fff0f0':x.hazard?'#fffbea':x.lasa?'#f5f0ff':x.refrigerated?'#f3f0ff':'';
     var bc=x.highAlert?'#da3633':x.hazard?'#d29922':x.lasa?'#8957e5':x.refrigerated?'#8250df':'transparent';
     var tags=cls.map(function(c){return '<span style="color:'+c[1]+';font-weight:700;font-size:10px;white-space:nowrap">'+c[0]+'</span>'}).join('<span style="color:#bbb"> &middot; </span>');
+    var dates=g.batches.map(function(b){var state=expiryBatchStatus(b,today);
+      var note=state==='expired'?' <b>(Expired / منتهي)</b>':(state==='today'?' <b>(Expires today / ينتهي اليوم)</b>':'');
+      return '<div'+(state?' style="color:#da3633;font-weight:700"':'')+'>'+dateOnly(b.date||b.expiry||'')+note+'</div>';
+    }).join('')||'—';
+    var qty=g.batches.map(function(b){return '<div>'+esc2(expiryQtyLabel(b))+'</div>'}).join('')||'—';
     return '<tr style="'+(bg?'background:'+bg+';':'')+'border-left:3px solid '+bc+';print-color-adjust:exact;-webkit-print-color-adjust:exact">'
-      +'<td>'+(i+1)+'</td><td><b>'+esc2(x.medication||x.name||'')+'</b>'
+      +'<td>'+(i+1)+'</td><td><b>'+esc2(g.name)+'</b>'
+      +(g.batches.length>1?' <span style="font-size:10px;color:#6e7781;font-weight:700">'+g.batches.length+' batches / دفعات</span>':'')
       +(x.outOfStock?' <span style="color:#6e7781;font-weight:700;font-size:10px">OUT OF STOCK / نفد</span>':'')
       +((x.shelfNames||[]).length?'<div style="font-size:10px;color:#666;margin-top:2px">'+(x.shelfNames||[]).map(esc2).join(' · ')+'</div>':'')
       +(tags?'<div style="margin-top:2px">'+tags+'</div>':'')+'</td>'
-      +'<td>'+dateOnly(dt)+'</td><td>'+esc2(x.qty==null?'—':x.qty)+'</td></tr>'}).join('');r.innerHTML='<div class="live-head"><h1>Expiry Monitor</h1><h2>'+esc2(d.departmentName||dept||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Expiry date</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
+      +'<td>'+dates+'</td><td>'+qty+'</td></tr>'}).join('');
+    /* An empty table after scanning a drawer QR looks like a broken page. Say
+       which drawer was asked for and that its list is published from the
+       department, instead of showing nothing at all. */
+    if(!rows)rows='<tr><td colspan="4" style="padding:18px;text-align:center;color:#6e7781">'
+      +(wantShelf?'No medicines are published for this drawer. Print the shelf list once from the department to refresh it. / لا توجد أدوية منشورة لهذا الدرج، أعد طباعة قائمة الرف من القسم للتحديث.'
+                 :'No expiry records have been registered for this department yet. / لم تُسجَّل تواريخ صلاحية لهذا القسم بعد.')
+      +'</td></tr>';
+    r.innerHTML='<div class="live-head"><h1>Expiry Monitor</h1><h2>'+esc2(d.departmentName||dept||'')+'</h2><div class="live-meta"><span class="live-pill"><b>Last update:</b> '+dateTime(d.updatedAt)+'</span><span class="live-pill live-ok">● Live public view</span></div></div><div class="table-wrap"><table><thead><tr><th>#</th><th>Medication</th><th>Expiry date</th><th>Qty</th></tr></thead><tbody>'+rows+'</tbody></table></div>'}
   function liveExpiry(dept){var r=publicRoot(),collection=window.fsTenantCollection?fsTenantCollection('public_expiry'):FB_DB.collection('public_expiry');r.innerHTML='<h2>Loading latest expiry data…</h2>';return collection.doc(dept).onSnapshot(function(s){if(!s.exists){r.innerHTML='<h2>Public expiry list was not found.</h2>';return}renderExpiry(s.data()||{},dept)},function(e){r.innerHTML='<h2>Could not load the public expiry page.</h2><p>'+esc2(e.message||e)+'</p>'})}
 
   /* Pharmacy cabinet map, opened from the QR on the printed sheet with no sign-in.

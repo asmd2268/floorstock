@@ -1,6 +1,7 @@
 import { deductReported, addDatedQuantity, removeFromExpiry } from '../core/crash-cart-batch-math.js?v=714f0a8e83';
 import { crashResponseRowIssue, itemPresent, itemStandard, dateKey, datedBatches, quantityAtExpiry } from '../core/crash-response-validation.js?v=ae90e3cb8e';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+import { canAccessPage } from '../core/role-capabilities.js?v=5932633d41';
 /* R6.76.88 — Controlled Medicines: complete redesign (stock/cabinets/departments) + drug-list print fix */
 (function(){
 'use strict';
@@ -822,6 +823,9 @@ function ctlCmpPrint(){
   function openReports(){return (crashReports()||[]).filter(function(r){return r.status==='open'||r.status==='pending'})}
   function isPharmacyCrashRole(){if(window.fsHasCapability)return window.fsHasCapability('crashCart.operate');var rRole=String((window.CU&&CU.role)||'');return !!window.CU&&['pharmacy','inpatient_supervisor','pharmacy_staff'].includes(rRole)}
 
+  /* Nav ORDER and WORDING only — canAccessPage (core/role-capabilities.js) owns who may see a page; a per-role array here is what kept re-granting 🧾 Medication Accountability to the outpatient supervisor. Third entry = per-role label. الصلاحية من مصدر واحد. Internal tabs (no button): pg-ctl-analytics, pg-import, pg-schedule. NAV_CATALOG_ROLES = the roles whose nav is this catalogue (controlled_pharmacy/warehouse have a one-page nav; department-side roles build theirs from the request groups below), and badges ask the same question through navAllows so a hidden page can never show a count. */
+  var NAV_CATALOG=[['pg-dash','Dashboard'],['pg-inv','Inventory',{pharmacy_staff:'Inventory status / حالة الأدوية'}],['pg-pharm-inv','🏥 Pharm Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','👥 Users'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
+  var NAV_CATALOG_ROLES=['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff'];function navAllows(r,id){return NAV_CATALOG_ROLES.indexOf(String(r||''))<0||canAccessPage({role:r},id)}
   function ccInstallActions(root){if(!root)return;installActions(root,{ccToggleCrashSection:function(el){ccToggleCrashSection(el.dataset.a1)},ctlOpenDepartmentPrintOptions:function(el,event){ctlOpenDepartmentPrintOptions()},ctlAddCatalogMedicine:function(el,event){ctlAddCatalogMedicine()},ctlOpenHijriLedger:function(el,event){ctlOpenHijriLedger()},ctlOpenCustodyHandover:function(el,event){ctlOpenCustodyHandover()},ctlAnPrint:function(el,event){ctlAnPrint()},ctlAnApply:function(el,event){ctlAnApply()},ctlCmpApply:function(el,event){ctlCmpApply()},ctlCmpPrint:function(el,event){ctlCmpPrint()},phExpirySelectAllDepartments:function(el,event){phExpirySelectAllDepartments()},phExpiryClearDepartments:function(el,event){phExpiryClearDepartments()},phExpiryEditRules:function(el,event){phExpiryEditRules()}},{event:'click',attribute:'clickact'});installActions(root,{toggleChoice:function(el){var box=el.closest('.cc-med-choice');if(box)box.classList.toggle('on',el.checked)},ccCrashUnavailableToggled:function(el,event){ccCrashUnavailableToggled(el)},ccCrashResponsePreview:function(el,event){ccCrashResponsePreview()},ccCrashExpiryChoiceChanged:function(el,event){ccCrashExpiryChoiceChanged(el)},phExpiryToggleDept:function(el,event){phExpiryToggleDept(el.dataset.a1,el.checked)},phExpirySetView:function(el,event){phExpirySetView(el.value)}},{event:'change',attribute:'changeact'});installActions(root,{capToMax:function(el){var v=parseFloat(el.value),mx=parseFloat(el.max);if(!isNaN(v)&&!isNaN(mx)&&v>mx){el.value=mx;el.style.outline='2px solid var(--err,#ef4444)';setTimeout(function(){el.style.outline=''},900)}},ccCrashResponsePreview:function(el,event){ccCrashResponsePreview()}},{event:'input',attribute:'inputact'});}
 
   window.buildNav=function(){
@@ -831,14 +835,9 @@ function ctlCmpPrint(){
     var _newRole=String((window.CU&&CU.role)||'');
     if(window.__buildNavLastRole!==_newRole){window.__buildNavLastRole=_newRole;document.querySelectorAll('.cc-tab-bar,.inv-tab-bar,.an-tab-bar,.req-tab-bar,.usr-tab-bar,.prn-tab-bar,.sys-tab-bar').forEach(function(el){el.parentNode&&el.parentNode.removeChild(el)})}
     nav.innerHTML='';
-    // Internal tabs (not nav buttons): pg-ctl-analytics (inside Analytics), pg-import (inside Users), pg-schedule (inside Requests)
-    var commonFull=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-pharm-inv','🏥 Pharm Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','👥 Users'],['pg-controlled','🔒 Controlled custody'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
     var items;
     var rRole=String((window.CU&&CU.role)||'');
-    if(rRole==='pharmacy')items=commonFull.filter(function(x){return x[0]!=='pg-controlled'});
-    else if(rRole==='inpatient_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-analytics','Analytics'],['pg-users','👥 Users'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
-    else if(rRole==='outpatient_pharmacy_supervisor')items=[['pg-dash','Dashboard'],['pg-inv','Inventory'],['pg-pharm-inv','🏥 Pharm Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
-    else if(rRole==='pharmacy_staff')items=[['pg-dash','Dashboard'],['pg-inv','Inventory status / حالة الأدوية'],['pg-pharm-inv','🏥 Pharm Inventory'],['pg-reqs','Requests'],['pg-notes-ph','📝 Notes'],['pg-print','Print'],['pg-crashcart','🚑 Crash Carts'],['pg-med-accountability','🧾 Medication Accountability']];
+    if(NAV_CATALOG_ROLES.indexOf(rRole)>=0)items=NAV_CATALOG.filter(function(x){return canAccessPage({role:rRole},x[0])}).map(function(x){return [x[0],(x[2]&&x[2][rRole])||x[1]]});
     else if(rRole==='controlled_pharmacy')items=[['pg-controlled','🔒 Controlled & psychotropic medicines']];
     else if(rRole==='warehouse')items=[['pg-controlled','🔒 Warehouse controlled custody']];
     else{
@@ -923,6 +922,7 @@ function ctlCmpPrint(){
     if(typeof window.fsCanAccessDepartment==='function')reqRows=reqRows.filter(function(r){return window.fsCanAccessDepartment(r.deptId)});
     var req=reqRows.filter(function(r){return r.status==='pending'}).length;
     var cb=document.querySelector('[data-pg="pg-crashcart"]'),rb=document.querySelector('[data-pg="pg-reqs"]'),ab=document.querySelector('[data-pg="pg-med-accountability"]');
+    if(cb&&!navAllows(badgeRole,'pg-crashcart'))cb=null;if(rb&&!navAllows(badgeRole,'pg-reqs'))rb=null;if(ab&&!navAllows(badgeRole,'pg-med-accountability'))ab=null;/* a leftover button is not permission */
     if(cb){cb.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});if(open)cb.insertAdjacentHTML('beforeend','<span class="cc-badge">'+open+'</span>')}
     if(rb){rb.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});if(req)rb.insertAdjacentHTML('beforeend','<span class="cc-badge">'+req+'</span>')}
     if(ab){ab.querySelectorAll('.cc-badge').forEach(function(x){x.remove()});/* Both counts through S.g — the badge read the partitions directly, which is a

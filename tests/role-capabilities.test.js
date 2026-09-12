@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { canAccessDepartment, hasCapability, normalizeRole } from '../public/assets/js/core/role-capabilities.js';
+import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
+import { canAccessDepartment, canAccessPage, hasCapability, normalizeRole } from '../public/assets/js/core/role-capabilities.js';
 
 test('role aliases normalize without widening privileges', () => {
   assert.equal(normalizeRole('external pharmacy supervisor'), 'outpatient_pharmacy_supervisor');
@@ -46,4 +48,80 @@ test('outpatient supervisor reaches the outpatient department by name when their
     const scoped = { role: 'outpatient_pharmacy_supervisor', deptId: 'dept_3' };
     assert.equal(canAccessDepartment(scoped, 'dept_3'), true);
   } finally { globalThis.S = previous; }
+});
+
+/* ── Nav page visibility: one source ──────────────────────────────────────────
+   The recurring defect: buildNav answered "who may see page X" with a separate
+   hardcoded array per role, so an edit to one array silently re-granted
+   🧾 Medication Accountability to outpatient_pharmacy_supervisor, which the
+   capability table denies. These tests read the REAL catalogue out of module 80
+   and run it through the real policy, so the two cannot drift again. */
+
+const navSource = await readFile(new URL('../public/assets/js/modules/80-controlled-pharmacy-ui-redesign.js', import.meta.url), 'utf8');
+
+function navCatalog() {
+  const match = navSource.match(/var NAV_CATALOG=(\[[\s\S]*?\]);\n/);
+  assert.ok(match, 'module 80 must declare a single NAV_CATALOG (order and labels only)');
+  return new Function(`return ${match[1]}`)();
+}
+
+function navFor(role) {
+  return navCatalog()
+    .filter((entry) => canAccessPage({ role }, entry[0]))
+    .map((entry) => [entry[0], (entry[2] && entry[2][role]) || entry[1]]);
+}
+
+test('nav carries no per-role page list of its own', () => {
+  const buildNav = navSource.slice(navSource.indexOf('window.buildNav='), navSource.indexOf('// Inject sub-tabs'));
+  /* The recurring defect had one shape: a page list written out again for a
+     catalogue role. Everything between the role test and the department branch
+     must therefore name no catalogue page at all. (The department branch below
+     it stays dynamic and keeps its own pushes.) */
+  const roleBranches = buildNav.slice(buildNav.indexOf('var rRole='), buildNav.indexOf('else{'));
+  for (const page of navCatalog().map((entry) => entry[0])) {
+    assert.ok(!roleBranches.includes(page), `${page} is named per role instead of coming from the catalogue`);
+  }
+  assert.match(roleBranches, /canAccessPage\(\{role:rRole\}/);
+});
+
+test('outpatient supervisor does not get Medication Accountability, and the roles that should still do', () => {
+  assert.ok(!navFor('outpatient_pharmacy_supervisor').some((x) => x[0] === 'pg-med-accountability'));
+  assert.equal(canAccessPage({ role: 'outpatient_pharmacy_supervisor' }, 'pg-med-accountability'), false);
+  for (const role of ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff']) {
+    assert.ok(navFor(role).some((x) => x[0] === 'pg-med-accountability'), `${role} lost the page`);
+    assert.equal(canAccessPage({ role }, 'pg-med-accountability'), true);
+  }
+  // The page mirrors accountability.read rather than restating it.
+  assert.equal(hasCapability({ role: 'outpatient_pharmacy_supervisor' }, 'accountability.read'), false);
+});
+
+test('no other role’s navigation changed', () => {
+  /* Every entry below is the list buildNav produced BEFORE the per-role arrays
+     were replaced. Only outpatient_pharmacy_supervisor lost a page. */
+  assert.deepEqual(navFor('pharmacy'), [
+    ['pg-dash', 'Dashboard'], ['pg-inv', 'Inventory'], ['pg-pharm-inv', '🏥 Pharm Inventory'],
+    ['pg-reqs', 'Requests'], ['pg-notes-ph', '📝 Notes'], ['pg-print', 'Print'],
+    ['pg-analytics', 'Analytics'], ['pg-users', '👥 Users'], ['pg-crashcart', '🚑 Crash Carts'],
+    ['pg-med-accountability', '🧾 Medication Accountability']]);
+  assert.deepEqual(navFor('inpatient_supervisor'), [
+    ['pg-dash', 'Dashboard'], ['pg-inv', 'Inventory'], ['pg-reqs', 'Requests'],
+    ['pg-notes-ph', '📝 Notes'], ['pg-print', 'Print'], ['pg-analytics', 'Analytics'],
+    ['pg-users', '👥 Users'], ['pg-crashcart', '🚑 Crash Carts'],
+    ['pg-med-accountability', '🧾 Medication Accountability']]);
+  assert.deepEqual(navFor('outpatient_pharmacy_supervisor'), [
+    ['pg-dash', 'Dashboard'], ['pg-inv', 'Inventory'], ['pg-pharm-inv', '🏥 Pharm Inventory'],
+    ['pg-reqs', 'Requests'], ['pg-notes-ph', '📝 Notes'], ['pg-print', 'Print'],
+    ['pg-crashcart', '🚑 Crash Carts']]);
+  assert.deepEqual(navFor('pharmacy_staff'), [
+    ['pg-dash', 'Dashboard'], ['pg-inv', 'Inventory status / حالة الأدوية'],
+    ['pg-pharm-inv', '🏥 Pharm Inventory'], ['pg-reqs', 'Requests'], ['pg-notes-ph', '📝 Notes'],
+    ['pg-print', 'Print'], ['pg-crashcart', '🚑 Crash Carts'],
+    ['pg-med-accountability', '🧾 Medication Accountability']]);
+});
+
+test('a hidden page cannot show a badge, and direct navigation to it is refused', () => {
+  assert.match(navSource, /if\(ab&&!navAllows\(badgeRole,'pg-med-accountability'\)\)ab=null/);
+  const routing = readFileSync(new URL('../public/assets/js/modules/12-local-daily-backups-system-health.js', import.meta.url), 'utf8');
+  assert.match(routing, /canAccessPage\(\{role:role\(\)\},id\)/);
+  assert.match(routing, /role-capabilities\.js/);
 });

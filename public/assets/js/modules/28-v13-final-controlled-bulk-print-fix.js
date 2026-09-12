@@ -1,3 +1,5 @@
+import { reconcileBatchQuantities } from '../core/controlled-batch-consumption.js?v=80230e0fce';
+
 (function(){
 'use strict';
 const E=globalThis.E;
@@ -63,7 +65,16 @@ function updateBulkCount(){var c=document.querySelectorAll('.v13-final-dept-chec
 function toggleAllBulk(){var boxes=Array.from(document.querySelectorAll('.v13-final-dept-check'));var on=boxes.some(function(x){return !x.checked});boxes.forEach(function(x){x.checked=on});E('v13-final-select-all').textContent=on?'Clear selection':'Select all departments';updateBulkCount()}
 async function applyBulk(){
  var med=E('v13-final-bulk-med').value;var selected=Array.from(document.querySelectorAll('.v13-final-dept-check:checked'));if(!med)return toast2('Select a medication.','err');if(!selected.length)return toast2('Select at least one department.','err');var qop=E('v13-final-bulk-qty-op').value,qv=n(E('v13-final-bulk-qty').value),eop=E('v13-final-bulk-exp-op').value,date=E('v13-final-bulk-expiry').value,eq=Math.max(0,n(E('v13-final-bulk-exp-qty').value));if(eop!=='keep'&&!date)return toast2('Choose an expiry date.','err');var changed=0;
- try{for(var i=0;i<selected.length;i++){var dept=selected[i].dataset.dept;var list=(ctlDeptList(dept)||[]).map(function(x){return Object.assign({},x,{batches:(x.batches||[]).map(function(b){return Object.assign({},b)})})});var item=list.find(function(x){return String(x.medId)===String(med)});if(!item)continue;var cur=n(item.qty);if(qop==='unavailable')item.qty=0;else if(qop==='set')item.qty=Math.max(0,qv);else if(qop==='adjust')item.qty=Math.max(0,cur+qv);if(eop==='replace')item.batches=[];if(eop==='add'||eop==='replace'){item.batches=item.batches||[];item.batches.push({expiry:date,qty:eq,lot:''})}await ctlSetDeptList(dept,list);changed++}closeM('v13-final-bulk-modal');toast2(changed+' department(s) updated ✓','succ');if(typeof auditAction==='function')auditAction('controlled_bulk_department_medication_edit',{medId:med,departments:changed,quantityOperation:qop,expiryOperation:eop});if(typeof renderControlled==='function')renderControlled()}catch(e){toast2(e&&e.message||'Bulk update failed.','err')}
+ /* Every selected department is reconciled BEFORE anything is written: this is a
+    narcotic register, so a run that is going to be refused for the fifth ward must
+    not already have rewritten the first four. And a blank "quantity linked to this
+    expiry" is no longer written as 0 — the shared rule either infers it (one dated
+    batch holds all of it) or refuses and says which department does not add up.
+    يُراجَع كل قسم قبل أي حفظ، والكمية الفارغة لا تُكتب صفراً. */
+ try{var plan=[];
+  for(var i=0;i<selected.length;i++){var dept=selected[i].dataset.dept;var list=(ctlDeptList(dept)||[]).map(function(x){return Object.assign({},x,{batches:(x.batches||[]).map(function(b){return Object.assign({},b)})})});var item=list.find(function(x){return String(x.medId)===String(med)});if(!item)continue;var actual=item.actualQty!=null?n(item.actualQty):n(item.qty);if(qop==='unavailable')actual=0;else if(qop==='set')actual=Math.max(0,qv);else if(qop==='adjust')actual=Math.max(0,actual+qv);if(qop!=='keep'){item.qty=actual;item.actualQty=actual}if(eop==='replace')item.batches=[];if(eop==='add'||eop==='replace'){item.batches=(item.batches||[]).concat([{expiry:date,qty:eq,lot:''}])}var check=reconcileBatchQuantities(actual,item.batches);if(check.error)return toast2(deptName(dept)+' — '+check.error,'err');item.batches=check.batches;plan.push({dept:dept,list:list})}
+  if(!plan.length)return toast2('This medication is not assigned to any selected department.','err');
+  for(var p=0;p<plan.length;p++){await ctlSetDeptList(plan[p].dept,plan[p].list);changed++}closeM('v13-final-bulk-modal');toast2(changed+' department(s) updated ✓','succ');if(typeof auditAction==='function')auditAction('controlled_bulk_department_medication_edit',{medId:med,departments:changed,quantityOperation:qop,expiryOperation:eop});if(typeof renderControlled==='function')renderControlled()}catch(e){toast2(e&&e.message||'Bulk update failed.','err')}
 }
 async function persistPrintOrdersMeta(ids){
   var requests=typeof gr==='function'?(gr()||[]):[];

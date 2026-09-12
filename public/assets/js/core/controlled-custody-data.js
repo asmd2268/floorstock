@@ -35,11 +35,12 @@ export function fsR5ControlledDept(){
   if(!value&&selector)value=selector.value||'';
   return fsText(value,'');
 }
+export const FS_R5_UNKNOWN_MEDICINE='Unknown medicine / دواء غير معروف';
 export function fsR5ControlledMedicine(id,row){
   var m={};row=row||{};
   try{if(typeof globalThis.ctlMedicine==='function')m=globalThis.ctlMedicine(id)||{}}catch(e){/* an optional source that is not loaded in this session */}
   return {
-    name:fsText(m.name||row.name||row.medName||row.medicineName,'Unknown medicine / دواء غير معروف'),
+    name:fsText(m.name||row.name||row.medName||row.medicineName,FS_R5_UNKNOWN_MEDICINE),
     moh:fsText(m.moh||m.mohCode||row.moh||row.mohCode,''),
     nupco:fsText(m.nupco||m.nupcoCode||row.nupco||row.nupcoCode,''),
     classification:fsText(m.classification||row.classification,'narcotic')
@@ -148,7 +149,7 @@ export async function fsR5ControlledRows(dept){
   }
   function normalizePrivate(value,source){
     var rows=fsR5NormalizeControlled(Array.isArray(value)?value:[],source);
-    return rows.filter(function(row){return row&&row.name&&row.name!=='Unknown medicine / دواء غير معروف'||row.key;});
+    return rows.filter(function(row){return row&&row.name&&row.name!==FS_R5_UNKNOWN_MEDICINE||row.key;});
   }
   async function readStateRest(id){
     if(typeof fsStateRestRequest!=='function'||typeof fsStateRestBase!=='function')return [];
@@ -169,6 +170,19 @@ export async function fsR5ControlledRows(dept){
     return fsR5NormalizeControlled(decoded.items||decoded.medicines||[],'public-rest');
   }
 
+  /* What a REST read leaves in the cache is what ctlDeptList serves for the rest
+     of the session — and what a later custody save republishes. Dropping the
+     medicine's identity here is how a republish blanked the public MEDICINE
+     column, so the row is cached whole, not reduced to its numbers.
+     صف العهدة يُحفظ كاملاً في الذاكرة، لا أرقامه فقط. */
+  function cachedRow(row){
+    /* The reader's own "unknown medicine" label is a way of showing a gap, not a
+       name: caching it would turn a missing name into a recorded one. */
+    var name=row.name===FS_R5_UNKNOWN_MEDICINE?'':row.name;
+    return {medId:row.key,name:name,moh:row.moh,nupco:row.nupco,classification:row.classification,
+      requiredQty:row.required,actualQty:row.actual,qty:row.actual,batches:row.batches};
+  }
+
   var candidates=candidateIds(),errors=[];
   for(var i=0;i<candidates.length;i++){
     var id=candidates[i],cacheRows=[];
@@ -185,9 +199,7 @@ export async function fsR5ControlledRows(dept){
     try{
       var restRows=await readStateRest(candidates[j]);
       if(restRows.length){
-        if(globalThis.S&&S.cache)S.cache['controlled_dept_list_'+candidates[j]]=restRows.map(function(row){return {
-          medId:row.key,requiredQty:row.required,actualQty:row.actual,qty:row.actual,batches:row.batches
-        };});
+        if(globalThis.S&&S.cache)S.cache['controlled_dept_list_'+candidates[j]]=restRows.map(cachedRow);
         return {dept:candidates[j],rows:restRows,source:'private-rest'};
       }
     }catch(error){errors.push(error);}
@@ -197,7 +209,7 @@ export async function fsR5ControlledRows(dept){
     try{
       var publicRows=await readPublicRest(candidates[k]);
       if(publicRows.length){
-        if(globalThis.S&&S.cache)S.cache['controlled_dept_list_'+candidates[k]]=publicRows.map(function(row){return {medId:row.key,requiredQty:row.required,actualQty:row.actual,qty:row.actual,batches:row.batches}});
+        if(globalThis.S&&S.cache)S.cache['controlled_dept_list_'+candidates[k]]=publicRows.map(cachedRow);
         return {dept:candidates[k],rows:publicRows,source:'public-rest'};
       }
     }catch(error){errors.push(error);}

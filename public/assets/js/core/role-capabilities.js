@@ -119,6 +119,47 @@ export function hasCapability(profile, capability) {
   return (CAPABILITIES[String(capability || '')] || []).includes(role);
 }
 
+/* WHO may see a page — asked once, here.
+   من يرى الصفحة: مصدر واحد لا غير.
+
+   buildNav used to answer it with a separate hardcoded array per role, and
+   module 83 keeps a third copy for its visibility switches. Every edit to one of
+   those arrays re-granted a page the capability table denies, which is how
+   outpatient_pharmacy_supervisor kept getting 🧾 Medication Accountability back.
+   Where a capability already states the same fact, the entry READS that
+   capability rather than restating its role list — restating it is the defect.
+   Where no capability governs a page, the roles are written out: page visibility
+   and data access are genuinely different facts for some pages (an outpatient
+   supervisor opens Inventory without holding `inventory.read`). */
+const PAGE_ROLES = Object.freeze({
+  'pg-dash': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
+  'pg-inv': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
+  'pg-pharm-inv': Object.freeze(['pharmacy', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
+  'pg-reqs': CAPABILITIES['requests.manage'],
+  'pg-notes-ph': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
+  'pg-print': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
+  'pg-analytics': Object.freeze(['pharmacy', 'inpatient_supervisor']),
+  /* Not users.manage: that capability is pharmacy-only, while the Users PAGE has
+     always been on the inpatient supervisor's nav (they read the roster; every
+     mutating control on it checks users.manage for itself). Recorded as its own
+     line so the difference stays deliberate rather than drifting. */
+  'pg-users': Object.freeze(['pharmacy', 'inpatient_supervisor']),
+  'pg-controlled': Object.freeze(['controlled_pharmacy', 'warehouse', 'department']),
+  'pg-crashcart': CAPABILITIES['crashCart.read'],
+  'pg-med-accountability': CAPABILITIES['accountability.read']
+});
+
+/* A page this table does not govern (sub-tabs, master tools, department request
+   pages) is left to its own caller — answering `false` for it here would be this
+   table inventing a rule nobody wrote. */
+export function canAccessPage(profile, pageId) {
+  const roles = PAGE_ROLES[String(pageId || '')];
+  if (!roles) return true;
+  const user = profile || {};
+  if (user.master === true) return true;
+  return roles.includes(normalizeRole(user.role));
+}
+
 export function canWriteStateKey(profile, key) {
   const user = profile || {};
   const role = normalizeRole(user.role);

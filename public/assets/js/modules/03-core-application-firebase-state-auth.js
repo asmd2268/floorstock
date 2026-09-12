@@ -1,7 +1,7 @@
 import { stateKeysForProfile, isPharmacyScopedProfile, uniqueKeys } from '../core/state-read-scope.js?v=af02f1361f';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=74dfed287c';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=5932633d41';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
