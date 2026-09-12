@@ -108,6 +108,7 @@ import './modules/82-classification-lists.js?v=90e38f3196';
 import './modules/83-permissions-control.js?v=18ececf626';
 import './modules/84-pharmacy-inventory.js?v=d6d533f9f2';
 import './modules/84-pwa-push-notifications.js?v=c5ae6d91d8';
+import './modules/85-controlled-batch-gap-report.js?v=ae1238d3d2';
 import { installDomBindings } from './core/dom-bindings.js?v=bea6d85c75';
 import { installDebugTracer } from './core/debug-tracer.js?v=7b531921a0';
 const requiredActions = ['doLogin','startApp','r17CrashExecuteBulk','renderMedicationAccountability','r664OpenSealCorrection','fsCanWriteStateKey'];
