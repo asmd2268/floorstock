@@ -24,12 +24,16 @@ test('Arabic harakat are folded, so a vowelled name is the same name', () => {
 });
 
 test('packaging words are not part of a medicine\'s identity', () => {
-  /* "Adrenaline 1mg ampoule" and "Adrenaline injection" are the same drug
-     described two ways — which is what lets a rule written once apply to a name
-     another department typed differently. */
+  /* Units of measure and container words are stripped; dosage forms are kept
+     so that tablet/suppository/syrup etc. produce different identities and
+     freeze rules do not bleed across forms of the same drug. */
   assert.equal(medIdentity('Adrenaline ampoule'), 'adrenaline');
   assert.equal(medIdentity('Adrenaline injection'), 'adrenaline');
-  assert.equal(medIdentity('Paracetamol 500 mg tablets'), 'paracetamol 500');
+  // tablets is now kept — Paracetamol tablet != Paracetamol suppository
+  assert.equal(medIdentity('Paracetamol 500 mg tablets'), 'paracetamol 500 tablets');
+  assert.equal(medIdentity('Paracetamol 500 mg Suppositories'), 'paracetamol 500 suppositories');
+  assert.notEqual(medIdentity('Paracetamol 500 mg tablets'), medIdentity('Paracetamol 500 mg Suppositories'),
+    'tablet and suppository must have different identities');
   assert.equal(medIdentity('vial ml iu'), '', 'a name that is only packaging has no identity');
 });
 

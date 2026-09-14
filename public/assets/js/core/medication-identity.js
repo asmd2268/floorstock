@@ -30,12 +30,18 @@
    test at all. */
 
 const PACKAGING_WORDS = {
+  // Units of measure — carry no dosage-form meaning
   mg: 1, mcg: 1, g: 1, gm: 1, ml: 1, l: 1, iu: 1, unit: 1, units: 1,
-  tab: 1, tabs: 1, tablet: 1, tablets: 1, cap: 1, caps: 1, capsule: 1, capsules: 1,
-  amp: 1, amps: 1, ampoule: 1, ampoules: 1, vial: 1, vials: 1, bottle: 1, bottles: 1,
-  bag: 1, bags: 1, syrup: 1, solution: 1, solutions: 1, injection: 1, injections: 1,
-  cream: 1, ointment: 1, drops: 1, inhaler: 1, inhalers: 1, suppository: 1, suppositories: 1,
-  oral: 1, iv: 1, im: 1, sc: 1, infusion: 1, for: 1, of: 1,
+  // Physical container words — add no identity
+  amp: 1, amps: 1, ampoule: 1, ampoules: 1,
+  vial: 1, vials: 1, bottle: 1, bottles: 1,
+  bag: 1, bags: 1, for: 1, of: 1,
+  // Route/form words that are generic delivery descriptors (not distinguishing forms)
+  injection: 1, injections: 1, oral: 1, iv: 1, im: 1, sc: 1, infusion: 1,
+  // NOTE: tablet, capsule, suppository, syrup, cream, drops, inhaler, solution
+  // are intentionally NOT stripped — they distinguish drug forms that must be
+  // treated as separate medications for freeze/hide rules.
+  // e.g. "Paracetamol 500mg Suppositories" != "Paracetamol 500mg Tablet"
 };
 
 export function medNorm(value) {
