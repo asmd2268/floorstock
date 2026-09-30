@@ -1,4 +1,4 @@
-import { medNorm, medIdentity, sameMedicine, medicationRuleFor } from '../core/medication-identity.js?v=12dfa81b30';
+import { medNorm, medIdentity, sameMedicine, medicationRuleFor } from '../core/medication-identity.js?v=9e607912c7';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 
 // ── MEDICATION / EXPIRY / SHELF CRUD HELPERS ────────────────────────────

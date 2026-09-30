@@ -537,7 +537,18 @@ async function assignSelectedMedsToShelf(){
 }
 
 // Crash Cart
-function crashCarts(){return S.g('crash_carts')||[]}
+/* Returns a COPY of the trolleys, never the cached array itself.
+   Every editor here reads the trolleys, changes one in place and saves the whole
+   list. S.s('crash_carts') saves by DIFF against S.cache (core/row-merge-write.js);
+   when the editor had mutated the cached objects themselves, the "before" and
+   "after" were the same thing, the diff came out empty and nothing was written —
+   the screen showed the new expiry date, Firestore kept the old one, and the old
+   date came back on the next snapshot. A copy keeps the cache as the true "before". */
+function crashCarts(){
+  var rows=S.g('crash_carts')||[];
+  try{return typeof structuredClone==='function'?structuredClone(rows):JSON.parse(JSON.stringify(rows))}
+  catch(e){return JSON.parse(JSON.stringify(rows))}
+}
 /* Live reports plus any archived months this session holds. Closed reports older
    than the retention window live in one document per month rather than one
    document each — see core/crash-report-archive.js — and every reader gets both,
