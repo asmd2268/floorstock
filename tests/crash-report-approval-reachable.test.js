@@ -2,41 +2,31 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import fs from 'node:fs';
 
-/* The accept/reject workflow had a deployed Cloud Function, a working client
-   function, and no way in: the buttons that called ccAcceptReport/ccRejectReport
-   were dropped when modules 27/43/45/63/66 were merged into thematic hosts, and
-   nothing noticed because window.ccAcceptReport.__r676SecureCallable = true —
-   a marker nothing ever read — made the functions look referenced to the
-   dead-code audit. These assertions are the tripwire for that whole shape. */
+/* A pending crash cart report is answered through "Respond to report" — the
+   pharmacy response that records the new seal number and closes the report.
+
+   There used to be Accept / Reject buttons beside it. Accept deducted the
+   quantities and closed the report with no new seal and no pharmacy response,
+   which left the trolley unsealed. They were removed on purpose; these
+   assertions keep them from coming back and keep the Respond route reachable. */
 
 const cards = fs.readFileSync(new URL('../public/assets/js/modules/44-ccx-inventory-redesign-script.js', import.meta.url), 'utf8');
 const impl = fs.readFileSync(new URL('../public/assets/js/modules/52-r635-master-backup-delete-and-crash-print-sync.js', import.meta.url), 'utf8');
 
-test('a pending crash cart report offers accept and reject', () => {
-  assert.match(cards, /data-clickact="ccxAcceptReport"/);
-  assert.match(cards, /data-clickact="ccxRejectReport"/);
-  // only while it is pending, and only to a role that may operate the cart
-  assert.match(cards, /var approval=isPending&&canOperate/);
+test('a pending crash cart report offers Respond, and only Respond', () => {
+  assert.match(cards, /data-clickact="ccxOpenReport"/);
+  assert.match(cards, /var actions=\(isPending\|\|r\.status==='open'\)&&canOperate/);
+  assert.doesNotMatch(cards, /ccxAcceptReport|ccxRejectReport/);
+  assert.doesNotMatch(cards, /Accept<\/button>|Reject<\/button>/);
 });
 
-test('those buttons reach the functions that call the Cloud Functions', () => {
-  assert.match(cards, /ccxAcceptReport:function\(el\)\{if\(typeof window\.ccAcceptReport==='function'\)window\.ccAcceptReport\(el\.dataset\.a1\)\}/);
-  assert.match(cards, /ccxRejectReport:function\(el\)\{if\(typeof window\.ccRejectReport==='function'\)window\.ccRejectReport\(el\.dataset\.a1\)\}/);
-  assert.match(impl, /window\.ccAcceptReport=async function/);
-  assert.match(impl, /window\.ccRejectReport=async function/);
-  assert.match(impl, /fsCallFunction\('acceptCrashCartReport'/);
-  assert.match(impl, /fsCallFunction\('rejectCrashCartReport'/);
-});
-
-test('each call still checks the capability for itself, not just the button', () => {
-  const accept = impl.slice(impl.indexOf('window.ccAcceptReport=async function'), impl.indexOf('window.ccRejectReport=async function'));
-  assert.match(accept, /crashCart\.operate/);
-  const reject = impl.slice(impl.indexOf('window.ccRejectReport=async function'));
-  assert.match(reject.slice(0, 1200), /crashCart\.operate/);
+test('the browser no longer has accept or reject shortcuts for a report', () => {
+  assert.doesNotMatch(impl, /window\.ccAcceptReport/);
+  assert.doesNotMatch(impl, /window\.ccRejectReport/);
+  assert.doesNotMatch(impl, /fsCallFunction\('acceptCrashCartReport'/);
+  assert.doesNotMatch(impl, /fsCallFunction\('rejectCrashCartReport'/);
 });
 
 test('no marker is written that nothing reads', () => {
-  /* The value of __r676SecureCallable was never read anywhere. A flag with no
-     reader cannot be a guarantee, but it did make dead code look alive. */
   assert.doesNotMatch(impl, /__r676SecureCallable/);
 });

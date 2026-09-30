@@ -297,61 +297,6 @@ window.ccSubmitReport=async function(){
   }
 };
 
-// Phase 7a: Pharmacy accepts a pending crash cart report — triggers deduction.
-var crashAccepting=false;
-window.ccAcceptReport=async function(reportId){
-  if(crashAccepting)return false;
-  var canAct=typeof window.fsHasCapability==='function'?window.fsHasCapability('crashCart.operate'):(function(){var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');return ['master','pharmacy','pharmacy_supervisor','inpatient_supervisor','inpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(role)>=0})();
-  if(!canAct)return callToast('هذه الصلاحية للصيدلية فقط','Only pharmacy staff can accept reports','err');
-  if(!reportId)return callToast('معرّف البلاغ مطلوب','Report ID is required','err');
-  if(!confirm('تأكيد قبول البلاغ وخصم الكميات من العربة؟\nConfirm accept and deduct quantities from the cart?'))return false;
-  crashAccepting=true;
-  try{
-    if(typeof window.fsCallFunction!=='function')throw new Error('Secure service is still loading. Please retry.');
-    var data=await window.fsCallFunction('acceptCrashCartReport',{reportId:reportId})||{};
-    if(!data.ok||!data.report)throw new Error('Server did not confirm acceptance.');
-    var reports=crashReportsList().slice(),idx=reports.findIndex(function(e){return String(e&&e.id||'')===String(reportId)});
-    if(idx>=0)reports[idx]=data.report;
-    if(window.S&&S.cache){S.cache.crash_cart_reports=reports;if(data.cart){var carts=crashItems().map(function(e){return String(e&&e.id||'')===String(data.cart.id)?data.cart:e});S.cache.crash_carts=carts}}
-    if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
-    if(typeof window.ccxRenderDashboardAlerts==='function')window.ccxRenderDashboardAlerts();
-    if(typeof window.ccUpdateBadges==='function')window.ccUpdateBadges();
-    callToast('تم قبول البلاغ وخصم الكميات من العربة ✓','Report accepted — quantities deducted from cart ✓','succ');
-    return true;
-  }catch(error){
-    callToast('لم يتم القبول. حاول مرة أخرى.','Could not accept report. Please retry.\n'+errorMessage(error),'err');
-    return false;
-  }finally{crashAccepting=false}
-};
-
-// Phase 7a: Pharmacy rejects a pending crash cart report — no inventory change.
-var crashRejecting=false;
-window.ccRejectReport=async function(reportId){
-  if(crashRejecting)return false;
-  var canAct=typeof window.fsHasCapability==='function'?window.fsHasCapability('crashCart.operate'):(function(){var role=typeof window.fsEffectiveRole==='function'?window.fsEffectiveRole():String(window.CU&&CU.role||'');return ['master','pharmacy','pharmacy_supervisor','inpatient_supervisor','inpatient_pharmacy_supervisor','pharmacy_staff'].indexOf(role)>=0})();
-  if(!canAct)return callToast('هذه الصلاحية للصيدلية فقط','Only pharmacy staff can reject reports','err');
-  if(!reportId)return callToast('معرّف البلاغ مطلوب','Report ID is required','err');
-  var note=window.prompt('ملاحظة الرفض (اختياري) / Rejection note (optional):','');
-  if(note===null)return false;
-  crashRejecting=true;
-  try{
-    if(typeof window.fsCallFunction!=='function')throw new Error('Secure service is still loading. Please retry.');
-    var data=await window.fsCallFunction('rejectCrashCartReport',{reportId:reportId,rejectionNote:note||''})||{};
-    if(!data.ok||!data.report)throw new Error('Server did not confirm rejection.');
-    var reports=crashReportsList().slice(),idx=reports.findIndex(function(e){return String(e&&e.id||'')===String(reportId)});
-    if(idx>=0)reports[idx]=data.report;
-    if(window.S&&S.cache)S.cache.crash_cart_reports=reports;
-    if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();
-    if(typeof window.ccxRenderDashboardAlerts==='function')window.ccxRenderDashboardAlerts();
-    if(typeof window.ccUpdateBadges==='function')window.ccUpdateBadges();
-    callToast('تم رفض البلاغ — لم تتغير كميات العربة','Report rejected — no inventory was changed','info');
-    return true;
-  }catch(error){
-    callToast('لم يتم الرفض. حاول مرة أخرى.','Could not reject report. Please retry.\n'+errorMessage(error),'err');
-    return false;
-  }finally{crashRejecting=false}
-};
-
 // Seal-must-match policy (master-only toggle)
 function getSealPolicy(){return !!(window.S&&typeof S.g==='function'&&S.g('crash_cart_seal_must_match'))}
 window.getCrashSealPolicy=getSealPolicy;

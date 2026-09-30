@@ -102,6 +102,13 @@ function rcard(r,isp){
     +(function(){var eff=effectiveRequestSchedule(r);return eff.scheduledFor?'<div style="margin-top:6px;color:var(--acl);font-weight:600">📅 Scheduled dispense: '+fmtDateTime(eff.scheduledFor)+(eff.scheduledLabel?' &middot; '+eff.scheduledLabel:'')+'</div>':'<div style="margin-top:6px">📅 Dispense time: Not scheduled yet</div>'})()
     +'</div></div>';
 }
+/* A request stores the medicine's id, not its name. The name comes from the
+   department's medicine list, which can still be loading on a weak connection or
+   no longer contain the medicine. Showing the raw internal id there read as a
+   broken screen; show the name saved with the request, or a plain placeholder. */
+function medFallbackLabel(){
+  return 'Medicine not loaded yet / الدواء لم يُحمَّل بعد';
+}
 function viewReq(id){
   var r=gr().find(function(x){return x.id===id});if(!r)return;
   var d=gd().find(function(x){return x.id===r.deptId});
@@ -112,7 +119,7 @@ function viewReq(id){
     +(r.items||[]).map(function(it,index){
       var m=ms.find(function(x){return x.id===it.medId});
       var dsp=(r.dispensed||[]).find(function(x){return x.medId===it.medId});
-      return '<tr><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td>'+(m?m.name:it.medId)+'</td><td style="text-align:center;font-family:var(--mono)">'+it.qty+'</td><td style="text-align:center;font-family:var(--mono)">'+(dsp?dsp.qty:'&mdash;')+'</td></tr>';
+      return '<tr><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td>'+(m?m.name:(it.name||medFallbackLabel()))+'</td><td style="text-align:center;font-family:var(--mono)">'+it.qty+'</td><td style="text-align:center;font-family:var(--mono)">'+(dsp?dsp.qty:'&mdash;')+'</td></tr>';
     }).join('')+'</tbody></table></div>';
   OM('mview');
 }
@@ -154,7 +161,7 @@ function openFulfill(id){
     var m=ms.find(function(x){return x.id===it.medId});
     var last30=dispensedLast30Days(it.medId);
     var rowBg=m&&m.high_alert?'background:rgba(218,54,51,.07)':m&&m.hazard?'background:rgba(210,153,34,.06)':'background:rgba(31,111,235,.04)';
-    return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:it.medId)+'</td><td>'+bdg(m)+'</td>'
+    return '<tr style="'+rowBg+'"><td style="text-align:center;font-family:var(--mono);font-weight:600">'+(index+1)+'</td><td style="font-weight:500">'+(m?m.name:(it.name||medFallbackLabel()))+'</td><td>'+bdg(m)+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.min!=null?m.min:'&mdash;')+'</td>'
       +'<td style="text-align:center;font-family:var(--mono)">'+(m&&m.max!=null?m.max:'&mdash;')+'</td>'
       +'<td style="text-align:center"><span class="badge bbl" style="font-family:var(--mono);font-size:11px">'+last30.qty+' / '+last30.orders+' orders<br><small>avg '+(Math.round(last30.average*100)/100)+'/order</small></span></td>'

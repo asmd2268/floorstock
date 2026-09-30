@@ -62,7 +62,8 @@ window.submitReq=async function(){
     var monthly=typeof getMonthlyLimit==='function'?getMonthlyLimit(CU.deptId):null;if(monthly!==null&&typeof getMonthlyReqCount==='function'&&getMonthlyReqCount(CU.deptId)>=monthly)return toast('Monthly request limit reached ('+monthly+'/month). Contact pharmacy.','err');
     if(typeof window.checkRequestCountLimits==='function'){var countLimit=window.checkRequestCountLimits(CU.deptId);if(countLimit&&countLimit.blocked)return toast(countLimit.reason,'err')}
   }
-  var items=Array.from(document.querySelectorAll('.rqi')).filter(function(i){return Number(i.value)>0}).map(function(i){return {medId:i.dataset.mid,qty:Number(i.value)}});
+  var requestMeds=(typeof getMeds==='function'?getMeds(CU.deptId):[])||[];
+  var items=Array.from(document.querySelectorAll('.rqi')).filter(function(i){return Number(i.value)>0}).map(function(i){var med=requestMeds.find(function(x){return String(x.id)===String(i.dataset.mid)});return {medId:i.dataset.mid,qty:Number(i.value),name:med&&med.name?String(med.name):''}});
   if(!items.length)return toast('Enter at least one quantity','err');
   var nextDispense=typeof getNextDispSlot==='function'?getNextDispSlot(CU.deptId):null,btn=document.querySelector('#pg-newreq button[data-asdh-binding="b047"]');
   requestSaving=true;if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='Saving… / جاري الحفظ'}
