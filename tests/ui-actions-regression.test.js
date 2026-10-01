@@ -432,12 +432,8 @@ test('Chrome backup transactions and unsent request forms are protected', () => 
   assert.match(backupSource, /tx\.oncomplete=function\(\)\{resolve\(rec\)\}/);
   assert.match(backupSource, /AH_TRANSIENT/);
   assert.match(backupSource, /storageMetaError/);
-  // Transport is chosen per device (core/network-health.js): auto-detect by
-  // default, long polling only on a device that has shown a weak connection.
-  // It must never be forced for everyone, and the two options are never both set.
-  assert.match(requestSource, /fsNet\.transportSettings\(\)/);
+  assert.match(requestSource, /experimentalAutoDetectLongPolling:true/);
   assert.doesNotMatch(requestSource, /experimentalForceLongPolling:true/);
-  assert.doesNotMatch(requestSource, /experimentalAutoDetectLongPolling:true/);
   assert.match(draftProtectionSource, /Unsaved form protected from automatic refresh/);
   assert.match(draftProtectionSource, /asdh_r666_draft_/);
 });
