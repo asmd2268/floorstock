@@ -13,6 +13,7 @@ import { debounce } from '../core/timing.js?v=e4cf678c0c';
 import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=e6374b4039';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
 import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
+import { createNetworkHealth } from '../core/network-health.js?v=70237096b7';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=eec5742551';
 import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=7a75e3ae82';
@@ -157,6 +158,9 @@ globalThis.renderReqFormDebounced = debounce(function(){
 globalThis.renderControlledDebounced = debounce(function(){renderControlled()},220);
 globalThis._firebasePersistenceAttempted = false;
 globalThis._firebaseReadyPromise = null;
+/* Per-device transport choice: auto-detect by default, long polling on a device that has shown a weak connection (see core/network-health.js). */
+var fsNet=createNetworkHealth({storage:(function(){try{return window.localStorage}catch(e){console.warn('Browser storage is unavailable; network mode will not be remembered.',e);return null}})()});
+window.fsNetworkHealth=fsNet;
 function initFirebase(){
   if(!window.firebase)throw new Error('Firebase SDK failed to load. Check the internet connection and reload.');
   FB_APP=firebase.apps.length?firebase.app():firebase.initializeApp(FIREBASE_CONFIG);
@@ -187,12 +191,11 @@ if(firebase.appCheck&&typeof firebase.appCheck==='function'){
       // emulator (confirmed live: the SDK's own console warning says as much,
       // "You are overriding the original host").  Harmless in production,
       // where isFirebaseEmulatorEnabled() is false and useEmulator() never runs.
-      FB_DB.settings({
-        experimentalAutoDetectLongPolling:true,
+      FB_DB.settings(Object.assign({
         useFetchStreams:false,
         ignoreUndefinedProperties:true,
         merge:true
-      });
+      },fsNet.transportSettings()));
     }
   }catch(settingsError){
     console.warn('Firestore transport settings could not be applied.',settingsError);
@@ -252,6 +255,7 @@ globalThis._lastSaveFailure = null;
 function _trackSave(promise,label){
   var p=(promise&&typeof promise.then==='function')?promise:Promise.resolve(promise);
   _pendingWrites++;_trackedSaves.add(p);
+  fsNet.watchSave(p);
   p.catch(function(err){_lastSaveFailure={label:label||'save',error:err,at:new Date().toISOString()};console.error('Persistent save failed:',label,err)});
   p.finally(function(){_pendingWrites=Math.max(0,_pendingWrites-1);_trackedSaves.delete(p)}).catch(function(){});
   return p;
@@ -925,6 +929,7 @@ function fsStateInstallCollectionListeners(profile,label){
       // an initial near-empty snapshot before the server-confirmed one arrives.
       // Skip it rather than let it blank out rows the cold load already fetched.
       if(snapshot.metadata.fromCache)return;
+      fsNet.serverReached();
       // From here the listener is the single source for this key; the REST seed
       // steps aside rather than writing a differently-decoded copy over it.
       S.__collectionListenerLive=S.__collectionListenerLive||{};
@@ -945,6 +950,7 @@ function fsStateInstallCollectionListeners(profile,label){
          page still shows them, and the failure is stated where the person who
          needs to act will see it. */
       console.error(spec.legacyPath+' realtime error'+(label?' ('+label+')':'')+'.',error);
+      fsNet.trouble('listener-error');
       S.__collectionListenerLive=S.__collectionListenerLive||{};
       S.__collectionListenerLive[spec.key]=false;
       fsStateLoadCollectionViaRest(spec,profile).then(function(rows){
@@ -1209,7 +1215,9 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
 
     if(S.transport==='sdk'){
       try{
+        fsNet.expectServer();
         S.stateUnsub=fsStateSdkCollection().onSnapshot(function(snapshot){
+          if(!snapshot.metadata.fromCache)fsNet.serverReached();
           var changed=false;
           snapshot.docChanges().forEach(function(change){
             // crash_cart_reports: read from the crash_cart_reports_v2 (or
@@ -1232,6 +1240,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
           if(changed)S.scheduleRefresh();
         },function(error){
           console.error('floorstock_state realtime error; switching to REST polling.',error);
+          fsNet.trouble('listener-error');
           S.transport='rest';S.startRealtime();
         });
         S.collectionUnsubs=fsStateInstallCollectionListeners(S.scopeProfile,'');
@@ -1322,9 +1331,11 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       if(openingWave<=0)finishWave();
     }
     S.__scopedWaveComplete=function(){return waveSettled};
+    fsNet.expectServer();
     S.scopedUnsubs=keys.map(function(key){
       var first=true;
       return fsStateSdkCollection().doc(key).onSnapshot(function(snapshot){
+        if(!snapshot.metadata.fromCache)fsNet.serverReached();
         // A document Firestore has never cached locally can fire an initial
         // "exists: false" snapshot straight from the empty local cache,
         // before the real server response arrives a moment later. Since the
@@ -1342,6 +1353,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
         if(changed&&waveSettled)S.scheduleRefresh();
       },function(error){
         if(first){first=false;waveArrived();}
+        fsNet.trouble('listener-error');
         fallBackToRest(error);
       });
     });
