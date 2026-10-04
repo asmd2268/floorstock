@@ -19,6 +19,15 @@ import { stableRowFingerprint } from './row-fingerprint.js?v=9a446bb45d';
    Rows the caller never touched are left exactly as the server has them, even if
    somebody changed them a second ago. */
 
+export const TRANSACTION_WAIT_MS = 6000;
+const TIMED_OUT = new Error('Transaction wait timed out.');
+
+function withTimeout(promise, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => { timer = setTimeout(() => reject(TIMED_OUT), ms); });
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timer));
+}
+
 function stateDocRef(key) {
   if (!globalThis.FB_DB || typeof globalThis.stateCollectionRef !== 'function') return null;
   return globalThis.stateCollectionRef(globalThis.FB_DB, globalThis.S && globalThis.S.scopeProfile).doc(key);
@@ -80,14 +89,42 @@ export async function saveRowsMerging(key, nextRows, { baseline, fallback } = {}
      narrower than losing the edit outright. */
   if (!ref || !globalThis.FB_DB.runTransaction) return fallback();
 
-  const merged = await globalThis.FB_DB.runTransaction(async (transaction) => {
-    const snapshot = await transaction.get(ref);
+  /* Show the change at once. A transaction needs a live round trip to the server,
+     so on a weak connection the screen used to keep the old value until it
+     finished (or failed). The local cache is updated first and corrected by the
+     server's answer afterwards. */
+  const cacheRef = globalThis.S && globalThis.S.cache ? globalThis.S.cache : null;
+  const hadCached = !!cacheRef && Object.prototype.hasOwnProperty.call(cacheRef, key);
+  const cachedBefore = hadCached ? cacheRef[key] : undefined;
+  if (cacheRef) {
+    cacheRef[key] = applyIntent(previous, intent);
+    if (globalThis.S && typeof globalThis.S.scheduleRefresh === 'function') globalThis.S.scheduleRefresh();
+  }
+
+  const transaction = globalThis.FB_DB.runTransaction(async (tx) => {
+    const snapshot = await tx.get(ref);
     const serverRows = snapshot.exists && Array.isArray(snapshot.data().value) ? snapshot.data().value : previous;
     const result = applyIntent(serverRows, intent);
-    transaction.set(ref, { value: result, updatedAt: stateStamp() }, { merge: false });
+    tx.set(ref, { value: result, updatedAt: stateStamp() }, { merge: false });
     return result;
   });
-  if (globalThis.S && globalThis.S.cache) globalThis.S.cache[key] = merged;
+
+  let merged;
+  try {
+    merged = await withTimeout(transaction, TRANSACTION_WAIT_MS);
+  } catch (error) {
+    const code = error && error.code;
+    if (error === TIMED_OUT || code === 'unavailable' || code === 'deadline-exceeded') {
+      /* The network is too weak for a transaction. Hand the merged result to the
+         plain writer: the SDK keeps that write in its offline queue and sends it
+         when the connection returns, instead of the save being lost. */
+      if (globalThis.console) console.warn('Transaction did not complete on this connection; queuing a plain save instead.', error);
+      return fallback();
+    }
+    if (cacheRef) { if (hadCached) cacheRef[key] = cachedBefore; else delete cacheRef[key]; }
+    throw error;
+  }
+  if (cacheRef) cacheRef[key] = merged;
   if (globalThis.S && typeof globalThis.S.scheduleRefresh === 'function') globalThis.S.scheduleRefresh();
   return merged;
 }
