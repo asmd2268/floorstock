@@ -1,6 +1,6 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
-import { normalizeRole } from '../core/role-capabilities.js?v=8775074cc7';
+import { normalizeRole } from '../core/role-capabilities.js?v=234c1ff934';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c146809fa9';
 import { fsNorm } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';

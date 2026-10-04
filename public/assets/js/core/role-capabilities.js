@@ -53,6 +53,8 @@ const CAPABILITIES = Object.freeze({
   'crashCart.report': Object.freeze(['department']),
   'crashCart.operate': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
   'crashCart.configure': Object.freeze(['pharmacy', 'inpatient_supervisor']),
+  // Backup to / restore from Excel: Inpatient Pharmacy Supervisor and Master only (Master passes every capability).
+  'crashCart.backup': Object.freeze(['inpatient_supervisor']),
   'crashCart.delete': Object.freeze(['pharmacy']),
   /* outpatient_pharmacy_supervisor holds custody for the outpatient department
      beneath them, so they read and manage it like any other supervisor. */

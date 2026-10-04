@@ -1,3 +1,4 @@
+import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
 import { selectedPrintIds, restorePrintSelection } from '../core/print-order-selection.js?v=42a613d169';
 import { openReceiveExpiryDialog } from '../core/receive-expiry-dialog.js?v=ef6827a3ad';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
@@ -72,7 +73,8 @@ function polishDepartment(){
  (typeof crashCarts==='function'?(crashCarts()||[]):[]).filter(function(c){return String(c.deptId)===String(CU.deptId)}).forEach(function(c){
   var card=Array.from(document.querySelectorAll('#crash-list .crash-cart-card')).find(function(x){return (x.textContent||'').indexOf(String(c.name||''))>-1});if(!card)return;
   var ordered=['up','down'].reduce(function(a,sec){return a.concat((c.items||[]).filter(function(it){return String(it.section||'up')===sec}))},[]),rows=Array.from(card.querySelectorAll('tbody tr')).filter(function(tr){return !tr.classList.contains('crash-section-label')});
-  rows.forEach(function(tr,i){var it=ordered[i];if(!it)return;var days=(it.batches||[]).map(function(b){var dt=new Date(String(b.expiry||'')+'T00:00:00');return isNaN(dt)?999999:Math.floor((dt-today)/86400000)});tr.classList.remove('v16-exp-soon','v16-exp-expired');if(days.some(function(d){return d<0}))tr.classList.add('v16-exp-expired');else if(days.some(function(d){return d>=0&&d<=30}))tr.classList.add('v16-exp-soon')})
+  var nearDays=currentExpiryThresholds().nearDays;
+  rows.forEach(function(tr,i){var it=ordered[i];if(!it)return;var days=(it.batches||[]).map(function(b){var dt=new Date(String(b.expiry||'')+'T00:00:00');return isNaN(dt)?999999:Math.floor((dt-today)/86400000)});tr.classList.remove('v16-exp-soon','v16-exp-expired');if(days.some(function(d){return d<0}))tr.classList.add('v16-exp-expired');else if(days.some(function(d){return d>=0&&d<=nearDays}))tr.classList.add('v16-exp-soon')})
  })
 }
 

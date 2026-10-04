@@ -717,7 +717,8 @@ window.crashPrint=function(id){
   if(!c){if(typeof toast==='function')toast('Crash Cart not found.','err');return false}
   function e(v){return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
   function q(v){var x=Number(v);return isFinite(x)?x:0}
-  function near30(item){return (item.batches||[]).some(function(batch){var days=daysUntil(batch&&batch.expiry);return days!==null&&days>=0&&days<=30})}
+  var printRules=rules();
+  function near30(item){return (item.batches||[]).some(function(batch){var days=daysUntil(batch&&batch.expiry);return days!==null&&days>=0&&days<=printRules.nearDays})}
   function status(item){var required=q(item.qty),available=q(item.present==null?item.qty:item.present);return available<=0?'Out of stock':(available<required?'Less than required':'Available')}
   var reports=typeof crashReports==='function'?(crashReports()||[]):[],closed=reports.filter(function(r){return String(r.cartId)===String(c.id)&&r.status==='closed'}).sort(function(a,b){return String(b.closedAt||b.lastEditedAt||b.openedAt||'').localeCompare(String(a.closedAt||a.lastEditedAt||a.openedAt||''))})[0]||{};
   var actorInfo=typeof window.fsActor==='function'?window.fsActor():{},printUser=actorInfo.name||actorInfo.user||(window.CU&&(CU.username||CU.email))||'Unknown user';
@@ -737,8 +738,8 @@ window.crashPrint=function(id){
   '</style></head><body><div class="toolbar"><button type="button" data-qr-print-button disabled>Print / طباعة</button></div><div class="page">'+official+
   '<div class="title-grid"><div class="titles"><div class="cart-kind-badge">Crash Cart / عربة الطوارئ</div><h1>'+e(c.name||'Crash Cart')+'</h1><h2>'+e(dn)+'</h2></div><div class="qr"><img class="asd-qr-image" id="crash-live-qr" src="'+e(qr)+'" alt="Live Crash Cart QR"><small>Live check — no login</small></div></div>'+
   '<table class="meta"><tr><td><b>Cart:</b> '+e(c.number||c.name||'—')+'</td><td><b>Seal number:</b> '+crashCartSealLabel(crashCartSealInfo(c,closed),fmtDateFinal,e)+'</td><td><b>Location:</b> '+e(c.location||dn||'—')+'</td></tr><tr><td><b>Last closure:</b> '+e(fmtDateFinal(closed.closedAt||c.lastClosedAt||'—'))+'</td><td><b>Closed by:</b> '+e(closed.closedByName||c.lastClosedByName||'—')+'</td><td><b>System user:</b> '+e(closed.closedByUser||c.lastClosedByUser||'—')+'</td></tr></table>'+
-  '<div class="track"><span><b>Expiry Track:</b> Expired before today · Urgent 0–7 days · Near expiry 8–30 days</span><span><b>Print date / تاريخ الطباعة:</b> '+e(printDate)+'</span></div>'+
-  '<div class="legend"><span class="swatch"></span> Expiry within 30 days / قريب الانتهاء خلال 30 يومًا</div>'+
+  '<div class="track"><span><b>Expiry Track:</b> Expired before today · Urgent 0–'+printRules.urgentDays+' days · Near expiry '+(printRules.urgentDays+1)+'–'+printRules.nearDays+' days</span><span><b>Print date / تاريخ الطباعة:</b> '+e(printDate)+'</span></div>'+
+  '<div class="legend"><span class="swatch"></span> Expiry within '+printRules.nearDays+' days / قريب الانتهاء خلال '+printRules.nearDays+' يومًا</div>'+
   '<table class="list"><colgroup><col style="width:2.5%"><col style="width:31.5%"><col style="width:13%"><col style="width:9%"><col style="width:9%"><col style="width:14%"><col style="width:21%"></colgroup><thead><tr><th>#</th><th>Generic name</th><th>Concentration</th><th>Standard quantity</th><th>Available</th><th>Stock status</th><th>Expiry date → Quantity</th></tr></thead><tbody>'+rows+'</tbody></table>'+
   '<div class="footer">Printed by: '+e(printUser)+' · '+e(actorInfo.user||window.CU&&CU.email||printUser)+'</div><div class="byline">By Ali Abudahash</div></div>'+
   '<script>'+qrPrintRuntime+'<\/script></body></html>';
