@@ -187,6 +187,60 @@ function installSealButtons(){
 window.__renderCrashOperationsAfterExtensions=window.__renderCrashOperationsAfterExtensions||[];
 window.__renderCrashOperationsAfterExtensions.push(function(){setTimeout(installSealButtons,0)});
 
+/* A cart whose seal differs from its last closing record cannot say which of the
+   two is right — only someone who can see the trolley can. The actual Master
+   decides, and the decision is recorded:
+     choice 'closure' — the closing record is right; the cart is put back to it
+     choice 'current' — the cart's seal is right; it is marked confirmed (the old
+                        closing report is history and is left exactly as it was) */
+window.r664AdoptSeal=async function(cartId,choice){
+  if(!actualMaster())return toast('Only the actual Master can decide which seal is correct. / للماستر فقط','err');
+  var original=JSON.parse(JSON.stringify(typeof crashCarts==='function'?(crashCarts()||[]):[]));
+  var carts=JSON.parse(JSON.stringify(original)),cart=carts.find(function(c){return String(c.id)===String(cartId)});
+  if(!cart)return toast('Crash Cart not found.','err');
+  var reports=typeof crashReports==='function'?(crashReports()||[]):[];
+  if(reports.some(function(r){return String(r.cartId)===String(cart.id)&&r.status==='open'}))return toast('Close the active opening report first. / أغلق بلاغ الفتح أولاً','err');
+  var closed=reports.filter(function(r){return String(r.cartId)===String(cart.id)&&r.status==='closed'&&String(r.newSeal||'').trim()})
+    .sort(function(a,b){return String(b.closedAt||b.lastEditedAt||'').localeCompare(String(a.closedAt||a.lastEditedAt||''))})[0];
+  if(!closed)return toast('There is no closing record to compare with.','err');
+  var current=String(cart.seal||'').trim(),closureSeal=String(closed.newSeal||'').trim();
+  if(current.toLowerCase()===closureSeal.toLowerCase())return toast('The cart seal already matches the last closure record.','succ');
+  var adopt=choice==='closure'?closureSeal:current;
+  if(!window.confirm('Cart: '+(cart.name||cart.number||cart.id)+'\n\nSeal on the cart: '+current+'\nSeal in the last closure record: '+closureSeal+'\n\nAdopt '+adopt+' as the correct seal?\nاعتماد '+adopt+' كرقم القفل الصحيح؟'))return;
+  var stamp=new Date().toISOString(),u=currentUser(),actorName=String((window.actualActorName&&actualActorName())||u.displayName||u.name||u.email||u.username||u.id||'Master');
+  if(choice==='closure'){
+    var conflict=usedSeal(closureSeal,cart.id);
+    if(conflict)return toast('This seal is already used in '+conflict+'. It cannot be adopted.','err');
+    cart.seal=closureSeal;
+    cart.lastSealCorrectionAt=stamp;cart.lastSealCorrectionBy=actorName;
+    cart.lastSealCorrectionReason='Master adopted the last closure seal / اعتمد الماستر قفل آخر إغلاق';cart.lastSealCorrectionOldValue=current;
+  }else{
+    cart.sealConfirmedAt=stamp;cart.sealConfirmedBy=actorName;cart.sealConfirmedSeal=current;
+  }
+  cart.updatedAt=stamp;cart.updatedBy=actorName;
+  try{
+    await setCrashCarts(carts);
+    var verified=(crashCarts()||[]).find(function(c){return String(c.id)===String(cart.id)});
+    if(!verified||String(verified.seal||'')!==adopt)throw new Error('The adopted seal did not persist.');
+    if(typeof auditAction==='function')await auditAction(choice==='closure'?'crash_cart_master_seal_correction':'crash_cart_master_seal_confirmation',{
+      cartId:cart.id,departmentId:cart.deptId||'',cartName:cart.name||'',oldSeal:current,newSeal:adopt,closureSeal:closureSeal,
+      reason:choice==='closure'?'Adopted the last closure seal':'Confirmed the cart seal as correct',
+      operation:'seal_decision',openingLog:false,contentsChanged:false,timestampsChanged:false,decidedAt:stamp
+    });
+    if(typeof renderCrashCarts==='function')renderCrashCarts();
+    if(typeof renderCrashOperations==='function')renderCrashOperations();
+    toast('Seal '+adopt+' adopted ✓ / تم اعتماد القفل','succ');
+  }catch(error){
+    try{await setCrashCarts(original)}
+    catch(rollbackError){
+      console.error('Crash Cart rollback failed after a seal decision error',rollbackError);
+      toast('The seal decision failed AND the cart could not be put back. Check this cart before relying on it. / تعذّر إرجاع العربة، تحقّق منها','err');
+      return;
+    }
+    toast(String(error&&error.message||error),'err');
+  }
+};
+
 /* Master cloud backup: authenticated, chunked Firestore snapshots, latest seven retained.
    Local IndexedDB backup remains as a second layer. */
 var CLOUD_COLLECTION='floorstock_backups',CLOUD_KEEP=7,CLOUD_CHUNK=420000;

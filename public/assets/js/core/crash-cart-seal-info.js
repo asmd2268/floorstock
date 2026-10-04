@@ -16,7 +16,10 @@
      'cart'               no closing report to compare against
      'closure'            the cart's seal is the one fitted at the last closure
      'master_correction'  corrected by the Master after the last closure
-     'mismatch'           differs from the last closure with no correction on record */
+     'master_confirmed'   differs from the last closure, and the Master confirmed
+                          the cart's seal as the right one
+     'mismatch'           differs from the last closure and nobody has decided which
+                          is right — `seal` is the cart's, `closureSeal` the record's */
 
 function text(value) {
   return String(value == null ? '' : value).trim();
@@ -38,19 +41,35 @@ export function crashCartSealInfo(cart, closed) {
   if (!closed || !closureSeal) return { source: 'cart', seal: current || closureSeal };
   if (!current || same(current, closureSeal)) return { source: 'closure', seal: current || closureSeal };
 
-  const correctedAt = time(cart.lastSealCorrectionAt);
   const closedAt = time(closed.closedAt || closed.lastEditedAt);
-  const correctedAfterClosure = correctedAt != null && (closedAt == null || correctedAt >= closedAt);
-  if (correctedAfterClosure) {
+  const after = (value) => value != null && (closedAt == null || value >= closedAt);
+  const correctedAt = time(cart.lastSealCorrectionAt);
+  /* A confirmation only speaks for the seal it was made about: if the seal has
+     changed since, the confirmation no longer applies. */
+  const confirmedAt = same(cart.sealConfirmedSeal, current) ? time(cart.sealConfirmedAt) : null;
+  const corrected = after(correctedAt);
+  const confirmed = after(confirmedAt);
+
+  if (confirmed && (!corrected || confirmedAt > correctedAt)) {
+    return {
+      source: 'master_confirmed',
+      seal: current,
+      closureSeal,
+      confirmedAt: text(cart.sealConfirmedAt),
+      confirmedBy: text(cart.sealConfirmedBy)
+    };
+  }
+  if (corrected) {
     return {
       source: 'master_correction',
       seal: current,
+      closureSeal,
       correctedAt: text(cart.lastSealCorrectionAt),
       correctedBy: text(cart.lastSealCorrectionBy),
       reason: text(cart.lastSealCorrectionReason)
     };
   }
-  return { source: 'mismatch', seal: current };
+  return { source: 'mismatch', seal: current, closureSeal };
 }
 
 /* The closure line's seal, as one piece of HTML-safe-by-caller text. `format`
@@ -64,8 +83,13 @@ export function crashCartSealLabel(info, format, esc) {
     const by = info.correctedBy ? ' · ' + e(info.correctedBy) : '';
     return e(info.seal) + ' — changed by Master correction / تغيّر بتصحيح الماستر · ' + e(fmt(info.correctedAt)) + by;
   }
+  if (info.source === 'master_confirmed') {
+    const by = info.confirmedBy ? ' · ' + e(info.confirmedBy) : '';
+    return e(info.seal) + ' — confirmed by Master / معتمد من الماستر · ' + e(fmt(info.confirmedAt)) + by;
+  }
   if (info.source === 'mismatch') {
-    return e(info.seal) + ' — differs from the last closure record / يختلف عن سجل آخر إغلاق';
+    return '<span class="seal-mismatch">' + e(info.seal) + ' <small>(on the cart / على العربة)</small>'
+      + ' ≠ ' + e(info.closureSeal) + ' <small>(last closure record / سجل آخر إغلاق)</small></span>';
   }
   return e(info.seal);
 }

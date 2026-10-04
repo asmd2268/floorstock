@@ -22,6 +22,27 @@ test('a Master correction after the closure is reported as such, not as the clos
   assert.doesNotMatch(label, /R100273/);
 });
 
+test('a differing seal with no decision shows BOTH numbers', () => {
+  const info = crashCartSealInfo({ seal: 'G065492' }, closed);
+  assert.equal(info.source, 'mismatch');
+  assert.equal(info.closureSeal, 'R100273');
+  const label = crashCartSealLabel(info, (v) => v, (v) => v);
+  assert.match(label, /G065492/);
+  assert.match(label, /R100273/);
+});
+
+test('the Master confirming the cart seal settles the difference', () => {
+  const cart = { seal: 'G065492', sealConfirmedSeal: 'g065492', sealConfirmedAt: '2026-10-05T10:00:00.000Z', sealConfirmedBy: 'Ali' };
+  const info = crashCartSealInfo(cart, closed);
+  assert.equal(info.source, 'master_confirmed');
+  assert.match(crashCartSealLabel(info, (v) => v, (v) => v), /confirmed by Master/);
+});
+
+test('a confirmation does not carry over to a different seal', () => {
+  const cart = { seal: 'X999', sealConfirmedSeal: 'G065492', sealConfirmedAt: '2026-10-05T10:00:00.000Z' };
+  assert.equal(crashCartSealInfo(cart, closed).source, 'mismatch');
+});
+
 test('a correction that put the closure seal back leaves nothing to explain', () => {
   const info = crashCartSealInfo({ seal: 'R100273', lastSealCorrectionAt: '2026-10-03T10:00:00.000Z' }, closed);
   assert.equal(info.source, 'closure');

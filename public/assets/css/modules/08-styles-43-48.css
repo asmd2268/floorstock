@@ -170,3 +170,9 @@ body.light .ccx-level-expired{color:#991b1b}body.light .ccx-level-urgent{color:#
 .ccx-rules-footer{display:flex;align-items:center;gap:8px;justify-content:flex-end;padding:14px 22px;border-top:1px solid var(--bd);background:var(--s2)}
 .ccx-filter-note{display:inline-flex;align-items:center;gap:5px;margin-top:6px;padding:3px 8px;border:1px solid var(--ac);border-radius:999px;background:rgba(31,111,235,.10);color:var(--acl);font-size:10px;font-weight:700}
 @media(max-width:620px){.ccx-rule-grid{grid-template-columns:1fr}.ccx-rules-preview-grid{grid-template-columns:1fr 1fr}.ccx-rules-footer{flex-wrap:wrap}.ccx-rules-status{width:100%;order:-1}.ccx-rules-dialog{max-height:94vh;overflow:auto}}
+
+/* A cart whose seal differs from its last closing record: show both numbers and,
+   for the Master, one button per number. */
+.ccx-closed-meta .seal-mismatch{color:var(--wn,#e0a82e);font-weight:700}
+.ccx-closed-meta .seal-mismatch small{font-weight:400;opacity:.85}
+.ccx-seal-decide{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
