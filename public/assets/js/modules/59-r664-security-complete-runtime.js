@@ -105,7 +105,17 @@ function usedSeal(newSeal,cartId){
   var carts=typeof window.crashCarts==='function'?(crashCarts()||[]):[];
   carts.forEach(function(c){if(!found&&String(c.id)!==String(cartId)&&String(c.seal||'').trim().toLowerCase()===key)found='another Crash Cart'});
   var reports=typeof window.crashReports==='function'?(crashReports()||[]):[];
-  reports.forEach(function(r){if(found)return;[r.oldSeal,r.newSeal].forEach(function(s){if(!found&&String(s||'').trim().toLowerCase()===key)found='the seal history'})});
+  /* Putting a cart back to the seal its OWN last closure recorded is the whole
+     point of a correction, so that one number is not "history" for that cart.
+     Every other recorded seal — other carts' and this cart's older ones — still
+     blocks, because a seal number must not be reused. */
+  var ownLast=reports.filter(function(r){return String(r.cartId)===String(cartId)&&r.status==='closed'&&String(r.newSeal||'').trim()})
+    .sort(function(a,b){return String(b.closedAt||b.lastEditedAt||'').localeCompare(String(a.closedAt||a.lastEditedAt||''))})[0];
+  var ownLastSeal=ownLast?String(ownLast.newSeal||'').trim().toLowerCase():'';
+  reports.forEach(function(r){if(found)return;[r.oldSeal,r.newSeal].forEach(function(s){
+    if(found||String(s||'').trim().toLowerCase()!==key)return;
+    if(ownLast&&r===ownLast&&s===r.newSeal&&key===ownLastSeal)return;
+    found='the seal history'})});
   return found;
 }
 window.r664OpenSealCorrection=function(cartId){
