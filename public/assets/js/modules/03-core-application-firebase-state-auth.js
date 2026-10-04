@@ -806,7 +806,13 @@ async function ensureGeoAllowed(){
     return;
   }
   try{
-    var result=await fsCallFunction('checkGeoAllowed',{});
+    // A weak connection must not hold every first write hostage to this check:
+    // wait a few seconds at most, then fail open exactly as for any other failure.
+    var result=await Promise.race([
+      fsCallFunction('checkGeoAllowed',{}),
+      new Promise(function(resolve){setTimeout(function(){resolve(null)},4000)})
+    ]);
+    if(result===null)throw new Error('Geo write check timed out.');
     var allowed=!!(result&&result.allowed);
     globalThis._geoWriteCheckCache={allowed:allowed,checkedAt:now};
     if(!allowed)throw new Error('Writing is restricted to Saudi Arabia. / الكتابة مقيّدة جغرافياً بالسعودية.');

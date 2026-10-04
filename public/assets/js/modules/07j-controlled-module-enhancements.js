@@ -606,20 +606,28 @@ async function _commitCrashReportOps(ops){
   }
 }
 /* Saves one report — or a handful the caller actually changed. */
+/* The write is already in the SDK's offline queue once commit() is called, so a
+   slow acknowledgement is not a failure. Wait a few seconds for it, then let the
+   caller carry on; a real rejection (permissions, validation) still throws. */
+function _waitForCommit(promise,ms){
+  var timer;
+  var slow=new Promise(function(resolve){timer=setTimeout(function(){resolve('slow')},ms)});
+  return Promise.race([promise,slow]).then(function(v){clearTimeout(timer);return v},function(e){clearTimeout(timer);throw e});
+}
 async function saveCrashReport(reports){
   var rows=(Array.isArray(reports)?reports:[reports]).filter(function(r){return r&&r.id});
   if(!rows.length)return rows;
-  await _commitCrashReportOps(rows.map(function(r){return {t:'set',id:String(r.id),d:r}}));
   _applyCrashReportsLocally(rows,[]);
   if(S&&S.scheduleRefresh)S.scheduleRefresh();
+  await _waitForCommit(_commitCrashReportOps(rows.map(function(r){return {t:'set',id:String(r.id),d:r}})),6000);
   return rows;
 }
 async function deleteCrashReport(reportIds){
   var ids=(Array.isArray(reportIds)?reportIds:[reportIds]).map(String).filter(Boolean);
   if(!ids.length)return false;
-  await _commitCrashReportOps(ids.map(function(id){return {t:'del',id:id}}));
   _applyCrashReportsLocally([],ids);
   if(S&&S.scheduleRefresh)S.scheduleRefresh();
+  await _waitForCommit(_commitCrashReportOps(ids.map(function(id){return {t:'del',id:id}})),6000);
   return true;
 }
 /* Reconciles the whole collection against a complete desired array: writes every
