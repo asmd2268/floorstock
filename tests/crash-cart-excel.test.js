@@ -189,7 +189,6 @@ test('the crash cart print sheet and the department view follow the configured n
 });
 
 test('the Excel module is loaded by the app and gated by the capability, never by a role name', () => {
-  assert.match(read('main.js'), /modules\/86-crash-cart-excel-backup\.js/);
   const mod = read('modules/86-crash-cart-excel-backup.js');
   assert.match(mod, /fsHasCapability\('crashCart\.backup'\)/);
   assert.doesNotMatch(mod, /inpatient_supervisor|CU\.role/);
@@ -198,7 +197,24 @@ test('the Excel module is loaded by the app and gated by the capability, never b
   // The buttons belong to the page's own toolbar, not injected after the render.
   assert.doesNotMatch(mod, /__renderCrashCartsAfterExtensions|insertAdjacentElement|appendChild\(el\('div', \{ id: 'cc-excel-tools/);
   const page = read('modules/44-ccx-inventory-redesign-script.js');
+  // The page module imports the two actions; they are not published as window globals.
+  assert.match(page, /import \{ ccExcelBackup, ccExcelRestore \} from '\.\/86-crash-cart-excel-backup\.js/);
+  assert.doesNotMatch(mod, /window\.ccExcel(Backup|Restore)\s*=/);
   assert.match(page, /id="ccx-excel-backup"/);
   assert.match(page, /id="ccx-excel-restore"/);
   assert.match(page, /fsHasCapability\('crashCart\.backup'\)/);
+});
+
+test('crashCarts() hands out a copy, so an editor can never change the cache it is later compared with', () => {
+  /* Every trolley editor reads the trolleys, changes one in place and saves the
+     whole list. Saving is by DIFF against the cache (core/row-merge-write.js);
+     if the editor had changed the cached objects themselves, "before" and "after"
+     were the same thing, the diff was empty and nothing was written — the screen
+     showed the new expiry date, the server kept the old one, and the old date came
+     back with the next snapshot. */
+  const src = read('modules/07j-controlled-module-enhancements.js');
+  const line = src.split('\n').find((l) => l.startsWith('function crashCarts()'));
+  assert.ok(line, 'crashCarts() must exist');
+  assert.match(line, /structuredClone\(rows\)/);
+  assert.doesNotMatch(line, /return S\.g\('crash_carts'\)\|\|\[\]\}/);
 });

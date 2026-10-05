@@ -73,8 +73,7 @@ function polishDepartment(){
  (typeof crashCarts==='function'?(crashCarts()||[]):[]).filter(function(c){return String(c.deptId)===String(CU.deptId)}).forEach(function(c){
   var card=Array.from(document.querySelectorAll('#crash-list .crash-cart-card')).find(function(x){return (x.textContent||'').indexOf(String(c.name||''))>-1});if(!card)return;
   var ordered=['up','down'].reduce(function(a,sec){return a.concat((c.items||[]).filter(function(it){return String(it.section||'up')===sec}))},[]),rows=Array.from(card.querySelectorAll('tbody tr')).filter(function(tr){return !tr.classList.contains('crash-section-label')});
-  var nearDays=currentExpiryThresholds().nearDays;
-  rows.forEach(function(tr,i){var it=ordered[i];if(!it)return;var days=(it.batches||[]).map(function(b){var dt=new Date(String(b.expiry||'')+'T00:00:00');return isNaN(dt)?999999:Math.floor((dt-today)/86400000)});tr.classList.remove('v16-exp-soon','v16-exp-expired');if(days.some(function(d){return d<0}))tr.classList.add('v16-exp-expired');else if(days.some(function(d){return d>=0&&d<=nearDays}))tr.classList.add('v16-exp-soon')})
+  rows.forEach(function(tr,i){var nearDays=currentExpiryThresholds().nearDays,it=ordered[i];if(!it)return;var days=(it.batches||[]).map(function(b){var dt=new Date(String(b.expiry||'')+'T00:00:00');return isNaN(dt)?999999:Math.floor((dt-today)/86400000)});tr.classList.remove('v16-exp-soon','v16-exp-expired');if(days.some(function(d){return d<0}))tr.classList.add('v16-exp-expired');else if(days.some(function(d){return d>=0&&d<=nearDays}))tr.classList.add('v16-exp-soon')})
  })
 }
 

@@ -717,8 +717,7 @@ window.crashPrint=function(id){
   if(!c){if(typeof toast==='function')toast('Crash Cart not found.','err');return false}
   function e(v){return String(v==null?'':v).replace(/[&<>"']/g,function(ch){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]})}
   function q(v){var x=Number(v);return isFinite(x)?x:0}
-  var printRules=rules();
-  function near30(item){return (item.batches||[]).some(function(batch){var days=daysUntil(batch&&batch.expiry);return days!==null&&days>=0&&days<=printRules.nearDays})}
+  var printRules=rules();function near30(item){return (item.batches||[]).some(function(batch){var days=daysUntil(batch&&batch.expiry);return days!==null&&days>=0&&days<=printRules.nearDays})}
   function status(item){var required=q(item.qty),available=q(item.present==null?item.qty:item.present);return available<=0?'Out of stock':(available<required?'Less than required':'Available')}
   var reports=typeof crashReports==='function'?(crashReports()||[]):[],closed=reports.filter(function(r){return String(r.cartId)===String(c.id)&&r.status==='closed'}).sort(function(a,b){return String(b.closedAt||b.lastEditedAt||b.openedAt||'').localeCompare(String(a.closedAt||a.lastEditedAt||a.openedAt||''))})[0]||{};
   var actorInfo=typeof window.fsActor==='function'?window.fsActor():{},printUser=actorInfo.name||actorInfo.user||(window.CU&&(CU.username||CU.email))||'Unknown user';
