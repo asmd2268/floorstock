@@ -63,3 +63,40 @@ test('the label escapes what it is given', () => {
   const label = crashCartSealLabel(info, (v) => v, (v) => String(v).replace(/</g, '&lt;'));
   assert.ok(!label.includes('<b>'));
 });
+
+import { findSealConflict } from '../public/assets/js/core/crash-cart-seal-info.js';
+
+const carts = [
+  { id: 'c1', name: 'ER Cart', seal: 'G065492' },
+  { id: 'c2', name: 'ICU Cart', seal: 'R200001' }
+];
+
+test('restoring a cart to its own last closure seal is allowed even when a later report of the same cart mentions it', () => {
+  const reports = [
+    { cartId: 'c1', status: 'closed', oldSeal: 'A1', newSeal: 'R100273', closedAt: '2026-09-30T08:00:00.000Z' },
+    // later: accepted without fitting a new seal, so it still names the seal it found
+    { cartId: 'c1', status: 'accepted', oldSeal: 'R100273', newSeal: '', createdAt: '2026-10-02T08:00:00.000Z' }
+  ];
+  assert.equal(findSealConflict('r100273', 'c1', carts, reports), null);
+});
+
+test('another cart\'s current seal and another cart\'s history still block, and say where', () => {
+  const reports = [{ cartId: 'c2', status: 'closed', oldSeal: 'X9', newSeal: 'R100273', closedAt: '2026-09-01T00:00:00.000Z' }];
+  const hit = findSealConflict('R100273', 'c1', carts, reports);
+  assert.equal(hit.where, 'seal-history');
+  assert.equal(hit.cart, 'ICU Cart');
+  assert.equal(findSealConflict('R200001', 'c1', carts, []).where, 'another-cart');
+});
+
+test('a number from this cart\'s OLDER history is still blocked — only the latest closure seal may be restored', () => {
+  const reports = [
+    { cartId: 'c1', status: 'closed', oldSeal: 'A0', newSeal: 'OLD111', closedAt: '2026-08-01T00:00:00.000Z' },
+    { cartId: 'c1', status: 'closed', oldSeal: 'OLD111', newSeal: 'R100273', closedAt: '2026-09-30T08:00:00.000Z' }
+  ];
+  assert.equal(findSealConflict('OLD111', 'c1', carts, reports).where, 'seal-history');
+  assert.equal(findSealConflict('R100273', 'c1', carts, reports), null);
+});
+
+test('a blank seal is never a conflict', () => {
+  assert.equal(findSealConflict('  ', 'c1', carts, [{ cartId: 'c2', oldSeal: '', newSeal: '' }]), null);
+});

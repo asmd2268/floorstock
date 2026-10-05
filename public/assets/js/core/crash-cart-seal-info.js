@@ -94,4 +94,43 @@ export function crashCartSealLabel(info, format, esc) {
   return e(info.seal);
 }
 
-Object.assign(globalThis, { crashCartSealInfo, crashCartSealLabel });
+/* Is this seal number already taken?  Returns null when it is free, otherwise
+   { where: 'another-cart' | 'seal-history', cart, report } saying WHERE it was
+   found, so the person is told which cart or report holds it instead of an
+   anonymous "seal history".
+
+   A seal number must not be reused, with one exception that is the whole point of
+   putting a cart back to its last closure: that closing report's own number. For
+   that number the cart's OWN reports are not a conflict. A report that came after
+   the closure and recorded the same number as the seal it broke (one that was
+   accepted or rejected without fitting a new seal, say) still describes the same
+   physical seal, so it does not make it "used". Other carts' records, and any
+   other number in this cart's history, still block. */
+export function findSealConflict(newSeal, cartId, carts, reports) {
+  const key = text(newSeal).toLowerCase();
+  if (!key) return null;
+  const mine = String(cartId);
+  const cartName = (id) => {
+    const c = (carts || []).find((x) => String(x.id) === String(id));
+    return c ? text(c.name || c.number || c.id) : text(id);
+  };
+  const other = (carts || []).find((c) => String(c.id) !== mine && text(c.seal).toLowerCase() === key);
+  if (other) return { where: 'another-cart', cart: text(other.name || other.number || other.id), report: null };
+
+  const own = (reports || []).filter((r) => String(r.cartId) === mine);
+  const ownLast = own
+    .filter((r) => r.status === 'closed' && text(r.newSeal))
+    .sort((a, b) => text(b.closedAt || b.lastEditedAt).localeCompare(text(a.closedAt || a.lastEditedAt)))[0];
+  const restoringOwnLast = !!ownLast && text(ownLast.newSeal).toLowerCase() === key;
+
+  for (const r of reports || []) {
+    const isMine = String(r.cartId) === mine;
+    if (isMine && restoringOwnLast) continue;
+    if ([r.oldSeal, r.newSeal].some((value) => text(value).toLowerCase() === key)) {
+      return { where: 'seal-history', cart: cartName(r.cartId), report: r };
+    }
+  }
+  return null;
+}
+
+Object.assign(globalThis, { crashCartSealInfo, crashCartSealLabel, findSealConflict });

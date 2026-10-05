@@ -1,4 +1,5 @@
 import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=234c1ff934';
+import { findSealConflict } from '../core/crash-cart-seal-info.js?v=b0499be037';
 (function(){
 'use strict';
 
@@ -100,23 +101,13 @@ function ensureSealModal(){
   E('r664-seal-save').onclick=saveSealCorrection;
 }
 function usedSeal(newSeal,cartId){
-  var key=String(newSeal||'').trim().toLowerCase(),found='';
-  if(!key)return '';
   var carts=typeof window.crashCarts==='function'?(crashCarts()||[]):[];
-  carts.forEach(function(c){if(!found&&String(c.id)!==String(cartId)&&String(c.seal||'').trim().toLowerCase()===key)found='another Crash Cart'});
   var reports=typeof window.crashReports==='function'?(crashReports()||[]):[];
-  /* Putting a cart back to the seal its OWN last closure recorded is the whole
-     point of a correction, so that one number is not "history" for that cart.
-     Every other recorded seal — other carts' and this cart's older ones — still
-     blocks, because a seal number must not be reused. */
-  var ownLast=reports.filter(function(r){return String(r.cartId)===String(cartId)&&r.status==='closed'&&String(r.newSeal||'').trim()})
-    .sort(function(a,b){return String(b.closedAt||b.lastEditedAt||'').localeCompare(String(a.closedAt||a.lastEditedAt||''))})[0];
-  var ownLastSeal=ownLast?String(ownLast.newSeal||'').trim().toLowerCase():'';
-  reports.forEach(function(r){if(found)return;[r.oldSeal,r.newSeal].forEach(function(s){
-    if(found||String(s||'').trim().toLowerCase()!==key)return;
-    if(ownLast&&r===ownLast&&s===r.newSeal&&key===ownLastSeal)return;
-    found='the seal history'})});
-  return found;
+  var hit=findSealConflict(newSeal,cartId,carts,reports);
+  if(!hit)return '';
+  if(hit.where==='another-cart')return 'another Crash Cart ('+hit.cart+')';
+  var r=hit.report||{},when=String(r.closedAt||r.lastEditedAt||r.createdAt||r.submittedAt||'').slice(0,10);
+  return 'the seal history — '+hit.cart+(when?' · '+when:'')+(r.status?' · '+r.status:'');
 }
 window.r664OpenSealCorrection=function(cartId){
   if(!actualMaster())return toast('Only the actual Master can correct a recorded seal.','err');
