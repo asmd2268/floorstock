@@ -1,5 +1,6 @@
 import { medNorm, medIdentity, sameMedicine, medicationRuleFor } from '../core/medication-identity.js?v=9e607912c7';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { orderForNewMed } from '../core/med-order.js?v=28cc5ad4eb';
 
 // ── MEDICATION / EXPIRY / SHELF CRUD HELPERS ────────────────────────────
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module
@@ -22,7 +23,7 @@ function fsR17NormalizeMeds(arr){var ids={},changed=false;var out=(Array.isArray
 function getMeds(deptId){var raw=S.g('meds_'+deptId)||[],n=fsR17NormalizeMeds(raw);if(n.changed&&!FS_R17_MED_MIGRATION_PENDING[deptId]){FS_R17_MED_MIGRATION_PENDING[deptId]=1;setTimeout(function(){S.s('meds_'+deptId,n.rows).catch(function(e){console.warn('Medication identity migration failed',deptId,e)}).finally(function(){delete FS_R17_MED_MIGRATION_PENDING[deptId]})},0)}return n.rows}
 /* Fail closed until the authoritative R6.64 inventory safety gateway is installed. */
 function setMeds(deptId,rows){var gateway=globalThis.inventorySafetySetMeds;if(typeof gateway==='function')return gateway(deptId,rows);return Promise.reject(new Error('Inventory safety gateway is not initialized.'))}
-function pushMed(deptId,v){var arr=getMeds(deptId).slice(),max=arr.reduce(function(a,m){return Math.max(a,Number(m.sortOrder)||0)},0);v=fsR17NormalizeMed(Object.assign({},v||{},{id:(v&&v.id)||fsR17MedId(),sortOrder:(v&&isFinite(Number(v.sortOrder)))?Number(v.sortOrder):max+100,createdAt:(v&&v.createdAt)||fsR17Now()}),arr.length);arr.push(v);return setMeds(deptId,arr).then(function(){return v})}
+function pushMed(deptId,v){var arr=getMeds(deptId).slice(),max=arr.reduce(function(a,m){return Math.max(a,Number(m.sortOrder)||0)},0);v=fsR17NormalizeMed(Object.assign({},v||{},{id:(v&&v.id)||fsR17MedId(),sortOrder:(v&&isFinite(Number(v.sortOrder)))?Number(v.sortOrder):orderForNewMed(arr,v),createdAt:(v&&v.createdAt)||fsR17Now()}),arr.length);arr.push(v);return setMeds(deptId,arr).then(function(){return v})}
 function updMed(deptId,id,d){var arr=getMeds(deptId).slice(),i=arr.findIndex(function(x){return String(x.id)===String(id)});if(i<0)return Promise.resolve(false);var old=arr[i],next=Object.assign({},old,d||{},{id:old.id,medId:old.id,sortOrder:old.sortOrder,updatedAt:fsR17Now()});if(d&&d.name&&fsR17MedNorm(d.name)!==fsR17MedNorm(old.name))next.aliases=fsR17UniqueNames((old.aliases||[]).concat([old.name]));arr[i]=fsR17NormalizeMed(next,i);return setMeds(deptId,arr).then(function(){return true})}
 function delMed(deptId,id){return setMeds(deptId,getMeds(deptId).filter(function(x){return String(x.id)!==String(id)}))}
 var fsR17SameMedicine=sameMedicine;

@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';import { alphabeticalOrder, isRecentlyAdded } from '../core/med-order.js?v=28cc5ad4eb';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import { normalizeRole } from '../core/role-capabilities.js?v=234c1ff934';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c146809fa9';
@@ -465,7 +465,7 @@ function renderInv(){
   }
   var deptId=getInvDept();
   var ms=deptId?getMeds(deptId):[];
-  ms.sort(function(a,b){return Number(a.sortOrder||0)-Number(b.sortOrder||0)});
+  ms.sort(function(a,b){return Number(a.sortOrder||0)-Number(b.sortOrder||0)});var canMark=!!(window.fsHasCapability&&window.fsHasCapability('inventory.manage')),alphaBtn=el('inv-alpha-btn');if(alphaBtn)alphaBtn.style.display=canMark?'':'none';
 
   var srch=(el('isrch')||{value:''}).value.toLowerCase();
   var catf=(el('icatf')||{value:''}).value;
@@ -544,7 +544,7 @@ function renderInv(){
       html+='<tr class="'+rowCls(m)+'" id="inv-row-'+m.id+'">'
         +'<td style="padding:4px 8px"><input type="checkbox" class="inv-chk" data-id="'+m.id+'" data-changeact="onInvCheck"></td>'
         +'<td style="text-align:center;font-family:var(--mono);font-weight:600">'+medNumber+'</td>'
-        +'<td style="font-weight:500">'+m.name+'</td>'
+        +'<td style="font-weight:500">'+m.name+(canMark&&isRecentlyAdded(m)?' <span class="chip" style="background:var(--ac);color:#fff;font-size:10px" title="Added in the last 7 days / أُضيف خلال آخر 7 أيام">NEW / جديد</span>':'')+'</td>'
         +'<td><span class="chip">'+m.category+'</span></td>'
         +'<td>'+bdg(m)+'</td>'
         +'<td style="text-align:center;font-family:var(--mono)">'+m.min+'</td>'
@@ -662,7 +662,7 @@ async function deleteSelected(){
 
 /* Installed once at module load — a render-time install leaves the control dead
    on any screen reached without that render. This module owns the showPg action. */
-function f03InstallActions(root){if(!root)return;installActions(root,{showPg:function(el){if(typeof showPg==='function')showPg(el.dataset.a1)},moveDrugOrderUp:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,-1)},moveDrugOrderDown:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,1)},openEditDrug:function(el){openEditDrug(el.dataset.id,el.dataset.dept)},delDrug:function(el){delDrug(el.dataset.id,el.dataset.dept)}},{event:'click',attribute:'clickact'});
+function f03InstallActions(root){if(!root)return;installActions(root,{showPg:function(el){if(typeof showPg==='function')showPg(el.dataset.a1)},sortInvAlpha:async function(){var deptId=getInvDept();if(!deptId||!(window.fsHasCapability&&window.fsHasCapability('inventory.manage')))return;if(!await uiConfirm('Sort every category A→Z? Any manual order is replaced. / ترتيب كل التصنيفات أبجدياً؟ سيُستبدل الترتيب اليدوي.'))return;try{await setMeds(deptId,alphabeticalOrder(getMeds(deptId)));renderInv();toast('Sorted A→Z ✓ / تم الترتيب الأبجدي','succ')}catch(err){console.error(err);toast('Sorting was not saved. Please retry. / لم يُحفظ الترتيب','err')}},moveDrugOrderUp:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,-1)},moveDrugOrderDown:function(el){if(typeof window.moveDrugOrder==='function')window.moveDrugOrder(el.dataset.id,el.dataset.dept,1)},openEditDrug:function(el){openEditDrug(el.dataset.id,el.dataset.dept)},delDrug:function(el){delDrug(el.dataset.id,el.dataset.dept)}},{event:'click',attribute:'clickact'});
 /* onInvCheck معرَّفة في 07i — declared in 07i-misc-features.js, a different module
    scope, so it is reached through window (published there) and never as a bare name. */
 installActions(root,{onInvCheck:function(){if(typeof window.onInvCheck==='function')window.onInvCheck()}},{event:'change',attribute:'changeact'});}
