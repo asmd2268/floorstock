@@ -1,4 +1,4 @@
-import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';import { alphabeticalOrder, isRecentlyAdded } from '../core/med-order.js?v=28cc5ad4eb';
+import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';import { alphabeticalOrder, isRecentlyAdded } from '../core/med-order.js?v=65f045abae';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import { normalizeRole } from '../core/role-capabilities.js?v=234c1ff934';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c146809fa9';

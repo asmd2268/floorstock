@@ -58,3 +58,13 @@ test('"new" lasts a week from creation', () => {
   assert.equal(isRecentlyAdded({ createdAt: '' }, now), false);
   assert.equal(isRecentlyAdded({}, now), false);
 });
+
+import { moveInCategory } from '../public/assets/js/core/med-order.js';
+test('arrows move a medicine even when sortOrder values are equal or missing', () => {
+  const meds = [med('1', 'A', 'Injections', 100), med('2', 'B', 'Injections', 100), med('3', 'C', 'Injections', undefined), med('4', 'X', 'Inhalers', 100)];
+  const up = moveInCategory(meds, '3', -1);
+  assert.deepEqual(listed(up, 'Injections'), ['A', 'C', 'B']);
+  assert.equal(up.find((m) => m.id === '4').sortOrder, 100);
+  assert.deepEqual(listed(moveInCategory(up, '3', -1), 'Injections'), ['C', 'A', 'B']);
+  assert.deepEqual(listed(moveInCategory(up, '3', -1).concat(), 'Injections').length, 3);
+});

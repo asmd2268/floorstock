@@ -54,3 +54,22 @@ export function isRecentlyAdded(med, now = Date.now()) {
   const at = Date.parse(med && med.createdAt);
   return Number.isFinite(at) && now - at >= -86400000 && now - at < NEW_BADGE_DAYS * 86400000;
 }
+
+/* One step up (dir<0) or down (dir>0) inside the medicine's own category.
+   The category is renumbered first, so equal or missing sortOrder values can never make a move do nothing. */
+export function moveInCategory(meds, id, dir) {
+  const rows = meds.map((m) => Object.assign({}, m));
+  const me = rows.find((m) => String(m.id) === String(id));
+  if (!me) return rows;
+  const inCat = rows.filter((m) => m.category === me.category);
+  const pos = (m) => (Number.isFinite(Number(m.sortOrder)) ? Number(m.sortOrder) : Infinity);
+  inCat.sort((a, b) => pos(a) - pos(b));
+  const from = inCat.indexOf(me);
+  const to = from + (dir < 0 ? -1 : 1);
+  if (to < 0 || to >= inCat.length) return rows;
+  const slots = inCat.map((m) => pos(m)).filter(Number.isFinite).sort((a, b) => a - b);
+  const base = slots.length === inCat.length && new Set(slots).size === slots.length ? slots : inCat.map((_, i) => (i + 1) * 100);
+  [inCat[from], inCat[to]] = [inCat[to], inCat[from]];
+  inCat.forEach((m, i) => { m.sortOrder = base[i]; });
+  return rows;
+}

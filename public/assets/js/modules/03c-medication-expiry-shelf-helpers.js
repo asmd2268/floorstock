@@ -1,6 +1,6 @@
 import { medNorm, medIdentity, sameMedicine, medicationRuleFor } from '../core/medication-identity.js?v=9e607912c7';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-import { orderForNewMed } from '../core/med-order.js?v=28cc5ad4eb';
+import { orderForNewMed, moveInCategory } from '../core/med-order.js?v=65f045abae';
 
 // ── MEDICATION / EXPIRY / SHELF CRUD HELPERS ────────────────────────────
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module
@@ -30,7 +30,7 @@ var fsR17SameMedicine=sameMedicine;
 window.fsR17FindCorrespondingMedicine=function(source,deptId){return getMeds(deptId).find(function(m){return fsR17SameMedicine(source,m)})||null};
 window.fsR17MedicationRuleFor=medicationRuleFor;
 window.fsR17RuleScopeLabel=function(rule){if(!rule)return '';if(rule.allDepartments===true||rule.deptIds==='all')return 'All departments';var ids=(rule.departmentIds||rule.deptIds||[]).map(String),names=ids.map(function(id){var d=(typeof gd==='function'?gd():[]).find(function(x){return String(x.id)===id});return d?d.name:id});return names.length?names.join(', '):'No department'};
-window.moveDrugOrder=async function(id,deptId,dir){var all=getMeds(deptId).slice().sort(function(a,b){return Number(a.sortOrder)-Number(b.sortOrder)}),idx=all.findIndex(function(m){return String(m.id)===String(id)});if(idx<0)return;var step=dir<0?-1:1,j=idx+step;while(j>=0&&j<all.length&&all[j].category!==all[idx].category)j+=step;if(j<0||j>=all.length)return;var x=all[idx].sortOrder;all[idx].sortOrder=all[j].sortOrder;all[j].sortOrder=x;await setMeds(deptId,all);if(typeof renderInv==='function')renderInv()};
+window.moveDrugOrder=async function(id,deptId,dir){await setMeds(deptId,moveInCategory(getMeds(deptId),id,dir));if(typeof renderInv==='function')renderInv()};
 window.fsR17RefreshMedicationReferences=async function(deptId,medId,oldName,newName){var tasks=[];if(typeof getExpiry==='function'&&typeof setExpiry==='function'){var exp=getExpiry(deptId),changed=false,next=exp.map(function(x){if(String(x.medId)===String(medId)){changed=true;return Object.assign({},x,{medName:newName})}return x});if(changed)tasks.push(setExpiry(deptId,next))}if(typeof crashCarts==='function'&&typeof setCrashCarts==='function'){var carts=JSON.parse(JSON.stringify(crashCarts()||[])),cartChanged=false;carts.forEach(function(c){if(String(c.deptId)!==String(deptId))return;(c.items||[]).forEach(function(it){if(String(it.medId||'')===String(medId)||fsR17MedNorm(it.name)===fsR17MedNorm(oldName)){it.medId=medId;it.name=newName;it.genericName=newName;cartChanged=true}})});if(cartChanged)tasks.push(setCrashCarts(carts))}for(var z=0;z<2;z++){var key=z?'medication_freeze_rules_v3':'medication_visibility_rules_v3',map=Object.assign({},S.g(key)||{}),rk='med:'+medId;if(map[rk]){map[rk]=Object.assign({},map[rk],{medId:medId,name:newName,updatedAt:fsR17Now()});tasks.push(S.s(key,map))}}await Promise.all(tasks)};
 // fsR17MigrateMedicationIdentity: module 40 permanently disables this on login
 // ("No login-time inventory mutation is permitted.") alongside window.seed and
