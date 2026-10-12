@@ -68,3 +68,11 @@ test('arrows move a medicine even when sortOrder values are equal or missing', (
   assert.deepEqual(listed(moveInCategory(up, '3', -1), 'Injections'), ['C', 'A', 'B']);
   assert.deepEqual(listed(moveInCategory(up, '3', -1).concat(), 'Injections').length, 3);
 });
+
+import { readFileSync } from 'node:fs';
+test('the A→Z button sits in the inventory toolbar, not inside the duplicates banner that is hidden by default', () => {
+  const html = readFileSync(new URL('../public/index.html', import.meta.url), 'utf8');
+  const banner = html.slice(html.indexOf('id="dup-banner"'), html.indexOf('id="bulk-bar"'));
+  assert.ok(!banner.includes('inv-alpha-btn'));
+  assert.ok(html.indexOf('inv-alpha-btn') > html.indexOf('id="pg-inv"') && html.indexOf('inv-alpha-btn') < html.indexOf('id="bulk-bar"'));
+});
