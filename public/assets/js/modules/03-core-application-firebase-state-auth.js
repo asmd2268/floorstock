@@ -1,6 +1,6 @@
 import { stateKeysForProfile, isPharmacyScopedProfile, uniqueKeys } from '../core/state-read-scope.js?v=af02f1361f';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-
+import { waitUpTo } from '../core/timing.js?v=5f574f9ba7';
 import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=234c1ff934';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
@@ -9,7 +9,7 @@ import {
   fulfillmentEditReason
 } from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
 import { loadScriptOnce } from '../core/script-loader.js?v=5e8c0b2d04';
-import { debounce } from '../core/timing.js?v=e4cf678c0c';
+import { debounce } from '../core/timing.js?v=5f574f9ba7';
 import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=e6374b4039';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
 import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
@@ -806,13 +806,7 @@ async function ensureGeoAllowed(){
     return;
   }
   try{
-    // A weak connection must not hold every first write hostage to this check:
-    // wait a few seconds at most, then fail open exactly as for any other failure.
-    var result=await Promise.race([
-      fsCallFunction('checkGeoAllowed',{}),
-      new Promise(function(resolve){setTimeout(function(){resolve(null)},4000)})
-    ]);
-    if(result===null)throw new Error('Geo write check timed out.');
+    var result=await waitUpTo(fsCallFunction('checkGeoAllowed',{}),4000);if(result==='slow')throw new Error('Geo write check timed out.'); /* a weak link must not hold every first write hostage: fail open after 4 s */
     var allowed=!!(result&&result.allowed);
     globalThis._geoWriteCheckCache={allowed:allowed,checkedAt:now};
     if(!allowed)throw new Error('Writing is restricted to Saudi Arabia. / الكتابة مقيّدة جغرافياً بالسعودية.');

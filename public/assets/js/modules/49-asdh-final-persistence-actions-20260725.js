@@ -62,8 +62,7 @@ window.submitReq=async function(){
     var monthly=typeof getMonthlyLimit==='function'?getMonthlyLimit(CU.deptId):null;if(monthly!==null&&typeof getMonthlyReqCount==='function'&&getMonthlyReqCount(CU.deptId)>=monthly)return toast('Monthly request limit reached ('+monthly+'/month). Contact pharmacy.','err');
     if(typeof window.checkRequestCountLimits==='function'){var countLimit=window.checkRequestCountLimits(CU.deptId);if(countLimit&&countLimit.blocked)return toast(countLimit.reason,'err')}
   }
-  var requestMeds=(typeof getMeds==='function'?getMeds(CU.deptId):[])||[];
-  var items=Array.from(document.querySelectorAll('.rqi')).filter(function(i){return Number(i.value)>0}).map(function(i){var med=requestMeds.find(function(x){return String(x.id)===String(i.dataset.mid)});return {medId:i.dataset.mid,qty:Number(i.value),name:med&&med.name?String(med.name):''}});
+  var requestMeds=(typeof getMeds==='function'?getMeds(CU.deptId):[])||[],items=Array.from(document.querySelectorAll('.rqi')).filter(function(i){return Number(i.value)>0}).map(function(i){var med=requestMeds.find(function(x){return String(x.id)===String(i.dataset.mid)});return {medId:i.dataset.mid,qty:Number(i.value),name:med&&med.name?String(med.name):''}});
   if(!items.length)return toast('Enter at least one quantity','err');
   var nextDispense=typeof getNextDispSlot==='function'?getNextDispSlot(CU.deptId):null,btn=document.querySelector('#pg-newreq button[data-asdh-binding="b047"]');
   requestSaving=true;if(btn){btn.disabled=true;btn.dataset.oldText=btn.textContent;btn.textContent='Saving… / جاري الحفظ'}
@@ -371,7 +370,7 @@ window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDef
 import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=df8094448c';
 import { saveReceivedExpiry } from '../core/receive-expiry-dialog.js?v=ef6827a3ad';
 import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
-
+import { crashCartSealInfo, crashCartSealLabel } from '../core/crash-cart-seal-info.js?v=1d24b15bf6';
 (function(){
 'use strict';
 var VERSION='R6.75.0';

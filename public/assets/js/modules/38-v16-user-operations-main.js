@@ -20,7 +20,6 @@ function applies(info,dept){return !!(info&&(info.allDepartments===true||info.de
 function findRule(map,m,dept){return typeof window.fsR17MedicationRuleFor==='function'?window.fsR17MedicationRuleFor(map,m,dept):null}
 function deptChecks(prefix){return '<label class="ops-scope-all"><input id="'+prefix+'-all" type="checkbox" data-changeact="v16ToggleScope" data-a1="'+prefix+'"> All departments / جميع الأقسام</label>'+(typeof gd==='function'?(gd()||[]):[]).map(function(d){return '<label><input class="'+prefix+'-dept" type="checkbox" value="'+esc(d.id)+'"> '+esc(d.name||d.id)+'</label>'}).join('')}
 function v16ToggleScope(prefix,on){document.querySelectorAll('.'+prefix+'-dept').forEach(function(x){x.checked=on})};
-
 /* Inventory permissions and controls */
 function ensureInventoryTools(){
  if(!mgr())return;

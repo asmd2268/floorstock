@@ -1,5 +1,6 @@
 import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
 import { ccExcelBackup, ccExcelRestore } from './86-crash-cart-excel-backup.js?v=5f9b13a834';
+import { crashCartSealInfo, crashCartSealLabel } from '../core/crash-cart-seal-info.js?v=1d24b15bf6';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 (function(){
 'use strict';

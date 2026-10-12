@@ -133,4 +133,3 @@ export function findSealConflict(newSeal, cartId, carts, reports) {
   return null;
 }
 
-Object.assign(globalThis, { crashCartSealInfo, crashCartSealLabel });

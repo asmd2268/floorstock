@@ -3,7 +3,7 @@ import { earliestDays, controlledStatus } from '../core/controlled-stock-status.
 import { normalizeCode, rowsFromTextItems, dedupeRows, findMedicineByCode } from '../core/receipt-pdf-rows.js?v=cbbd054b27';
 import { recordedBatchQuantities, reconcileBatchQuantities } from '../core/controlled-batch-consumption.js?v=80230e0fce';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
-
+import { waitUpTo } from '../core/timing.js?v=5f574f9ba7';
 // ── CONTROLLED MODULE ENHANCEMENTS: unified stock, PDF receipt import,
 // batch editor v6, dispensing, analytics, print suite, department shelf
 // medication database, role/permission helpers, crash-cart accessors ───
@@ -595,20 +595,12 @@ async function _commitCrashReportOps(ops){
   }
 }
 /* Saves one report — or a handful the caller actually changed. */
-/* The write is already in the SDK's offline queue once commit() is called, so a
-   slow acknowledgement is not a failure. Wait a few seconds for it, then let the
-   caller carry on; a real rejection (permissions, validation) still throws. */
-function _waitForCommit(promise,ms){
-  var timer;
-  var slow=new Promise(function(resolve){timer=setTimeout(function(){resolve('slow')},ms)});
-  return Promise.race([promise,slow]).then(function(v){clearTimeout(timer);return v},function(e){clearTimeout(timer);throw e});
-}
 async function saveCrashReport(reports){
   var rows=(Array.isArray(reports)?reports:[reports]).filter(function(r){return r&&r.id});
   if(!rows.length)return rows;
   _applyCrashReportsLocally(rows,[]);
   if(S&&S.scheduleRefresh)S.scheduleRefresh();
-  await _waitForCommit(_commitCrashReportOps(rows.map(function(r){return {t:'set',id:String(r.id),d:r}})),6000);
+  await waitUpTo(_commitCrashReportOps(rows.map(function(r){return {t:'set',id:String(r.id),d:r}})),6000);
   return rows;
 }
 async function deleteCrashReport(reportIds){
@@ -616,7 +608,7 @@ async function deleteCrashReport(reportIds){
   if(!ids.length)return false;
   _applyCrashReportsLocally([],ids);
   if(S&&S.scheduleRefresh)S.scheduleRefresh();
-  await _waitForCommit(_commitCrashReportOps(ids.map(function(id){return {t:'del',id:id}})),6000);
+  await waitUpTo(_commitCrashReportOps(ids.map(function(id){return {t:'del',id:id}})),6000);
   return true;
 }
 /* Reconciles the whole collection against a complete desired array: writes every
