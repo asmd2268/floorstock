@@ -16,6 +16,8 @@
    fixed delay whatever happened — a page whose images never resolve must still
    reach the print dialogue. `d`/`done` guards the three against printing twice. */
 
+import { toLatinDigits } from './latin-digits.js?v=36b6915648';
+
 const AUTO_PRINT = '<' + 'script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print()}'
   + 'if(document.readyState==="complete")setTimeout(g,300);'
   + 'else window.addEventListener("load",function(){setTimeout(g,300)},{once:true});'
@@ -24,7 +26,7 @@ const AUTO_PRINT = '<' + 'script>(function(){var d=false;function g(){if(d)retur
 /* Some callers open the window during the user's click — a popup blocker will
    not allow it later — and park it here for whatever produces the document. */
 export function openBlobPrint(fullHtml) {
-  const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+  const blob = new Blob([toLatinDigits(fullHtml)], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const parked = globalThis.__preOpenedPW;
   if (parked && !parked.closed) {

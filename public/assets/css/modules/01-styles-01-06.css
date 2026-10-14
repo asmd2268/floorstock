@@ -484,7 +484,7 @@ tr.rha.rhz:hover td{
 .ctl-pdf-review{max-height:440px;overflow:auto;border:1px solid var(--bd);border-radius:8px}
 .ctl-pdf-review table{table-layout:fixed;min-width:920px}
 .ctl-pdf-review th,.ctl-pdf-review td{padding:6px 7px;font-size:11px;vertical-align:middle}
-.ctl-pdf-review input[type=number],.ctl-pdf-review input[type=date]{margin:0;padding:5px 6px;font-size:11px}
+.ctl-pdf-review input[type=number],.ctl-pdf-review input[type=date],.ctl-pdf-review input[data-latin-number],.ctl-pdf-review input[data-latin-date]{margin:0;padding:5px 6px;font-size:11px}
 .ctl-pdf-review input[type=checkbox]{width:16px;height:16px;margin:0}
 .ctl-pdf-match-ok{background:rgba(46,160,67,.08)}
 .ctl-pdf-match-miss{background:rgba(218,54,51,.08)}

@@ -1,4 +1,4 @@
-import { printFullDocument } from '../core/print-window.js?v=7e3e2088a2';
+import { printFullDocument } from '../core/print-window.js?v=958ca6e29f';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 (function(){
 'use strict';

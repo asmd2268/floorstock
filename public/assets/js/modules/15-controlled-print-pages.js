@@ -1,4 +1,4 @@
-import { printDocument } from '../core/print-window.js?v=7e3e2088a2';
+import { printDocument } from '../core/print-window.js?v=958ca6e29f';
 (function(){
 
   /* One printer for the whole project: core/print-window.js opens a blob: URL.
