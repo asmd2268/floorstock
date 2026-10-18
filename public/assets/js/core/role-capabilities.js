@@ -49,6 +49,9 @@ const CAPABILITIES = Object.freeze({
   'requests.manage': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
   'schedule.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
   'schedule.manage': Object.freeze(['pharmacy']),
+  /* Block a department from ordering, or lift a block: Master, Pharmacy Director and the
+     Inpatient Pharmacy Supervisor (Master passes every capability). */
+  'requestBlocks.manage': Object.freeze(['pharmacy', 'inpatient_supervisor']),
   'crashCart.read': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor', 'department']),
   'crashCart.report': Object.freeze(['department']),
   'crashCart.operate': Object.freeze(['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor']),
@@ -140,6 +143,7 @@ const PAGE_ROLES = Object.freeze({
   'pg-inv': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
   'pg-pharm-inv': Object.freeze(['pharmacy', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
   'pg-reqs': CAPABILITIES['requests.manage'],
+  'pg-request-blocks': CAPABILITIES['requestBlocks.manage'],
   'pg-notes-ph': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
   'pg-print': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
   'pg-analytics': Object.freeze(['pharmacy', 'inpatient_supervisor']),
@@ -187,7 +191,7 @@ export function canWriteStateKey(profile, key) {
   if (value === 'theme' || value === 'user_activity_daily_v1') return true;
 
   if (role === 'inpatient_supervisor') {
-    return /^(crash_.*|accountability_.*|requests$|notes$|dept_notes$|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1$|deleted_request_audit_v4$|department_request_notifications_v1$|pharmacy_.*|inventory_.*|inventory_name_merge_history$|manual_medicine_merge_history_v1$|similar_medicine_separations_v1$|custom_categories$|facility_logo$|hidden_request_categories_v1$|global_request_freeze_v2$|medication_(visibility|freeze)_rules_v3$|theme$)/.test(value);
+    return /^(crash_.*|accountability_.*|requests$|notes$|dept_notes$|meds_.*|expiry_.*|shelves_.*|alerts_.*|request_analytics_summary_v1$|deleted_request_audit_v4$|department_request_notifications_v1$|pharmacy_.*|inventory_.*|inventory_name_merge_history$|manual_medicine_merge_history_v1$|similar_medicine_separations_v1$|custom_categories$|facility_logo$|hidden_request_categories_v1$|global_request_freeze_v2$|request_receive_blocks_v1$|medication_(visibility|freeze)_rules_v3$|theme$)/.test(value);
   }
   if (role === 'pharmacy_staff') {
     return /^(crash_carts$|crash_cart_reports$|accountability_.*|requests$|notes$|dept_notes$|request_analytics_summary_v1$|theme$)/.test(value);

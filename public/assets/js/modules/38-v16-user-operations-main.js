@@ -1,6 +1,6 @@
 import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
 import { selectedPrintIds, restorePrintSelection } from '../core/print-order-selection.js?v=42a613d169';
-import { openReceiveExpiryDialog } from '../core/receive-expiry-dialog.js?v=ef6827a3ad';
+import { openReceiveExpiryDialog } from '../core/receive-expiry-dialog.js?v=188c01c040';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 (function(){
 'use strict';
@@ -703,7 +703,7 @@ window.refreshRequestCountLimitWarning=function(){
 const E=globalThis.E;
 function classIcons(m){var h='<span class="v13-class-icons">';if(m&&m.high_alert)h+='<span class="v13-ci v13-ha" title="High Alert">HA</span>';if(m&&m.lasa)h+='<span class="v13-ci v13-lasa" title="LASA">LASA</span>';if(m&&m.refrigerated)h+='<span class="v13-ci v13-ref" title="Refrigerator">❄</span>';if(m&&m.hazard)h+='<span class="v13-ci v13-haz" title="Hazard">⚠</span>';return h+'</span>'}
 
-window.receiveFulfilledRequest=function(id){var req=(typeof gr==='function'?gr():[]).find(function(x){return x.id===id});if(!req||!window.CU||req.deptId!==CU.deptId)return toast('Request not available','err');var meds=getMeds(CU.deptId);openReceiveExpiryDialog(req,function(medId){var m=meds.find(function(x){return String(x.id)===String(medId)})||{};return {name:m.name||medId,badges:classIcons(m)}})};
+window.receiveFulfilledRequest=function(id){var req=(typeof gr==='function'?gr():[]).find(function(x){return x.id===id});if(!req||!window.CU||req.deptId!==CU.deptId)return toast('Request not available','err');var meds=getMeds(CU.deptId);openReceiveExpiryDialog(req,function(medId){var m=meds.find(function(x){return String(x.id)===String(medId)})||{};return {name:m.name||medId,badges:classIcons(m)}},getExpiry(CU.deptId)||[])};
 })();
 
 

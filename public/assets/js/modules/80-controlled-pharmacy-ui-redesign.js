@@ -1,7 +1,7 @@
 import { deductReported, addDatedQuantity, removeFromExpiry } from '../core/crash-cart-batch-math.js?v=714f0a8e83';
 import { crashResponseRowIssue, itemPresent, itemStandard, dateKey, datedBatches, quantityAtExpiry } from '../core/crash-response-validation.js?v=ae90e3cb8e';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
-import { canAccessPage } from '../core/role-capabilities.js?v=234c1ff934';
+import { canAccessPage } from '../core/role-capabilities.js?v=cc6a72d5b0';
 /* R6.76.88 — Controlled Medicines: complete redesign (stock/cabinets/departments) + drug-list print fix */
 (function(){
 'use strict';

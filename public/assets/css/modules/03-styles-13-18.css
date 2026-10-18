@@ -74,6 +74,16 @@ input[type="date"],input[data-latin-date]{direction:ltr!important;text-align:lef
 .v13-review{max-height:55vh;overflow:auto;border:1px solid var(--bd);border-radius:9px}
 .v13-review table{min-width:850px}
 .v13-review input,.v13-review select{margin:0}
+/* Receive: tick registered expiry dates, or add new ones — no quantity is typed. */
+.v13-review .v13-r-dates{min-width:360px}
+.v13-r-held{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px}
+.v13-r-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--bd);border-radius:999px;cursor:pointer;font-size:12px}
+.v13-r-chip:has(input:checked){border-color:var(--ac);background:rgba(0,150,136,.10);font-weight:700}
+.v13-r-chip-expired{border-style:dashed}
+.v13-r-chip input{width:auto;margin:0}
+.v13-r-newrow{display:flex;gap:6px;align-items:center;margin-bottom:6px;flex-wrap:wrap}
+.v13-r-newrow .v13-r-exp{max-width:160px}
+.v13-r-newrow .v13-r-lot{max-width:190px}
 .v13-class-icons{display:inline-flex;gap:4px;margin-inline-start:6px;vertical-align:middle}
 .v13-ci{display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 5px;border-radius:6px;font-size:10px;font-weight:800;border:1px solid}
 .v13-ha{color:var(--cls-ha-tx);background:rgba(var(--cls-ha-rgb),1);border-color:rgba(var(--cls-ha-rgb),.7)}

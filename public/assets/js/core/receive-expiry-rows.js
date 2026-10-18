@@ -1,68 +1,123 @@
-/* Turning what a department typed on the receipt screen into expiry records.
+/* Turning what a department chose on the receipt screen into expiry records.
 
-   A delivery of one medicine can arrive as more than one expiry date — two
-   boxes with different dates is the ordinary case — so the screen lets a person
-   add a date and split the quantity. This is where that split is checked.
+   The department does NOT type a quantity here. How many units were sent is the
+   pharmacy's fact, recorded when it dispensed the order; the ward only says
+   WHICH expiry dates the delivered stock carries. For each dispensed medicine it
+   either ticks dates the department already holds on its own expiry list, or adds
+   a date that is not there yet — and one delivery may carry several dates, so
+   both can be done more than once.
 
-   The parts must add up to what was received. Not fewer: the missing units
-   would sit in the department with no expiry recorded, which is exactly what
-   the expiry screen exists to prevent. Not more: the record would claim stock
-   nobody delivered.
+   What this module decides:
+   - every dispensed medicine needs at least one date, otherwise the delivery
+     would sit in the department with no expiry recorded, which is exactly what
+     the expiry screen exists to prevent;
+   - a date the department already holds is never written twice — ticking it and
+     typing it again are the same act, and the list's own normaliser would merge
+     the two and turn an unrecorded quantity into zero;
+   - a date added here is saved with qty null. Blank is UNRECORDED, never 0: on a
+     pharmacy register 0 asserts "none left" about stock the ward holds.
 
-   A row with no date and no quantity is someone who added a line and changed
-   their mind — dropped, not an error. A row with a quantity and no date is an
-   error, because that quantity has nowhere to live. */
+   A row with no date and no batch is someone who added a line and changed their
+   mind — dropped, not an error. A batch number with no date is an error, because
+   a batch with no expiry has nothing to attach to. */
 
-function num(value) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
+const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
-export function buildReceiveRecords(rows, { requestId = '', now = new Date().toISOString(), newId } = {}) {
-  const byMedicine = new Map();
-  (Array.isArray(rows) ? rows : []).forEach((row) => {
-    const medId = String((row && row.medId) || '');
-    if (!medId) return;
-    if (!byMedicine.has(medId)) byMedicine.set(medId, { received: num(row.received), lines: [] });
-    const entry = byMedicine.get(medId);
-    /* The received total is a property of the medicine, not of the row. */
-    if (num(row.received) > entry.received) entry.received = num(row.received);
-    entry.lines.push({ expiry: String(row.expiry || '').trim(), qty: num(row.qty), lot: String(row.lot || '').trim() });
+function text(value) { return String(value == null ? '' : value).trim(); }
+function dateOf(row) { return text(row && (row.date || row.expiry || row.expiryDate)).slice(0, 10); }
+function lotOf(row) { return text(row && (row.lot || row.batch || row.batchNo || row.lotNo)); }
+function identity(medId, date, lot) { return [medId, date, lot.toLowerCase()].join('|'); }
+function recordId(row) { return text(row && (row.id || row.batchId)); }
+
+/* rows: [{ medId, existingId?, expiry?, lot? }]
+     existingId set  -> the person ticked a date the department already holds
+     existingId blank -> the person typed a new date (expiry, optional lot)
+   existing: the department's current expiry rows.
+   required: medicine ids that were dispensed and must each end with a date. */
+export function buildReceiveRecords(rows, {
+  requestId = '', now = new Date().toISOString(), newId, existing = [], required = [],
+} = {}) {
+  const held = Array.isArray(existing) ? existing : [];
+  const heldById = new Map();
+  const heldByIdentity = new Map();
+  held.forEach((row) => {
+    const id = recordId(row);
+    if (id) heldById.set(id, row);
+    heldByIdentity.set(identity(text(row && row.medId), dateOf(row), lotOf(row)), row);
   });
 
   const errors = [];
   const records = [];
   const received = [];
+  const seen = new Set();
+  const covered = new Set();
+  const failed = new Set();
 
-  byMedicine.forEach((entry, medId) => {
-    const used = entry.lines.filter((line) => line.expiry || line.qty > 0);
-    if (!used.length) return;  // nothing entered for this medicine yet
+  const fail = (medId, reason, extra) => {
+    if (failed.has(medId)) return;
+    failed.add(medId);
+    errors.push({ medId, reason, ...(extra || {}) });
+  };
 
-    const missingDate = used.find((line) => line.qty > 0 && !line.expiry);
-    if (missingDate) { errors.push({ medId, reason: 'quantity-without-date' }); return; }
+  const remember = (medId, date, lot, source, id) => {
+    const key = identity(medId, date, lot);
+    if (seen.has(key)) return;               // the same date twice is one date
+    seen.add(key);
+    covered.add(medId);
+    received.push({ medId, expiry: date, batch: lot, source, ...(id ? { batchId: id } : {}) });
+  };
 
-    const total = used.reduce((sum, line) => sum + line.qty, 0);
-    if (Math.abs(total - entry.received) > 1e-6) {
-      errors.push({ medId, reason: 'split-mismatch', total, received: entry.received });
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const medId = text(row && row.medId);
+    if (!medId) return;
+
+    const existingId = text(row.existingId);
+    if (existingId) {
+      const match = heldById.get(existingId);
+      if (!match || text(match.medId) !== medId) { fail(medId, 'stale-selection'); return; }
+      remember(medId, dateOf(match), lotOf(match), 'existing', existingId);
       return;
     }
 
-    used.forEach((line) => {
-      if (!line.expiry) return;
-      records.push({
-        id: typeof newId === 'function' ? newId() : `ex_${Math.random().toString(36).slice(2, 10)}`,
-        medId, expiry: line.expiry, date: line.expiry,
-        batch: line.lot, lot: line.lot, qty: line.qty,
-        sourceRequestId: requestId, receivedAt: now,
-      });
-      received.push({ medId, qty: line.qty, expiry: line.expiry, batch: line.lot });
+    const date = dateOf(row);
+    const lot = lotOf(row);
+    if (!date && !lot) return;               // added a line and changed their mind
+    if (!date) { fail(medId, 'batch-without-date'); return; }
+    if (!DATE_ONLY.test(date)) { fail(medId, 'invalid-date', { value: date }); return; }
+
+    /* A date the department already holds is a selection, not a new record. */
+    const same = heldByIdentity.get(identity(medId, date, lot));
+    if (same) { remember(medId, date, lot, 'existing', recordId(same)); return; }
+
+    const key = identity(medId, date, lot);
+    if (seen.has(key)) return;
+    records.push({
+      id: typeof newId === 'function' ? newId() : `ex_${Math.random().toString(36).slice(2, 10)}`,
+      medId, expiry: date, date,
+      batch: lot, lot, qty: null,
+      sourceRequestId: requestId, receivedAt: now,
     });
+    remember(medId, date, lot, 'new');
   });
 
-  return { records, received, errors };
+  (Array.isArray(required) ? required : []).forEach((id) => {
+    const medId = text(id);
+    if (medId && !covered.has(medId)) fail(medId, 'no-date');
+  });
+
+  return errors.length ? { records: [], received: [], errors } : { records, received, errors };
 }
 
 export function describeReceiveError(error, nameOf = (id) => id) {
   const name = nameOf(error.medId);
-  if (error.reason === 'quantity-without-date') {
-    return `${name}: a quantity was entered with no expiry date. / أُدخلت كمية بلا تاريخ انتهاء.`;
+  switch (error.reason) {
+    case 'batch-without-date':
+      return `${name}: a batch number was entered with no expiry date. / ${name}: أُدخل رقم دفعة بلا تاريخ انتهاء.`;
+    case 'invalid-date':
+      return `${name}: the expiry date is not valid. / ${name}: تاريخ الانتهاء غير صالح.`;
+    case 'stale-selection':
+      return `${name}: a selected date is no longer on the department list — reopen the receipt. / ${name}: تاريخ مختار لم يعد في قائمة القسم — أعد فتح الاستلام.`;
+    default:
+      return `${name}: choose or add at least one expiry date. / ${name}: اختر أو أضف تاريخ انتهاء واحد على الأقل.`;
   }
-  return `${name}: the dates account for ${error.total} of ${error.received} received. / التواريخ تغطي ${error.total} من ${error.received}.`;
 }

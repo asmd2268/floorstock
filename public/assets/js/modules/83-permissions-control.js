@@ -48,6 +48,7 @@ var PL_PAGES={
   'pg-reqs':{label:'Requests / الطلبات',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff']},
   'pg-notes-ph':{label:'Notes (Pharmacy) / ملاحظات',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff']},
   'pg-schedule':{label:'Schedule / الجدولة',roles:['pharmacy','inpatient_supervisor']},
+  'pg-request-blocks':{label:'Request Blocks / منع الطلبات',roles:['pharmacy','inpatient_supervisor']},
   'pg-print':{label:'Print / الطباعة',roles:['pharmacy','inpatient_supervisor','outpatient_pharmacy_supervisor','pharmacy_staff']},
   'pg-analytics':{label:'Analytics / التحليلات',roles:['pharmacy','inpatient_supervisor']},
   'pg-import':{label:'Import / الاستيراد',roles:['pharmacy','inpatient_supervisor']},

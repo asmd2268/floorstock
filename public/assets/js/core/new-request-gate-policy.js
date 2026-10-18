@@ -1,3 +1,5 @@
+import { deriveReceiveBlock } from './request-receive-block-policy.js?v=2853c92f9b';
+
 export function isPendingDepartmentRequest(request) {
   return Boolean(
     request
@@ -37,6 +39,7 @@ export function deriveNewRequestGateState({
   rollingLimit = { blocked: false },
   monthlyLimit = null,
   monthlyUsed = 0,
+  blockSettings = null,
 } = {}) {
   if (!isDepartment) {
     return {
@@ -70,6 +73,20 @@ export function deriveNewRequestGateState({
       reasonEn: scheduleOpen
         ? 'You have a pending request. You cannot create a new request until it is fulfilled by the pharmacy. You may edit the pending request now before the allowed ordering window closes.'
         : 'You have a pending request. You cannot create a new request until it is fulfilled by the pharmacy. You may edit the pending request when the ordering window opens and before it closes.',
+    };
+  }
+
+  /* Blocked by the pharmacy, or by not having received the last order. Checked
+     before the schedule so the ward learns it must receive its stock even while
+     the ordering window is closed — the window is not what stops it ordering. */
+  const receiveBlock = deriveReceiveBlock({ requests, departmentId, settings: blockSettings });
+  if (receiveBlock.blocked) {
+    return {
+      blocked: true,
+      kind: 'receive-block',
+      source: receiveBlock.source,
+      reasonAr: receiveBlock.reasonAr,
+      reasonEn: receiveBlock.reasonEn,
     };
   }
 

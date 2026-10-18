@@ -3,86 +3,140 @@ import { test } from 'node:test';
 
 import { buildReceiveRecords, describeReceiveError } from '../public/assets/js/core/receive-expiry-rows.js';
 
-/* A delivery of one medicine can arrive as more than one expiry date. The
-   screen lets a department add a date and split the quantity; this is where the
-   split is checked. */
+/* The department says WHICH expiry dates a delivery carries — it never types a
+   quantity. It ticks dates it already holds or adds new ones; one delivery may
+   carry several. */
 
-const build = (rows) => buildReceiveRecords(rows, { requestId: 'req-1', now: '2026-03-01T09:00:00Z', newId: () => 'ex_fixed' });
-const row = (over = {}) => ({ medId: 'med-a', received: 10, expiry: '2027-01-01', qty: 10, lot: '', ...over });
+const held = [
+  { id: 'ex_1', medId: 'med-a', date: '2027-01-01', expiry: '2027-01-01', lot: 'L1', batch: 'L1', qty: 12 },
+  { id: 'ex_2', medId: 'med-a', date: '2028-05-01', expiry: '2028-05-01', lot: '', batch: '', qty: null },
+  { id: 'ex_3', medId: 'med-b', date: '2027-09-09', expiry: '2027-09-09', lot: '', batch: '', qty: 3 },
+];
+const build = (rows, over = {}) => buildReceiveRecords(rows, {
+  requestId: 'req-1', now: '2026-03-01T09:00:00Z', newId: () => 'ex_fixed', existing: held, required: ['med-a'], ...over,
+});
 
-test('one date for the whole delivery is recorded as one batch', () => {
-  const { records, received, errors } = build([row()]);
+test('ticking a date the department already holds writes nothing new', () => {
+  const { records, received, errors } = build([{ medId: 'med-a', existingId: 'ex_1' }]);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(records, []);
+  assert.deepEqual(received, [{ medId: 'med-a', expiry: '2027-01-01', batch: 'L1', source: 'existing', batchId: 'ex_1' }]);
+});
+
+test('a date that is not on the list is added, and its quantity is unrecorded, never zero', () => {
+  const { records, received, errors } = build([{ medId: 'med-a', expiry: '2029-02-02', lot: 'N9' }]);
   assert.deepEqual(errors, []);
   assert.equal(records.length, 1);
+  assert.equal(records[0].qty, null);
   assert.deepEqual(
-    { medId: records[0].medId, expiry: records[0].expiry, qty: records[0].qty, sourceRequestId: records[0].sourceRequestId },
-    { medId: 'med-a', expiry: '2027-01-01', qty: 10, sourceRequestId: 'req-1' },
+    { id: records[0].id, medId: records[0].medId, expiry: records[0].expiry, date: records[0].date, lot: records[0].lot, batch: records[0].batch, sourceRequestId: records[0].sourceRequestId },
+    { id: 'ex_fixed', medId: 'med-a', expiry: '2029-02-02', date: '2029-02-02', lot: 'N9', batch: 'N9', sourceRequestId: 'req-1' },
   );
-  assert.deepEqual(received, [{ medId: 'med-a', qty: 10, expiry: '2027-01-01', batch: '' }]);
+  assert.deepEqual(received, [{ medId: 'med-a', expiry: '2029-02-02', batch: 'N9', source: 'new' }]);
 });
 
-test('two boxes with different dates are two records', () => {
-  const { records, errors } = build([
-    row({ qty: 6, expiry: '2027-01-01', lot: 'L1' }),
-    row({ qty: 4, expiry: '2028-05-01', lot: 'L2' }),
+test('one delivery can carry several dates, ticked and typed together', () => {
+  const { records, received, errors } = build([
+    { medId: 'med-a', existingId: 'ex_1' },
+    { medId: 'med-a', existingId: 'ex_2' },
+    { medId: 'med-a', expiry: '2029-02-02' },
+    { medId: 'med-a', expiry: '2030-03-03' },
   ]);
   assert.deepEqual(errors, []);
-  assert.deepEqual(records.map((r) => [r.expiry, r.qty, r.lot]), [['2027-01-01', 6, 'L1'], ['2028-05-01', 4, 'L2']]);
+  assert.deepEqual(records.map((r) => r.expiry), ['2029-02-02', '2030-03-03']);
+  assert.deepEqual(received.map((r) => r.expiry), ['2027-01-01', '2028-05-01', '2029-02-02', '2030-03-03']);
 });
 
-test('the split must add up to what was received — not less', () => {
-  /* The missing units would sit in the department with no expiry recorded,
-     which is exactly what the expiry screen exists to prevent. */
-  const { records, errors } = build([row({ qty: 6 }), row({ qty: 3, expiry: '2028-05-01' })]);
-  assert.deepEqual(records, []);
-  assert.equal(errors[0].reason, 'split-mismatch');
-  assert.match(describeReceiveError(errors[0], () => 'Dextrose 50%'), /9 of 10/);
-});
-
-test('and not more — a record may not claim stock nobody delivered', () => {
-  const { errors } = build([row({ qty: 8 }), row({ qty: 8, expiry: '2028-05-01' })]);
-  assert.equal(errors[0].reason, 'split-mismatch');
-  assert.equal(errors[0].total, 16);
-});
-
-test('a quantity with no date is refused, and says which medicine', () => {
-  const { errors, records } = build([row({ expiry: '', qty: 10 })]);
-  assert.deepEqual(records, []);
-  assert.equal(errors[0].reason, 'quantity-without-date');
-  assert.match(describeReceiveError(errors[0], () => 'Naloxone'), /Naloxone/);
-  assert.match(describeReceiveError(errors[0], () => 'Naloxone'), /بلا تاريخ انتهاء/);
-});
-
-test('an extra line somebody added and left blank is dropped, not an error', () => {
-  const { records, errors } = build([row({ qty: 10 }), row({ expiry: '', qty: 0 })]);
+test('typing a date the department already holds is a selection, not a duplicate record', () => {
+  /* The list normaliser merges equal rows and sums their quantities, which would
+     turn an unrecorded quantity into 0. */
+  const { records, received, errors } = build([{ medId: 'med-a', expiry: '2028-05-01', lot: '' }]);
   assert.deepEqual(errors, []);
+  assert.deepEqual(records, []);
+  assert.equal(received[0].source, 'existing');
+  assert.equal(received[0].batchId, 'ex_2');
+});
+
+test('the same new date typed twice, or ticked and typed, is one date', () => {
+  const { records, received } = build([
+    { medId: 'med-a', expiry: '2029-02-02' },
+    { medId: 'med-a', expiry: '2029-02-02' },
+    { medId: 'med-a', existingId: 'ex_1' },
+    { medId: 'med-a', expiry: '2027-01-01', lot: 'l1' },
+  ]);
   assert.equal(records.length, 1);
-  assert.equal(records[0].qty, 10);
+  assert.equal(received.length, 2);
 });
 
-test('a medicine nobody has filled in yet is simply not recorded', () => {
-  const { records, errors } = build([row({ expiry: '', qty: 0 })]);
+test('every dispensed medicine needs a date, and the error names it', () => {
+  const { records, errors } = build([{ medId: 'med-b', existingId: 'ex_3' }], { required: ['med-a', 'med-b'] });
   assert.deepEqual(records, []);
-  assert.deepEqual(errors, []);
-});
-
-test('each medicine is checked against its own received quantity', () => {
-  const { records, errors } = build([
-    row({ medId: 'med-a', received: 10, qty: 10 }),
-    row({ medId: 'med-b', received: 4, qty: 1, expiry: '2027-02-01' }),
-  ]);
-  assert.deepEqual(records.map((r) => r.medId), ['med-a']);
   assert.equal(errors.length, 1);
-  assert.equal(errors[0].medId, 'med-b');
+  assert.equal(errors[0].medId, 'med-a');
+  assert.equal(errors[0].reason, 'no-date');
+  const message = describeReceiveError(errors[0], () => 'Dextrose 50%');
+  assert.match(message, /Dextrose 50%/);
+  assert.match(message, /at least one expiry date/);
+  assert.match(message, /تاريخ انتهاء واحد على الأقل/);
 });
 
-test('a batch number is optional and carried when given', () => {
-  const { records } = build([row({ lot: 'B-77' })]);
-  assert.equal(records[0].lot, 'B-77');
-  assert.equal(records[0].batch, 'B-77');
+test('a failed receipt writes nothing at all — not even the medicines that were fine', () => {
+  const { records, received, errors } = build(
+    [{ medId: 'med-b', expiry: '2031-01-01' }],
+    { required: ['med-a', 'med-b'] },
+  );
+  assert.equal(errors.length, 1);
+  assert.deepEqual(records, []);
+  assert.deepEqual(received, []);
+});
+
+test('a batch number with no date is refused, in both languages', () => {
+  const { errors } = build([{ medId: 'med-a', expiry: '', lot: 'ZZ' }]);
+  assert.equal(errors[0].reason, 'batch-without-date');
+  const message = describeReceiveError(errors[0], () => 'Naloxone');
+  assert.match(message, /Naloxone/);
+  assert.match(message, /رقم دفعة بلا تاريخ انتهاء/);
+});
+
+test('a line somebody added and left blank is dropped, not an error', () => {
+  const { records, errors, received } = build([
+    { medId: 'med-a', existingId: 'ex_1' },
+    { medId: 'med-a', expiry: '', lot: '' },
+  ]);
+  assert.deepEqual(errors, []);
+  assert.deepEqual(records, []);
+  assert.equal(received.length, 1);
+});
+
+test('a malformed date is refused rather than saved', () => {
+  const { errors } = build([{ medId: 'med-a', expiry: '03/04/2027' }]);
+  assert.equal(errors[0].reason, 'invalid-date');
+  assert.match(describeReceiveError(errors[0], () => 'X'), /تاريخ الانتهاء غير صالح/);
+});
+
+test('a tick that no longer matches the department list is refused', () => {
+  const { errors } = build([{ medId: 'med-a', existingId: 'ex_gone' }]);
+  assert.equal(errors[0].reason, 'stale-selection');
+  /* A date from another medicine cannot be ticked for this one. */
+  const crossed = build([{ medId: 'med-a', existingId: 'ex_3' }]);
+  assert.equal(crossed.errors[0].reason, 'stale-selection');
+  assert.match(describeReceiveError(errors[0], () => 'X'), /أعد فتح الاستلام/);
+});
+
+test('each medicine is judged on its own dates', () => {
+  const { records, received, errors } = build(
+    [
+      { medId: 'med-a', existingId: 'ex_1' },
+      { medId: 'med-b', expiry: '2031-01-01' },
+    ],
+    { required: ['med-a', 'med-b'] },
+  );
+  assert.deepEqual(errors, []);
+  assert.deepEqual(records.map((r) => r.medId), ['med-b']);
+  assert.deepEqual(received.map((r) => r.medId), ['med-a', 'med-b']);
 });
 
 test('nothing in, nothing out', () => {
-  assert.deepEqual(build([]), { records: [], received: [], errors: [] });
+  assert.deepEqual(buildReceiveRecords([], { required: [] }), { records: [], received: [], errors: [] });
   assert.deepEqual(buildReceiveRecords(null, {}).records, []);
 });
