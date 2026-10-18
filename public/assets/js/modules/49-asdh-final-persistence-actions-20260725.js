@@ -367,8 +367,8 @@ window.addEventListener('beforeunload',function(e){if(!dirty)return;e.preventDef
 })();
 
 // --- Merged from 63-r668-request-lock-drafts-and-session-defaults.js (Phase 6 consolidation) ---
-import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=df8094448c';
-import { saveReceivedExpiry } from '../core/receive-expiry-dialog.js?v=ef6827a3ad';
+import { deriveNewRequestGateState } from '../core/new-request-gate-policy.js?v=dd65ac473c';import { REQUEST_RECEIVE_BLOCKS_KEY } from '../core/request-receive-block-policy.js?v=2853c92f9b';
+import { saveReceivedExpiry } from '../core/receive-expiry-dialog.js?v=188c01c040';
 import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
 import { crashCartSealInfo, crashCartSealLabel } from '../core/crash-cart-seal-info.js?v=1d24b15bf6';
 (function(){
@@ -422,7 +422,7 @@ function currentGateState(){
     schedule:schedule,
     rollingLimit:rolling,
     monthlyLimit:monthly,
-    monthlyUsed:used
+    monthlyUsed:used,blockSettings:(window.S&&typeof window.S.g==='function')?window.S.g(REQUEST_RECEIVE_BLOCKS_KEY):null
   });
 }
 window.getNewRequestGateState=function(){return currentGateState()};
@@ -440,7 +440,7 @@ function renderGateWarning(state){
   warning.id='r670-new-request-gate-warning';
   warning.className='r18-request-limit-warn blocked';
   warning.style.whiteSpace='normal';
-  var ar=document.createElement('div');ar.dir='rtl';ar.textContent=(state.kind==='pending'?'⏳ ':'🚫 ')+(state.reasonAr||'');
+  var ar=document.createElement('div');ar.dir='rtl';ar.textContent=(state.kind==='pending'?'⏳ ':state.kind==='receive-block'?'📥 ':'🚫 ')+(state.reasonAr||'');
   var en=document.createElement('div');en.dir='ltr';en.style.marginTop='5px';en.textContent=state.reasonEn||'';
   warning.appendChild(ar);warning.appendChild(en);
   host.insertAdjacentElement('beforebegin',warning);

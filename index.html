@@ -25,7 +25,7 @@
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-check-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-messaging-compat.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500&amp;display=swap" rel="stylesheet"/>
-<link href="./public/assets/css/modules/01-styles-01-06.css?v=baf6f2ed76" rel="stylesheet"/><link href="./public/assets/css/modules/02-styles-07-12.css?v=28888a176b" rel="stylesheet"/><link href="./public/assets/css/modules/03-styles-13-18.css?v=baa149e56d" rel="stylesheet"/><link href="./public/assets/css/modules/04-styles-19-24.css?v=775668df3d" rel="stylesheet"/><link href="./public/assets/css/modules/05-styles-25-30.css?v=bffa189328" rel="stylesheet"/><link href="./public/assets/css/modules/06-styles-31-36.css?v=7b2251b6aa" rel="stylesheet"/><link href="./public/assets/css/modules/07-styles-37-42.css?v=c2ac343728" rel="stylesheet"/><link href="./public/assets/css/modules/08-styles-43-48.css?v=eafe8c3018" rel="stylesheet"/><link href="./public/assets/css/modules/09-styles-49-54.css?v=a6258de804" rel="stylesheet"/><link href="./public/assets/css/modules/10-styles-55-59.css?v=43c8f8c845" rel="stylesheet"/><link href="./public/assets/css/modules/11-design-refresh.css?v=e3b409edec" rel="stylesheet"/>
+<link href="./public/assets/css/modules/01-styles-01-06.css?v=baf6f2ed76" rel="stylesheet"/><link href="./public/assets/css/modules/02-styles-07-12.css?v=28888a176b" rel="stylesheet"/><link href="./public/assets/css/modules/03-styles-13-18.css?v=2b30a5d2b9" rel="stylesheet"/><link href="./public/assets/css/modules/04-styles-19-24.css?v=775668df3d" rel="stylesheet"/><link href="./public/assets/css/modules/05-styles-25-30.css?v=bffa189328" rel="stylesheet"/><link href="./public/assets/css/modules/06-styles-31-36.css?v=7b2251b6aa" rel="stylesheet"/><link href="./public/assets/css/modules/07-styles-37-42.css?v=c2ac343728" rel="stylesheet"/><link href="./public/assets/css/modules/08-styles-43-48.css?v=eafe8c3018" rel="stylesheet"/><link href="./public/assets/css/modules/09-styles-49-54.css?v=a6258de804" rel="stylesheet"/><link href="./public/assets/css/modules/10-styles-55-59.css?v=43c8f8c845" rel="stylesheet"/><link href="./public/assets/css/modules/11-design-refresh.css?v=e3b409edec" rel="stylesheet"/>
 
 
 
@@ -846,6 +846,22 @@ Furosemide 40mg tab	5	20</pre>
 </div>
 <div id="pharm-notes-list"></div>
 </div>
+<div class="pg" id="pg-request-blocks">
+<div class="stitle">🚫 Request Blocks / منع الطلبات</div>
+<div class="ssub">By default a department cannot create a new request until it has received all items of its last order. Allow a department as an exception, or block it outright. / افتراضياً لا يستطيع القسم إنشاء طلب جديد قبل استلام جميع أصناف آخر طلبية. يمكنك السماح لقسم كاستثناء أو منعه بشكل كامل.</div>
+<div class="card mb14">
+<div class="ch"><span class="ct">🚫 Departments / الأقسام</span><span class="fhint" id="request-blocks-summary"></span></div>
+<div class="cb">
+<div class="fl g8" id="request-blocks-bulk" style="margin-bottom:12px;flex-wrap:wrap;align-items:center">
+<span class="fhint">Apply to selected / تطبيق على المحدد:</span>
+<button type="button" class="btn bd2c bsm" data-act="requestBlockBulk" data-mode="block">🚫 Block selected / منع المحدد</button>
+<button type="button" class="btn bp bsm" data-act="requestBlockBulk" data-mode="allow">✓ Allow selected / سماح للمحدد</button>
+<button type="button" class="btn bg bsm" data-act="requestBlockBulk" data-mode="auto">↺ Reset to Auto / تلقائي</button>
+</div>
+<div id="request-blocks-list"></div>
+</div>
+</div>
+</div>
 <div class="pg" id="pg-schedule">
 <div class="stitle">⏰ Schedule &amp; Limits / جدول الطلبيات</div>
 <div class="ssub">Control when departments can submit requests and when pharmacy dispenses. Set monthly order limits per department.</div>
@@ -1449,7 +1465,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <div id="toast"></div>
 
 
-<div class="modal-bg" id="v13-receive-modal"><div class="modal v13-wide"><div class="mh"><span class="mt">Receive &amp; Add Expiry / استلام وإضافة الصلاحية</span><button class="xbtn" data-asdh-binding="b177">✕</button></div><div class="fhint" id="v13-receive-meta" style="margin-bottom:10px"></div><div class="fhint" style="margin-bottom:10px">One delivery can arrive as more than one expiry date. Use <b>+</b> to add another date for the same medicine and split the quantity between them. / يمكن أن تصل الكمية الواحدة بأكثر من تاريخ انتهاء — استخدم <b>+</b> لإضافة تاريخ آخر وتوزيع الكمية.</div><div class="v13-review"><table><thead><tr><th>#</th><th>Medication</th><th>Received Qty</th><th>Expiry date</th><th>Qty for this date / الكمية</th><th>Batch / Lot</th><th></th></tr></thead><tbody id="v13-receive-body"></tbody></table></div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" data-asdh-binding="b178">Cancel</button><button class="btn bs" data-asdh-binding="b179">Confirm all / تأكيد الكل</button></div></div></div>
+<div class="modal-bg" id="v13-receive-modal"><div class="modal v13-wide"><div class="mh"><span class="mt">Receive &amp; Add Expiry / استلام وإضافة الصلاحية</span><button class="xbtn" data-asdh-binding="b177">✕</button></div><div class="fhint" id="v13-receive-meta" style="margin-bottom:10px"></div><div class="fhint" style="margin-bottom:10px">Tick the expiry dates already registered for each medicine in your department, or use <b>+ Add date</b> for a date that is not listed. A delivery can carry more than one date. No quantity is needed here — it comes from the pharmacy. / اختر تواريخ الانتهاء المسجلة لكل دواء في قسمك، أو استخدم <b>+ إضافة تاريخ</b> لتاريخ غير موجود. قد تحمل الشحنة أكثر من تاريخ. لا حاجة لإدخال كمية — الكمية تأتي من الصيدلية.</div><div class="v13-review"><table><thead><tr><th>#</th><th>Medication</th><th>Dispensed / المصروف</th><th>Expiry dates / تواريخ الانتهاء</th></tr></thead><tbody id="v13-receive-body"></tbody></table></div><div class="fl g8" style="justify-content:flex-end;margin-top:14px"><button class="btn bg" data-asdh-binding="b178">Cancel</button><button class="btn bs" data-asdh-binding="b179">Confirm all / تأكيد الكل</button></div></div></div>
 
 
 
@@ -1592,7 +1608,7 @@ EXP:2025-12-31 LOT:A123 Adrenaline 1mg" rows="4" style="font-family:var(--mono);
 <!-- Public-snapshot Crash Cart recovery removed in the hardened production build.
      Operational carts are loaded only from authenticated floorstock_state/crash_carts. -->
 <script src="./public/assets/js/vendor/qrcode-generator.js?v=79ec86f828"></script>
-<script type="module" src="./public/assets/js/auth-bootstrap.js?v=1b0742d83f"></script>
+<script type="module" src="./public/assets/js/auth-bootstrap.js?v=4a23a402c8"></script>
 <script src="./public/assets/js/register-sw.js?v=9d32c584b2"></script>
 </body>
 </html>

@@ -49,6 +49,7 @@ export const APPLICATION_STATE_KEYS = [
   'facility_logo',
   'global_request_freeze_v2',
   'fulfillment_edit_settings_v1',
+  'request_receive_blocks_v1',
   'hidden_request_categories_v1',
   `inventory_integrity_${DEPARTMENT_ID}`,
   'inventory_name_merge_history',
@@ -115,7 +116,7 @@ export function mayWriteState(role, rawKey) {
   // Activity instrumentation is written by every signed-in client, whatever the role.
   if (key === 'theme' || key === 'user_activity_daily_v1') return true;
   if (role === 'inpatient_supervisor') {
-    return /^(crash_.*|accountability_.*|requests|request_analytics_summary_v1|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
+    return /^(crash_.*|accountability_.*|requests|request_analytics_summary_v1|notes|dept_notes|meds_.*|expiry_.*|shelves_.*|alerts_.*|deleted_request_audit_v4|department_request_notifications_v1|pharmacy_.*|inventory_.*|inventory_name_merge_history|manual_medicine_merge_history_v1|similar_medicine_separations_v1|custom_categories|facility_logo|hidden_request_categories_v1|global_request_freeze_v2|request_receive_blocks_v1|medication_(visibility|freeze)_rules_v3|theme)$/.test(key);
   }
   if (role === 'pharmacy_staff') {
     return /^(crash_carts|accountability_.*|requests|notes|dept_notes|request_analytics_summary_v1|theme)$/.test(key);

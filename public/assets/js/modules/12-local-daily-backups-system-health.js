@@ -1,4 +1,4 @@
-import { canAccessPage } from '../core/role-capabilities.js?v=234c1ff934';
+import { canAccessPage } from '../core/role-capabilities.js?v=cc6a72d5b0';
 /* ASDHealth pilot protection: free daily IndexedDB backups + System Health. */
 (function(){
   var AH_DB='ASDHealthLocalBackups',AH_STORE='daily',AH_MAX=365,AH_TRANSIENT=null;

@@ -1,12 +1,13 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';import { alphabeticalOrder, isRecentlyAdded } from '../core/med-order.js?v=65f045abae';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
-import { normalizeRole } from '../core/role-capabilities.js?v=234c1ff934';
+import { normalizeRole } from '../core/role-capabilities.js?v=cc6a72d5b0';
 import { resolveMasterFromUser } from '../core/master-authority.js?v=c146809fa9';
 import { fsNorm } from '../core/text-normalize.js?v=aa16ae9ac0';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
 import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=c13c38051a';
+import { renderRequestBlocks } from '../core/request-blocks-page.js?v=d3c1e03679';
 
 // ── APP SHELL: STATE URLS / THEME / AUTO-CATEGORY / AUTH / NAV / DASHBOARD / INVENTORY ──
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module
@@ -334,7 +335,7 @@ function renderPageById(id){
     'pg-analytics':renderAn,'pg-users':renderUsers,'pg-newreq':renderReqForm,
     'pg-myreqs':renderMyReqs,'pg-print':renderPrint,'pg-import':renderImport,
     'pg-shelves':renderShelves,'pg-deptprint':renderDeptPrint,
-    'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule,
+    'pg-notes-dept':renderDeptNotes,'pg-notes-ph':renderPharmNotes,'pg-schedule':renderSchedule,'pg-request-blocks':renderRequestBlocks,
     'pg-controlled':renderControlled,'pg-ctl-analytics':renderCtlAnalytics,'pg-crashcart':renderCrashCarts,'pg-crash-ops':renderCrashOperations,'pg-med-accountability':renderMedicationAccountability,
     'pg-zebra-labels':function(){if(typeof window.renderZebraPageUi==='function')window.renderZebraPageUi()}
   }[id];

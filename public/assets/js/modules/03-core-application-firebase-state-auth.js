@@ -1,7 +1,7 @@
 import { stateKeysForProfile, isPharmacyScopedProfile, uniqueKeys } from '../core/state-read-scope.js?v=af02f1361f';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { waitUpTo } from '../core/timing.js?v=5f574f9ba7';
-import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=234c1ff934';
+import { normalizeRole, hasCapability, canAccessDepartment } from '../core/role-capabilities.js?v=cc6a72d5b0';
 import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import {
   FULFILLMENT_EDIT_SETTINGS_KEY,
@@ -343,7 +343,7 @@ globalThis.DEPARTMENT_SHARED_STATE_KEYS = Object.freeze([
   'departments','deleted_departments','custom_categories','daily_limits_v2',
   'weekly_limits_v2','monthly_limits','rate_limits_v2','req_windows','disp_slots',
   'request_count_limits_v1','request_hour_grids_v1','requests','dept_notes','notes',
-  'fulfillment_edit_settings_v1',
+  'fulfillment_edit_settings_v1','request_receive_blocks_v1',
   'crash_carts',
   'theme','facility_logo','pharmacy_category_config','pharmacy_department_announcements',
   'pharmacy_department_expiry_rules','medication_freeze_rules_v3','medication_visibility_rules_v3',
@@ -382,7 +382,7 @@ globalThis.PHARMACY_SCOPED_STATE_KEYS = Object.freeze([
   'accountability_expiry_batches_v1','accountability_regimen_catalog_v1','department_print_names_v1',
   'theme','facility_logo','pharmacy_category_config',
   'pharmacy_department_announcements','pharmacy_department_expiry_rules',
-  'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1',
+  'medication_freeze_rules_v3','medication_visibility_rules_v3','fulfillment_edit_settings_v1','request_receive_blocks_v1',
   'req_windows','disp_slots','daily_limits_v2','weekly_limits_v2','monthly_limits',
   'rate_limits_v2','request_count_limits_v1','request_hour_grids_v1','user_activity_daily_v1',
   'crash_cart_min_seal_length','classification_lists_v1','page_visibility_overrides_v1','user_dept_restrictions_v1','classification_colors_v1'
