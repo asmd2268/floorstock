@@ -276,7 +276,7 @@ function installOnce(label, needed, install) {
 }
 
 installOnce('print patch', { doDeptPrint: window.doDeptPrint }, patchPrintFunctions);
-installOnce('controlled page', { ctlTabs: window.ctlTabs, renderControlled: window.renderControlled }, function () {
+installOnce('controlled page', { renderControlled: window.renderControlled }, function () { /* not ctlTabs: patchCtlTabs() defines it */
   injectHero();
   patchCtlTabs();
   patchRenderControlled();
