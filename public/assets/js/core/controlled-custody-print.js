@@ -165,7 +165,7 @@ th,td{
   line-height:1.1;
   text-align:center;
   vertical-align:middle;
-  overflow-wrap:anywhere
+  white-space:nowrap
 }
 th{font-weight:900}
 .medicine{text-align:center;font-weight:800}
@@ -267,9 +267,9 @@ th{font-weight:900}
     legend+
     '<table>'+
       '<colgroup>'+
-        '<col style="width:3%"><col style="width:8%"><col style="width:8%">'+
-        '<col style="width:32%"><col style="width:10%"><col style="width:6%">'+
-        '<col style="width:6%"><col style="width:27%">'+
+        '<col style="width:3%"><col style="width:10%"><col style="width:14%">'+
+        '<col style="width:28%"><col style="width:10%"><col style="width:9%">'+
+        '<col style="width:9%"><col style="width:17%">'+
       '</colgroup>'+
       '<thead><tr>'+
         '<th>#</th><th>MOH</th><th>NUPCO</th><th>Medicine / الدواء</th>'+
@@ -326,8 +326,11 @@ function showQrFailure(error){
   var box=document.createElement('div');box.className='print-error';box.innerHTML='<h2>QR generation failed / تعذر إنشاء رمز QR</h2><p>Automatic printing stopped because the QR would not be scannable.<br>تم إيقاف الطباعة التلقائية لأن الرمز لن يكون قابلاً للمسح.</p><button type="button">Print without QR / طباعة بدون QR</button>';box.querySelector('button').onclick=function(){window.focus();window.print()};document.body.insertBefore(box,document.body.firstChild);console.error(error);
 }
 function over(layout,fit){
-  return fit.scrollHeight>layout.clientHeight+1||
-    fit.scrollWidth>layout.clientWidth+1;
+  if(fit.scrollHeight>layout.clientHeight+1||fit.scrollWidth>layout.clientWidth+1)return true;
+  /* Cells never wrap, so a cell whose text is wider than its column is overflow too. */
+  var cells=fit.querySelectorAll('th,td');
+  for(var i=0;i<cells.length;i++){if(cells[i].scrollWidth>cells[i].clientWidth+1)return true}
+  return false;
 }
 function fitOne(layout){
   var fit=layout.querySelector('.fit');
