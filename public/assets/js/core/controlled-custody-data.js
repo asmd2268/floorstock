@@ -29,7 +29,12 @@ import { fsR5DepartmentRecords, fsR5DepartmentCandidates } from './department-na
 
 export function fsR5ControlledDept(){
   var effective=(typeof globalThis.fsEffectiveUser==='function'?globalThis.fsEffectiveUser():globalThis.CU||{}),value='';
-  try{if(typeof globalThis.ctlCurrentDept==='function')value=globalThis.ctlCurrentDept()||''}catch(e){/* an optional source that is not loaded in this session */}
+  /* A department account (or a Master previewing as one) prints its OWN list: the
+     Departments selector belongs to the officer's screen and keeps whatever it
+     last held, so letting it win printed another department's custody under this
+     department's heading. */
+  if(effective.role==='department')value=effective.deptId||effective.departmentId||effective.department||'';
+  try{if(!value&&typeof globalThis.ctlCurrentDept==='function')value=globalThis.ctlCurrentDept()||''}catch(e){/* an optional source that is not loaded in this session */}
   if(!value)value=effective.deptId||effective.departmentId||effective.department||'';
   var selector=fsE('ctl-dept');
   if(!value&&selector)value=selector.value||'';
