@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-import { openBlobPrint, printDocument } from '../core/print-window.js?v=958ca6e29f';
+import { openBlobPrint, printDocument } from '../core/print-window.js?v=dafb959d71';
 
 // ── LOGO / OFFICIAL PRINT HEADER ─────────────────────────────────────
 // Split out of 07-expiry-requests-and-primary-features.js (Phase 3 module

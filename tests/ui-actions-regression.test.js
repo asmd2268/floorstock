@@ -510,16 +510,15 @@ test('Print Orders uses a CSP-safe external runtime and creates a PDF matching t
 });
 
 test('QR print pages wait for decoded QR images and stop on non-scannable fallback', () => {
-  assert.match(localQrRuntimeSource, /function printRuntimeScript\(options\)/);
-  assert.match(localQrRuntimeSource, /img\.naturalWidth>0/);
-  assert.match(localQrRuntimeSource, /QR image load timed out/);
-  assert.match(localQrRuntimeSource, /automatic printing was stopped/);
-  assert.match(localQrRuntimeSource, /data-qr-state/);
+  const printWindowSource = fs.readFileSync(new URL('../public/assets/js/core/print-window.js', import.meta.url), 'utf8');
+  assert.match(printWindowSource, /naturalWidth/);
+  assert.match(printWindowSource, /QR image load timed out/);
+  assert.match(printWindowSource, /Automatic printing was stopped/);
+  assert.match(printWindowSource, /qrState/);
   assert.match(usersSource, /openBlobPrint/);
   assert.match(usersSource, /printShelfList/);
-  assert.match(accountabilitySource, /openBlobPrint|Blob URL bypasses/);
   assert.match(crashPrintSource, /data-qr-print-button disabled/);
-  assert.match(crashPrintSource, /ASD_QR\.printRuntimeScript/);
+  assert.doesNotMatch(crashPrintSource, /<script>|ASD_QR\.printRuntimeScript/);
   assert.doesNotMatch(crashPrintSource, /image\.onerror=go|setTimeout\(go,2200\)/);
   assert.match(controlledCustodySource, /showQrFailure/);
   assert.match(controlledCustodySource, /QR generator returned a placeholder/);

@@ -722,7 +722,6 @@ window.crashPrint=function(id){
   var actorInfo=typeof window.fsActor==='function'?window.fsActor():{},printUser=actorInfo.name||actorInfo.user||(window.CU&&(CU.username||CU.email))||'Unknown user';
   var publicUrl=new URL(typeof getAppUrl==='function'?getAppUrl():location.href);publicUrl.searchParams.set('view','crash-cart-public');publicUrl.searchParams.set('id',String(c.id));var tenant=window.fsTenantId&&fsTenantId();if(tenant)publicUrl.searchParams.set('tenant',tenant);
   var qr=window.makeReadableQR(publicUrl.toString());
-  var qrPrintRuntime=window.ASD_QR&&ASD_QR.printRuntimeScript?ASD_QR.printRuntimeScript():'';
   var official=typeof officialPrintHeaderHTML==='function'?officialPrintHeaderHTML():'';
   var nowDate=new Date(),printDate=String(nowDate.getDate()).padStart(2,'0')+'/'+String(nowDate.getMonth()+1).padStart(2,'0')+'/'+nowDate.getFullYear();
   var rows=(c.items||[]).map(function(it,i){
@@ -740,7 +739,7 @@ window.crashPrint=function(id){
   '<div class="legend"><span class="swatch"></span> Expiry within '+printRules.nearDays+' days / قريب الانتهاء خلال '+printRules.nearDays+' يومًا</div>'+
   '<table class="list"><colgroup><col style="width:2.5%"><col style="width:31.5%"><col style="width:13%"><col style="width:9%"><col style="width:9%"><col style="width:14%"><col style="width:21%"></colgroup><thead><tr><th>#</th><th>Generic name</th><th>Concentration</th><th>Standard quantity</th><th>Available</th><th>Stock status</th><th>Expiry date → Quantity</th></tr></thead><tbody>'+rows+'</tbody></table>'+
   '<div class="footer">Printed by: '+e(printUser)+' · '+e(actorInfo.user||window.CU&&CU.email||printUser)+'</div><div class="byline">By Ali Abudahash</div></div>'+
-  '<script>'+qrPrintRuntime+'<\/script></body></html>';
+  '</body></html>';
   // Blob URL + openBlobPrint (same pattern every other print path in this
   // app already uses), not window.open('','_blank') + document.write():
   // Safari does not reliably fire the 'load' event on a document written

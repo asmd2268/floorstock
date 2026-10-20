@@ -203,7 +203,7 @@ async function printShelfList(){
        decode and refuses to print a sheet whose QR came back as the
        "QR unavailable" placeholder, which would go onto a drawer looking like a
        code and scan as nothing. / لا تُطبع ورقة برمز QR غير قابل للمسح. */
-    +'<script>'+window.ASD_QR.printRuntimeScript({})+'</sc'+'ript></body></html>';
+    +'</body></html>';
   var pw=openBlobPrint(slHtml);
   if(!pw){toast('Allow pop-ups to print the shelf list.','err');return false;}
   return true;

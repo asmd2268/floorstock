@@ -146,8 +146,7 @@ async function doDeptPrint(){
       +'<span>'+footerNote+'</span>'
       +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76" alt="QR">'
       +'</div>'
-      +'<script>(function(){var done=false;function fit(){if(done)return;done=true;if(!('+fitOne+')){var s=document.createElement("style");s.textContent="@media print{#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}}";document.head.appendChild(s)}}if(document.readyState==="complete")fit();else window.addEventListener("load",fit,{once:true})})()</sc'+'ript>'
-      +'<script>'+(window.ASD_QR&&typeof window.ASD_QR.printRuntimeScript==='function'?window.ASD_QR.printRuntimeScript({}):'window.focus();window.print();')+'</sc'+'ript>'
+      +(fitOne?'':'<style>@media print{#footer{position:fixed;bottom:0;left:0;right:0;background:#fff;padding:4px 10px;border-top:1px solid #ccc}}</style>')
       +'</body></html>';
     var pw=openBlobPrint(dpHtml);
     if(!pw){toast('Allow pop-ups to print the department drug list.','err');return false;}
