@@ -450,10 +450,12 @@ function start(){
 }
 start();
 }
-function openBlobPrintR5(html){
+function openBlobPrintR5(html,w){
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
-  var w=window.open(url,'_blank');
+  /* The window is opened by the caller inside the click (a browser only allows a
+     pop-up then; opened after the list has been fetched it was silently blocked). */
+  if(w&&!w.closed)w.location.href=url;else w=window.open(url,'_blank');
   setTimeout(function(){URL.revokeObjectURL(url);},60000);
   if(!w)return false;
   var tries=0,timer=setInterval(function(){
@@ -469,13 +471,19 @@ window.printDepartmentCustodyExact=async function(dept,options){
   options=options||{};
   dept=fsText(dept||fsR5ControlledDept(),'');
   if(options.printWindow){try{options.printWindow.close();}catch(e){/* tearing down something already gone is not a failure */}}
+  var pre=null;
+  try{pre=window.open('','_blank');}catch(e){/* reported just below */}
+  if(!pre){uiToast('Pop-ups are blocked — allow pop-ups for this site and press print again / اسمح بالنوافذ المنبثقة لهذا الموقع ثم أعد الطباعة','err');return false;}
+  try{pre.document.title='Preparing… / جاري التحضير';pre.document.body.textContent='Preparing the controlled list… / جاري تحضير القائمة…';}catch(e){/* cosmetic placeholder */}
+  var closePre=function(){try{pre.close();}catch(e){/* already closed */}};
   try{
     var result=await fsLoginTimeout(fsR5ControlledRows(dept),18000,'Controlled custody print data timed out.');
     if(!result.rows||!result.rows.length){
+      closePre();
       uiToast('My controlled list is empty / قائمة عهدتي فارغة','err');
       return false;
     }
-    openBlobPrintR5(fsR5ControlledPrintHtml(result.dept||dept,result.rows));
+    openBlobPrintR5(fsR5ControlledPrintHtml(result.dept||dept,result.rows),pre);
     setTimeout(function(){
       try{
         if(typeof window.ctlPublishDept==='function')Promise.resolve(window.ctlPublishDept(result.dept||dept)).catch(function(error){console.warn('Background controlled public publish skipped.',error);});
@@ -484,6 +492,7 @@ window.printDepartmentCustodyExact=async function(dept,options){
     return true;
   }catch(error){
     console.error('Controlled list print failed',error);
+    closePre();
     uiToast('Unable to prepare My controlled list: '+String(error&&error.message||error),'err');
     return false;
   }
