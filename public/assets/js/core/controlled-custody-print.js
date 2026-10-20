@@ -287,7 +287,27 @@ th{font-weight:900}
     '<div class="brand">By Ali Abudahash</div>'+
   '</div>';
 
-  var runtime=`(function(){
+
+  function layoutHtml(orientation){
+    var label=orientation==='landscape'?'landscape-layout':'portrait-layout';
+    return '<section class="controlled-layout '+label+
+      '" data-orientation="'+orientation+
+      '" data-expected="'+rows.length+'">'+content+'</section>';
+  }
+
+  return '<!doctype html><html><head><meta charset="utf-8">'+
+    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+    '<title>'+fsEsc(name)+' Department Controlled List</title>'+
+    '<style>'+css+'</style></head><body>'+
+    '<main class="sheet">'+layoutHtml('landscape')+layoutHtml('portrait')+'</main>'+
+    '</body></html>';
+}
+/* The fitter and the print call run from here, in the opener, against the print
+   window's document. The blob document inherits the site's CSP, which forbids
+   inline scripts, so the sheet carries none — an inline runtime was refused and
+   nothing ever printed. */
+function fsR5ControlledPrintRuntime(window){
+var document=window.document;
 function imagesReady(){
   return Promise.all(Array.from(document.images).map(function(image){
     var qr=image.classList.contains('asd-qr-image');
@@ -428,29 +448,22 @@ function start(){
     }
   }).catch(showQrFailure);
 }
-window.addEventListener('load',start,{once:true});
-})();`;
-
-  function layoutHtml(orientation){
-    var label=orientation==='landscape'?'landscape-layout':'portrait-layout';
-    return '<section class="controlled-layout '+label+
-      '" data-orientation="'+orientation+
-      '" data-expected="'+rows.length+'">'+content+'</section>';
-  }
-
-  return '<!doctype html><html><head><meta charset="utf-8">'+
-    '<meta name="viewport" content="width=device-width,initial-scale=1">'+
-    '<title>'+fsEsc(name)+' Department Controlled List</title>'+
-    '<style>'+css+'</style></head><body>'+
-    '<main class="sheet">'+layoutHtml('landscape')+layoutHtml('portrait')+'</main>'+
-    '<script>'+runtime+'<\/script></body></html>';
+start();
 }
 function openBlobPrintR5(html){
   var blob=new Blob([html],{type:'text/html;charset=utf-8'});
   var url=URL.createObjectURL(blob);
   var w=window.open(url,'_blank');
   setTimeout(function(){URL.revokeObjectURL(url);},60000);
-  return !!w;
+  if(!w)return false;
+  var tries=0,timer=setInterval(function(){
+    try{
+      var d=w.document;
+      if(d.readyState==='complete'&&d.querySelector('.controlled-layout')){clearInterval(timer);fsR5ControlledPrintRuntime(w);return;}
+    }catch(e){/* window not navigated to the blob yet */}
+    if(w.closed||++tries>200)clearInterval(timer);
+  },50);
+  return true;
 }
 window.printDepartmentCustodyExact=async function(dept,options){
   options=options||{};
