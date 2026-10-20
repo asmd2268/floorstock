@@ -25,7 +25,7 @@ import {
 } from '../core/analytics-drug-trends.js?v=ce84bf0b15';
 import { crashCartStats } from '../core/analytics-crash-carts.js?v=33105767c7';
 import { narcoticStats } from '../core/analytics-narcotics.js?v=684e55b66c';
-import { printDocument } from '../core/print-window.js?v=958ca6e29f';
+import { printDocument } from '../core/print-window.js?v=dafb959d71';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 /* One stylesheet for every printed report.

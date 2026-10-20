@@ -1,9 +1,9 @@
 /* Pharmacy Inventory — rooms → cabinets → shelves → medicines */
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
-import { printDocument } from '../core/print-window.js?v=958ca6e29f';
+import { printDocument } from '../core/print-window.js?v=dafb959d71';
 import { pharmacyPrintCss, pharmacyPrintName, pharmacyPrintQr, luma } from '../core/pharmacy-print-style.js?v=be72d2bca8';
-import { usePharmacyInventory, piPrintReorder, piPrintCabinet, piPublicCabinetUrl, piPrintCabinetMap, piPrintRoomDoor, piDoPrint } from '../core/pharmacy-inventory-print.js?v=bc40cc6b21';
+import { usePharmacyInventory, piPrintReorder, piPrintCabinet, piPublicCabinetUrl, piPrintCabinetMap, piPrintRoomDoor, piDoPrint } from '../core/pharmacy-inventory-print.js?v=fcb172dcee';
 import {
   piParseShelfLine, piShelfLine, piShelfCells, piCellLabel, piFindShelf,
   piCellOptionsHtml, piShelfCmp, piShelvesOf,

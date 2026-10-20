@@ -228,13 +228,10 @@ th{font-weight:900}
 .footer{text-align:center;font-size:5.8pt;margin-top:.7mm}
 .brand{text-align:right;font-size:5.5pt;color:#94a3b8;margin-top:.5mm}
 .print-error{padding:15mm;text-align:center}
-@media print and (orientation:landscape){
+/* The page is A4 landscape (@page above), so print always uses the landscape layout. Chrome evaluates the orientation media feature before @page size applies, so keying the layout on it printed the portrait layout onto a landscape page. */
+@media print{
   .landscape-layout{display:block!important}
   .portrait-layout{display:none!important}
-}
-@media print and (orientation:portrait){
-  .landscape-layout{display:none!important}
-  .portrait-layout{display:block!important}
 }
 @media screen and (orientation:landscape){
   body{background:#d5d5d5!important}
@@ -341,7 +338,8 @@ function fitOne(layout){
   var fontMax=orientation==='landscape'?15:13;
   var guard=0;
 
-  layout.style.display='block';
+  /* !important: the stylesheet hides whichever layout does not match the window's orientation with !important, and a plain inline display loses to that — the hidden layout was then "measured" at zero width and kept whatever font it was left with. */
+  layout.style.setProperty('display','block','important');
   layout.style.visibility='hidden';
   fit.style.transform='none';
   layout.style.setProperty('--fs',font+'pt');

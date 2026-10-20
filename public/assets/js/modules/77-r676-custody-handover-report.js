@@ -1,3 +1,4 @@
+import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 
 (function(){
@@ -191,12 +192,8 @@ function printRecord(record){
     '.chr-sig b{display:block}'+
     '.chr-footer{text-align:right;font-size:7pt;color:#555;margin-top:3mm}'+
     '</style></head><body>'+official+pages+
-    '<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(g,300);else window.addEventListener("load",function(){setTimeout(g,300)},{once:true})})()</'+'script></body></html>';
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var w=window.open(url,'_blank');
-  setTimeout(function(){URL.revokeObjectURL(url)},60000);
-  if(!w)window.toast&&window.toast('Allow pop-ups to print the custody report.','err');
+    '</body></html>';
+  openBlobPrint(html);
 }
 
 window.ctlOpenCustodyHandover=function(){

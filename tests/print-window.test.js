@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { openBlobPrint, printDocument, printFullDocument } from '../public/assets/js/core/print-window.js';
+import { openBlobPrint, printDocument, printFullDocument, drivePrint } from '../public/assets/js/core/print-window.js';
 
 /* One way to open a printable document.
 
@@ -33,15 +33,51 @@ test('a document is opened as a real navigation, never written into a blank wind
   });
 });
 
-test('printing is attempted three ways, and happens once', () => {
+test('the document carries no script — the opener prints it (a blob inherits the page CSP)', () => {
   withBrowser(({ html }) => {
-    printDocument({ title: 'Report', html: '' });
-    const page = html();
-    assert.match(page, /readyState==="complete"/, 'a document already loaded still prints');
-    assert.match(page, /addEventListener\("load"/);
-    assert.match(page, /setTimeout\(g,1500\)/, 'and a page whose images never resolve prints anyway');
-    assert.match(page, /var d=false/, 'the guard that keeps three attempts from printing three times');
+    printDocument({ title: 'Report', html: '<p>x</p>' });
+    assert.doesNotMatch(html(), /<script/i);
+    assert.doesNotMatch(html(), /window\.print/);
   });
+});
+
+test('drivePrint prints a loaded blob document once, after its QR images are real', async () => {
+  let printed = 0;
+  const qr = { dataset: {}, getAttribute: () => 'data:image/png;base64,AAAA', complete: true, naturalWidth: 10 };
+  const win = {
+    closed: false, focus() {}, print() { printed++; },
+    location: { href: 'blob:https://x/abc' },
+    document: {
+      readyState: 'complete', body: { children: [1], dataset: {} }, images: [qr], fonts: null,
+      querySelector: () => null, querySelectorAll: (sel) => (sel === 'img.asd-qr-image' ? [qr] : []),
+    },
+  };
+  drivePrint(win, { delay: 10 });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  assert.equal(printed, 1);
+});
+
+test('drivePrint refuses to print a placeholder QR and offers a manual button', async () => {
+  let printed = 0;
+  const placeholder = { dataset: { qrState: 'unavailable' }, getAttribute: () => 'data:image/svg+xml;x', style: {}, complete: true, naturalWidth: 1 };
+  const inserted = [];
+  const win = {
+    closed: false, focus() {}, print() { printed++; },
+    location: { href: 'blob:https://x/abc' },
+    document: {
+      readyState: 'complete', body: { children: [1], dataset: {}, insertBefore: (box) => inserted.push(box), firstChild: null },
+      images: [placeholder], fonts: null, querySelector: () => null,
+      querySelectorAll: (sel) => (sel === 'img.asd-qr-image' ? [placeholder] : []),
+      getElementById: () => null,
+      createElement: () => ({ setAttribute() {}, style: {}, querySelector: () => ({}), set innerHTML(v) {} }),
+    },
+  };
+  const saved = console.error; console.error = () => {};
+  drivePrint(win, { delay: 10 });
+  await new Promise((resolve) => setTimeout(resolve, 300));
+  console.error = saved;
+  assert.equal(printed, 0);
+  assert.equal(inserted.length, 1);
 });
 
 test('the title is escaped — a medicine name with a bracket cannot open a tag', () => {
@@ -91,10 +127,11 @@ test('a blocked pop-up is reported rather than failing silently', () => {
   } finally { Object.assign(globalThis, saved); }
 });
 
-test('a caller with a whole document already built gets the print sequence injected', () => {
-  withBrowser(({ html }) => {
+test('a caller with a whole document already built gets it opened the same way', () => {
+  withBrowser(({ opened, html }) => {
     printFullDocument('<!doctype html><html><body><table></table></body></html>');
-    assert.match(html(), /<table><\/table>.*window\.print\(\).*<\/body>/s, 'injected inside the body, not after it');
+    assert.equal(opened.length, 1);
+    assert.doesNotMatch(html(), /<script/i);
   });
 });
 
@@ -129,4 +166,20 @@ test('no module opens a blank window and writes a printable document into it', a
     if (/\.document\.write\(/.test(source) && !/Preparing drug list/.test(source)) offenders.push(file);
   }
   assert.deepEqual(offenders, [], 'print through core/print-window.js — a written document never fires load in Safari');
+});
+
+test('no printable document embeds a script that prints itself (the page CSP forbids inline scripts)', async () => {
+  const { readFile, readdir } = await import('node:fs/promises');
+  const offenders = [];
+  for (const base of ['../public/assets/js/modules/', '../public/assets/js/core/']) {
+    const dir = new URL(base, import.meta.url);
+    for (const file of await readdir(dir)) {
+      if (!file.endsWith('.js')) continue;
+      const source = await readFile(new URL(file, dir), 'utf8');
+      /* A string that writes a <script> whose body prints: the document opens and
+         then never prints, because a blob inherits the page's CSP. */
+      if (/<script>[^`]*window\.print\(\)/.test(source) || /'<script>'\s*\+\s*\w*[Rr]untime/.test(source)) offenders.push(file);
+    }
+  }
+  assert.deepEqual(offenders, [], 'print through core/print-window.js (drivePrint)');
 });

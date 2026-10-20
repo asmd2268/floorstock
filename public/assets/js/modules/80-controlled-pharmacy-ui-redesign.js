@@ -2,6 +2,7 @@ import { deductReported, addDatedQuantity, removeFromExpiry } from '../core/cras
 import { crashResponseRowIssue, itemPresent, itemStandard, dateKey, datedBatches, quantityAtExpiry } from '../core/crash-response-validation.js?v=ae90e3cb8e';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import { canAccessPage } from '../core/role-capabilities.js?v=cc6a72d5b0';
+import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 /* R6.76.88 — Controlled Medicines: complete redesign (stock/cabinets/departments) + drug-list print fix */
 (function(){
 'use strict';
@@ -752,12 +753,8 @@ function ctlCmpPrint(){
     '<h1>Controlled Medicines Comparison / مقارنة صرف الأدوية المخدرة والمقيدة</h1>'+
     '<h2>'+esc(yearA)+' vs '+esc(yearB)+(dept?' — '+esc(dept):'')+'</h2>'+
     table.outerHTML+
-    '<script>(function(){var d=false;function g(){if(d)return;d=true;window.focus();window.print();}if(document.readyState==="complete")setTimeout(g,400);else window.addEventListener("load",function(){setTimeout(g,400)},{once:true});})()</sc'+'ript></body></html>';
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var w=window.open(url,'_blank');
-  setTimeout(function(){URL.revokeObjectURL(url);},60000);
-  if(!w)window.toast&&window.toast('Allow pop-ups to print.','err');
+    '</body></html>';
+  openBlobPrint(html);
 };
 
 })();

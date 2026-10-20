@@ -11,7 +11,7 @@
    at call time, so nothing is duplicated to make the move. */
 
 import { fsEsc as piEsc } from './dom-utils.js?v=b2909b7f46';
-import { printDocument } from './print-window.js?v=958ca6e29f';
+import { printDocument } from './print-window.js?v=dafb959d71';
 import { pharmacyPrintCss as piPrintCss, pharmacyPrintName as piPrintClass2, pharmacyPrintQr as piQrSvg, luma } from './pharmacy-print-style.js?v=be72d2bca8';
 import { piShelvesOf, piShelfCells, piCellLabel, piExpiryStatus, piDaysToExpiry } from './pharmacy-inventory-model.js?v=77f4ad8cd5';
 import { medicinesNeedingReorder, visibleMedicines } from './pharmacy-inventory-filters.js?v=709188b2f5';

@@ -98,6 +98,5 @@ test('printing a shelf list publishes the document its QR points at', () => {
   assert.match(printShelfList, /warnPublicSync\('Shelf list QR'/);
   // A placeholder QR must stop the print, the way every other QR sheet does.
   assert.match(source, /class="asd-qr-image"/);
-  assert.match(source, /ASD_QR\.printRuntimeScript/);
-  assert.doesNotMatch(source, /<script>\(function\(\)\{var d=false/);
+  assert.doesNotMatch(source, /<script>|printRuntimeScript/, 'printing is driven by print-window, not by a script inside the sheet');
 });

@@ -1,6 +1,7 @@
 import { wholeUnits, pendingUnits, effectiveBalance, activeRegimenVersion as regimenVersion, regimensForAssignment, submissionBlockedBy, uniqueLines, filterUsageRows } from '../core/accountability-custody-rules.js?v=f292ac6424';
 import { itemKey as engineItemKey, findCartItem as engineFindCartItem, uniqueCrashItems as engineUniqueCrashItems, removeFromItem as engineRemoveFromItem, buildCrashBulkResult as engineBuildCrashBulkResult } from '../core/crash-cart-bulk-engine.js?v=46d095710f';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 (function(){
 'use strict';
 var E=window.fsE;
@@ -1171,14 +1172,10 @@ async function controlledStoragePrint(id,mode){
       '</div>'+
       '<div class="public-url">'+esc(publicUrl)+'</div>'+
       '<div class="brand">By Ali Abudahash</div>'+
-      '<script>(function(){var d=false;function p(){if(d)return;d=true;window.focus();window.print()}if(document.readyState==="complete")setTimeout(p,250);else window.addEventListener("load",function(){setTimeout(p,250)},{once:true})})()</scr'+'ipt>'+
       '</body></html>';
 
-    // Blob URL bypasses the app's CSP response headers so the inline auto-print script runs.
-    var blob=new Blob([printHtml],{type:'text/html;charset=utf-8'});
-    var blobUrl=URL.createObjectURL(blob);
-    var printPopup=window.open(blobUrl,'_blank','width=1180,height=820');
-    setTimeout(function(){URL.revokeObjectURL(blobUrl)},60000);
+    // The print is driven from this window (drivePrint), not by a script inside the blob document: a blob inherits the page's CSP, which forbids inline scripts.
+    var printPopup=openBlobPrint(printHtml);
     if(!printPopup){
       toast('Allow pop-ups to print the controlled storage list or map.','err');
       return false;

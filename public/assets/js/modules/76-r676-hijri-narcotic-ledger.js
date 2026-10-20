@@ -1,4 +1,13 @@
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
+function fitLedgerSheet(w){
+  var d=w.document,s=d.querySelector('.sheet'),f=d.querySelector('.fit'),size=13,guard=0;
+  function over(){return f.scrollHeight>s.clientHeight+1}
+  f.style.fontSize=size+'px';
+  while(over()&&size>5&&guard<80){size-=0.4;f.style.fontSize=size+'px';guard++}
+  var wr=(s.clientWidth-2)/Math.max(1,f.scrollWidth),hr=(s.clientHeight-2)/Math.max(1,f.scrollHeight),scale=Math.min(wr,hr,1);
+  f.style.transform='scale('+scale+')';
+}
 
 (function(){
 'use strict';
@@ -340,19 +349,8 @@ function printAllMedicines(){
     '<tbody>'+(body||'<tr><td colspan="7">No data / لا توجد بيانات</td></tr>')+'</tbody></table>'+
     '<div class="footer">By Ali Abudahash — Printed / تاريخ الطباعة: '+esc2(hijriDateLabel(new Date()))+'</div>'+
     '</div></div>'+
-    '<script>(function(){'+
-    'function over(){var s=document.querySelector(".sheet"),f=document.querySelector(".fit");return f.scrollHeight>s.clientHeight+1}'+
-    'function fit(){var f=document.querySelector(".fit"),size=13,guard=0;f.style.fontSize=size+"px";'+
-    'while(over()&&size>5&&guard<80){size-=0.4;f.style.fontSize=size+"px";guard++}'+
-    'var s=document.querySelector(".sheet"),wr=(s.clientWidth-2)/Math.max(1,f.scrollWidth),hr=(s.clientHeight-2)/Math.max(1,f.scrollHeight),scale=Math.min(wr,hr,1);'+
-    'f.style.transform="scale("+scale+")"}'+
-    'window.addEventListener("load",function(){setTimeout(function(){fit();window.focus();window.print()},250)},{once:true});'+
-    '})()</'+'script></body></html>';
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var w=window.open(url,'_blank');
-  setTimeout(function(){URL.revokeObjectURL(url)},60000);
-  if(!w)window.toast&&window.toast('Allow pop-ups to print the ledger.','err');
+    '</body></html>';
+  openBlobPrint(html,{prepare:fitLedgerSheet});
 }
 
 function _statCard(label,val){
@@ -463,19 +461,8 @@ function printLedger(){
     '<tbody>'+(rows||'<tr><td colspan="6">No movements / لا توجد حركات</td></tr>')+'</tbody></table>'+
     '<div class="footer">By Ali Abudahash — Printed / تاريخ الطباعة: '+esc2(hijriDateLabel(new Date()))+'</div>'+
     '</div></div>'+
-    '<script>(function(){'+
-    'function over(){var s=document.querySelector(".sheet"),f=document.querySelector(".fit");return f.scrollHeight>s.clientHeight+1}'+
-    'function fit(){var f=document.querySelector(".fit"),size=13,guard=0;f.style.fontSize=size+"px";'+
-    'while(over()&&size>5&&guard<80){size-=0.4;f.style.fontSize=size+"px";guard++}'+
-    'var s=document.querySelector(".sheet"),wr=(s.clientWidth-2)/Math.max(1,f.scrollWidth),hr=(s.clientHeight-2)/Math.max(1,f.scrollHeight),scale=Math.min(wr,hr,1);'+
-    'f.style.transform="scale("+scale+")"}'+
-    'window.addEventListener("load",function(){setTimeout(function(){fit();window.focus();window.print()},250)},{once:true});'+
-    '})()</'+'script></body></html>';
-  var blob=new Blob([html],{type:'text/html;charset=utf-8'});
-  var url=URL.createObjectURL(blob);
-  var w=window.open(url,'_blank');
-  setTimeout(function(){URL.revokeObjectURL(url)},60000);
-  if(!w)window.toast&&window.toast('Allow pop-ups to print the ledger.','err');
+    '</body></html>';
+  openBlobPrint(html,{prepare:fitLedgerSheet});
 }
 
 window.ctlOpenHijriLedger=function(){
