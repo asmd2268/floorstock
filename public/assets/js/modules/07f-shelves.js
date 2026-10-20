@@ -122,7 +122,6 @@ async function printShelfList(){
     expiryUrl+=(expiryUrl.indexOf('?')>=0?'&':'?')+'shelf='+encodeURIComponent(shelfId);
   }
   var qrUrl=window.makeReadableQR(expiryUrl);
-  var qrSiteUrl=window.makeReadableQR(getAppUrl());
   
   var _cs=getComputedStyle(document.documentElement);
   function _rgb(v,fb){return 'rgba('+(_cs.getPropertyValue(v).trim()||fb)+',1)'}
@@ -180,13 +179,12 @@ async function printShelfList(){
     +'</style></head><body>'
     +officialPrintHeaderHTML()
     +'<div style="position:relative;min-height:96px;margin-bottom:10px;padding-bottom:8px;border-bottom:2px solid #000">'
-    +'<div style="text-align:center;padding:0 200px 0 40px">'
+    +'<div style="text-align:center;padding:0 110px 0 40px">'
     +'<div style="font-size:13pt;font-weight:700">'+deptName+' — Floor Stock / &#x623;&#x62F;&#x648;&#x64A;&#x629; &#x627;&#x644;&#x642;&#x633;&#x645;</div>'
     +'<div style="font-size:8pt;color:#333;margin-top:3px">Date: <b>'+today+'</b> &nbsp;|&nbsp; Shelf: <b>'+shelfLabel+'</b> &nbsp;|&nbsp; Filter: <b>'+filterLabel+'</b> &nbsp;|&nbsp; Items: <b>'+filtered.length+'</b></div>'
     +'<div style="font-size:7pt;color:#666;margin-top:2px">By: '+(profile.username||profile.email||'Department')+' &nbsp;|&nbsp; Developed by Ali Abudahash | ASDHealth</div>'
     +'</div>'
     +'<div style="position:absolute;top:0;right:0;display:flex;gap:8px">'
-    +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrSiteUrl+'" width="90" height="90" alt="System QR code"><div style="font-size:5.5pt;color:#888">System</div></div>'
     +'<div style="text-align:center"><img class="asd-qr-image" src="'+qrUrl+'" width="90" height="90" alt="Expiry monitor QR code"><div style="font-size:5.5pt;color:#888">Expiry Monitor'+(shelfId&&shelfId!=='all'?' — '+shelfLabel:'')+'</div></div>'
     +'</div>'
     +'</div>'
@@ -200,7 +198,6 @@ async function printShelfList(){
     +'</tr></thead><tbody>'+rows+'</tbody></table>'
     +'<div id="footer">'
     +'<span>'+deptName+' — Floor Stock — '+today+' — By Ali Abudahash</span>'
-    +'<img class="asd-qr-image" src="'+qrUrl+'" width="76" height="76" alt="Expiry monitor QR code">'
     +'</div>'
     /* The shared print runtime, not a timer: it waits for every QR image to
        decode and refuses to print a sheet whose QR came back as the
