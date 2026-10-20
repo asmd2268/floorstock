@@ -176,6 +176,24 @@ import { expiryBatchesForShelf, groupExpiryByMedication, expiryBatchStatus, expi
       '<p style="text-align:center;font-size:7.5pt;color:#aaa">Reference: '+esc2(d.referenceName||'—')+'</p>'+
       '<div style="text-align:center;margin-top:10px"><button type="button" data-clickact="printThisPage" style="padding:8px 20px;font-size:13px;cursor:pointer">🖨 Print / طباعة</button></div>';
   }
+  /* The live listener below can only start once the whole application has booted
+     and the Firebase SDK has loaded, which left a scanned QR on a blank page for
+     seconds. These two documents are readable without sign-in, so the first paint
+     is a plain REST read (as the classification list does); the listener then
+     keeps the page live and replaces it. Skipped if the listener already drew.
+     القراءة الأولى عبر REST ثم يتولى المستمع التحديث الحي. */
+  async function firstPaint(collection,id,tenant,render){
+    var r=publicRoot();r.innerHTML='<h2>Loading… / جاري التحميل</h2>';
+    var path=(tenant?'tenants/'+encodeURIComponent(tenant)+'/':'')+collection+'/'+encodeURIComponent(id);
+    try{
+      var res=await fetch('https://firestore.googleapis.com/v1/projects/floorstock-6ac2d/databases/(default)/documents/'+path+'?key=AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU');
+      if(!res.ok)return;
+      var json=await res.json();
+      if(!json.fields||document.querySelector('#public-live-root table'))return;
+      var d={};Object.keys(json.fields).forEach(function(k){d[k]=fromFsVal(json.fields[k])});
+      render(d);
+    }catch(e){/* the live listener reports the failure */}
+  }
   async function liveClassification(type,tenant){
     var r=publicRoot();r.innerHTML='<p style="text-align:center;padding:40px">Loading… / جاري التحميل</p>';
     var API_KEY='AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU',PROJECT='floorstock-6ac2d';
@@ -203,6 +221,7 @@ import { expiryBatchesForShelf, groupExpiryByMedication, expiryBatchStatus, expi
     if(v==='classification'&&p.get('type')){liveClassification(p.get('type'),p.get('tenant')||'');return true;}
     if(v!=='crash-cart-public'&&v!=='controlled-expiry'&&v!=='expiry'&&v!=='pharm-cabinet')return false;
     clearPublicLiveSubscriptions();
+    if((v==='expiry'||v==='controlled-expiry')&&p.get('dept'))firstPaint(v==='expiry'?'public_expiry':'public_controlled_expiry',p.get('dept'),p.get('tenant')||'',v==='expiry'?function(d){renderExpiry(d,p.get('dept'))}:renderControlled);
     if(v==='crash-cart-public'&&!p.get('id')&&p.get('data')){var legacyRoot=publicRoot();legacyRoot.innerHTML='<h2>This legacy embedded Crash Cart QR is disabled.</h2><p>Print a new live QR from the authenticated system.</p>';return true}
     try{await waitForFirebase()}catch(e){var r=publicRoot();r.innerHTML='<h2>Could not initialize Firebase.</h2><p>'+esc2(e.message||e)+'</p>';return true}
     if(v==='crash-cart-public'&&p.get('id'))unsub=liveCrash(p.get('id'));
