@@ -1,5 +1,5 @@
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
-import { earliestDays, controlledStatus } from '../core/controlled-stock-status.js?v=4caae09948';
+import { earliestDays, controlledStatus } from '../core/controlled-stock-status.js?v=12433274ab';
 import { normalizeCode, rowsFromTextItems, dedupeRows, findMedicineByCode } from '../core/receipt-pdf-rows.js?v=cbbd054b27';
 import { recordedBatchQuantities, reconcileBatchQuantities } from '../core/controlled-batch-consumption.js?v=80230e0fce';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';

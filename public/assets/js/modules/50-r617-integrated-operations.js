@@ -870,6 +870,7 @@ function storageBatchText(medicine){
   return text||'No expiry dates';
 }
 window.renderControlledStorage=async function(){
+  r17InstallActions(document.body); // Edit layout / Print list / Print map / Delete and the cell inputs are delegated buttons; only the crash-cart and accountability pages used to install the listener, so an officer opening Controlled Medicines first had dead buttons.
   var panel=E('ctl-storage-view'),notice=E('controlled-storage-auth-message'),workspace=E('controlled-storage-workspace');
   if(!panel||!notice||!workspace)return;
   var createButton=E('controlled-storage-create-btn');

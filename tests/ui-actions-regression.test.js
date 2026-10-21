@@ -853,3 +853,11 @@ test('scoped-role realtime uses per-document listeners, never a collection query
   const installerCalls = requestSource.match(/S\.collectionUnsubs=fsStateInstallCollectionListeners\(/g) || [];
   assert.equal(installerCalls.length, 3);
 });
+
+test('the controlled storage page installs its own delegated listeners', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../public/assets/js/modules/50-r617-integrated-operations.js', import.meta.url), 'utf8');
+  const body = source.slice(source.indexOf('window.renderControlledStorage=async function(){'));
+  assert.match(body.slice(0, 400), /r17InstallActions\(document\.body\)/,
+    'Edit layout, Print list, Print map, Delete and the cell inputs only work once the listener exists');
+});

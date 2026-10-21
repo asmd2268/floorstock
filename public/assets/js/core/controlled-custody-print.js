@@ -113,7 +113,7 @@ body{position:fixed!important;inset:0!important}
 }
 .landscape-layout{width:291mm;height:204mm;display:block}
 .portrait-layout{width:204mm;height:291mm;display:none}
-.fit{width:100%;transform-origin:top left}
+.fit{width:100%;padding:0 1.6mm;transform-origin:top left}
 .official-print-header{margin-bottom:2mm!important}
 .document-head{
   display:grid;
@@ -142,6 +142,8 @@ body{position:fixed!important;inset:0!important}
   break-inside:avoid
 }
 .legend-item{display:flex;align-items:center;gap:1mm}
+.print-date span{unicode-bidi:isolate;white-space:nowrap}
+.print-date{padding-right:.6mm}
 .legend-swatch{
   display:inline-block;
   width:4mm;
@@ -252,8 +254,8 @@ th{font-weight:900}
     '<div class="print-legend">'+
       '<div class="legend-item"><span class="legend-swatch"></span>'+
         '<span>Expiry within 30 days / قريب الانتهاء خلال 30 يومًا</span></div>'+
-      '<div class="print-date">Print date / تاريخ الطباعة: '+
-        fsEsc(printInfo.text)+'</div>'+
+      '<div class="print-date"><span dir="ltr">Print date /</span> <span dir="rtl">تاريخ الطباعة:</span> <span dir="ltr">'+
+        fsEsc(printInfo.text)+'</span></div>'+
     '</div>';
 
   var content='<div class="fit">'+official+
@@ -384,6 +386,21 @@ function fitOne(layout){
       break;
     }
     font=nextFont;
+    guard++;
+  }
+  /* Width limits the font (cells never wrap), so on a short list the sheet still had its lower half empty. Spend the remaining height on row padding, which grows the table without touching any column. */
+  guard=0;
+  var padMax=orientation==='landscape'?2.4:4.2;
+  while(!over(layout,fit)&&padding<padMax&&guard<80){
+    padding=Math.min(padMax,padding+.1);
+    layout.style.setProperty('--py',padding+'mm');
+    void fit.offsetHeight;
+    if(over(layout,fit)){
+      padding=Math.max(.16,padding-.1);
+      layout.style.setProperty('--py',padding+'mm');
+      void fit.offsetHeight;
+      break;
+    }
     guard++;
   }
   guard=0;
