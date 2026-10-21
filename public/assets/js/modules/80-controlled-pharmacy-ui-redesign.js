@@ -202,6 +202,8 @@ import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
   border-color:var(--acl,#1f6feb)!important;
   box-shadow:0 0 0 1.5px rgba(31,111,235,.2)!important}
 .r21-storage-cell-assigned .r17-cell-code{color:var(--acl,#1f6feb)}
+.r21-storage-cell-duplicate{border-color:var(--yl,#d29922)!important;box-shadow:0 0 0 1.5px rgba(210,153,34,.28)!important}
+.r21-storage-duplicate{margin-top:6px;padding:4px 7px;border-radius:6px;font-size:11px;line-height:1.35;background:rgba(210,153,34,.14);color:var(--yl,#b8860b);border:1px solid rgba(210,153,34,.45)}
 .controlled-storage-med-search{width:100%!important;font-size:12px!important;margin:0!important}
 
 /* Near-expiry & unassigned cards */
