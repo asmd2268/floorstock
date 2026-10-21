@@ -2,6 +2,7 @@ import { wholeUnits, pendingUnits, effectiveBalance, activeRegimenVersion as reg
 import { itemKey as engineItemKey, findCartItem as engineFindCartItem, uniqueCrashItems as engineUniqueCrashItems, removeFromItem as engineRemoveFromItem, buildCrashBulkResult as engineBuildCrashBulkResult } from '../core/crash-cart-bulk-engine.js?v=46d095710f';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
+import { storageLocations, otherCells, staleCells, duplicateMark, clearStaleCells } from '../core/controlled-storage-locations.js?v=89134527dd';
 (function(){
 'use strict';
 var E=window.fsE;
@@ -33,7 +34,7 @@ function buildCrashBulkResult(carts,reports,plan){return engineBuildCrashBulkRes
 var removeFromItem=engineRemoveFromItem;window.R17Core=Object.assign(window.R17Core||{},{buildCrashBulkResult:buildCrashBulkResult,removeFromItem:removeFromItem});
 
 function r17InstallActions(root){if(!root)return; /* one listener per event: core/delegated-actions.js */
-  installActions(root,{removeClosest:function(el){var row=el.closest(el.dataset.a1);if(row)row.remove()},removeReplacement:function(el){var row=el.closest('.r17-replacement');if(row)row.remove();r17CrashRenderMatrix()},acc2SaveGrace:function(){acc2SaveGrace((E('acc2-grace-input')||{}).value)},ccTabCarts:function(el,event){ccTabCarts()},ccOpsTab:function(el,event){ccOpsTab(el.dataset.a1)},r17CrashSaveDetails:function(el,event){r17CrashSaveDetails(el.dataset.a1)},r18OpenCrashCorrection:function(el,event){r18OpenCrashCorrection(el.dataset.a1)},r18CrashCorrectionAddBatch:function(el,event){r18CrashCorrectionAddBatch(el)},acc2SetAdminTab:function(el,event){acc2SetAdminTab(el.dataset.a1)},acc2SetDeptTab:function(el,event){acc2SetDeptTab(el.dataset.a1)},acc2SaveAssignment:function(el,event){acc2SaveAssignment()},acc2CancelAssignmentEdit:function(el,event){acc2CancelAssignmentEdit()},acc2EditAssignment:function(el,event){acc2EditAssignment(el.dataset.a1)},acc2ToggleAssignment:function(el,event){acc2ToggleAssignment(el.dataset.a1)},acc2DeleteAssignment:function(el,event){acc2DeleteAssignment(el.dataset.a1)},acc2ResetBalance:function(el,event){acc2ResetBalance(el.dataset.a1)},acc2Decision:function(el,event){acc2Decision(el.dataset.a1,el.dataset.a2)},acc2UndoApproval:function(el,event){acc2UndoApproval(el.dataset.a1)},acc2SaveRegimenVersion:function(el,event){acc2SaveRegimenVersion()},acc2CancelRegimenEdit:function(el,event){acc2CancelRegimenEdit()},acc2ToggleRegimenPause:function(el,event){acc2ToggleRegimenPause(el.dataset.a1)},acc2StartRegimenVersion:function(el,event){acc2StartRegimenVersion(el.dataset.a1)},acc2DeleteRegimen:function(el,event){acc2DeleteRegimen(el.dataset.a1)},acc2RemoveExpiryRow:function(el,event){acc2RemoveExpiryRow(el)},acc3CancelPlanUsage:function(el,event){acc3CancelPlanUsage(el.dataset.a1,el.dataset.a2)},acc2CancelUsage:function(el,event){acc2CancelUsage(el.dataset.a1,el.dataset.a2)},acc2SubmitUsage:function(el,event){acc2SubmitUsage(el.dataset.a1)},acc2ShowExpirySection:function(el,event){acc2ShowExpirySection(el.dataset.a1)},acc2AddExpiryRow:function(el,event){acc2AddExpiryRow(el.dataset.a1)},acc2SaveExpiryBatches:function(el,event){acc2SaveExpiryBatches(el.dataset.a1)},acc2SetMedTab:function(el,event){acc2SetMedTab(el.dataset.a1)},controlledStorageEditUnit:function(el,event){controlledStorageEditUnit(el.dataset.a1)},controlledStoragePrint:function(el,event){controlledStoragePrint(el.dataset.a1,el.dataset.a2)},controlledStorageDeleteUnit:function(el,event){controlledStorageDeleteUnit(el.dataset.a1)},acc2SaveClassColors:function(el,event){acc2SaveClassColors()},acc2ResetClassColors:function(el,event){acc2ResetClassColors()},acc2SaveIntColors:function(el,event){acc2SaveIntColors()},acc2ResetIntColors:function(el,event){acc2ResetIntColors()}},{event:'click',attribute:'clickact'});
+  installActions(root,{removeClosest:function(el){var row=el.closest(el.dataset.a1);if(row)row.remove()},removeReplacement:function(el){var row=el.closest('.r17-replacement');if(row)row.remove();r17CrashRenderMatrix()},acc2SaveGrace:function(){acc2SaveGrace((E('acc2-grace-input')||{}).value)},ccTabCarts:function(el,event){ccTabCarts()},ccOpsTab:function(el,event){ccOpsTab(el.dataset.a1)},r17CrashSaveDetails:function(el,event){r17CrashSaveDetails(el.dataset.a1)},r18OpenCrashCorrection:function(el,event){r18OpenCrashCorrection(el.dataset.a1)},r18CrashCorrectionAddBatch:function(el,event){r18CrashCorrectionAddBatch(el)},acc2SetAdminTab:function(el,event){acc2SetAdminTab(el.dataset.a1)},acc2SetDeptTab:function(el,event){acc2SetDeptTab(el.dataset.a1)},acc2SaveAssignment:function(el,event){acc2SaveAssignment()},acc2CancelAssignmentEdit:function(el,event){acc2CancelAssignmentEdit()},acc2EditAssignment:function(el,event){acc2EditAssignment(el.dataset.a1)},acc2ToggleAssignment:function(el,event){acc2ToggleAssignment(el.dataset.a1)},acc2DeleteAssignment:function(el,event){acc2DeleteAssignment(el.dataset.a1)},acc2ResetBalance:function(el,event){acc2ResetBalance(el.dataset.a1)},acc2Decision:function(el,event){acc2Decision(el.dataset.a1,el.dataset.a2)},acc2UndoApproval:function(el,event){acc2UndoApproval(el.dataset.a1)},acc2SaveRegimenVersion:function(el,event){acc2SaveRegimenVersion()},acc2CancelRegimenEdit:function(el,event){acc2CancelRegimenEdit()},acc2ToggleRegimenPause:function(el,event){acc2ToggleRegimenPause(el.dataset.a1)},acc2StartRegimenVersion:function(el,event){acc2StartRegimenVersion(el.dataset.a1)},acc2DeleteRegimen:function(el,event){acc2DeleteRegimen(el.dataset.a1)},acc2RemoveExpiryRow:function(el,event){acc2RemoveExpiryRow(el)},acc3CancelPlanUsage:function(el,event){acc3CancelPlanUsage(el.dataset.a1,el.dataset.a2)},acc2CancelUsage:function(el,event){acc2CancelUsage(el.dataset.a1,el.dataset.a2)},acc2SubmitUsage:function(el,event){acc2SubmitUsage(el.dataset.a1)},acc2ShowExpirySection:function(el,event){acc2ShowExpirySection(el.dataset.a1)},acc2AddExpiryRow:function(el,event){acc2AddExpiryRow(el.dataset.a1)},acc2SaveExpiryBatches:function(el,event){acc2SaveExpiryBatches(el.dataset.a1)},acc2SetMedTab:function(el,event){acc2SetMedTab(el.dataset.a1)},controlledStorageEditUnit:function(el,event){controlledStorageEditUnit(el.dataset.a1)},controlledStoragePrint:function(el,event){controlledStoragePrint(el.dataset.a1,el.dataset.a2)},controlledStorageDeleteUnit:function(el,event){controlledStorageDeleteUnit(el.dataset.a1)},controlledStorageClearStale:async function(el){var data=storageState(),n=clearStaleCells(data,el.dataset.a1,controlledMeds().map(function(m){return m.id}));if(!n)return;try{await S.s(CONTROLLED_STORAGE_KEY,data);renderControlledStorage();toast(n+' stale cell(s) cleared ✓','info');}catch(error){console.error(error);toast('Stale cells were not cleared.','err');}},acc2SaveClassColors:function(el,event){acc2SaveClassColors()},acc2ResetClassColors:function(el,event){acc2ResetClassColors()},acc2SaveIntColors:function(el,event){acc2SaveIntColors()},acc2ResetIntColors:function(el,event){acc2ResetIntColors()}},{event:'click',attribute:'clickact'});
   installActions(root,{r17CrashRenderMatrix:function(el,event){r17CrashRenderMatrix()},acc2RefreshMedicationList:function(el,event){acc2RefreshMedicationList()},acc2SetCustFilter:function(el,event){acc2SetCustFilter(el.dataset.a1,el.value)},acc2SetFilter:function(el,event){acc2SetFilter(el.dataset.a1,el.value)},acc2SetReceiptDept:function(el,event){acc2SetReceiptDept(el.value)},acc2RegimenDeptChanged:function(el,event){acc2RegimenDeptChanged(el.value)},acc2ActivateRegimen:function(el,event){acc2ActivateRegimen(el.dataset.a1,el.value)},acc2SubSetMed:function(el,event){acc2SubSetMed(el.value)},controlledStorageAssignByName:function(el,event){controlledStorageAssignByName(el)}},{event:'change',attribute:'changeact'});
   installActions(root,{    filterMedicine:function(el){ACC2_UI.filters.medicine=el.value;clearTimeout(window.acc2FilterTimer);window.acc2FilterTimer=setTimeout(r17AccRenderVerify,140)},r17CrashRenderMatrix:function(el,event){r17CrashRenderMatrix()},acc2UpdateDoseCalc:function(el,event){acc2UpdateDoseCalc(el.dataset.a1,el.dataset.a2)},acc2MedSearch:function(el,event){acc2MedSearch(el.value)},controlledStorageCountsChanged:function(el,event){controlledStorageCountsChanged()},controlledStorageValidateSearch:function(el,event){controlledStorageValidateSearch(el)}},{event:'input',attribute:'inputact'});
 }
@@ -923,7 +924,7 @@ window.renderControlledStorage=async function(){
     function batchNearExpiry(m){return (m.batches||[]).some(function(b){var d=new Date(b.expiry||b.date||'');return !isNaN(d.getTime())&&d.getTime()<=cutoffMs;});}
     var nearExpMeds=medicines.filter(batchNearExpiry);
     var cellMap={};
-    data.units.forEach(function(u){(u.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(cell.medId)cellMap[String(cell.medId)]={unit:u.name,code:cell.code};});});});
+    data.units.forEach(function(u){(u.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(cell.medId){(cellMap[String(cell.medId)]=cellMap[String(cell.medId)]||[]).push(u.name+' — '+cell.code);}});});});
     E('controlled-storage-root').innerHTML='<div class="card"><div class="ch"><span class="ct">Near-expiry medicines (≤30 days) / الأدوية القريبة من الانتهاء (خلال 30 يومًا)</span></div>'+
       '<div class="cb">'+
       (nearExpMeds.length?
@@ -932,7 +933,7 @@ window.renderControlledStorage=async function(){
           var cell=cellMap[String(m.id)];
           var batches=(m.batches||[]).filter(function(b){var d=new Date(b.expiry||b.date||'');return !isNaN(d.getTime())&&d.getTime()<=cutoffMs;});
           var expiryText=batches.map(function(b){return (b.expiry||b.date||'—')+(b.lot?' · '+b.lot:'');}).join(' | ');
-          return '<tr style="background:rgba(210,153,34,.08)"><td><b>'+esc(m.name)+'</b></td><td style="color:var(--yl)"><b>'+esc(expiryText)+'</b></td><td>'+(cell?esc(cell.unit)+' — '+esc(cell.code):'<span class="fhint">Unassigned</span>')+'</td></tr>';
+          return '<tr style="background:rgba(210,153,34,.08)"><td><b>'+esc(m.name)+'</b></td><td style="color:var(--yl)"><b>'+esc(expiryText)+'</b></td><td>'+(cell?cell.map(esc).join(' · '):'<span class="fhint">Unassigned</span>')+'</td></tr>';
         }).join('')+
         '</tbody></table></div>':
         '<div class="fhint" style="padding:16px">No medicines expiring within 30 days.</div>')+
@@ -940,15 +941,15 @@ window.renderControlledStorage=async function(){
     return;
   }
   if(!data.units.length){E('controlled-storage-root').innerHTML='<div class="r21-storage-empty"><b>No cabinets or safes yet / لا توجد دواليب أو خزائن</b><div style="margin-top:6px">Use the form above to define the first unit for the controlled-pharmacy custody.</div></div>';return;}
-  E('controlled-storage-root').innerHTML=units.map(function(unit){
-    var actions='<div class="r21-storage-unit-actions"><button class="btn bg bxs" type="button" data-clickact="controlledStorageEditUnit" data-a1="'+unit.id+'">Edit layout</button><button class="btn bg bxs" type="button" data-clickact="controlledStoragePrint" data-a1="'+unit.id+'" data-a2="list">Print list</button><button class="btn bg bxs" type="button" data-clickact="controlledStoragePrint" data-a1="'+unit.id+'" data-a2="map">Print map</button><button class="btn bd2c bxs" type="button" data-clickact="controlledStorageDeleteUnit" data-a1="'+unit.id+'">Delete</button></div>';
+  var locations=storageLocations(data),staleList=staleCells(data,medicines.map(function(m){return m.id}));E('controlled-storage-root').innerHTML=units.map(function(unit){
+    var actions='<div class="r21-storage-unit-actions"><button class="btn bg bxs" type="button" data-clickact="controlledStorageEditUnit" data-a1="'+unit.id+'">Edit layout</button><button class="btn bg bxs" type="button" data-clickact="controlledStoragePrint" data-a1="'+unit.id+'" data-a2="list">Print list</button><button class="btn bg bxs" type="button" data-clickact="controlledStoragePrint" data-a1="'+unit.id+'" data-a2="map">Print map</button>'+(staleList.filter(function(c){return c.unitId===String(unit.id)}).length?'<button class="btn bg bxs" type="button" data-clickact="controlledStorageClearStale" data-a1="'+unit.id+'">Clear stale cell(s) / مسح الخانات القديمة</button>':'')+'<button class="btn bd2c bxs" type="button" data-clickact="controlledStorageDeleteUnit" data-a1="'+unit.id+'">Delete</button></div>';
     var head='<div class="r17-unit-head"><div class="r21-storage-unit-meta"><b>'+esc(unit.name)+'</b><span class="chip">'+esc(unit.type)+'</span><span class="chip">'+(unit.rows||[]).length+' shelf/shelves</span></div>'+actions+'</div>';
     if(data.mode==='list'){
       var listRows=[];(unit.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});if(medicine)listRows.push('<tr><td><b>'+esc(cell.code)+'</b></td><td>'+esc(medicine.name)+'</td><td>'+esc(storageBatchText(medicine))+'</td></tr>');});});
       return '<div class="r17-unit">'+head+'<div class="tw"><table><thead><tr><th>Cell</th><th>Medicine</th><th>Batch/Lot (optional) &amp; Expiry</th></tr></thead><tbody>'+(listRows.length?listRows.join(''):'<tr><td colspan="3">No medicines assigned to this unit.</td></tr>')+'</tbody></table></div></div>';
     }
     var optionsCache={};function options(selected){var key=String(selected||'');if(!optionsCache[key])optionsCache[key]=storageMedicineOptions(medicines,key);return optionsCache[key];}
-    var map=(unit.rows||[]).map(function(row,rowIndex){return '<div class="r17-storage-row" style="grid-template-columns:repeat('+Math.max(1,(row.cells||[]).length)+',minmax(120px,1fr))">'+(row.cells||[]).map(function(cell,cellIndex){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});var stale=cell.medId&&!medicine;return '<div class="r17-cell'+(medicine?' r21-storage-cell-assigned':'')+'"><div class="r17-cell-code">'+esc(cell.code)+'</div><input class="controlled-storage-med-search" list="controlled-storage-medicine-list" data-unit="'+esc(unit.id)+'" data-row="'+rowIndex+'" data-cell="'+cellIndex+'" value="'+(medicine?esc(medicine.name):'')+'" placeholder="Type medicine name / اكتب اسم العلاج" data-changeact="controlledStorageAssignByName" data-inputact="controlledStorageValidateSearch">'+(medicine?'<div class="fhint" style="margin-top:5px">'+esc(storageBatchText(medicine))+'</div>':(stale?'<div class="r21-storage-inline-error" style="display:block;margin-top:5px">Medicine is no longer in pharmacy custody. Clear this cell.</div>':''))+'</div>';}).join('')+'</div>';}).join('');
+    var map=(unit.rows||[]).map(function(row,rowIndex){return '<div class="r17-storage-row" style="grid-template-columns:repeat('+Math.max(1,(row.cells||[]).length)+',minmax(120px,1fr))">'+(row.cells||[]).map(function(cell,cellIndex){var medicine=medicines.find(function(item){return String(item.id)===String(cell.medId);});var stale=cell.medId&&!medicine;return '<div class="r17-cell'+(medicine?' r21-storage-cell-assigned':'')+(medicine&&(locations[String(medicine.id)]||[]).length>1?' r21-storage-cell-duplicate':'')+'"><div class="r17-cell-code">'+esc(cell.code)+'</div><input class="controlled-storage-med-search" list="controlled-storage-medicine-list" data-unit="'+esc(unit.id)+'" data-row="'+rowIndex+'" data-cell="'+cellIndex+'" value="'+(medicine?esc(medicine.name):'')+'" placeholder="Type medicine name / اكتب اسم العلاج" data-changeact="controlledStorageAssignByName" data-inputact="controlledStorageValidateSearch">'+(medicine?'<div class="fhint" style="margin-top:5px">'+esc(storageBatchText(medicine))+'</div>'+duplicateMark(otherCells(locations,medicine.id,unit.id,cell.code),esc,'r21-storage-duplicate'):(stale?'<div class="r21-storage-inline-error" style="display:block;margin-top:5px">Medicine is no longer in pharmacy custody. Clear this cell.</div>':''))+'</div>';}).join('')+'</div>';}).join('');
     return '<div class="r17-unit">'+head+map+'</div>';
   }).join('');
 };
@@ -973,9 +974,9 @@ async function controlledStorageAssign(unitId,rowIndex,cellIndex,medId){
   if(!unit||!unit.rows[rowIndex]||!unit.rows[rowIndex].cells[cellIndex])return;
   var valid=controlledMeds().some(function(medicine){return String(medicine.id)===String(medId);});
   if(medId&&!valid)return toast('This medicine is not in current controlled-pharmacy custody.','err');
-  var movedFrom='';data.units.forEach(function(candidate){(candidate.rows||[]).forEach(function(row){(row.cells||[]).forEach(function(cell){if(medId&&String(cell.medId)===String(medId)){movedFrom=candidate.name+' '+cell.code;cell.medId='';}});});});
-  unit.rows[rowIndex].cells[cellIndex].medId=medId||'';
-  try{await S.s(CONTROLLED_STORAGE_KEY,data);renderControlledStorage();if(medId&&movedFrom)toast('Medicine moved from '+movedFrom+' ✓','info');}
+  unit.rows[rowIndex].cells[cellIndex].medId=medId||''; // other cells holding it keep it: they are marked as duplicates
+  var others=medId?otherCells(storageLocations(data),medId,unitId,unit.rows[rowIndex].cells[cellIndex].code):[];
+  try{await S.s(CONTROLLED_STORAGE_KEY,data);renderControlledStorage();if(others.length)toast('Same medicine is also in: '+others.join(', ')+' / نفس العلاج موجود أيضًا في: '+others.join('، '),'info');}
   catch(error){console.error(error);toast('Cell assignment was not saved.','err');renderControlledStorage();}
 };
 async function controlledStorageDeleteUnit(unitId){
@@ -1041,7 +1042,8 @@ async function controlledStoragePrint(id,mode){
     base.searchParams.set('unit',id);
     var tenant=window.fsTenantId&&fsTenantId();if(tenant)base.searchParams.set('tenant',tenant);
     var publicUrl=base.toString();
-    var qr=window.makeReadableQR(publicUrl);
+    var qr=window.makeReadableQR(publicUrl),locations=storageLocations(data);
+    function dupMark(medicine,cell){return medicine?duplicateMark(otherCells(locations,medicine.id,unit.id,cell.code),esc,'dup'):'';}
     var date=new Date().toLocaleDateString('en-GB');
     var content='';
 
@@ -1068,9 +1070,9 @@ async function controlledStoragePrint(id,mode){
           if(!medicine)return;
           listRows.push(
             '<tr class="'+(near30(medicine.batches)?'near':'')+'">'+
-            '<td class="code-col">'+esc(medicine.moh||'—')+'</td>'+
+            '<td class="cell-col">'+esc(cell.code)+'</td>'+'<td class="code-col">'+esc(medicine.moh||'—')+'</td>'+
             '<td class="code-col">'+esc(medicine.nupco||'—')+'</td>'+
-            '<td class="medicine-col">'+esc(medicine.name)+'</td>'+
+            '<td class="medicine-col">'+esc(medicine.name)+dupMark(medicine,cell)+'</td>'+
             '<td class="expiry-col">'+expiryLines(medicine)+'</td>'+
             '</tr>'
           );
@@ -1079,7 +1081,7 @@ async function controlledStoragePrint(id,mode){
       content=
         '<table class="storage-list">'+
         '<thead><tr>'+
-        '<th>MOH</th>'+
+        '<th>Cell</th><th>MOH</th>'+
         '<th>NUPCO</th>'+
         '<th>Medicine / العلاج</th>'+
         '<th>Expiry date / تاريخ الانتهاء</th>'+
@@ -1087,7 +1089,7 @@ async function controlledStoragePrint(id,mode){
         '<tbody>'+
         (listRows.length
           ?listRows.join('')
-          :'<tr><td colspan="4" class="empty">No medicines assigned.</td></tr>')+
+          :'<tr><td colspan="5" class="empty">No medicines assigned.</td></tr>')+
         '</tbody></table>';
     }else{
       content=
@@ -1107,7 +1109,7 @@ async function controlledStoragePrint(id,mode){
                     '<br>NUPCO: '+esc(medicine.nupco||'—')+'</small>'+
                     '<small class="map-expiry">'+
                     expiryLines(medicine)+
-                    '</small>'
+                    '</small>'+dupMark(medicine,cell)
                   :'')+
                 '</div>';
             }).join('')+
@@ -1138,7 +1140,7 @@ async function controlledStoragePrint(id,mode){
       'thead{display:table-header-group}'+
       'th,td{border:1px solid #000;padding:4px 5px;vertical-align:top;overflow-wrap:anywhere}'+
       'th{background:#444;color:#fff;text-align:center;font-weight:700}'+
-      '.code-col{width:17%;text-align:center}.medicine-col{width:39%;font-weight:800;font-size:10px}.expiry-col{width:27%;font-weight:700}'+
+      '.cell-col{width:8%;text-align:center;font-weight:800}.code-col{width:15%;text-align:center}.medicine-col{width:36%;font-weight:800;font-size:10px}.expiry-col{width:26%;font-weight:700}.dup{margin-top:3px;padding:2px 4px;border:1px dashed #000;font-size:7.5px;font-weight:700}.pcell .dup{font-size:7px;margin-top:3px}'+
       '.expiry-line{padding:2px 0;border-bottom:1px dotted #777}.expiry-line:last-child{border-bottom:0}'+
       '.near td,.pcell.near{background:#000!important;color:#fff!important}'+
       '.empty{text-align:center;padding:20px}'+
