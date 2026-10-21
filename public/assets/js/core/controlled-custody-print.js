@@ -80,7 +80,7 @@ function fsR5ControlledPrintHtml(dept,rows){
       '<span>'+fsEsc(signature[1]||'')+'</span></div>';
   }).join('');
 
-  var css=`@page{size:A4 landscape;margin:6mm}
+  var css=`@page{margin:6mm}
 *{
   box-sizing:border-box;
   -webkit-print-color-adjust:exact!important;
@@ -228,10 +228,14 @@ th{font-weight:900}
 .footer{text-align:center;font-size:5.8pt;margin-top:.7mm}
 .brand{text-align:right;font-size:5.5pt;color:#94a3b8;margin-top:.5mm}
 .print-error{padding:15mm;text-align:center}
-/* The page is A4 landscape (@page above), so print always uses the landscape layout. Chrome evaluates the orientation media feature before @page size applies, so keying the layout on it printed the portrait layout onto a landscape page. */
-@media print{
+/* No @page size on purpose: with one, Chrome picks the layout for the dialog's orientation but prints on the @page one (overlap), and Safari ignores it (cropping). Without it both browsers print the layout that matches the page orientation chosen in the print dialog. */
+@media print and (orientation:landscape){
   .landscape-layout{display:block!important}
   .portrait-layout{display:none!important}
+}
+@media print and (orientation:portrait){
+  .landscape-layout{display:none!important}
+  .portrait-layout{display:block!important}
 }
 @media screen and (orientation:landscape){
   body{background:#d5d5d5!important}
@@ -397,9 +401,10 @@ function fitOne(layout){
     guard++;
   }
 
-  var widthRatio=(layout.clientWidth-2)/Math.max(1,fit.scrollWidth);
+  /* The fit box is as wide as the layout, so its scrollWidth is the layout width or less. Dividing by a smaller scrollWidth gave a scale above 1 that pushed the right edge past the layout, where overflow:hidden cut it (Arabic header, last table column border). Scale to the box that is really occupied and never enlarge. */
+  var widthRatio=layout.clientWidth/Math.max(1,fit.scrollWidth,fit.offsetWidth);
   var heightRatio=(layout.clientHeight-2)/Math.max(1,fit.scrollHeight);
-  var scale=Math.min(widthRatio,heightRatio,1.06);
+  var scale=Math.min(widthRatio,heightRatio,1);
   if(!isFinite(scale)||scale<=0)scale=1;
   fit.style.transform='scale('+scale+')';
 

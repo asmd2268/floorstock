@@ -183,3 +183,18 @@ test('no printable document embeds a script that prints itself (the page CSP for
   }
   assert.deepEqual(offenders, [], 'print through core/print-window.js (drivePrint)');
 });
+
+test('the controlled sheet sets no @page size, so each browser prints the layout of the chosen orientation', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../public/assets/js/core/controlled-custody-print.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /@page\{size:/);
+  assert.match(source, /@media print and \(orientation:landscape\)/);
+  assert.match(source, /@media print and \(orientation:portrait\)/);
+});
+
+test('the controlled sheet never scales above 1, which pushed its right edge out of the clipped box', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../public/assets/js/core/controlled-custody-print.js', import.meta.url), 'utf8');
+  assert.match(source, /Math\.min\(widthRatio,heightRatio,1\)/);
+  assert.doesNotMatch(source, /1\.06/);
+});
