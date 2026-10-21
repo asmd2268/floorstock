@@ -5,10 +5,10 @@
    to act in: expired stock must be pulled whatever the count says, and a shelf
    with nothing on it is a different problem from a shelf with too little.
 
-   Both sides are checked — the warehouse and the pharmacy — and the WORST of
-   the two decides. A medicine in date in the warehouse but expiring in the
-   pharmacy is expiring; a medicine well stocked in the warehouse but empty in
-   the pharmacy is out of stock, because that is where it is dispensed from.
+   Both sides are checked. Expiry: the WORST of the two decides. Quantity: an
+   empty pharmacy shelf is out of stock, because that is where it is dispensed
+   from; an empty warehouse is only a warning, and only when the medicine has a
+   warehouse minimum.
 
    `daysUntil` compares calendar days, not instants: something expiring today is
    at zero days and reads as expired, whatever hour the page was opened.
@@ -38,7 +38,7 @@ export function earliestDays(batches, today = new Date()) {
   return found.length ? Math.min(...found) : null;
 }
 
-export const STATUS = { expired: 'expired', soon: 'soon', out: 'out', low: 'low', ok: 'ok' };
+export const STATUS = { expired: 'expired', soon: 'soon', out: 'out', warehouseEmpty: 'warehouseEmpty', low: 'low', ok: 'ok' };
 
 export function controlledStatusKey(medicine, warehouse, pharmacy, alertDays = 60, today = new Date()) {
   const min = num(medicine && medicine.min);
@@ -50,7 +50,9 @@ export function controlledStatusKey(medicine, warehouse, pharmacy, alertDays = 6
 
   if (earliest !== null && earliest <= 0) return STATUS.expired;
   if (earliest !== null && earliest <= alertDays) return STATUS.soon;
-  if (warehouseQty === 0 || pharmacyQty === 0) return STATUS.out;
+  /* Out of stock is the pharmacy shelf, where it is dispensed from. An empty warehouse is its own warning, and only for a medicine the warehouse is meant to hold (a minimum above zero): a medicine with no warehouse minimum that is stocked in the pharmacy is not out of stock. */
+  if (pharmacyQty === 0) return STATUS.out;
+  if (warehouseQty === 0 && min > 0) return STATUS.warehouseEmpty;
   if (min > 0 && (warehouseQty < min || pharmacyQty < min)) return STATUS.low;
   return STATUS.ok;
 }
@@ -61,6 +63,7 @@ export function controlledStatus(medicine, warehouse, pharmacy, alertDays = 60, 
     expired: '<span class="badge brd">Expired</span>',
     soon: '<span class="badge byl">Expiring ≤ ' + alertDays + 'd</span>',
     out: '<span class="badge brd">Out of stock</span>',
+    warehouseEmpty: '<span class="badge byl">Warehouse empty / المستودع فارغ</span>',
     low: '<span class="badge byl">Below minimum</span>',
     ok: '<span class="badge bgn">OK</span>',
   }[key];

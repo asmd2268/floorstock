@@ -50,8 +50,11 @@ test('the alert window is the hospital\'s own, not a fixed sixty days', () => {
 
 test('an empty shelf is out of stock, and it outranks being below minimum', () => {
   assert.equal(status({ min: 10 }, stocked, { qty: 0, batches: [] }), 'out');
-  assert.equal(status({ min: 10 }, { system: 0, outside: 0, batches: [] }, onShelf), 'out',
-    'empty in the warehouse counts too');
+  assert.equal(status({ min: 10 }, { system: 0, outside: 0, batches: [] }, onShelf), 'warehouseEmpty',
+    'an empty warehouse is a warning, not out of stock, while the shelf has stock');
+  assert.equal(status({ min: 0 }, { system: 0, outside: 0, batches: [] }, onShelf), 'ok',
+    'no warehouse minimum: stocked in the pharmacy is fine');
+  assert.equal(status({ min: 0 }, { system: 0, outside: 0, batches: [] }, { qty: 0, batches: [] }), 'out');
 });
 
 test('stock held outside the system still counts as stock', () => {
