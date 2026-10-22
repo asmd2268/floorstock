@@ -17,6 +17,7 @@ import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=5
 import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=eec5742551';
 import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=7a75e3ae82';
 import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=58354d0a19';
+import { stateRunQueries, documentsFromRunQuery } from '../core/state-list-query.js?v=2a69444611';
 import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
 
@@ -325,12 +326,12 @@ async function fsStateRestListCollection(collectionId){
   return documents;
 }
 async function fsStateLoadFloorstockViaRest(){
-  var documents=await fsStateRestListCollection(fsStateCollectionPath()),cache={};
-  documents.forEach(function(documentValue){
-    var data=fsLoginDecodeRestDocument(documentValue)||{};
+  var queries=stateRunQueries(fsStateRestBase(),fsStateCollectionPath(),FIREBASE_CONFIG.apiKey),cache={}; // all but the on-demand snapshot documents: core/state-list-query.js
+  var answers=await Promise.all(queries.map(function(q){return fsStateRestRequest(q.url,{method:'POST',body:JSON.stringify(q.body)},20000)}));
+  answers.forEach(function(answer){documentsFromRunQuery(answer.payload).forEach(function(documentValue){
     var id=String(documentValue.name||'').split('/').pop();
-    if(id&&id!=='users')cache[id]=data.value;
-  });
+    if(id&&id!=='users')cache[id]=(fsLoginDecodeRestDocument(documentValue)||{}).value;
+  })});
   return {cache:cache,source:'rest'};
 }
 // Every key in COLLECTION_BACKED_KEYS is intentionally omitted from the lists
@@ -873,7 +874,6 @@ function fsStateScheduleManagedUserLoad(profileHint){
     });
   },0);
 }
-
 
 /* One realtime listener per collection-backed key, shared by the master path
    (transport 'sdk') and the scoped path. Both used to carry their own copy of
@@ -1438,6 +1438,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     if(hasOverflowParts(k))return joinOverflowParts(k);
     return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null;
   },
+  readDocument:function(k){return Object.prototype.hasOwnProperty.call(S.cache,k)?Promise.resolve(S.cache[k]):fsStateLoadDocumentViaRest(k)}, // a document kept out of the login load (inventory snapshots)
   s:function(k,v){
     if(partitionsAreLive(k)){
       // Writes only the months that actually changed, instead of rewriting every
@@ -1600,7 +1601,6 @@ function fmtDateTime(iso){
 function daysUntil(iso){return window.fsDaysUntil?window.fsDaysUntil(iso):null}
 function todayISO(){return new Date().toISOString().slice(0,10)}
 function nowISO(){return window.fsNowISO?window.fsNowISO():new Date().toISOString()}
-
 
 const __asdhLegacyApi = {
   ensureFirebaseFunctions: ensureFirebaseFunctions,
