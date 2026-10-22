@@ -38,6 +38,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install Cloud Functions dependencies
+        # The Functions emulator (npm run test:cf) loads functions/index.js, which needs its own
+        # node_modules; the root `npm ci` does not install them.
+        run: npm --prefix functions ci
+
       - name: Install Chromium for browser tests
         run: npx playwright install --with-deps chromium
 
