@@ -80,7 +80,7 @@ function fsR5ControlledPrintHtml(dept,rows){
       '<span>'+fsEsc(signature[1]||'')+'</span></div>';
   }).join('');
 
-  var css=`@page{margin:6mm}
+  var css=`@page{margin:8mm}
 *{
   box-sizing:border-box;
   -webkit-print-color-adjust:exact!important;
@@ -111,8 +111,8 @@ body{position:fixed!important;inset:0!important}
   --py:.8mm;
   --qr:22mm
 }
-.landscape-layout{width:291mm;height:204mm;display:block}
-.portrait-layout{width:204mm;height:291mm;display:none}
+.landscape-layout{width:281mm;height:194mm;display:block}
+.portrait-layout{width:194mm;height:281mm;display:none}
 .fit{width:100%;padding:0 1.6mm;transform-origin:top left}
 .official-print-header{margin-bottom:2mm!important}
 .document-head{

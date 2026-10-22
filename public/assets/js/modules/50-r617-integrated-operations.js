@@ -1123,11 +1123,11 @@ async function controlledStoragePrint(id,mode){
       '<!doctype html><html><head><meta charset="utf-8">'+
       '<title>'+esc(unit.name)+' — Controlled storage '+esc(mode)+'</title>'+
       '<style>'+
-      '@page{size:A4 portrait;margin:4mm}'+
+      '@page{size:A4 portrait;margin:8mm}'+
       'html,body{width:100%;margin:0}'+
       '*{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}'+
       'body{font-family:Arial,Tahoma,sans-serif;color:#000}'+
-      'body.print-map{height:289mm;overflow:hidden;display:flex;flex-direction:column}'+
+      'body.print-map{height:281mm;overflow:hidden;display:flex;flex-direction:column}'+
       'body.print-list{min-height:100%;overflow:visible}'+
       '.head{display:grid;grid-template-columns:1fr 25mm;gap:4mm;align-items:center;border-bottom:2px solid #000;padding-bottom:3px;margin-bottom:3px;flex:0 0 auto}'+
       '.title{text-align:center}.title h2{font-size:16px;margin:0 0 2px}.title div{font-size:9px}'+
