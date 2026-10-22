@@ -4,6 +4,7 @@
 // (E, FB_DB, fsTenantCollection, waitForFirebase), never anything from module 07's
 // own module-scope closure, so it can live in its own file safely.
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=c13c38051a';
 import { expiryBatchesForShelf, groupExpiryByMedication, expiryBatchStatus, expiryQtyLabel } from '../core/public-expiry-view.js?v=6df94dc7a9';
 
 (function(){
@@ -186,7 +187,7 @@ import { expiryBatchesForShelf, groupExpiryByMedication, expiryBatchStatus, expi
     var r=publicRoot();r.innerHTML='<h2>Loading… / جاري التحميل</h2>';
     var path=(tenant?'tenants/'+encodeURIComponent(tenant)+'/':'')+collection+'/'+encodeURIComponent(id);
     try{
-      var res=await fetch('https://firestore.googleapis.com/v1/projects/floorstock-6ac2d/databases/(default)/documents/'+path+'?key=AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU');
+      var res=await fetch('https://firestore.googleapis.com/v1/projects/floorstock-6ac2d/databases/(default)/documents/'+path+'?key='+FIREBASE_CONFIG.apiKey);
       if(!res.ok)return;
       var json=await res.json();
       if(!json.fields||document.querySelector('#public-live-root table'))return;
@@ -196,7 +197,7 @@ import { expiryBatchesForShelf, groupExpiryByMedication, expiryBatchStatus, expi
   }
   async function liveClassification(type,tenant){
     var r=publicRoot();r.innerHTML='<p style="text-align:center;padding:40px">Loading… / جاري التحميل</p>';
-    var API_KEY='AIzaSyBlcFhBTaJ9so8MlCLa_JTtUpQxCbEwuzU',PROJECT='floorstock-6ac2d';
+    var API_KEY=FIREBASE_CONFIG.apiKey,PROJECT='floorstock-6ac2d';
     var path=tenant?'tenants/'+encodeURIComponent(tenant)+'/public_classification/'+encodeURIComponent(type):'public_classification/'+encodeURIComponent(type);
     var url='https://firestore.googleapis.com/v1/projects/'+PROJECT+'/databases/(default)/documents/'+path+'?key='+API_KEY;
     try{
