@@ -8,7 +8,7 @@ import { printDocument } from '../core/print-window.js?v=dafb959d71';
      same official header, same certification line. A caller that pre-opened a
      window inside the user's click still gets that window used. */
   var CTL_PRINT_CSS =
-    '@page{size:A4 landscape;margin:5mm}'+
+    '@page{size:A4 landscape;margin:8mm}'+
     '*{box-sizing:border-box}html,body{width:100%;height:auto!important;max-height:none!important;margin:0;padding:0;overflow:visible!important;direction:ltr!important}'+
     'body{font-family:Arial,Tahoma,sans-serif;color:#111;text-align:left;padding:0}'+
     '.print-page{width:100%;height:auto!important;max-height:none!important;max-width:none;margin:0;overflow:visible!important;transform:none!important}'+

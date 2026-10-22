@@ -198,3 +198,12 @@ test('the controlled sheet never scales above 1, which pushed its right edge out
   assert.match(source, /Math\.min\(widthRatio,heightRatio,1\)/);
   assert.doesNotMatch(source, /1\.06/);
 });
+
+test('no print sheet sets a page margin below the 8mm a office printer can actually print', async () => {
+  const { readFile } = await import('node:fs/promises');
+  for (const file of ['modules/50-r617-integrated-operations.js', 'modules/15-controlled-print-pages.js', 'core/controlled-custody-print.js']) {
+    const source = await readFile(new URL('../public/assets/js/' + file, import.meta.url), 'utf8');
+    const margins = [...source.matchAll(/@page\{[^}]*?margin:(\d+)mm/g)].map((m) => Number(m[1]));
+    assert.ok(margins.length > 0 && margins.every((mm) => mm >= 8), file + ' margins ' + margins);
+  }
+});
