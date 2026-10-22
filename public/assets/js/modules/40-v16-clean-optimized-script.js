@@ -708,7 +708,7 @@ window.restoreSelectedInventorySafetySnapshot=async function(){
   if(!masterAllowed())return false;
   var deptId=String((document.getElementById('r662-snapshot-dept')||{}).value||''),choice=document.querySelector('input[name="r662-snapshot-choice"]:checked'),list=clone(S.g('inventory_snapshot_index_'+deptId)||[]),item=choice&&list.find(function(x){return String(x.id)===String(choice.value)});
   if(!item)return typeof toast==='function'?toast('Choose a snapshot first.','err'):false;
-  var meds=clone(S.g(item.medsKey)||[]),expiry=clone(S.g(item.expiryKey)||[]);
+  var meds=clone(await S.readDocument(item.medsKey)||[]),expiry=clone(await S.readDocument(item.expiryKey)||[]);
   var yes=typeof uiConfirm==='function'?await uiConfirm('Restore '+deptName(deptId)+' to '+new Date(item.at).toLocaleString()+'?\\n\\nCurrent medications: '+medsRaw(deptId).length+'\\nSnapshot medications: '+meds.length+'\\n\\nA safety snapshot of the current state will be created first.'):window.confirm('Restore selected inventory snapshot?');
   if(!yes)return false;
   var button=document.getElementById('r662-restore-snapshot');if(button){button.disabled=true;button.textContent='Restoring…'}
@@ -725,7 +725,7 @@ window.undoLatestInventorySafetySnapshot=async function(){
   if(!masterAllowed())return typeof toast==='function'?toast('Master permission required.','err'):false;
   var deptId=typeof getInvDept==='function'?String(getInvDept()||''):'',index=deptId?clone(S.g('inventory_snapshot_index_'+deptId)||[]):[];
   if(!deptId||!index.length)return typeof toast==='function'?toast('No inventory safety snapshot is available for this department.','info'):false;
-  var item=index[0],meds=clone(S.g(item.medsKey)||[]),expiry=clone(S.g(item.expiryKey)||[]);
+  var item=index[0],meds=clone(await S.readDocument(item.medsKey)||[]),expiry=clone(await S.readDocument(item.expiryKey)||[]);
   var yes=typeof uiConfirm==='function'?await uiConfirm('Restore '+deptName(deptId)+' to '+new Date(item.at).toLocaleString()+'?\\nMedication records: '+meds.length):window.confirm('Restore latest inventory snapshot?');
   if(!yes)return false;
   await window.inventorySafetyApprovedBulk('undo_snapshot',function(){return setMeds(deptId,meds)});
