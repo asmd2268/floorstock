@@ -7,7 +7,7 @@ import { isSupportedLoginRole } from '../core/auth-role-policy.js?v=f923470ab5';
 import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
 import { fsStateRestBase } from '../core/firestore-rest-paths.js?v=5c800b7527';
 import { FIREBASE_CONFIG } from '../core/firebase-config.js?v=c13c38051a';
-import { renderRequestBlocks } from '../core/request-blocks-page.js?v=d3c1e03679';
+import { renderRequestBlocks } from '../core/request-blocks-page.js?v=e58b79787a';
 
 // ── APP SHELL: STATE URLS / THEME / AUTO-CATEGORY / AUTH / NAV / DASHBOARD / INVENTORY ──
 // Split out of 03-core-application-firebase-state-auth.js (Phase 3 module

@@ -128,8 +128,13 @@ async function setMode(departmentIds, mode) {
   let next = normalizeBlockSettings(readSettings());
   ids.forEach((id) => { next = applyBlockMode(next, id, mode, actor, now); });
 
+  /* S.s puts the value in the cache before it waits on Firestore, so the page can
+     show the new setting at once instead of after the round trip; a refused write
+     rolls the cache back and the redraw below shows the old setting again. */
+  const saving = globalThis.S.s(REQUEST_RECEIVE_BLOCKS_KEY, next);
+  renderRequestBlocks();
   try {
-    await globalThis.S.s(REQUEST_RECEIVE_BLOCKS_KEY, next);
+    await saving;
     if (typeof globalThis.auditAction === 'function') {
       try { await globalThis.auditAction('request_block_changed', { departments: ids, mode }); } catch (error) { console.warn('Request block audit failed', error); }
     }
