@@ -17,6 +17,7 @@ import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=5
 import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '../core/firestore-scope.js?v=eec5742551';
 import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=7a75e3ae82';
 import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=58354d0a19';
+import { recentAuditLogKeys, controlledPharmacyDeptKeys, pharmacyDepartmentStateKeys } from '../core/state-scope-key-lists.js?v=844bb97636';
 import { stateRunQueries, documentsFromRunQuery } from '../core/state-list-query.js?v=2a69444611';
 import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
@@ -397,7 +398,7 @@ function fsStateKeysForProfile(profile){
     controlledPharmacyBase:CONTROLLED_PHARMACY_BASE_KEYS,
     warehouse:WAREHOUSE_STATE_KEYS,
     departmentShared:DEPARTMENT_SHARED_STATE_KEYS,
-    auditKeys:fsRecentAuditLogKeys,
+    auditKeys:recentAuditLogKeys,
     ledgerKeys:fsRecentLedgerKeys,
     ledgerMonths:LEDGER_MONTHS_IN_SESSION
   });
@@ -478,15 +479,7 @@ async function fsStateLoadScoped(keys,loader,source,profile){
    cannot LIST the collection has to name the months it wants. It reads the current
    and previous month, which is what its screens actually show; the full history is
    available to the roles that can list. */
-function fsRecentAuditLogKeys(monthsBack){
-  var keys=[],now=new Date();
-  for(var i=0;i<=(monthsBack||1);i++){
-    var d=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()-i,1));
-    keys.push('audit_log_'+d.getUTCFullYear()+'-'+String(d.getUTCMonth()+1).padStart(2,'0'));
-  }
-  return keys;
-}
-globalThis.fsRecentAuditLogKeys=fsRecentAuditLogKeys;
+globalThis.fsRecentAuditLogKeys=recentAuditLogKeys;
 
 /* Thirteen Hijri months: the current one plus a full year back, which covers the
    custody officer's working view and the year-to-date report without loading five
@@ -538,48 +531,16 @@ globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'controlled_custody_handover_log_v1','controlled_custody_handover_defaults_v1','user_activity_daily_v1',
   'classification_lists_v1','page_visibility_overrides_v1'
 ]);
-function fsControlledPharmacyDeptKeys(cache){
-  var ids=(Array.isArray(cache&&cache.departments)?cache.departments:[])
-    .map(function(d){return String(d&&d.id||'').trim();}).filter(Boolean);
-  var keys=[];
-  // controlled_settings_ (custody print signatures/print-code mode) and
-  // controlled_dept_shelves_ (shelf/cabinet layout) are readable+writable by
-  // this role for every department (see canReadPharmacyState/canWriteState
-  // in firestore.rules, both matched by the controlled_.* wildcard), but were
-  // missing from this scoped key list — so a save via ctlEditSignatures
-  // succeeded in Firestore yet never came back on the next scoped state
-  // load/poll, making edits appear to silently revert and print pull stale
-  // per-department data.
-  ids.forEach(function(id){
-    keys.push('controlled_dept_list_'+id,'controlled_settings_'+id,'controlled_dept_shelves_'+id);
-  });
-  return keys;
-}
 async function fsStateLoadControlledPharmacyScoped(profile,loader,source){
   // Same one list the listeners use: the ledger and audit months are part of
   // this role's state, and a poll that omitted them deleted them from the cache.
   var initial=await fsStateLoadScoped(fsStateKeysForProfile(profile)||CONTROLLED_PHARMACY_BASE_KEYS,loader,source,profile);
-  var deptKeys=fsControlledPharmacyDeptKeys(initial.cache);
+  var deptKeys=controlledPharmacyDeptKeys(initial.cache);
   if(!deptKeys.length)return initial;
   var dynamic=await fsStateLoadScoped(deptKeys,loader,source,profile);
   Object.assign(initial.cache,dynamic.cache);
   initial.failedKeys=(initial.failedKeys||[]).concat(dynamic.failedKeys||[]);
   return initial;
-}
-function fsPharmacyDepartmentStateKeys(cache,profile){
-  var departments=Array.isArray(cache&&cache.departments)?cache.departments:[];
-  var role=String(profile&&profile.role||'');
-  var isInpatient=false;
-  var prefixes=['meds_','expiry_','shelves_','alerts_','inventory_integrity_','inventory_snapshot_index_'];
-  var keys=[];
-  departments.forEach(function(dept){
-    var id=String(dept&&dept.id||'').trim();
-    if(!id)return;
-    // inpatient_supervisor has no access to outpatient department data
-    if(isInpatient){var n=String(dept.name||id).toLowerCase().trim();if(n==='outpatient'||n==='outpatient department'||id.toLowerCase()==='outpatient')return;}
-    prefixes.forEach(function(prefix){keys.push(prefix+id)});
-  });
-  return keys;
 }
 async function fsStateLoadPharmacyScoped(profile,loader,source){
   // The per-department keys (meds_/expiry_/shelves_/... for every
@@ -600,7 +561,7 @@ async function fsStateLoadPharmacyScoped(profile,loader,source){
      poll wiped the partitions the listeners had just delivered, and the badge
      counting pending custody rows went 2, 0, 2, 0 in front of the pharmacist. */
   var restKeys=(fsStateKeysForProfile(profile)||PHARMACY_SCOPED_STATE_KEYS).filter(function(k){return k!=='departments'});
-  var dynamicKeys=fsPharmacyDepartmentStateKeys(deptOnly.cache,profile);
+  var dynamicKeys=pharmacyDepartmentStateKeys(deptOnly.cache,profile);
   var pair=await Promise.all([
     fsStateLoadScoped(restKeys,loader,source,profile),
     dynamicKeys.length?fsStateLoadScoped(dynamicKeys,loader,source,profile):Promise.resolve({cache:{},failedKeys:[]})
@@ -1027,7 +988,7 @@ globalThis.S = {
       if(cached){
         var parsed=JSON.parse(cached),allowed=fsStateKeysForProfile(profileHint);
         if(allowed){
-          if(fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(fsPharmacyDepartmentStateKeys(parsed,profileHint));
+          if(fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(pharmacyDepartmentStateKeys(parsed,profileHint));
           /* A collection-backed key is not in any role's key list — it is read
              from its own collection, not named document by document — so the warm
              boot was dropping it from the restored cache. The Crash Cart badge
@@ -1280,7 +1241,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       // meds_/expiry_/shelves_/... per-department keys can only be computed
       // once `departments` is known — already true here, since S.ready only
       // flips after the initial full load (REST or SDK) has completed.
-      keys=keys.concat(fsPharmacyDepartmentStateKeys(S.cache,profile));
+      keys=keys.concat(pharmacyDepartmentStateKeys(S.cache,profile));
     }
     S.transport='sdk-scoped-listen';
     var fellBack=false;
@@ -1361,7 +1322,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
         if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previousCache,key))incoming[key]=previousCache[key];
       });
       if(fsIsPharmacyScopedProfile(S.scopeProfile)&&!Object.prototype.hasOwnProperty.call(incoming,'departments')&&Array.isArray(previousCache.departments)&&previousCache.departments.length){
-        fsPharmacyDepartmentStateKeys(previousCache).forEach(function(key){
+        pharmacyDepartmentStateKeys(previousCache).forEach(function(key){
           if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previousCache,key))incoming[key]=previousCache[key];
         });
       }
@@ -1616,7 +1577,7 @@ const __asdhLegacyApi = {
   fsStateMergeCollectionKeys: fsStateMergeCollectionKeys,
   fsStateScopeCacheForProfile: fsStateScopeCacheForProfile,
   fsStateLoadScoped: fsStateLoadScoped,
-  fsPharmacyDepartmentStateKeys: fsPharmacyDepartmentStateKeys,
+  fsPharmacyDepartmentStateKeys: pharmacyDepartmentStateKeys,
   fsStateLoadPharmacyScoped: fsStateLoadPharmacyScoped,
   fsStateLoadUsersViaRest: fsStateLoadUsersViaRest,
   fsHydrateDepartmentDirectoryForLogin: fsHydrateDepartmentDirectoryForLogin,
@@ -1693,7 +1654,7 @@ export {
   fsStateLoadDocumentViaRest,
   fsStateLoadDocumentViaSdk,
   fsStateScopeCacheForProfile,
-  fsControlledPharmacyDeptKeys,
+  controlledPharmacyDeptKeys as fsControlledPharmacyDeptKeys,
   fsStateLoadControlledPharmacyScoped,
   fsStateLoadFloorstockForProfileViaRest,
   fsStateLoadFloorstockForProfileViaSdk,
