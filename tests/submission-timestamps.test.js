@@ -36,5 +36,7 @@ test('an order already shows the hour it was sent', async () => {
 
 test('the time format is the one the app already uses everywhere', async () => {
   const stateModule = await readFile(new URL('modules/03-core-application-firebase-state-auth.js', jsRoot), 'utf8');
-  assert.match(stateModule, /function fmtDateTime\(iso\)\{[\s\S]*?hour: ?'2-digit', ?minute: ?'2-digit'/);
+  assert.match(stateModule, /function fmtDateTime\(iso\)\{[\s\S]*?return formatDateTimeGB\(d\);/);
+  const format = await readFile(new URL('core/date-format.js', jsRoot), 'utf8');
+  assert.match(format, /hour: ?'2-digit', ?minute: ?'2-digit'/);
 });

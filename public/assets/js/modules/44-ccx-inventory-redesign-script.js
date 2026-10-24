@@ -1,6 +1,7 @@
 import { currentExpiryThresholds } from '../core/expiry-thresholds.js?v=c226ecff7d';
 import { ccExcelBackup, ccExcelRestore } from './86-crash-cart-excel-backup.js?v=5f9b13a834';
 import { latestClosedByCart } from '../core/crash-report-latest.js?v=5fab0d24df';
+import { createMedicationCanonicalizer } from '../core/medication-canonicalizer.js?v=b2491feeae';
 import { crashCartSealInfo, crashCartSealLabel } from '../core/crash-cart-seal-info.js?v=1d24b15bf6';
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 (function(){
@@ -31,30 +32,7 @@ function numx(v){var n=Number(v);return isFinite(n)?n:0}
 function norm(v){return window.fsMedNorm?window.fsMedNorm(v):String(v||'').toLowerCase().trim()}
 function actor(){return window.fsActor?window.fsActor():{name:'Unknown',user:'Unknown',id:''}}
 function deptName(id){return window.fsDeptName?window.fsDeptName(id):String(id||'—')}
-function canonicalMedication(itemOrName,strengthValue){
- var item=(itemOrName&&typeof itemOrName==='object')?itemOrName:{name:itemOrName,strength:strengthValue,concentration:strengthValue};
- var name=String(item.name||item.genericName||'').trim(),strength=String(item.strength||item.concentration||strengthValue||'').trim();
- if(item.identityLocked===true)return {generic:name||'Unknown',concentration:strength};
- var raw=norm(name+' '+strength),nameRaw=norm(name),strengthRaw=norm(strength);
- var compactName=nameRaw.replace(/\s+/g,'');
- if(compactName.indexOf('calciumchloride10%')===0)return {generic:'Calcium Chloride 10%',concentration:strength||'1g/10ml'};
- if(compactName.indexOf('calciumgluconate10%')===0)return {generic:'Calcium Gluconate 10%',concentration:strength||'1g/10ml'};
- if(compactName.indexOf('magnesiumsulfate10%')===0||compactName.indexOf('magnesiumsulphate10%')===0)return {generic:'Magnesium Sulfate 10%',concentration:strength||'2g/20ml'};
- if(/norepinephrine|noradrenaline|noradranaline/.test(raw)||((/adrenaline|epinephrine/.test(raw))&&strengthRaw.indexOf('4mgml')>=0))return {generic:'Norepinephrine 1:1,000',concentration:'4mg/ml'};
- if(nameRaw.indexOf(norm('Sodium Bicarbonate'))>=0){
-   if(strengthRaw.indexOf(norm('4.2g/50ml'))>=0||nameRaw.indexOf(norm('8.4%'))>=0)return {generic:'Sodium Bicarbonate 8.4%',concentration:'4.2g/50ml'};
-   if(strengthRaw.indexOf(norm('4.2g/10ml'))>=0)return {generic:'Sodium Bicarbonate',concentration:'4.2g/10ml'};
- }
- var found=null;
- CCX_CATALOG.some(function(x){
-   var catalogName=norm(x.generic),catalogCompact=catalogName.replace(/\s+/g,'');
-   var exact=nameRaw===catalogName||compactName===catalogCompact;
-   var alias=x.aliases.some(function(a){var aliasNorm=norm(a),aliasCompact=aliasNorm.replace(/\s+/g,'');return nameRaw===aliasNorm||nameRaw.indexOf(aliasNorm)===0||compactName===aliasCompact||compactName.indexOf(aliasCompact)===0});
-   if(exact||alias){found=x;return true}return false
- });
- if(found)return {generic:found.generic,concentration:strength||found.concentration||''};
- return {generic:name||'Unknown',concentration:strength};
-}
+var canonicalMedication=createMedicationCanonicalizer({catalog:CCX_CATALOG,norm:norm});
 window.fsCrashCanonicalMedication=canonicalMedication;
 function meta(item){return canonicalMedication(item)}
 var rules=currentExpiryThresholds;
