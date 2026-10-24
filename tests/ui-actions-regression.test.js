@@ -605,7 +605,8 @@ test('department expiry and inventory saves retain own safety snapshots without 
 
   assert.equal(canDeleteStateKey(department, 'inventory_snapshot_emergency_old_meds'), true);
   assert.equal(canDeleteStateKey(department, 'inventory_snapshot_nicu_old_meds'), false);
-  assert.match(requestSource, /inventory_integrity_','inventory_snapshot_index_/);
+  const scopeKeyLists = fs.readFileSync(new URL('../public/assets/js/core/state-scope-key-lists.js', import.meta.url), 'utf8');
+  assert.match(scopeKeyLists, /'inventory_integrity_', 'inventory_snapshot_index_'/);
   /* Receiving a delivery appends to the department's OWN expiry list and saves
      it through its own setter, so one department can never write another's.
      That lives with the dialog now (core/receive-expiry-dialog.js). */
@@ -819,7 +820,7 @@ test('scoped pharmacy roles load permitted state documents without collection li
     assert.match(readScope, new RegExp("'" + role + "'"));
   }
   assert.match(requestSource, /function fsStateLoadPharmacyScoped\(/);
-  assert.match(requestSource, /function fsPharmacyDepartmentStateKeys\(/);
+  assert.match(requestSource, /fsPharmacyDepartmentStateKeys: pharmacyDepartmentStateKeys/);
   assert.match(requestSource, /Promise\.allSettled\(keys\.map/);
   assert.match(requestSource, /var scopedKeys=fsStateKeysForProfile\(S\.scopeProfile\);/);
   assert.match(requestSource, /if\(scopedKeys\)\{/);
