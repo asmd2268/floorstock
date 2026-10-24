@@ -19,6 +19,7 @@ import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-
 import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=58354d0a19';
 import { recentAuditLogKeys, controlledPharmacyDeptKeys, pharmacyDepartmentStateKeys } from '../core/state-scope-key-lists.js?v=844bb97636';
 import { createStateRestClient, stateAppCheckToken } from '../core/state-rest-client.js?v=39db0d6281';
+import { formatDateGB, formatDateTimeGB } from '../core/date-format.js?v=ea70f645d9';
 import { stateRunQueries, documentsFromRunQuery } from '../core/state-list-query.js?v=2a69444611';
 import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
@@ -1508,14 +1509,13 @@ function fmtDate(iso){
   if(!iso)return '—';
   var d=new Date(iso);
   if(isNaN(d))return iso;
-  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric'});
+  return formatDateGB(d);
 }
-
 function fmtDateTime(iso){
   if(!iso)return '—';
   var d=new Date(iso);
   if(isNaN(d))return iso;
-  return d.toLocaleString('en-GB',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  return formatDateTimeGB(d);
 }
 function daysUntil(iso){return window.fsDaysUntil?window.fsDaysUntil(iso):null}
 function todayISO(){return new Date().toISOString().slice(0,10)}
