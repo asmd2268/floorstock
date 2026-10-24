@@ -18,6 +18,7 @@ import { tenantIdFromProfile, stateCollectionPath, collectionBackedPath } from '
 import { stateCollectionRef, collectionRefForSpec } from '../core/firestore-sdk-scope.js?v=7a75e3ae82';
 import { registerStateTransport, setState as portSetState, removeState as portRemoveState, loadState as portLoadState, onTransportFallback, resetWriteTransport, writeTransportName } from '../core/state-transport.js?v=58354d0a19';
 import { recentAuditLogKeys, controlledPharmacyDeptKeys, pharmacyDepartmentStateKeys } from '../core/state-scope-key-lists.js?v=844bb97636';
+import { createStateRestClient, stateAppCheckToken } from '../core/state-rest-client.js?v=39db0d6281';
 import { stateRunQueries, documentsFromRunQuery } from '../core/state-list-query.js?v=2a69444611';
 import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
@@ -128,7 +129,7 @@ async function fsCallFunction(name,data){
     }
   }
   var token=await fsLoginTimeout(user.getIdToken(true),10000,'Firebase authentication refresh timed out.');
-  var appCheckToken=await fsStateAppCheckToken();
+  var appCheckToken=await stateAppCheckToken(globalThis.FB_APPCHECK);
   var callHeaders={'Content-Type':'application/json','Authorization':'Bearer '+token};
   if(appCheckToken)callHeaders['X-Firebase-AppCheck']=appCheckToken;
   var response=await fsLoginTimeout(fetch(fsCallableUrl(name),{
@@ -281,51 +282,8 @@ window.fsTenantCollection=function(name){var tenantId=window.fsTenantId();return
 // existing defensive activate() pattern in initFirebase — a request
 // without this header is unaffected as long as Firestore stays in
 // "Monitor" mode; it only starts mattering once Enforce is turned on.
-async function fsStateAppCheckToken(){
-  var appCheck=globalThis.FB_APPCHECK;
-  if(!appCheck||typeof appCheck.getToken!=='function')return null;
-  // One retry on failure: a transient reCAPTCHA Enterprise network hiccup
-  // (slow hospital wifi, brief connectivity blip) shouldn't permanently mark
-  // every REST call for the rest of the session as unverified when a second
-  // attempt a moment later would likely succeed. Still fails open — a
-  // second failure just returns null like before, never blocks the write.
-  for(var attempt=0;attempt<2;attempt++){
-    try{
-      var result=await appCheck.getToken(false);
-      var token=result&&result.token||null;
-      if(token)return token;
-    }catch(appCheckTokenError){
-      if(attempt===1)console.warn('Firebase App Check token unavailable for REST request.',appCheckTokenError);
-    }
-    if(attempt===0)await new Promise(function(resolve){setTimeout(resolve,300)});
-  }
-  return null;
-}
-async function fsStateRestRequest(url,options,timeoutMs){
-  var token=await fsStateToken(false);
-  var appCheckToken=await fsStateAppCheckToken();
-  options=options||{};
-  options.headers=Object.assign({},options.headers||{},{
-    'Authorization':'Bearer '+token,
-    'Content-Type':'application/json'
-  });
-  if(appCheckToken)options.headers['X-Firebase-AppCheck']=appCheckToken;
-  return fsLoginFetchJson(url,options,timeoutMs||12000);
-}
-async function fsStateRestListCollection(collectionId){
-  var documents=[],pageToken='',guard=0;
-  do{
-    var url=fsStateRestBase()+'/'+fsRestPath(collectionId)+'?pageSize=300&key='+encodeURIComponent(FIREBASE_CONFIG.apiKey);
-    if(pageToken)url+='&pageToken='+encodeURIComponent(pageToken);
-    var response=await fsStateRestRequest(url,{method:'GET'},12000);
-    var payload=response.payload||{};
-    if(Array.isArray(payload.documents))documents=documents.concat(payload.documents);
-    pageToken=payload.nextPageToken||'';
-    guard++;
-    if(guard>20)throw new Error('Firestore REST pagination exceeded the safety limit.');
-  }while(pageToken);
-  return documents;
-}
+var fsStateRestClient=createStateRestClient({authToken:fsStateToken,appCheck:function(){return globalThis.FB_APPCHECK},fetchJson:function(){return fsLoginFetchJson.apply(null,arguments)},restBase:fsStateRestBase,restPath:fsRestPath,apiKey:function(){return FIREBASE_CONFIG.apiKey}});
+var fsStateRestRequest=fsStateRestClient.request,fsStateRestListCollection=fsStateRestClient.listCollection;
 async function fsStateLoadFloorstockViaRest(){
   var queries=stateRunQueries(fsStateRestBase(),fsStateCollectionPath(),FIREBASE_CONFIG.apiKey),cache={}; // all but the on-demand snapshot documents: core/state-list-query.js
   var answers=await Promise.all(queries.map(function(q){return fsStateRestRequest(q.url,{method:'POST',body:JSON.stringify(q.body)},20000)}));
