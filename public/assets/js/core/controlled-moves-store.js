@@ -6,8 +6,7 @@ import {
   appendMonthPartitionedRows,
   saveMonthPartitionedRow,
   deleteMonthPartitionedRow,
-  partitionKeysInCache,
-  partitionKey
+  partitionKeysInCache
 } from './month-partitioned-store.js?v=9a4f8c0b46';
 import { registerStorageCleanup } from './storage-cleanup.js?v=09fc6d5eed';
 
@@ -140,5 +139,4 @@ Object.assign(globalThis, {
   appendControlledMoves,
   saveControlledMove,
   deleteControlledMove,
-  availableControlledMonths,
-  controlledMovePartitionKey: (month, part) => partitionKey(CONTROLLED_MOVES_KEY, month, part)});
+  availableControlledMonths});

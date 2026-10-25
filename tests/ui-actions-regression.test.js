@@ -824,7 +824,7 @@ test('scoped pharmacy roles load permitted state documents without collection li
     assert.match(readScope, new RegExp("'" + role + "'"));
   }
   assert.match(requestSource, /fsStateLoadPharmacyScoped=fsScopedLoader\.loadPharmacy/);
-  assert.match(requestSource, /fsPharmacyDepartmentStateKeys: pharmacyDepartmentStateKeys/);
+  assert.match(requestSource, /pharmacyDepartmentStateKeys\(S\.cache,profile\)/);
   const scopedLoader = fs.readFileSync(new URL('../public/assets/js/core/scoped-state-loader.js', import.meta.url), 'utf8');
   assert.match(scopedLoader, /Promise\.allSettled\(keys\.map/);
   assert.match(requestSource, /var scopedKeys=fsStateKeysForProfile\(S\.scopeProfile\);/);

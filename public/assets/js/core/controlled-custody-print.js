@@ -531,6 +531,5 @@ window.ctlOpenDepartmentPrintOptions=function(){return window.ctlConfirmDepartme
 /* Bound in HTML and called by other modules under all four names. */
 Object.assign(globalThis,{
   printDepartmentCustodyExact: globalThis.printDepartmentCustodyExact,
-  ctlConfirmDepartmentPrint: globalThis.ctlConfirmDepartmentPrint,
-  fsR5ControlledPrintHtml
+  ctlConfirmDepartmentPrint: globalThis.ctlConfirmDepartmentPrint
 });

@@ -666,7 +666,6 @@ publishLegacy("07j-controlled-module-enhancements.js", {
   renderCtlPdfReceiptPanel,
   ctlAddCatalogMedicine,
   ctlFmtDMY,
-  ctlCanDispense,
   ctlOpenDispense,
   ctlChooseLogo,
   ctlPrintSettings,
