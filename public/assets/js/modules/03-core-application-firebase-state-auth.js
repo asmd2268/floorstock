@@ -24,6 +24,7 @@ import { carryOverFailedKeys, carryOverDepartmentKeys, applyStateCache } from '.
 import { createOpeningWave, applySnapshotToCache } from '../core/scoped-listener-rules.js?v=8b519e2b0f';
 import { warmCacheKey, pruneOtherWarmCaches, readWarmCache, saveWarmCache } from '../core/state-warm-cache.js?v=147306da90';
 import { applyStateDocChanges } from '../core/state-doc-changes.js?v=6ecb2c70ee';
+import { canManageUsers, refreshUsersDirectory } from '../core/users-directory-refresh.js?v=b8697cc8e4';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
 import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
 import { estimateDocBytes } from '../core/firestore-doc-size.js?v=0edc84c939';
@@ -711,10 +712,9 @@ async function fsStateDeleteSmart(key){
   return portRemoveState(key);
 }
 function fsStateApplyCache(nextCache){return applyStateCache(S.cache||{},nextCache,stateValueEqual)}
+function fsRefreshUsersDirectory(){return refreshUsersDirectory({cache:S.cache,loadUsers:function(){return S.loadUsers()},valuesEqual:stateValueEqual,usersPageActive:function(){var active=document.querySelector('.pg.on');return !!(active&&active.id==='pg-users')},scheduleRefresh:function(){S.scheduleRefresh()}})}
 function fsStateScheduleManagedUserLoad(profileHint){
-  var role=profileHint&&profileHint.role||'';
-  var shouldLoadUsers=!!(profileHint&&profileHint.master===true)||role==='pharmacy'||role==='pharmacy_director';
-  if(!shouldLoadUsers)return;
+  if(!canManageUsers(profileHint))return;
   setTimeout(function(){
     if(!S.ready)return;
     S.loadUsers().then(function(users){
@@ -1053,18 +1053,8 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
           S.transport='rest';S.startRealtime();
         });
         S.collectionUnsubs=fsStateInstallCollectionListeners(S.scopeProfile,'');
-        var tenantId=fsTenantId(S.scopeProfile),canManageUsers=!!(S.scopeProfile&&(S.scopeProfile.master===true||['pharmacy','pharmacy_director'].indexOf(S.scopeProfile.role)>=0));
-        if(canManageUsers){
-          // Always refresh through the canonical directory callable.  A direct
-          // /users listener cannot include legacy users and caused the Users
-          // page to become empty again after the first realtime update.
-          S.usersPollTimer=setInterval(function(){
-            var before=S.cache.users||[];
-            S.loadUsers().then(function(users){
-              var active=document.querySelector('.pg.on');
-              if(!stateValueEqual(before,users||[])&&active&&active.id==='pg-users')S.scheduleRefresh();
-            }).catch(function(error){console.warn('User-list refresh was unavailable.',error)});
-          },30000);
+        if(canManageUsers(S.scopeProfile)){
+          S.usersPollTimer=setInterval(function(){fsRefreshUsersDirectory().catch(function(error){console.warn('User-list refresh was unavailable.',error)})},30000);
         }
         return true;
       }catch(error){
@@ -1144,16 +1134,9 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
         window.__ASDH_REAL_LOAD_COMPLETE=true;
         document.dispatchEvent(new CustomEvent('asdh:real-load-complete'));
       }
-      if(CU&&(CU.master===true||['pharmacy','pharmacy_director'].indexOf(CU.role)>=0)){
-        try{
-          var previousUsers=S.cache.users||[];
-          var users=await S.loadUsers();
-          var usersChanged=!stateValueEqual(previousUsers,users||[]);
-          var active=document.querySelector('.pg.on');
-          if(usersChanged&&active&&active.id==='pg-users')S.scheduleRefresh();
-        }catch(usersError){
-          console.warn('REST user polling was unavailable.',usersError);
-        }
+      if(canManageUsers(CU)){
+        try{await fsRefreshUsersDirectory();}
+        catch(usersError){console.warn('REST user polling was unavailable.',usersError);}
       }
     }catch(error){
       console.warn('REST Floor Stock polling failed.',error);
