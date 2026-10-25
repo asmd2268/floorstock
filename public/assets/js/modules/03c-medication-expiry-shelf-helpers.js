@@ -50,12 +50,13 @@ function fsR17NormalizeExpiryRow(deptId,row,index,usedIds){
   usedIds[id]=1;
   return Object.assign({},row,{id:id,batchId:id,medId:medId,date:date,expiry:date,batch:lot,lot:lot});
 }
+var FS_R18_EXPIRY_NORMALIZED_FIELDS=['id','batchId','medId','date','expiry','batch','lot'];
 function fsR18NormalizeExpiryRows(deptId,rows){
   var used={},changed=false,merged={};
   var normalized=(Array.isArray(rows)?rows:[]).map(function(row,index){
-    var before=JSON.stringify(row||{});
     var next=fsR17NormalizeExpiryRow(deptId,row,index,used);
-    if(before!==JSON.stringify(next))changed=true;
+    /* Only these seven fields are written by the normaliser, so a row changed exactly when one differs: comparing them avoids serialising every row twice per read. */
+    if(FS_R18_EXPIRY_NORMALIZED_FIELDS.some(function(field){return !row||row[field]!==next[field]}))changed=true;
     var key=next.medId+'|'+next.date+'|'+next.lot;
     if(merged[key]){merged[key].qty=(Number(merged[key].qty)||0)+(Number(next.qty)||0);changed=true;return null}
     merged[key]=next;return next;
