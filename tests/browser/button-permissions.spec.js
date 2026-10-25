@@ -26,6 +26,8 @@ const DELIBERATE_DOORS = new Set([]);
 
 
 test('no role is shown a control whose only answer is "no permission"', async ({ page }) => {
+  /* Walks every role through every page: ~25s on a fast machine against a 30s default, so a slower CI runner failed on speed alone. The budget is for the walk, not a limit on what a page may take. */
+  test.setTimeout(120_000);
   const findings = [];
   const noControls = [];
   const walked = [];
