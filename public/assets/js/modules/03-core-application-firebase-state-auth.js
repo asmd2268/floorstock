@@ -25,6 +25,7 @@ import { createOpeningWave, applySnapshotToCache } from '../core/scoped-listener
 import { warmCacheKey, pruneOtherWarmCaches, readWarmCache, saveWarmCache } from '../core/state-warm-cache.js?v=147306da90';
 import { applyStateDocChanges } from '../core/state-doc-changes.js?v=6ecb2c70ee';
 import { canManageUsers, refreshUsersDirectory } from '../core/users-directory-refresh.js?v=b8697cc8e4';
+import { createIntervalRunner } from '../core/interval-runner.js?v=82d04b813f';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
 import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
 import { estimateDocBytes } from '../core/firestore-doc-size.js?v=0edc84c939';
@@ -711,6 +712,7 @@ async function fsStateDeleteSmart(key){
   await ensureGeoAllowed();
   return portRemoveState(key);
 }
+var restPoller=createIntervalRunner(function(){S.pollRest()},30000);
 function fsStateApplyCache(nextCache){return applyStateCache(S.cache||{},nextCache,stateValueEqual)}
 function fsRefreshUsersDirectory(){return refreshUsersDirectory({cache:S.cache,loadUsers:function(){return S.loadUsers()},valuesEqual:stateValueEqual,usersPageActive:function(){var active=document.querySelector('.pg.on');return !!(active&&active.id==='pg-users')},scheduleRefresh:function(){S.scheduleRefresh()}})}
 function fsStateScheduleManagedUserLoad(profileHint){
@@ -852,7 +854,7 @@ function fsStatePlainSet(k,v){
 
 var fsStateWrite=createStateWriter({partitionsAreLive:partitionsAreLive,applyPartitionedArray:applyPartitionedArray,hasOverflowParts:hasOverflowParts,estimateDocBytes:estimateDocBytes,overflowSplitBytes:OVERFLOW_SPLIT_BYTES,writeWithOverflow:writeWithOverflow,putChunkInCache:function(docId,chunk){S.cache[docId]=chunk},setDocument:function(docId,chunk){return fsStateSetSmart(docId,chunk)},isRowMergedKey:isRowMergedKey,saveRowsMerging:saveRowsMerging,plainSet:function(k,v){return fsStatePlainSet(k,v)},trackSave:_trackSave,notifyFailure:function(message){toast(message,'err')}});
 globalThis.S = {
-  cache:{},ready:false,stateUnsub:null,collectionUnsubs:null,__collectionRowsById:{},usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,cacheKey:'',
+  cache:{},ready:false,stateUnsub:null,collectionUnsubs:null,__collectionRowsById:{},usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,cacheKey:'',
   persistLocalCache:function(){
     if(!S.cacheKey)return;
     try{
@@ -915,29 +917,24 @@ globalThis.S = {
     });
 
     var freshCache=result.cache||{};
-
-S.cache=freshCache;
-S.transport=result.source||'rest';
-resetWriteTransport();S.writeTransport=writeTransportName();
-S.cache.users=S.cache.users||[];
-S.ready=true;
-if(!window.__ASDH_REAL_LOAD_COMPLETE){
-  window.__ASDH_REAL_LOAD_COMPLETE=true;
-  document.dispatchEvent(new CustomEvent('asdh:real-load-complete'));
-}
-
+    S.cache=freshCache;
+    S.transport=result.source||'rest';
+    resetWriteTransport();S.writeTransport=writeTransportName();
+    S.cache.users=S.cache.users||[];
+    S.ready=true;
+    if(!window.__ASDH_REAL_LOAD_COMPLETE){
+      window.__ASDH_REAL_LOAD_COMPLETE=true;
+      document.dispatchEvent(new CustomEvent('asdh:real-load-complete'));
+    }
     // Save only this authenticated account's already permission-scoped state.
     saveWarmCache(localStorage,cacheKey,freshCache,function(e){console.warn('Could not save Floor Stock cache.',e)});
     S.startRealtime();
-
     setTimeout(function(){
       if(typeof window.renderRequestHourGridUI==='function'){
         window.renderRequestHourGridUI();
       }
     },0);
-
     fsStateScheduleManagedUserLoad(profileHint);
-
     if(statusCallback)statusCallback('Opening Floor Stock…');
     return true;
   },
@@ -1035,7 +1032,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       if(window.__ASDH_FORCE_REST_SCOPED){
         S.transport='rest';
         S.pollRest();
-        S.pollTimer=setInterval(function(){S.pollRest();},30000);
+        restPoller.start();
         return true;
       }
       S.startScopedListeners(scopedKeys);
@@ -1072,7 +1069,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       try{S.collectionUnsubs=fsStateInstallCollectionListeners(S.scopeProfile,'rest-state');}
       catch(error){console.warn('Collection listeners unavailable on the REST path.',error);}
     }
-    S.pollTimer=setInterval(function(){S.pollRest();},30000);
+    restPoller.start();
     return false;
   },
   // Real-time replacement for scoped-role REST polling. One onSnapshot per
@@ -1100,7 +1097,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       S.transport='rest';
       S.startSelfProfileWatch();
       S.pollRest();
-      S.pollTimer=setInterval(function(){S.pollRest();},30000);
+      restPoller.start();
     }
     /* The opening wave renders once, and a from-cache "not found" never blanks a held key: see core/scoped-listener-rules.js. */
     var wave=createOpeningWave({count:keys.length,deadlineMs:2500,onSettled:function(){S.scheduleRefresh()}});
@@ -1152,7 +1149,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     if(S.usersUnsub){S.usersUnsub();S.usersUnsub=null;}
     if(S.usersPollTimer){clearInterval(S.usersPollTimer);S.usersPollTimer=null;}
     if(S.refreshTimer){clearTimeout(S.refreshTimer);S.refreshTimer=null;}
-    if(S.pollTimer){clearInterval(S.pollTimer);S.pollTimer=null;}
+    restPoller.stop();
     // The fallback poll only exists while a collection listener is down; a new
     // session installs its own listeners and must not inherit the old one's.
     if(S.__collectionRestFallbackTimer){clearInterval(S.__collectionRestFallbackTimer);S.__collectionRestFallbackTimer=null;}
