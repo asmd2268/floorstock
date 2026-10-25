@@ -86,12 +86,12 @@ test('a scoped session draws once its opening snapshots have landed', () => {
   /* ~40 per-document listeners each delivering on their own schedule, each
      asking for a render, meant the page was drawn repeatedly from different
      half-arrived states. Master reads one collection snapshot and never saw it. */
-  assert.match(stateModule, /var openingWave=keys\.length,waveSettled=false/);
-  assert.match(stateModule, /if\(changed&&waveSettled\)S\.scheduleRefresh\(\)/);
-  // A slow or denied document must not hold the page back forever.
-  assert.match(stateModule, /waveDeadline=setTimeout\(function\(\)\{finishWave\(\)\},2500\)/);
+  assert.match(stateModule, /createOpeningWave\(\{count:keys\.length,deadlineMs:2500,/);
+  assert.match(stateModule, /if\(applied\.changed&&wave\.isSettled\(\)\)S\.scheduleRefresh\(\)/);
   // A listener that errors still counts as having spoken.
-  assert.match(stateModule, /\},function\(error\)\{\s*\n\s*if\(first\)\{first=false;waveArrived\(\);\}/);
+  assert.match(stateModule, /\},function\(error\)\{\s*\n\s*if\(first\)\{first=false;wave\.arrived\(\);\}/);
+  // A from-cache "not found" is ignored through the shared rule.
+  assert.match(stateModule, /applySnapshotToCache\(S\.cache,key,snapshot,stateValueEqual\)/);
   // The collection listener waits for the same wave.
   assert.match(stateModule, /function fsRefreshWhenSettled\(\)/);
   // And the gate is dropped with the listeners it belongs to.

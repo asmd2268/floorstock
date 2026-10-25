@@ -845,7 +845,9 @@ test('scoped-role realtime uses per-document listeners, never a collection query
   // the crash-reports collection listener, guard included. Both now call the one
   // shared installer, so there is one guard covering every collection-backed key
   // plus the one on the per-document scoped listeners.
-  assert.equal(fromCacheGuards.length >= 2, true);
+  assert.equal(fromCacheGuards.length >= 1, true);
+  // The per-document scoped guard now lives in the shared rule module.
+  assert.match(fs.readFileSync(new URL('../public/assets/js/core/scoped-listener-rules.js', import.meta.url), 'utf8'), /snapshot\.metadata\.fromCache && !snapshot\.exists && held/);
   assert.match(requestSource, /function fsStateInstallCollectionListeners\(profile,label\)\{/);
   /* Every realtime path must go through the one installer rather than growing a
      second copy of the listener. There are three call sites — the SDK state
