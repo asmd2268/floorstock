@@ -112,7 +112,7 @@ for required_header in ["Strict-Transport-Security", "X-Frame-Options", "Content
 auth_module = (PUBLIC / "assets" / "js" / "modules" / "03-core-application-firebase-state-auth.js").read_text(encoding="utf-8")
 for required in [
     "FB_APPCHECK.activate(",
-    "floorstock_last_cache_v2_",
+    "warmCacheKey(cacheUid)",
     "fsHydrateDepartmentDirectoryForLogin(profile)",
     # The cold load prefers REST and falls back to the SDK. That rule moved into
     # core/state-transport.js; this module registers both implementations behind it.

@@ -22,6 +22,7 @@ import { createStateRestClient, stateAppCheckToken } from '../core/state-rest-cl
 import { formatDateGB, formatDateTimeGB } from '../core/date-format.js?v=ea70f645d9';
 import { carryOverFailedKeys, carryOverDepartmentKeys, applyStateCache } from '../core/state-poll-reconcile.js?v=696dbb5754';
 import { createOpeningWave, applySnapshotToCache } from '../core/scoped-listener-rules.js?v=8b519e2b0f';
+import { warmCacheKey, pruneOtherWarmCaches, readWarmCache, saveWarmCache } from '../core/state-warm-cache.js?v=147306da90';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
 import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
 import { estimateDocBytes } from '../core/firestore-doc-size.js?v=0edc84c939';
@@ -863,35 +864,21 @@ globalThis.S = {
     S.stopRealtime();
     S.scopeProfile=profileHint||null;
     var cacheUid=String(profileHint&&profileHint.uid||FB_AUTH&&FB_AUTH.currentUser&&FB_AUTH.currentUser.uid||'').trim();
-    var cacheKey=cacheUid?'floorstock_last_cache_v2_'+cacheUid:'';
+    var cacheKey=warmCacheKey(cacheUid);
     S.cacheKey=cacheKey;
-    // The v1 key was shared across accounts and could expose a previous session's state.
-    try{
-      localStorage.removeItem('floorstock_last_cache_v1');
-      Object.keys(localStorage).forEach(function(key){
-        if(key.indexOf('floorstock_last_cache_v2_')===0&&key!==cacheKey)localStorage.removeItem(key);
-      });
-    }catch(removeError){/* storage is unavailable: a private window, or site data the browser cleared. The feature works without it. */}
+    pruneOtherWarmCaches(localStorage,cacheKey);
     var hasCachedState=false;
     try{
-      var cached=cacheKey?localStorage.getItem(cacheKey):null;
-      if(cached){
-        var parsed=JSON.parse(cached),allowed=fsStateKeysForProfile(profileHint);
-        if(allowed){
-          if(fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(pharmacyDepartmentStateKeys(parsed,profileHint));
-          /* A collection-backed key is not in any role's key list — it is read
-             from its own collection, not named document by document — so the warm
-             boot was dropping it from the restored cache. The Crash Cart badge
-             therefore started every session empty and only appeared once the
-             collection listener had spoken, seconds later, with a pending report
-             invisible until then. The listener still corrects it immediately; it
-             just no longer starts from nothing. */
-          allowed=allowed.concat(collectionBackedKeyNames());
-          var allowedSet=new Set(allowed),scoped={};
-          Object.keys(parsed||{}).forEach(function(key){if(allowedSet.has(key))scoped[key]=parsed[key]});
-          parsed=scoped;
-        }
-        S.cache=fsStateScopeCacheForProfile(parsed||{},profileHint);
+      var parsed=readWarmCache(localStorage,cacheKey,{
+        allowedKeys:function(cacheValue){
+          var allowed=fsStateKeysForProfile(profileHint);
+          if(allowed&&fsIsPharmacyScopedProfile(profileHint))allowed=allowed.concat(pharmacyDepartmentStateKeys(cacheValue,profileHint));
+          return allowed;
+        },
+        extraKeys:collectionBackedKeyNames
+      });
+      if(parsed){
+        S.cache=fsStateScopeCacheForProfile(parsed,profileHint);
         S.cache.users=[];
         S.ready=true;
         hasCachedState=Object.keys(S.cache).length>0;
@@ -939,11 +926,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
 }
 
     // Save only this authenticated account's already permission-scoped state.
-    try{
-      if(cacheKey)localStorage.setItem(cacheKey,JSON.stringify(freshCache));
-    }catch(e){
-      console.warn('Could not save Floor Stock cache.',e);
-    }
+    saveWarmCache(localStorage,cacheKey,freshCache,function(e){console.warn('Could not save Floor Stock cache.',e)});
     S.startRealtime();
 
     setTimeout(function(){
