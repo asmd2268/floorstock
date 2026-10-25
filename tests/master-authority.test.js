@@ -64,7 +64,9 @@ test('a lagging claim does not sign the account out in a loop', async () => {
      document to CU.master. Now that CU.master is the claim, that comparison
      would fire on every snapshot for exactly the account this fix is about. */
   const stateModule = await readFile(new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url), 'utf8');
-  assert.match(stateModule, /window\.CU\.documentMaster!==undefined\?window\.CU\.documentMaster:window\.CU\.master/);
+  assert.match(stateModule, /selfProfileVerdict\(true,snapshot\.data\(\),window\.CU\)/);
+  const guard = await readFile(new URL('../public/assets/js/core/self-profile-guard.js', import.meta.url), 'utf8');
+  assert.match(guard, /current\.documentMaster !== undefined \? current\.documentMaster : current\.master/);
   const login = await readFile(new URL('../public/assets/js/modules/03f-app-shell-nav-dashboard-inventory.js', import.meta.url), 'utf8');
   assert.match(login, /documentMaster:profile\.master===true/);
 });

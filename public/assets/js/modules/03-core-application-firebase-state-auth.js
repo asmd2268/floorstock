@@ -24,7 +24,8 @@ import { carryOverFailedKeys, carryOverDepartmentKeys, applyStateCache } from '.
 import { createOpeningWave, applySnapshotToCache } from '../core/scoped-listener-rules.js?v=8b519e2b0f';
 import { warmCacheKey, pruneOtherWarmCaches, readWarmCache, saveWarmCache } from '../core/state-warm-cache.js?v=147306da90';
 import { applyStateDocChanges } from '../core/state-doc-changes.js?v=6ecb2c70ee';
-import { canManageUsers, refreshUsersDirectory } from '../core/users-directory-refresh.js?v=b8697cc8e4';
+import { selfProfileVerdict } from '../core/self-profile-guard.js?v=76e06b437a';
+import { canManageUsers, refreshUsersDirectory, resolveUserDirectory } from '../core/users-directory-refresh.js?v=7933e4a7ea';
 import { createIntervalRunner } from '../core/interval-runner.js?v=82d04b813f';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
 import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
@@ -939,29 +940,7 @@ globalThis.S = {
     return true;
   },
   loadUsers:async function(){
-    // The callable is authoritative: it combines the current /users
-    // collection with the legacy directory.  Do not race it against a direct
-    // Firestore query, because an empty direct query can otherwise overwrite a
-    // valid legacy directory before the callable returns.
-    // Keep a known-good directory during a transient network/callable issue.
-    // In particular, never replace a populated Users screen with an empty
-    // result from a failed fallback path during the 30-second refresh cycle.
-    var previousUsers=Array.isArray(S.cache&&S.cache.users)?S.cache.users:[];
-    var users;
-    try{
-      // The server function is the canonical directory for both legacy and
-      // tenant installations. It can merge Authentication-backed records with
-      // the legacy state directory without depending on client list rules.
-      users=await fsStateLoadUsersViaCallable();
-    }catch(callableError){
-      console.warn('Managed-user directory callable was unavailable; using a read-only fallback.',callableError);
-      users=await fsStateLoadLegacyUserDirectory();
-    }
-    if(Array.isArray(users)&&users.length===0&&previousUsers.length){
-      console.warn('Managed-user directory refresh returned no records; retaining the last verified directory.');
-      return previousUsers;
-    }
-    S.cache.users=Array.isArray(users)?users:[];
+    S.cache.users=await resolveUserDirectory({previous:S.cache&&S.cache.users,viaCallable:fsStateLoadUsersViaCallable,viaFallback:fsStateLoadLegacyUserDirectory,warn:console.warn.bind(console)});
     return S.cache.users;
   },
   // Token-lag mitigation for the Phase 2b custom-claims scaffolding (see
@@ -984,21 +963,9 @@ globalThis.S = {
         S.forceSignOutForProfileChange('Your account was removed. / تم حذف حسابك، الرجاء التواصل مع الإدارة.');
         return;
       }
-      var profile=snapshot.data()||{};
-      var deptId=profile.deptId!=null?profile.deptId:profile.departmentId;
-      var deactivated=profile.active!==true;
-      var changed=deactivated
-        || String(profile.role||'')!==String(window.CU.role||'')
-        || String(deptId||'')!==String(window.CU.deptId||'')
-        /* Compared against what the DOCUMENT said at login, not against the
-           effective Master flag, which now comes from the token claim. An
-           account whose document says Master while its claim has not caught up
-           runs with master:false on purpose — comparing the two here would read
-           that as "permissions changed" and sign the person out on every
-           snapshot, forever. A real change to the document still signs out. */
-        || !!profile.master!==!!(window.CU.documentMaster!==undefined?window.CU.documentMaster:window.CU.master);
-      if(changed){
-        S.forceSignOutForProfileChange(deactivated
+      var verdict=selfProfileVerdict(true,snapshot.data(),window.CU);
+      if(verdict){
+        S.forceSignOutForProfileChange(verdict==='deactivated'
           ? 'Your account was deactivated by an administrator. / تم إيقاف حسابك من قبل الإدارة، الرجاء التواصل معها.'
           : 'Your account permissions changed. Please sign in again. / تغيّرت صلاحيات حسابك، الرجاء تسجيل الدخول مرة أخرى.');
       }
