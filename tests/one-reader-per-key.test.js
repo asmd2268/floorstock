@@ -20,13 +20,16 @@ import { test } from 'node:test';
 const jsRoot = new URL('../public/assets/js/', import.meta.url);
 const stateModule = await readFile(new URL('modules/03-core-application-firebase-state-auth.js', jsRoot), 'utf8');
 
-test('a role loads exactly the keys it listens to', () => {
-  assert.match(stateModule, /var restKeys=\(fsStateKeysForProfile\(profile\)\|\|PHARMACY_SCOPED_STATE_KEYS\)/);
-  assert.match(stateModule, /fsStateLoadScoped\(fsStateKeysForProfile\(profile\)\|\|CONTROLLED_PHARMACY_BASE_KEYS/);
+test('a role loads exactly the keys it listens to', async () => {
+  const loader = await readFile(new URL('core/scoped-state-loader.js', jsRoot), 'utf8');
+  assert.match(loader, /\(keysForProfile\(profile\) \|\| pharmacyFallbackKeys\(\)\)/);
+  assert.match(loader, /loadScoped\(keysForProfile\(profile\) \|\| controlledFallbackKeys\(\)/);
   // The scoped loaders must not build their own list from a raw constant, or the
   // poll starts deleting what the listeners deliver.
-  assert.ok(!/fsStateLoadScoped\(CONTROLLED_PHARMACY_BASE_KEYS/.test(stateModule));
-  assert.ok(!/var restKeys=PHARMACY_SCOPED_STATE_KEYS\.filter/.test(stateModule));
+  assert.ok(!/loadScoped\(controlledFallbackKeys\(\), /.test(loader));
+  assert.ok(!/restKeys = pharmacyFallbackKeys\(\)/.test(loader));
+  // And the state module hands the loader the same function the listeners use.
+  assert.match(stateModule, /keysForProfile:function\(profile\)\{return fsStateKeysForProfile\(profile\)\}/);
 });
 
 test('only the state module decides where a partitioned key is read from', async () => {
