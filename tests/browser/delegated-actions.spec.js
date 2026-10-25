@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 
 /* Buttons in generated markup used to carry `onclick="clPrint('high')"`, which
    needs a global function of that name for the CSP bridge to find. The

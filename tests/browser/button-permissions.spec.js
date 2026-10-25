@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 import { VISIBLE, STATES, ROLES, prepare, visiblePages } from './role-walk.js';
 
 /* Every control a role can SEE should do something for that role.

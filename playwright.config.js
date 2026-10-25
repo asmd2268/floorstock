@@ -8,7 +8,9 @@ export default defineConfig({
   use: {
     baseURL: 'http://127.0.0.1:4173',
     browserName: 'chromium',
-    headless: true
+    headless: true,
+    // Nothing but the local server resolves: see tests/browser/fixtures.js.
+    launchOptions: { args: ['--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1'] }
   },
   webServer: {
     command: 'python3 -m http.server 4173 --bind 127.0.0.1',

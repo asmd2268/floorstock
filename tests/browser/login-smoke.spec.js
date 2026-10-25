@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures.js';
 
 test('application modules load and the CSP-safe login action runs in a browser', async ({ page }) => {
   await page.goto('/');
@@ -270,4 +270,13 @@ test('temporary Accountability QR page records one party and completes after the
   await expect.poll(() => confirmed).toBe(true);
   await expect(page.locator('#handover-status')).toContainText('Handover completed');
   await expect(page.locator('#handover-form')).toHaveClass(/handover-hidden/);
+});
+
+test('the page makes no request to any host but the local server unless a spec answers it', async ({ page, externalRequests }) => {
+  await page.goto('/');
+  await expect(page.locator('html')).toHaveAttribute('data-asdh-modules', 'ready');
+  // The Firebase SDK and fonts are refused, not fetched: the list names what was
+  // asked for, so a new third-party dependency shows up here by name.
+  const hosts = [...new Set(externalRequests.map((href) => new URL(href).host))].sort();
+  expect(hosts).toEqual(['fonts.googleapis.com', 'www.gstatic.com']);
 });
