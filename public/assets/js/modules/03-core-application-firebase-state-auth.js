@@ -21,6 +21,7 @@ import { recentAuditLogKeys, controlledPharmacyDeptKeys, pharmacyDepartmentState
 import { createStateRestClient, stateAppCheckToken } from '../core/state-rest-client.js?v=39db0d6281';
 import { formatDateGB, formatDateTimeGB } from '../core/date-format.js?v=ea70f645d9';
 import { carryOverFailedKeys, carryOverDepartmentKeys, applyStateCache } from '../core/state-poll-reconcile.js?v=696dbb5754';
+import { createOpeningWave, applySnapshotToCache } from '../core/scoped-listener-rules.js?v=8b519e2b0f';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
 import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
 import { estimateDocBytes } from '../core/firestore-doc-size.js?v=0edc84c939';
@@ -1144,54 +1145,18 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
       S.pollRest();
       S.pollTimer=setInterval(function(){S.pollRest();},30000);
     }
-    /* A scoped role reads ~40 individual documents, and each listener delivers
-       its first snapshot on its own schedule. Every one of them asked for a
-       render, so the page was drawn again and again over the first seconds of a
-       session, each time from a DIFFERENT partially-arrived state: a badge
-       counting pending custody rows showed 2, then 0, then 2, depending on
-       whether that key's document had landed yet.
-
-       Master never saw it, because master reads the whole collection in one
-       snapshot and therefore has only ever had one state to draw.
-
-       So the opening wave is treated as one arrival: snapshots are applied to
-       the cache as they come, and the first render waits until every listener
-       has spoken — or until the deadline, so one slow or denied document cannot
-       hold the page back. After that, each change refreshes as it always did. */
-    var openingWave=keys.length,waveSettled=false;
-    var waveDeadline=setTimeout(function(){finishWave()},2500);
-    function finishWave(){
-      if(waveSettled)return;
-      waveSettled=true;
-      clearTimeout(waveDeadline);
-      S.scheduleRefresh();
-    }
-    function waveArrived(){
-      if(waveSettled)return;
-      openingWave-=1;
-      if(openingWave<=0)finishWave();
-    }
-    S.__scopedWaveComplete=function(){return waveSettled};
+    /* The opening wave renders once, and a from-cache "not found" never blanks a held key: see core/scoped-listener-rules.js. */
+    var wave=createOpeningWave({count:keys.length,deadlineMs:2500,onSettled:function(){S.scheduleRefresh()}});
+    S.__scopedWaveComplete=wave.isSettled;
     S.scopedUnsubs=keys.map(function(key){
       var first=true;
       return fsStateSdkCollection().doc(key).onSnapshot(function(snapshot){
-        // A document Firestore has never cached locally can fire an initial
-        // "exists: false" snapshot straight from the empty local cache,
-        // before the real server response arrives a moment later. Since the
-        // cold-load already populated S.cache with real data before any
-        // listener attached, never let a from-cache "not found" blank out a
-        // key we already have a value for — wait for the server-confirmed
-        // snapshot instead. A genuine deletion still lands right after.
-        if(snapshot.metadata.fromCache&&!snapshot.exists&&Object.prototype.hasOwnProperty.call(S.cache,key))return;
-        var next=snapshot.exists?snapshot.data().value:null;
-        var changed=!stateValueEqual(S.cache[key],next);
-        if(changed)S.cache[key]=next;
-        if(first){first=false;waveArrived();}
-        // During the opening wave the cache is filled quietly; finishWave draws
-        // it once, whole.
-        if(changed&&waveSettled)S.scheduleRefresh();
+        var applied=applySnapshotToCache(S.cache,key,snapshot,stateValueEqual);
+        if(!applied)return;
+        if(first){first=false;wave.arrived();}
+        if(applied.changed&&wave.isSettled())S.scheduleRefresh();
       },function(error){
-        if(first){first=false;waveArrived();}
+        if(first){first=false;wave.arrived();}
         fallBackToRest(error);
       });
     });
