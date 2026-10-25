@@ -32,6 +32,8 @@ function isOurBug(message) {
 }
 
 test('no control throws when the role that can see it presses it', async ({ page }) => {
+  /* Walks every role through every page: ~25s on a fast machine against a 30s default, so a slower CI runner failed on speed alone. The budget is for the walk, not a limit on what a page may take. */
+  test.setTimeout(120_000);
   const failures = [];
   let pressed = 0;
   let current = { role: '', page: '', label: '' };
