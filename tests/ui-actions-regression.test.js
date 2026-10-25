@@ -234,9 +234,13 @@ test('department login hydrates its directory before assignment validation and s
   const validateAt = requestSource.indexOf("if(profile.role==='department'&&!dept)throw new Error('Your department assignment is missing.')");
   assert.ok(hydrateAt > 0);
   assert.ok(validateAt > hydrateAt);
-  assert.match(requestSource, /floorstock_last_cache_v2_['"]?\+cacheUid/);
-  assert.match(requestSource, /localStorage\.removeItem\('floorstock_last_cache_v1'\)/);
-  assert.doesNotMatch(requestSource, /localStorage\.setItem\(\s*['"]floorstock_last_cache_v1/);
+  // The per-account key and the pruning of other accounts' caches live in core/state-warm-cache.js.
+  const warmCache = fs.readFileSync(new URL('../public/assets/js/core/state-warm-cache.js', import.meta.url), 'utf8');
+  assert.match(requestSource, /warmCacheKey\(cacheUid\)/);
+  assert.match(requestSource, /pruneOtherWarmCaches\(localStorage,cacheKey\)/);
+  assert.match(warmCache, /const PREFIX = 'floorstock_last_cache_v2_'/);
+  assert.match(warmCache, /storage\.removeItem\('floorstock_last_cache_v1'\)/);
+  assert.doesNotMatch(warmCache, /setItem\(\s*['"]floorstock_last_cache_v1/);
   // The cold load still prefers REST and falls back to the SDK; the rule now lives
   // in core/state-transport.js instead of being spelled out at this call site.
   assert.match(requestSource, /portLoadState\(profileHint/);

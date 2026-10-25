@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { test } from 'node:test';
 
 import { hasCapability } from '../public/assets/js/core/role-capabilities.js';
@@ -95,5 +96,7 @@ test('a warm boot keeps the reports it already had, so the badge is not late', (
      collection rather than named document by document — so the warm-boot restore
      filtered it out and every session started with an empty Crash Cart badge. A
      pending report was invisible until the listener spoke, seconds later. */
-  assert.match(stateModule, /allowed=allowed\.concat\(collectionBackedKeyNames\(\)\);/);
+  assert.match(stateModule, /extraKeys:collectionBackedKeyNames/);
+  // ...and the restore adds those keys to the allowed set instead of dropping them.
+  assert.match(readFileSync(new URL('../public/assets/js/core/state-warm-cache.js', import.meta.url), 'utf8'), /allowed\.concat\(extraKeys\(\)\)/);
 });
