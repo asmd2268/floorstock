@@ -819,9 +819,10 @@ test('scoped pharmacy roles load permitted state documents without collection li
   for (const role of ['inpatient_supervisor', 'inpatient_pharmacy_supervisor', 'inpatient pharmacy supervisor', 'pharmacy_staff']) {
     assert.match(readScope, new RegExp("'" + role + "'"));
   }
-  assert.match(requestSource, /function fsStateLoadPharmacyScoped\(/);
+  assert.match(requestSource, /fsStateLoadPharmacyScoped=fsScopedLoader\.loadPharmacy/);
   assert.match(requestSource, /fsPharmacyDepartmentStateKeys: pharmacyDepartmentStateKeys/);
-  assert.match(requestSource, /Promise\.allSettled\(keys\.map/);
+  const scopedLoader = fs.readFileSync(new URL('../public/assets/js/core/scoped-state-loader.js', import.meta.url), 'utf8');
+  assert.match(scopedLoader, /Promise\.allSettled\(keys\.map/);
   assert.match(requestSource, /var scopedKeys=fsStateKeysForProfile\(S\.scopeProfile\);/);
   assert.match(requestSource, /if\(scopedKeys\)\{/);
   assert.match(firestoreRulesSource, /allow list: if sameTenant\(tenant\) && !scopedStateUser\(\);/);

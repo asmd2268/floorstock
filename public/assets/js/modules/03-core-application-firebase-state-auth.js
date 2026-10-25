@@ -20,6 +20,8 @@ import { registerStateTransport, setState as portSetState, removeState as portRe
 import { recentAuditLogKeys, controlledPharmacyDeptKeys, pharmacyDepartmentStateKeys } from '../core/state-scope-key-lists.js?v=844bb97636';
 import { createStateRestClient, stateAppCheckToken } from '../core/state-rest-client.js?v=39db0d6281';
 import { formatDateGB, formatDateTimeGB } from '../core/date-format.js?v=ea70f645d9';
+import { createScopedStateLoader } from '../core/scoped-state-loader.js?v=9fab9638d8';
+import { overflowProbeKeys } from '../core/overflow-parts-store.js?v=256d83471f';
 import { stateRunQueries, documentsFromRunQuery } from '../core/state-list-query.js?v=2a69444611';
 import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
@@ -401,37 +403,6 @@ function fsStateScopeCacheForProfile(cache,profile){
 window.fsStateScopeCacheForProfile=fsStateScopeCacheForProfile;
 // Enough rounds for a value spread over dozens of documents; each round is one
 // batch of reads and stops as soon as a probe comes back empty.
-var OVERFLOW_PROBE_ROUNDS=8;
-async function fsStateLoadScoped(keys,loader,source,profile){
-  // A scoped session may legitimately be denied one optional document. Do not
-  // discard every permitted document (especially crash_carts) because of it.
-  var results=await Promise.allSettled(keys.map(function(key){return loader(key)})),cache={},failedKeys=[];
-  results.forEach(function(result,index){
-    if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined)cache[keys[index]]=result.value;
-    else if(result.status==='rejected'){
-      failedKeys.push(keys[index]);
-      console.warn('Scoped state document was unavailable:',keys[index],result.reason);
-    }
-  });
-  /* A value too large for one document continues into <key>_p2, <key>_p3, …
-     A scoped session cannot list the collection, so it has to name what it
-     reads — but it only has to ask when a document it just read is large enough
-     to have been continued. A session holding nothing large asks for nothing,
-     which is the ordinary case and costs no extra read. */
-  for(var round=0;round<OVERFLOW_PROBE_ROUNDS;round++){
-    var probes=overflowProbeKeys(cache);
-    if(!probes.length)break;
-    // eslint-disable-next-line no-await-in-loop
-    var extra=await Promise.allSettled(probes.map(function(key){return loader(key)}));
-    var found=false;
-    extra.forEach(function(result,index){
-      if(result.status==='fulfilled'&&result.value!==null&&result.value!==undefined){cache[probes[index]]=result.value;found=true;}
-    });
-    if(!found)break;
-  }
-  if(profile&&['department','outpatient_pharmacy_supervisor'].includes(String(profile.role||'')))Object.defineProperty(cache,'__scopedDepartmentState',{value:true,enumerable:false,configurable:true});
-  return {cache:fsStateScopeCacheForProfile(cache,profile),source:source,failedKeys:failedKeys};
-}
 // Warehouse role is a scopedStateUser — it cannot LIST the collection.
 // It reads only the specific documents permitted by canReadScopedState() in firestore.rules.
 /* The audit trail is one document per calendar month now, so a scoped role that
@@ -490,45 +461,8 @@ globalThis.CONTROLLED_PHARMACY_BASE_KEYS = Object.freeze([
   'controlled_custody_handover_log_v1','controlled_custody_handover_defaults_v1','user_activity_daily_v1',
   'classification_lists_v1','page_visibility_overrides_v1'
 ]);
-async function fsStateLoadControlledPharmacyScoped(profile,loader,source){
-  // Same one list the listeners use: the ledger and audit months are part of
-  // this role's state, and a poll that omitted them deleted them from the cache.
-  var initial=await fsStateLoadScoped(fsStateKeysForProfile(profile)||CONTROLLED_PHARMACY_BASE_KEYS,loader,source,profile);
-  var deptKeys=controlledPharmacyDeptKeys(initial.cache);
-  if(!deptKeys.length)return initial;
-  var dynamic=await fsStateLoadScoped(deptKeys,loader,source,profile);
-  Object.assign(initial.cache,dynamic.cache);
-  initial.failedKeys=(initial.failedKeys||[]).concat(dynamic.failedKeys||[]);
-  return initial;
-}
-async function fsStateLoadPharmacyScoped(profile,loader,source){
-  // The per-department keys (meds_/expiry_/shelves_/... for every
-  // department) can only be listed once `departments` is known, but that
-  // never required the OTHER ~24 static keys first — fetching them one big
-  // wave, then waiting for it to fully settle before even starting the
-  // department wave, cost a full extra sequential round trip on every cold
-  // login. Fetch `departments` alone first (one small document), then fire
-  // the rest of the static wave and the department wave together.
-  var deptOnly=await fsStateLoadScoped(['departments'],loader,source,profile);
-  /* The list comes from fsStateKeysForProfile, which is also what the realtime
-     listeners subscribe to — one list, not two.
-
-     They used to differ: the listeners subscribed to
-     PHARMACY_SCOPED_STATE_KEYS *plus the month partitions*, while this loader
-     fetched only PHARMACY_SCOPED_STATE_KEYS. And a poll applies its result with
-     fsStateApplyCache, which DELETES any key the poll did not return — so every
-     poll wiped the partitions the listeners had just delivered, and the badge
-     counting pending custody rows went 2, 0, 2, 0 in front of the pharmacist. */
-  var restKeys=(fsStateKeysForProfile(profile)||PHARMACY_SCOPED_STATE_KEYS).filter(function(k){return k!=='departments'});
-  var dynamicKeys=pharmacyDepartmentStateKeys(deptOnly.cache,profile);
-  var pair=await Promise.all([
-    fsStateLoadScoped(restKeys,loader,source,profile),
-    dynamicKeys.length?fsStateLoadScoped(dynamicKeys,loader,source,profile):Promise.resolve({cache:{},failedKeys:[]})
-  ]);
-  var cache=Object.assign({},deptOnly.cache,pair[0].cache,pair[1].cache);
-  var failedKeys=(deptOnly.failedKeys||[]).concat(pair[0].failedKeys||[],pair[1].failedKeys||[]);
-  return {cache:cache,source:source,failedKeys:failedKeys};
-}
+var fsScopedLoader=createScopedStateLoader({overflowProbeKeys:overflowProbeKeys,scopeCache:function(cache,profile){return fsStateScopeCacheForProfile(cache,profile)},keysForProfile:function(profile){return fsStateKeysForProfile(profile)},pharmacyFallbackKeys:function(){return PHARMACY_SCOPED_STATE_KEYS},controlledFallbackKeys:function(){return CONTROLLED_PHARMACY_BASE_KEYS},controlledDeptKeys:controlledPharmacyDeptKeys,pharmacyDeptKeys:pharmacyDepartmentStateKeys});
+var fsStateLoadScoped=fsScopedLoader.loadScoped,fsStateLoadControlledPharmacyScoped=fsScopedLoader.loadControlledPharmacy,fsStateLoadPharmacyScoped=fsScopedLoader.loadPharmacy;
 async function fsStateMergeCollectionKeys(resultPromise,profile){
   // Each collection list is independent of the scoped state fetch and of the
   // others, so they all start before the state result is awaited rather than
