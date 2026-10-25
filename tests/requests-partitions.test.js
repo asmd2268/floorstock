@@ -12,6 +12,7 @@ const jsRoot = new URL('../public/assets/js/', import.meta.url);
 const store = await readFile(new URL('core/requests-store.js', jsRoot), 'utf8');
 const partitions = await readFile(new URL('core/month-partitioned-store.js', jsRoot), 'utf8');
 const stateModule = await readFile(new URL('modules/03-core-application-firebase-state-auth.js', jsRoot), 'utf8');
+const writeRouter = await readFile(new URL('core/state-write-router.js', jsRoot), 'utf8');
 const capabilities = await readFile(new URL('core/role-capabilities.js', jsRoot), 'utf8');
 const rules = await readFile(new URL('../firestore.rules', import.meta.url), 'utf8');
 
@@ -30,7 +31,8 @@ test('reads and writes route through one place, not ten call sites', () => {
   // Everything that already said S.g('requests') / S.s('requests', rows) keeps
   // working; the diff turns a whole-array save into a write per changed month.
   assert.match(stateModule, /if\(partitionsAreLive\(k\)\)return monthPartitionRows\(k\)/);
-  assert.match(stateModule, /if\(partitionsAreLive\(k\)\)\{/);
+  assert.match(stateModule, /s:function\(k,v\)\{return fsStateWrite\(k,v\)\}/);
+  assert.match(writeRouter, /if \(partitionsAreLive\(key\)\) \{/);
   assert.match(partitions, /export async function applyPartitionedArray/);
   assert.match(partitions, /export function partitionsAreLive/);
 });

@@ -84,7 +84,8 @@ test('a continuation carries the permissions of the key it continues', async () 
 test('reads and writes route through the one owner, not the call sites', async () => {
   const stateModule = await readFile(new URL('modules/03-core-application-firebase-state-auth.js', jsRoot), 'utf8');
   assert.match(stateModule, /if\(hasOverflowParts\(k\)\)return joinOverflowParts\(k\)/);
-  assert.match(stateModule, /writeWithOverflow\(k,v,function\(docId,chunk\)/);
+  const router = await readFile(new URL('core/state-write-router.js', jsRoot), 'utf8');
+  assert.match(router, /writeWithOverflow\(key, value, \(docId, chunk\)/);
   // The old advice sent every oversize failure to the Requests page, whatever
   // the record was.
   assert.ok(!/archive old orders from the Requests page/i.test(stateModule));
