@@ -23,6 +23,7 @@ import { formatDateGB, formatDateTimeGB } from '../core/date-format.js?v=ea70f64
 import { carryOverFailedKeys, carryOverDepartmentKeys, applyStateCache } from '../core/state-poll-reconcile.js?v=696dbb5754';
 import { createOpeningWave, applySnapshotToCache } from '../core/scoped-listener-rules.js?v=8b519e2b0f';
 import { warmCacheKey, pruneOtherWarmCaches, readWarmCache, saveWarmCache } from '../core/state-warm-cache.js?v=147306da90';
+import { applyStateDocChanges } from '../core/state-doc-changes.js?v=6ecb2c70ee';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
 import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
 import { estimateDocBytes } from '../core/firestore-doc-size.js?v=0edc84c939';
@@ -1044,25 +1045,8 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     if(S.transport==='sdk'){
       try{
         S.stateUnsub=fsStateSdkCollection().onSnapshot(function(snapshot){
-          var changed=false;
-          snapshot.docChanges().forEach(function(change){
-            // crash_cart_reports: read from the crash_cart_reports_v2 (or
-            // per-tenant) collection listener below instead of this legacy
-            // state-doc array — the Cloud Functions still dual-write both,
-            // this just switches which side the client reads from first.
-            // Collection-backed keys are read from their own listeners (see
-            // fsStateInstallCollectionListeners); the legacy state document for
-            // the same key, where one still exists, must not overwrite them.
-            if(change.doc.id==='users'||collectionBackedKeyNames().indexOf(change.doc.id)>=0)return;
-            var key=change.doc.id;
-            if(change.type==='removed'){
-              if(Object.prototype.hasOwnProperty.call(S.cache,key)){delete S.cache[key];changed=true;}
-              return;
-            }
-            var next=change.doc.data().value;
-            if(!stateValueEqual(S.cache[key],next))changed=true;
-            S.cache[key]=next;
-          });
+          /* Users and collection-backed keys are read from their own listeners; see core/state-doc-changes.js. */
+          var changed=applyStateDocChanges(S.cache,snapshot.docChanges(),{skip:function(id){return id==='users'||collectionBackedKeyNames().indexOf(id)>=0},valuesEqual:stateValueEqual});
           if(changed)S.scheduleRefresh();
         },function(error){
           console.error('floorstock_state realtime error; switching to REST polling.',error);
