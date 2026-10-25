@@ -20,8 +20,13 @@ import { registerStateTransport, setState as portSetState, removeState as portRe
 import { recentAuditLogKeys, controlledPharmacyDeptKeys, pharmacyDepartmentStateKeys } from '../core/state-scope-key-lists.js?v=844bb97636';
 import { createStateRestClient, stateAppCheckToken } from '../core/state-rest-client.js?v=39db0d6281';
 import { formatDateGB, formatDateTimeGB } from '../core/date-format.js?v=ea70f645d9';
+import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
+import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
+import { estimateDocBytes } from '../core/firestore-doc-size.js?v=0edc84c939';
+import { isRowMergedKey } from '../core/row-merged-keys.js?v=64f3abc474';
+import { saveRowsMerging } from '../core/row-merge-write.js?v=6edc1661ca';
 import { createScopedStateLoader } from '../core/scoped-state-loader.js?v=9fab9638d8';
-import { overflowProbeKeys } from '../core/overflow-parts-store.js?v=256d83471f';
+import { overflowProbeKeys, writeWithOverflow, hasOverflowParts, OVERFLOW_SPLIT_BYTES } from '../core/overflow-parts-store.js?v=256d83471f';
 import { stateRunQueries, documentsFromRunQuery } from '../core/state-list-query.js?v=2a69444611';
 import { COLLECTION_BACKED_KEYS, collectionBackedKeyNames, normalizeCollectionRow, sortCollectionRows } from '../core/collection-backed-keys.js?v=9ed94061f1';
 import { FIREBASE_CONFIG, isFirebaseEmulatorEnabled } from '../core/firebase-config.js?v=c13c38051a';
@@ -852,6 +857,7 @@ function fsStatePlainSet(k,v){
 
 }
 
+var fsStateWrite=createStateWriter({partitionsAreLive:partitionsAreLive,applyPartitionedArray:applyPartitionedArray,hasOverflowParts:hasOverflowParts,estimateDocBytes:estimateDocBytes,overflowSplitBytes:OVERFLOW_SPLIT_BYTES,writeWithOverflow:writeWithOverflow,putChunkInCache:function(docId,chunk){S.cache[docId]=chunk},setDocument:function(docId,chunk){return fsStateSetSmart(docId,chunk)},isRowMergedKey:isRowMergedKey,saveRowsMerging:saveRowsMerging,plainSet:function(k,v){return fsStatePlainSet(k,v)},trackSave:_trackSave,notifyFailure:function(message){toast(message,'err')}});
 globalThis.S = {
   cache:{},ready:false,stateUnsub:null,collectionUnsubs:null,__collectionRowsById:{},usersUnsub:null,usersPollTimer:null,refreshTimer:null,pollTimer:null,pollBusy:false,transport:'unknown',writeTransport:'sdk',scopeProfile:null,cacheKey:'',
   persistLocalCache:function(){
@@ -1293,47 +1299,7 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     return Object.prototype.hasOwnProperty.call(S.cache,k)?S.cache[k]:null;
   },
   readDocument:function(k){return Object.prototype.hasOwnProperty.call(S.cache,k)?Promise.resolve(S.cache[k]):fsStateLoadDocumentViaRest(k)}, // a document kept out of the login load (inventory snapshots)
-  s:function(k,v){
-    if(partitionsAreLive(k)){
-      // Writes only the months that actually changed, instead of rewriting every
-      // row the key has ever held.
-      var partitioned=applyPartitionedArray(k,v).catch(function(error){
-        console.error('Partitioned save failed for key:',k,error);
-        toast('Save failed — '+String(error&&error.message||error),'err');
-        throw error;
-      });
-      return _trackSave(partitioned,'floorstock_state/'+k+' (by month)');
-    }
-    /* Anything that would not fit in one document is written across numbered
-       parts instead of being refused. This is the general form of what month
-       partitioning does for dated records: no state key has a ceiling, so
-       "the record filled up and everything stopped" cannot happen to a key
-       nobody thought to handle in advance. */
-    if(v!==null&&typeof v==='object'&&(hasOverflowParts(k)||estimateDocBytes(v)>OVERFLOW_SPLIT_BYTES)){
-      var spread=writeWithOverflow(k,v,function(docId,chunk){
-        S.cache[docId]=chunk;
-        return fsStateSetSmart(docId,chunk);
-      }).catch(function(error){
-        console.error('Overflow save failed for key:',k,error);
-        toast('Save failed — '+String(error&&error.message||error),'err');
-        throw error;
-      });
-      return _trackSave(spread,'floorstock_state/'+k+' (split)');
-    }
-    /* A key that holds a list several people edit at once is written as a diff
-       — what THIS caller changed, applied to whatever the document holds now —
-       so two people working on two different rows stop overwriting each other.
-       Everything else keeps the plain whole-value write. */
-    if(Array.isArray(v)&&isRowMergedKey(k)){
-      var merged=saveRowsMerging(k,v,{fallback:function(){return fsStatePlainSet(k,v)}}).catch(function(error){
-        console.error('Merged save failed for key:',k,error);
-        toast('Save failed — '+String(error&&error.message||error),'err');
-        throw error;
-      });
-      return _trackSave(merged,'floorstock_state/'+k+' (merged)');
-    }
-    return fsStatePlainSet(k,v);
-  },
+  s:function(k,v){return fsStateWrite(k,v)},
   /* The plain whole-value write, and the only place the cache is rolled back
      when Firestore refuses one. */
   __plainSet:function(k,v){return fsStatePlainSet(k,v)},

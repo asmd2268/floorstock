@@ -50,8 +50,10 @@ test('the merge lives in the one writer, not at the call sites', async () => {
   /* S.s decides, from one list of keys, whether a save is a diff or a plain
      write — so no caller has to know, and none can forget. */
   const stateModule = await readFile(new URL('../public/assets/js/modules/03-core-application-firebase-state-auth.js', import.meta.url), 'utf8');
-  assert.match(stateModule, /if\(Array\.isArray\(v\)&&isRowMergedKey\(k\)\)\{/);
-  assert.match(stateModule, /saveRowsMerging\(k,v,\{fallback:function\(\)\{return fsStatePlainSet\(k,v\)\}\}\)/);
+  const router = await readFile(new URL('../public/assets/js/core/state-write-router.js', import.meta.url), 'utf8');
+  assert.match(router, /Array\.isArray\(value\) && isRowMergedKey\(key\)/);
+  assert.match(router, /saveRowsMerging\(key, value, \{ fallback: \(\) => plainSet\(key, value\) \}\)/);
+  assert.match(stateModule, /s:function\(k,v\)\{return fsStateWrite\(k,v\)\}/);
   const persistence = await readFile(new URL('../public/assets/js/modules/49-asdh-final-persistence-actions-20260725.js', import.meta.url), 'utf8');
   assert.match(persistence, /S\.s\('crash_carts',repaired\.carts\)/);
 });
