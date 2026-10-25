@@ -20,6 +20,7 @@ import { registerStateTransport, setState as portSetState, removeState as portRe
 import { recentAuditLogKeys, controlledPharmacyDeptKeys, pharmacyDepartmentStateKeys } from '../core/state-scope-key-lists.js?v=844bb97636';
 import { createStateRestClient, stateAppCheckToken } from '../core/state-rest-client.js?v=39db0d6281';
 import { formatDateGB, formatDateTimeGB } from '../core/date-format.js?v=ea70f645d9';
+import { carryOverFailedKeys, carryOverDepartmentKeys, applyStateCache } from '../core/state-poll-reconcile.js?v=696dbb5754';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
 import { partitionsAreLive, applyPartitionedArray } from '../core/month-partitioned-store.js?v=9a4f8c0b46';
 import { estimateDocBytes } from '../core/firestore-doc-size.js?v=0edc84c939';
@@ -706,18 +707,7 @@ async function fsStateDeleteSmart(key){
   await ensureGeoAllowed();
   return portRemoveState(key);
 }
-function fsStateApplyCache(nextCache){
-  var changed=false,current=S.cache||{};
-  Object.keys(current).forEach(function(key){
-    if(key==='users')return;
-    if(!Object.prototype.hasOwnProperty.call(nextCache,key)){delete current[key];changed=true;}
-  });
-  Object.keys(nextCache).forEach(function(key){
-    if(!stateValueEqual(current[key],nextCache[key]))changed=true;
-    current[key]=nextCache[key];
-  });
-  return changed;
-}
+function fsStateApplyCache(nextCache){return applyStateCache(S.cache||{},nextCache,stateValueEqual)}
 function fsStateScheduleManagedUserLoad(profileHint){
   var role=profileHint&&profileHint.role||'';
   var shouldLoadUsers=!!(profileHint&&profileHint.master===true)||role==='pharmacy'||role==='pharmacy_director';
@@ -1213,18 +1203,9 @@ if(!window.__ASDH_REAL_LOAD_COMPLETE){
     try{
       var state=await fsStateLoadFloorstockForProfileViaRest(S.scopeProfile);
       var incoming=state.cache||{},previousCache=S.cache||{};
-      // A scoped poll is an explicit set of document reads. Preserve only a
-      // document whose read failed in this poll; a fulfilled null still means
-      // the document was deliberately removed. This prevents a transient
-      // permission/network failure from blanking every visible crash cart.
-      (state.failedKeys||[]).forEach(function(key){
-        if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previousCache,key))incoming[key]=previousCache[key];
-      });
-      if(fsIsPharmacyScopedProfile(S.scopeProfile)&&!Object.prototype.hasOwnProperty.call(incoming,'departments')&&Array.isArray(previousCache.departments)&&previousCache.departments.length){
-        pharmacyDepartmentStateKeys(previousCache).forEach(function(key){
-          if(!Object.prototype.hasOwnProperty.call(incoming,key)&&Object.prototype.hasOwnProperty.call(previousCache,key))incoming[key]=previousCache[key];
-        });
-      }
+      /* A scoped poll is an explicit set of document reads: carry over only what failed to read (a fulfilled null still means removed), so one transient permission or network failure cannot blank every visible crash cart. */
+      carryOverFailedKeys(incoming,previousCache,state.failedKeys);
+      if(fsIsPharmacyScopedProfile(S.scopeProfile))carryOverDepartmentKeys(incoming,previousCache,pharmacyDepartmentStateKeys);
       var changed=fsStateApplyCache(incoming);
       if(changed)S.scheduleRefresh();
       if(!window.__ASDH_REAL_LOAD_COMPLETE){
