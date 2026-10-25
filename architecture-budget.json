@@ -2,7 +2,7 @@
   "globals": 897,
   "modules": {
     "core/event-bindings.js": 1133,
-    "modules/03-core-application-firebase-state-auth.js": 1428,
+    "modules/03-core-application-firebase-state-auth.js": 1395,
     "modules/07j-controlled-module-enhancements.js": 703,
     "modules/38-v16-user-operations-main.js": 824,
     "modules/40-v16-clean-optimized-script.js": 788,

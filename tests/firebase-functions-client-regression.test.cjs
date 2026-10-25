@@ -52,10 +52,12 @@ test('user management uses the central authenticated callable transport', () => 
 });
 
 test('managed-user directory uses the authenticated callable before any legacy client fallback', () => {
-  assert.match(core, /users=await fsStateLoadUsersViaCallable\(\)/);
+  const rules = fs.readFileSync('public/assets/js/core/users-directory-refresh.js', 'utf8');
+  assert.match(core, /viaCallable:fsStateLoadUsersViaCallable,viaFallback:fsStateLoadLegacyUserDirectory/);
+  assert.match(rules, /users = await viaCallable\(\)/);
   assert.match(core, /async function fsStateLoadLegacyUserDirectory\(\)/);
   assert.match(core, /var loaders=\[fsStateLoadUsersViaCallable,fsStateLoadUsersViaSdk,fsStateLoadUsersViaRest\]/);
-  assert.match(core, /Managed-user directory callable was unavailable; using a read-only fallback/);
+  assert.match(rules, /Managed-user directory callable was unavailable; using a read-only fallback/);
   assert.doesNotMatch(core, /loadUsers:async function\(\)\{\s*var users=await fsStateFirstSuccess/);
   assert.match(core, /User-list refresh was unavailable/);
 });
@@ -110,9 +112,11 @@ test('the production entrypoint cache version advances with authenticated-operat
 });
 
 test('managed-user refresh retains a known-good directory after a transient empty fallback', () => {
-  assert.match(core, /var previousUsers=Array\.isArray\(S\.cache&&S\.cache\.users\)\?S\.cache\.users:\[\];/);
-  assert.match(core, /users\.length===0&&previousUsers\.length/);
-  assert.match(core, /retaining the last verified directory/);
+  const rules = fs.readFileSync('public/assets/js/core/users-directory-refresh.js', 'utf8');
+  assert.match(core, /previous:S\.cache&&S\.cache\.users/);
+  assert.match(rules, /const held = Array\.isArray\(previous\) \? previous : \[\]/);
+  assert.match(rules, /users\.length === 0 && held\.length/);
+  assert.match(rules, /retaining the last verified directory/);
 });
 
 test('managed-user callables support legacy administrator directories during migration', () => {
