@@ -12,7 +12,7 @@
     "test": "node --test sync-user-claims-core.test.js accountability-handover-core.test.js crash-cart-report-core.test.js accountability-partitions-core.test.js upkeep-core.test.js crash-cart-close-core.test.js"
   },
   "dependencies": {
-    "firebase-admin": "^13.0.0",
-    "firebase-functions": "^6.0.0"
+    "firebase-admin": "^14.5.0",
+    "firebase-functions": "^7.4.0"
   }
 }
