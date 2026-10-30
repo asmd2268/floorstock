@@ -1278,7 +1278,7 @@ function fmtDateTime(iso){
   return formatDateTimeGB(d);
 }
 function daysUntil(iso){return window.fsDaysUntil?window.fsDaysUntil(iso):null}
-function todayISO(){return new Date().toISOString().slice(0,10)}
+function todayISO(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
 function nowISO(){return window.fsNowISO?window.fsNowISO():new Date().toISOString()}
 
 const __asdhLegacyApi = {
