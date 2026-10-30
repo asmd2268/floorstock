@@ -57,7 +57,7 @@ async function ctlParseReceiptPdf(file){
   var pr=el('ctl-pdf-progress');if(pr)pr.textContent='جاري قراءة الملف...\nReading the file...';
   try{
     await ensurePDFJS();
-    var data=await file.arrayBuffer(),doc=await pdfjsLib.getDocument({data:data}).promise,raw=[];
+    var data=await file.arrayBuffer(),doc=await pdfjsLib.getDocument({data:data,isEvalSupported:false}).promise,raw=[];
     for(var p=1;p<=doc.numPages;p++){
       if(pr)pr.textContent='جاري قراءة الصفحة '+p+' من '+doc.numPages+'...\nReading page '+p+' of '+doc.numPages+'...';
       var page=await doc.getPage(p),content=await page.getTextContent({normalizeWhitespace:true});
