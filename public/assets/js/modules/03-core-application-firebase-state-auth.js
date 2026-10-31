@@ -10,7 +10,7 @@ import {
 } from '../core/fulfillment-edit-policy.js?v=8342cad0ce';
 import { loadScriptOnce } from '../core/script-loader.js?v=5e8c0b2d04';
 import { debounce } from '../core/timing.js?v=5f574f9ba7';
-import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=e6374b4039';
+import { ensurePDFJS, ensureZXing } from '../core/media-loaders.js?v=f3b613ff97';
 import { stateValueEqual, fsStateRestEncode } from '../core/firestore-value-codec.js?v=9da1524dc8';
 import { withTimeout } from '../core/promise-timeout.js?v=44d3522bfc';
 import { fsStateRestBase, fsRestPath } from '../core/firestore-rest-paths.js?v=5c800b7527';
