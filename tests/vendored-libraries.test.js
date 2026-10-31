@@ -33,3 +33,10 @@ test('no module loads a script from a CDN host', async () => {
   }
   assert.deepEqual(offenders, []);
 });
+
+test('no CSP directive in either hosting config names a CDN host', async () => {
+  for (const file of ['vercel.json', 'firebase.json']) {
+    const text = await readFile(new URL(`../${file}`, import.meta.url), 'utf8');
+    assert.doesNotMatch(text, /cdnjs\.cloudflare\.com|unpkg\.com|cdn\.jsdelivr\.net/, file);
+  }
+});
