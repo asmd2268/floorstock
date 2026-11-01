@@ -14,6 +14,7 @@ import {
   fulfillBadge, renderFulfillLegend, renderThresholdControl, bindThresholdControl,
   FULFILL_TIERS
 } from '../core/analytics-severity.js?v=3a9756438b';
+import { registeredPrintTab, registeredPrintTabNames } from '../core/print-tabs.js?v=c15bf9cb7b';
 import {
   qLabel, pctArrow, pctChange, svcSub, hoursLabel,
   renderKpis, renderQuarterTable, renderDeptBars, renderMedTable, renderShortfalls,
@@ -471,6 +472,8 @@ function isMaster() { return !!(window.CU && window.CU.master); }
 function tabAllowed(tab) {
   const r = currentRole(), master = isMaster();
   if (tab === 'orders') return true;
+  const added = registeredPrintTab(tab);
+  if (added) return added.allowed();
   if (tab === 'analytics') return master || r === 'controlled_pharmacy';
   if (tab === 'crashcart' || tab === 'drugs' || tab === 'fulfillment' || tab === 'drugcompare' || tab === 'depttrend') return master || ['pharmacy','inpatient_supervisor','inpatient_pharmacy_supervisor'].includes(r);
   return false;
@@ -1498,24 +1501,11 @@ function renderCrash() {
 
 /* ── TAB SWITCHING ──────────────────────────────────────────────────────── */
 function activatePrintTab(tab) {
-  const panels = {
-    orders:      document.getElementById('pg-print-panel-orders'),
-    analytics:   document.getElementById('pg-print-panel-analytics'),
-    crashcart:   document.getElementById('pg-print-panel-crashcart'),
-    drugs:       document.getElementById('pg-print-panel-drugs'),
-    fulfillment: document.getElementById('pg-print-panel-fulfillment'),
-    drugcompare: document.getElementById('pg-print-panel-drugcompare'),
-    depttrend:   document.getElementById('pg-print-panel-depttrend'),
-  };
-  const tabs = {
-    orders:      document.getElementById('pg-print-tab-orders'),
-    analytics:   document.getElementById('pg-print-tab-analytics'),
-    crashcart:   document.getElementById('pg-print-tab-crashcart'),
-    drugs:       document.getElementById('pg-print-tab-drugs'),
-    fulfillment: document.getElementById('pg-print-tab-fulfillment'),
-    drugcompare: document.getElementById('pg-print-tab-drugcompare'),
-    depttrend:   document.getElementById('pg-print-tab-depttrend'),
-  };
+  const panels = {}, tabs = {};
+  ['orders', 'analytics', 'crashcart', 'drugs', 'fulfillment', 'drugcompare', 'depttrend', ...registeredPrintTabNames()].forEach(k => {
+    panels[k] = document.getElementById('pg-print-panel-' + k);
+    tabs[k] = document.getElementById('pg-print-tab-' + k);
+  });
   if (!panels.orders) return;
 
   // If requested tab is not allowed for this role, fall back to orders
@@ -1542,6 +1532,8 @@ function activatePrintTab(tab) {
   if (tab === 'drugcompare') setTimeout(renderDrugComparison, 50);
   if (tab === 'depttrend') setTimeout(renderDeptTrend, 50);
   if (tab === 'drugs') setTimeout(renderDrugsThreshold, 50);
+  const added = registeredPrintTab(tab);
+  if (added) setTimeout(added.render, 50);
 
   // Header settings button is master-only
   const hdrBtn = document.getElementById('pg-print-header-settings-btn');
@@ -1553,13 +1545,8 @@ document.addEventListener('click', function (e) {
     if (typeof window.openLogoSettings === 'function') window.openLogoSettings();
     return;
   }
-  if (e.target.closest('#pg-print-tab-orders')) { activatePrintTab('orders'); return; }
-  if (e.target.closest('#pg-print-tab-analytics')) { activatePrintTab('analytics'); return; }
-  if (e.target.closest('#pg-print-tab-crashcart')) { activatePrintTab('crashcart'); return; }
-  if (e.target.closest('#pg-print-tab-drugs')) { activatePrintTab('drugs'); return; }
-  if (e.target.closest('#pg-print-tab-fulfillment')) { activatePrintTab('fulfillment'); return; }
-  if (e.target.closest('#pg-print-tab-drugcompare')) { activatePrintTab('drugcompare'); return; }
-  if (e.target.closest('#pg-print-tab-depttrend')) { activatePrintTab('depttrend'); return; }
+  const printTab = e.target.closest('[id^="pg-print-tab-"]');
+  if (printTab) { activatePrintTab(printTab.id.slice('pg-print-tab-'.length)); return; }
   if (e.target.closest('#drug-analytics-print-trigger')) {
     if (typeof window.renderAnalyticsReports === 'function') window.renderAnalyticsReports();
     setTimeout(() => window.dispatchEvent(new CustomEvent('floorstock:analytics-print')), 300);
