@@ -119,13 +119,16 @@ export function expiringRows(carts, windowDays, daysUntil) {
     || collator.compare(a.generic, b.generic));
 }
 
+/* One mark per medicine a cart can be out of, in the order they are first met. */
+export const MARKS = ['★', '#', '†', '‡', '§', '¶', '◆', '●', '▲', '■'];
+
 export function summarize(rows, missing = []) {
   const medicines = new Map();
   let total = 0;
   let uncounted = 0;
   const entryFor = (row) => {
     const key = keyPart(row.generic) + '|' + keyPart(row.strength);
-    if (!medicines.has(key)) medicines.set(key, { generic: row.generic, strength: row.strength, carts: new Set(), qty: 0, uncounted: 0, missingCarts: new Set() });
+    if (!medicines.has(key)) medicines.set(key, { generic: row.generic, strength: row.strength, carts: new Set(), qty: 0, uncounted: 0, out: new Map() });
     return medicines.get(key);
   };
   rows.forEach((row) => {
@@ -133,24 +136,34 @@ export function summarize(rows, missing = []) {
     entry.carts.add(row.cartId);
     if (row.qty === null) { entry.uncounted += 1; uncounted += 1; } else { entry.qty += row.qty; total += row.qty; }
   });
-  missing.forEach((row) => entryFor(row).missingCarts.add(row.cartId));
+  missing.forEach((row) => entryFor(row).out.set(row.cartId, { cartName: row.cartName, standard: row.standard }));
   const list = [...medicines.values()]
-    .map((entry) => ({ generic: entry.generic, strength: entry.strength, carts: entry.carts.size, qty: entry.qty, uncounted: entry.uncounted, missingCarts: entry.missingCarts.size }))
+    .map((entry) => ({
+      generic: entry.generic, strength: entry.strength, carts: entry.carts.size, qty: entry.qty, uncounted: entry.uncounted,
+      missingCarts: entry.out.size, outIn: [...entry.out.values()].sort((a, b) => collator.compare(a.cartName, b.cartName)), mark: '',
+    }))
     .sort((a, b) => b.qty - a.qty || b.missingCarts - a.missingCarts || a.generic.localeCompare(b.generic));
+  let next = 0;
+  list.forEach((entry) => { if (entry.missingCarts) { entry.mark = MARKS[next % MARKS.length]; next += 1; } });
   const cartIds = new Set([...rows, ...missing].map((row) => row.cartId));
   return { medicines: list, totalQty: total, totalRows: rows.length, uncountedRows: uncounted, missingRows: missing.length, cartCount: cartIds.size };
 }
 
-/* One block per cart, because the new seal is one number for the whole cart:
-   its expiring lines by date, then the medicines it is out of. */
-export function groupByCart(rows, missing) {
+/* One block per cart that has something expiring, because the new seal is one
+   number for the whole cart. What a cart is out of takes no rows of its own — it
+   is a mark on the cart's name, explained in the summary. */
+export function groupByCart(rows, summary, missing) {
+  const markOf = new Map(summary.medicines.map((m) => [keyPart(m.generic) + '|' + keyPart(m.strength), m.mark]));
+  const outByCart = new Map();
+  missing.forEach((row) => {
+    const mark = markOf.get(keyPart(row.generic) + '|' + keyPart(row.strength));
+    outByCart.set(row.cartId, (outByCart.get(row.cartId) || []).concat(mark));
+  });
   const groups = new Map();
-  const groupFor = (row) => {
-    if (!groups.has(row.cartId)) groups.set(row.cartId, { cartId: row.cartId, cartName: row.cartName, lines: [] });
-    return groups.get(row.cartId);
-  };
-  rows.forEach((row) => groupFor(row).lines.push({ kind: 'expiring', ...row }));
-  missing.forEach((row) => groupFor(row).lines.push({ kind: 'missing', ...row }));
+  rows.forEach((row) => {
+    if (!groups.has(row.cartId)) groups.set(row.cartId, { cartId: row.cartId, cartName: row.cartName, marks: (outByCart.get(row.cartId) || []).sort(), lines: [] });
+    groups.get(row.cartId).lines.push(row);
+  });
   return [...groups.values()].sort((a, b) => collator.compare(a.cartName, b.cartName));
 }
 
@@ -158,5 +171,6 @@ export function groupByCart(rows, missing) {
 export function crashCartExpiryList(carts, windowDays, daysUntil) {
   const rows = expiringRows(carts, windowDays, daysUntil);
   const missing = unavailableRows(carts);
-  return { windowDays, rows, missing, groups: groupByCart(rows, missing), summary: summarize(rows, missing) };
+  const summary = summarize(rows, missing);
+  return { windowDays, rows, missing, groups: groupByCart(rows, summary, missing), summary };
 }
