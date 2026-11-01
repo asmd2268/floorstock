@@ -15,7 +15,11 @@
      unknown batches nothing honest can be said per batch, so the row carries no
      quantity and the totals report how many rows are uncounted.
    - Medicines are grouped by generic name AND strength: 5 mg and 10 mg are
-     different things to replace. */
+     different things to replace.
+   - A medicine the cart is out of (present count 0 against a standard above 0)
+     is listed as unavailable whatever the window, with its standard quantity. A
+     medicine merely below its standard is not "unavailable". An item that is out
+     produces no expiry rows: whatever batches are still recorded on it are stale. */
 
 export const DEFAULT_WINDOW_DAYS = 60;
 export const MAX_WINDOW_DAYS = 730;
@@ -65,19 +69,44 @@ function quantitiesByExpiry(item) {
   return out;
 }
 
+const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
+
+function describe(cart, item) {
+  return {
+    cartId: String(cart.id),
+    cartName: clean(cart.name || cart.number || cart.id),
+    generic: genericNameOf(item),
+    strength: clean(item.strength || item.concentration),
+  };
+}
+
+/* Out of stock: a recorded present count of zero against a standard above zero.
+   A count that was never recorded is not evidence the cart is empty. */
+export function isUnavailable(item) {
+  return item.present != null && item.present !== '' && number(item.present) === 0 && number(item.qty) > 0;
+}
+
+export function unavailableRows(carts) {
+  const rows = [];
+  (Array.isArray(carts) ? carts : []).forEach((cart) => {
+    (Array.isArray(cart && cart.items) ? cart.items : []).forEach((item) => {
+      if (isUnavailable(item)) rows.push({ ...describe(cart, item), standard: number(item.qty) });
+    });
+  });
+  return rows.sort((a, b) => collator.compare(a.cartName, b.cartName) || collator.compare(a.generic, b.generic));
+}
+
 export function expiringRows(carts, windowDays, daysUntil) {
   const rows = [];
   (Array.isArray(carts) ? carts : []).forEach((cart) => {
     (Array.isArray(cart && cart.items) ? cart.items : []).forEach((item) => {
+      if (isUnavailable(item)) return;
       quantitiesByExpiry(item).forEach((qty, expiry) => {
         const days = daysUntil(expiry);
         if (days === null || days === undefined || days > windowDays) return;
         if (qty === 0) return;
         rows.push({
-          cartId: String(cart.id),
-          cartName: clean(cart.name || cart.number || cart.id),
-          generic: genericNameOf(item),
-          strength: clean(item.strength || item.concentration),
+          ...describe(cart, item),
           expiry,
           qty,
           expired: days < 0,
@@ -85,31 +114,49 @@ export function expiringRows(carts, windowDays, daysUntil) {
       });
     });
   });
-  const collator = new Intl.Collator('en', { numeric: true, sensitivity: 'base' });
   return rows.sort((a, b) => collator.compare(a.cartName, b.cartName)
     || a.expiry.localeCompare(b.expiry)
     || collator.compare(a.generic, b.generic));
 }
 
-export function summarize(rows) {
+export function summarize(rows, missing = []) {
   const medicines = new Map();
   let total = 0;
   let uncounted = 0;
-  rows.forEach((row) => {
+  const entryFor = (row) => {
     const key = keyPart(row.generic) + '|' + keyPart(row.strength);
-    const entry = medicines.get(key) || { generic: row.generic, strength: row.strength, carts: new Set(), qty: 0, uncounted: 0 };
+    if (!medicines.has(key)) medicines.set(key, { generic: row.generic, strength: row.strength, carts: new Set(), qty: 0, uncounted: 0, missingCarts: new Set() });
+    return medicines.get(key);
+  };
+  rows.forEach((row) => {
+    const entry = entryFor(row);
     entry.carts.add(row.cartId);
     if (row.qty === null) { entry.uncounted += 1; uncounted += 1; } else { entry.qty += row.qty; total += row.qty; }
-    medicines.set(key, entry);
   });
+  missing.forEach((row) => entryFor(row).missingCarts.add(row.cartId));
   const list = [...medicines.values()]
-    .map((entry) => ({ generic: entry.generic, strength: entry.strength, carts: entry.carts.size, qty: entry.qty, uncounted: entry.uncounted }))
-    .sort((a, b) => b.qty - a.qty || a.generic.localeCompare(b.generic));
-  return { medicines: list, totalQty: total, totalRows: rows.length, uncountedRows: uncounted, cartCount: new Set(rows.map((row) => row.cartId)).size };
+    .map((entry) => ({ generic: entry.generic, strength: entry.strength, carts: entry.carts.size, qty: entry.qty, uncounted: entry.uncounted, missingCarts: entry.missingCarts.size }))
+    .sort((a, b) => b.qty - a.qty || b.missingCarts - a.missingCarts || a.generic.localeCompare(b.generic));
+  const cartIds = new Set([...rows, ...missing].map((row) => row.cartId));
+  return { medicines: list, totalQty: total, totalRows: rows.length, uncountedRows: uncounted, missingRows: missing.length, cartCount: cartIds.size };
+}
+
+/* One block per cart, because the new seal is one number for the whole cart:
+   its expiring lines by date, then the medicines it is out of. */
+export function groupByCart(rows, missing) {
+  const groups = new Map();
+  const groupFor = (row) => {
+    if (!groups.has(row.cartId)) groups.set(row.cartId, { cartId: row.cartId, cartName: row.cartName, lines: [] });
+    return groups.get(row.cartId);
+  };
+  rows.forEach((row) => groupFor(row).lines.push({ kind: 'expiring', ...row }));
+  missing.forEach((row) => groupFor(row).lines.push({ kind: 'missing', ...row }));
+  return [...groups.values()].sort((a, b) => collator.compare(a.cartName, b.cartName));
 }
 
 /* The whole thing, for the caller that has a user's carts and a clock. */
 export function crashCartExpiryList(carts, windowDays, daysUntil) {
   const rows = expiringRows(carts, windowDays, daysUntil);
-  return { windowDays, rows, summary: summarize(rows) };
+  const missing = unavailableRows(carts);
+  return { windowDays, rows, missing, groups: groupByCart(rows, missing), summary: summarize(rows, missing) };
 }

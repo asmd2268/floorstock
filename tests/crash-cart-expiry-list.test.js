@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { crashCartExpiryList, parseWindowDays, expiringRows } from '../public/assets/js/core/crash-cart-expiry-list.js';
+import { crashCartExpiryList, parseWindowDays, expiringRows, unavailableRows } from '../public/assets/js/core/crash-cart-expiry-list.js';
 import { sheetHtml, listTable } from '../public/assets/js/core/crash-cart-expiry-sheet.js';
 import { hasCapability } from '../public/assets/js/core/role-capabilities.js';
 
@@ -74,11 +74,48 @@ test('the printed sheet has the five columns, a blank seal cell per row, no lett
   const html = sheetHtml(crashCartExpiryList(carts, 60, daysUntil), '2026-11-01');
   assert.doesNotMatch(html, /<img src=x/);
   assert.match(html, /&lt;img src=x/);
-  assert.match(html, /<td class="seal"><\/td>/);
+  assert.match(html, /class="seal"/);
   for (const heading of ['Crash cart', 'Generic name', 'Near-expiry qty', 'Expiry date', 'New seal number']) assert.match(html, new RegExp(heading));
   assert.doesNotMatch(html, /facility|logo|<img/i);
   assert.match(html, /<tfoot>/);
-  assert.equal((listTable(crashCartExpiryList(carts, 60, daysUntil)).match(/<tr>/g) || []).length, 2);
+  assert.equal((listTable(crashCartExpiryList(carts, 60, daysUntil)).match(/<tr class=/g) || []).length, 1);
+});
+
+test('a medicine the cart is out of is listed as unavailable with its standard, whatever the window', () => {
+  const carts = [{ id: 'c', name: 'ICU', items: [
+    item('Adenosine', [], { qty: 6, present: 0 }),
+    item('Atropine', [{ expiry: '2028-01-01', qty: 2 }], { qty: 4, present: 2 }),
+    item('Dopamine', [{ expiry: '2026-11-05', qty: 3 }], { qty: 3, present: 0 }),
+    { name: 'Unrecorded', qty: 3, batches: [] },
+  ] }];
+  const list = crashCartExpiryList(carts, 60, daysUntil);
+  assert.deepEqual(unavailableRows(carts).map((r) => [r.generic, r.standard]), [['Adenosine', 6], ['Dopamine', 3]]);
+  assert.equal(list.rows.length, 0, 'stale batches on an item that is out produce no expiry row; a below-standard item is not unavailable');
+  assert.equal(list.summary.missingRows, 2);
+});
+
+test('rows are grouped per cart: expiring lines by date, then what the cart is out of', () => {
+  const carts = [
+    { id: 'b', name: 'Cart B', items: [item('Zinc', [], { qty: 2, present: 0 })] },
+    { id: 'a', name: 'Cart A', items: [item('Atropine', [{ expiry: '2026-11-09', qty: 2 }]), item('Adenosine', [], { qty: 6, present: 0 })] },
+  ];
+  const { groups } = crashCartExpiryList(carts, 60, daysUntil);
+  assert.deepEqual(groups.map((g) => [g.cartName, g.lines.map((l) => l.kind)]), [['Cart A', ['expiring', 'missing']], ['Cart B', ['missing']]]);
+});
+
+test('the sheet has one merged seal cell per cart, alternating shading by cart, an unavailable column with the standard', () => {
+  const carts = [
+    { id: 'a', name: 'Cart A', items: [item('Atropine', [{ expiry: '2026-11-09', qty: 2 }]), item('Adenosine', [], { qty: 6, present: 0 })] },
+    { id: 'b', name: 'Cart B', items: [item('Zinc', [{ expiry: '2026-11-12', qty: 1 }])] },
+    { id: 'c', name: 'Cart C', items: [item('Dopamine', [{ expiry: '2026-11-12', qty: 1 }])] },
+  ];
+  const html = sheetHtml(crashCartExpiryList(carts, 60, daysUntil), '2026-11-01');
+  assert.equal((html.match(/class="seal"/g) || []).length, 3, 'one seal cell per cart, not per medicine');
+  assert.match(html, /class="seal" rowspan="2"/);
+  assert.deepEqual([...html.matchAll(/<tr class="([gw])">/g)].map((m) => m[1]), ['g', 'g', 'w', 'g']);
+  assert.match(html, /غير متوفر بالكراش كارت Cart A — الستاندرد: 6/);
+  assert.match(html, /print-color-adjust:exact/);
+  assert.match(html, /name="viewport"/);
 });
 
 test('every pharmacy-side role and the Master can use it; departments and others cannot', () => {

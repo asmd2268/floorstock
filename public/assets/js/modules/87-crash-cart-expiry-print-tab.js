@@ -6,8 +6,8 @@
    core/crash-cart-expiry-sheet.js; this file only connects them to the screen. */
 
 import { registerPrintTab } from '../core/print-tabs.js?v=c15bf9cb7b';
-import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=60450cdb9d';
-import { listTable, sheetHtml, summaryTable, fitToOnePage } from '../core/crash-cart-expiry-sheet.js?v=314b889ed9';
+import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=8893f73d69';
+import { listTable, sheetHtml, summaryTable, fitToOnePage } from '../core/crash-cart-expiry-sheet.js?v=23697cd633';
 import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 
 const HOST_ID = 'car-crashexpiry-host';
@@ -47,19 +47,19 @@ function paint(host) {
     print.disabled = true;
     return;
   }
-  print.disabled = list.rows.length === 0;
-  if (!list.rows.length) {
+  print.disabled = list.groups.length === 0;
+  if (!list.groups.length) {
     out.innerHTML = '<div class="empty">لا توجد أدوية تنتهي خلال ' + list.windowDays + ' يوم في العربات المتاحة لك. / Nothing expires inside this window in the carts you can see.</div>';
     return;
   }
-  const crowded = list.rows.length + list.summary.medicines.length > SINGLE_PAGE_ROWS
+  const crowded = list.rows.length + list.missing.length + list.summary.medicines.length > SINGLE_PAGE_ROWS
     ? '<div class="empty">القائمة طويلة وقد يصغر الخط جدًا لتتسع بصفحة واحدة. / Long list: type will shrink to fit one page.</div>' : '';
   out.innerHTML = crowded + '<div class="tw">' + listTable(list) + '</div><div class="tw">' + summaryTable(list) + '</div>';
 }
 
 function printList(host) {
   const list = currentList(host);
-  if (!list || !list.rows.length) return;
+  if (!list || !list.groups.length) return;
   openBlobPrint(sheetHtml(list, todayLabel()), { prepare: fitToOnePage });
 }
 
@@ -68,7 +68,8 @@ function render() {
   if (!host) return;
   if (!host.dataset.ready) {
     host.dataset.ready = '1';
-    host.innerHTML = '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
+    host.innerHTML = '<style>#car-crashexpiry-host tr.g td{background:rgba(128,128,128,.2)}#car-crashexpiry-host td.m{color:#c0392b;font-weight:700}</style>'
+      + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
       + '<label for="crashexpiry-days">خلال (يوم) / Within (days)</label>'
       + '<input id="crashexpiry-days" type="number" min="1" max="' + MAX_WINDOW_DAYS + '" step="1" value="' + DEFAULT_WINDOW_DAYS + '" style="width:90px">'
       + '<button type="button" class="btn bp bsm" id="crashexpiry-print">🖨 طباعة / Print</button></div>'
