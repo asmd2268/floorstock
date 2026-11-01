@@ -9,31 +9,41 @@ import { fsEsc as esc } from './dom-utils.js?v=b2909b7f46';
 const medicineLabel = (generic, strength) => generic + (strength ? ' ' + strength : '');
 const qtyText = (qty) => (qty === null ? '—' : String(qty));
 
+const unavailableText = (line) => 'غير متوفر بالكراش كارت ' + line.cartName + ' — الستاندرد: ' + line.standard;
+
+/* One block per cart. The new seal is one number for the whole cart, so its cell
+   spans the cart's rows; blocks alternate shading so a cart reads as a unit. */
 export function listTable(list, { forPrint = false } = {}) {
-  const { rows } = list;
   const head = '<thead><tr><th>اسم الكراش كارت<br>Crash cart</th><th>الاسم العلمي<br>Generic name</th>'
     + '<th>الكمية قريبة الانتهاء<br>Near-expiry qty</th><th>تاريخ الانتهاء<br>Expiry date</th>'
-    + '<th>رقم القفل الجديد<br>New seal number</th></tr></thead>';
-  const body = rows.map((row) => '<tr>'
-    + '<td dir="auto">' + esc(row.cartName) + '</td>'
-    + '<td dir="auto">' + esc(medicineLabel(row.generic, row.strength)) + '</td>'
-    + '<td class="c">' + esc(qtyText(row.qty)) + '</td>'
-    + '<td class="c' + (row.expired ? ' x' : '') + '">' + esc(row.expiry) + (row.expired ? ' ⚠' : '') + '</td>'
-    + '<td class="seal"></td></tr>').join('');
-  return '<table class="' + (forPrint ? 'sheet' : 'list') + '">' + head + '<tbody>' + body + '</tbody></table>';
+    + '<th>غير متوفر<br>Unavailable</th><th>رقم القفل الجديد<br>New seal number</th></tr></thead>';
+  const body = list.groups.map((group, index) => group.lines.map((line, lineIndex) => {
+    const missing = line.kind === 'missing';
+    return '<tr class="' + (index % 2 ? 'w' : 'g') + '">'
+      + '<td dir="auto">' + esc(line.cartName) + '</td>'
+      + '<td dir="auto">' + esc(medicineLabel(line.generic, line.strength)) + '</td>'
+      + '<td class="c">' + (missing ? '' : esc(qtyText(line.qty))) + '</td>'
+      + '<td class="c' + (line.expired ? ' x' : '') + '">' + (missing ? '' : esc(line.expiry) + (line.expired ? ' ⚠' : '')) + '</td>'
+      + '<td class="m">' + (missing ? esc(unavailableText(line)) : '') + '</td>'
+      + (lineIndex === 0 ? '<td class="seal" rowspan="' + group.lines.length + '"></td>' : '')
+      + '</tr>';
+  }).join('')).join('');
+  const cols = '<colgroup><col style="width:13%"><col style="width:23%"><col style="width:10%"><col style="width:14%"><col style="width:26%"><col style="width:14%"></colgroup>';
+  return '<table class="' + (forPrint ? 'sheet' : 'list') + '">' + cols + head + '<tbody>' + body + '</tbody></table>';
 }
 
 export function summaryTable(list) {
   const { summary } = list;
   const lines = summary.medicines.map((m) => '<tr><td dir="auto">' + esc(medicineLabel(m.generic, m.strength)) + '</td>'
-    + '<td class="c">' + m.carts + '</td><td class="c"><b>' + m.qty + '</b>'
-    + (m.uncounted ? ' <span class="note">+' + m.uncounted + '؟</span>' : '') + '</td></tr>').join('');
+    + '<td class="c">' + (m.carts || '—') + '</td><td class="c"><b>' + (m.carts ? m.qty : '—') + '</b>'
+    + (m.uncounted ? ' <span class="note">+' + m.uncounted + '؟</span>' : '') + '</td>'
+    + '<td class="c">' + (m.missingCarts || '') + '</td></tr>').join('');
   const note = summary.uncountedRows
     ? '<div class="note">' + summary.uncountedRows + ' سطر بكمية غير مسجلة / row(s) with no recorded quantity (marked —)</div>' : '';
   return '<table class="sum"><thead><tr><th>الدواء<br>Medicine</th><th>عدد العربات<br>Carts</th>'
-    + '<th>المطلوب تغييره<br>To replace</th></tr></thead><tbody>' + lines + '</tbody>'
+    + '<th>المطلوب تغييره<br>To replace</th><th>غير متوفر (عربات)<br>Unavailable (carts)</th></tr></thead><tbody>' + lines + '</tbody>'
     + '<tfoot><tr><td>الإجمالي / Total</td><td class="c">' + summary.cartCount + '</td><td class="c"><b>'
-    + summary.totalQty + '</b></td></tr></tfoot></table>' + note;
+    + summary.totalQty + '</b></td><td class="c">' + (summary.missingRows || '') + '</td></tr></tfoot></table>' + note;
 }
 
 export function sheetHtml(list, today) {
@@ -43,12 +53,15 @@ export function sheetHtml(list, today) {
     + 'table{border-collapse:collapse;width:100%;margin-bottom:8px}'
     + 'th,td{border:1px solid #333;padding:2px 5px;vertical-align:middle}'
     + 'th{background:#eee;font-size:.9em}td.c{text-align:center}td.x{font-weight:700}'
-    + 'td.seal{width:22%}table.sum{width:70%}table.sum tfoot td{font-weight:700;background:#f3f3f3}'
+    + 'table{table-layout:fixed;word-break:break-word}'
+    + 'tr.g td{background:#e4e4e4}tr.w td{background:#fff}td.m{color:#8a1f11;font-weight:700}'
+    + 'td.seal{background:#fff!important}table.sum{width:80%}table.sum tfoot td{font-weight:700;background:#f3f3f3}'
+    + '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
     + '.note{font-size:.85em;color:#555}.brand{text-align:center;font-size:.8em;color:#555;margin-top:6px}';
-  const rowsPart = list.rows.length
+  const rowsPart = list.groups.length
     ? listTable(list, { forPrint: true }) + summaryTable(list)
-    : '<p>لا توجد أدوية تنتهي خلال هذه الفترة / Nothing expires inside this window.</p>';
-  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>Crash cart expiry list</title>'
+    : '<p>لا توجد أدوية تنتهي خلال هذه الفترة / Nothing expires or is missing.</p>';
+  return '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Crash cart expiry list</title>'
     + '<style>' + css + '</style></head><body>'
     + '<h1>أدوية العربات قريبة الانتهاء / Crash-cart near-expiry list</h1>'
     + '<div class="sub">' + esc(today) + ' · ' + list.windowDays + ' يوم / days</div>'
