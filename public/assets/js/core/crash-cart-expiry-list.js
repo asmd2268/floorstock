@@ -16,10 +16,11 @@
      quantity and the totals report how many rows are uncounted.
    - Medicines are grouped by generic name AND strength: 5 mg and 10 mg are
      different things to replace.
-   - A medicine the cart is out of (present count 0 against a standard above 0)
-     is listed as unavailable whatever the window, with its standard quantity. A
-     medicine merely below its standard is not "unavailable". An item that is out
-     produces no expiry rows: whatever batches are still recorded on it are stale. */
+   - A medicine a cart holds less of than its standard (a recorded present count
+     below a standard above 0) is a shortage whatever the window: the cart is short
+     by standard minus present. A cart that holds none is short by the whole
+     standard, and produces no expiry rows, since whatever batches are still
+     recorded on it are stale. A present count never recorded is not a shortage. */
 
 export const DEFAULT_WINDOW_DAYS = 60;
 export const MAX_WINDOW_DAYS = 730;
@@ -82,15 +83,26 @@ function describe(cart, item) {
 
 /* Out of stock: a recorded present count of zero against a standard above zero.
    A count that was never recorded is not evidence the cart is empty. */
+function recordedPresent(item) {
+  return item.present != null && item.present !== '';
+}
+
 export function isUnavailable(item) {
-  return item.present != null && item.present !== '' && number(item.present) === 0 && number(item.qty) > 0;
+  return recordedPresent(item) && number(item.present) === 0 && number(item.qty) > 0;
+}
+
+/* How many units the cart is short of its standard; 0 when it is not short. */
+export function shortageOf(item) {
+  if (!recordedPresent(item) || number(item.qty) <= 0) return 0;
+  return Math.max(0, number(item.qty) - number(item.present));
 }
 
 export function unavailableRows(carts) {
   const rows = [];
   (Array.isArray(carts) ? carts : []).forEach((cart) => {
     (Array.isArray(cart && cart.items) ? cart.items : []).forEach((item) => {
-      if (isUnavailable(item)) rows.push({ ...describe(cart, item), standard: number(item.qty) });
+      const shortage = shortageOf(item);
+      if (shortage > 0) rows.push({ ...describe(cart, item), standard: number(item.qty), present: number(item.present), shortage });
     });
   });
   return rows.sort((a, b) => collator.compare(a.cartName, b.cartName) || collator.compare(a.generic, b.generic));
@@ -136,17 +148,18 @@ export function summarize(rows, missing = []) {
     entry.carts.add(row.cartId);
     if (row.qty === null) { entry.uncounted += 1; uncounted += 1; } else { entry.qty += row.qty; total += row.qty; }
   });
-  missing.forEach((row) => entryFor(row).out.set(row.cartId, { cartName: row.cartName, standard: row.standard }));
+  missing.forEach((row) => entryFor(row).out.set(row.cartId, { cartName: row.cartName, standard: row.standard, shortage: row.shortage }));
   const list = [...medicines.values()]
     .map((entry) => ({
       generic: entry.generic, strength: entry.strength, carts: entry.carts.size, qty: entry.qty, uncounted: entry.uncounted,
-      missingCarts: entry.out.size, outIn: [...entry.out.values()].sort((a, b) => collator.compare(a.cartName, b.cartName)), mark: '',
+      missingCarts: entry.out.size, addQty: [...entry.out.values()].reduce((sum, c) => sum + c.shortage, 0), outIn: [...entry.out.values()].sort((a, b) => collator.compare(a.cartName, b.cartName)), mark: '',
     }))
     .sort((a, b) => b.qty - a.qty || b.missingCarts - a.missingCarts || a.generic.localeCompare(b.generic));
   let next = 0;
   list.forEach((entry) => { if (entry.missingCarts) { entry.mark = MARKS[next % MARKS.length]; next += 1; } });
   const cartIds = new Set([...rows, ...missing].map((row) => row.cartId));
-  return { medicines: list, totalQty: total, totalRows: rows.length, uncountedRows: uncounted, missingRows: missing.length, cartCount: cartIds.size };
+  const totalAdd = list.reduce((sum, entry) => sum + entry.addQty, 0);
+  return { medicines: list, totalQty: total, totalAdd, totalRows: rows.length, uncountedRows: uncounted, missingRows: missing.length, cartCount: cartIds.size };
 }
 
 /* One block per cart that has something expiring, because the new seal is one
