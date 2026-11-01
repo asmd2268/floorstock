@@ -43,6 +43,7 @@ test('the summary reproduces the worked example: four carts, 2+2+2+1 = 7 to repl
   const [calcium] = list.summary.medicines;
   assert.deepEqual([calcium.generic, calcium.carts, calcium.qty], ['Calcium Gluconate', 4, 7]);
   assert.equal(list.summary.totalQty, 7);
+  assert.equal(list.summary.totalAdd, 0);
 });
 
 test('different strengths of one generic are separate summary lines', () => {
@@ -81,17 +82,20 @@ test('the printed sheet has the five columns, a blank seal cell per row, no lett
   assert.equal((listTable(crashCartExpiryList(carts, 60, daysUntil)).match(/<tr class=/g) || []).length, 1);
 });
 
-test('a medicine the cart is out of is listed as unavailable with its standard, whatever the window', () => {
+test('a cart below its standard is short by the difference; none recorded means short by the whole standard; unrecorded is no shortage', () => {
   const carts = [{ id: 'c', name: 'ICU', items: [
     item('Adenosine', [], { qty: 6, present: 0 }),
-    item('Atropine', [{ expiry: '2028-01-01', qty: 2 }], { qty: 4, present: 2 }),
+    item('Atropine', [{ expiry: '2028-01-01', qty: 1 }], { qty: 2, present: 1 }),
     item('Dopamine', [{ expiry: '2026-11-05', qty: 3 }], { qty: 3, present: 0 }),
+    item('Full', [{ expiry: '2028-01-01', qty: 4 }], { qty: 4, present: 4 }),
     { name: 'Unrecorded', qty: 3, batches: [] },
   ] }];
   const list = crashCartExpiryList(carts, 60, daysUntil);
-  assert.deepEqual(unavailableRows(carts).map((r) => [r.generic, r.standard]), [['Adenosine', 6], ['Dopamine', 3]]);
-  assert.equal(list.rows.length, 0, 'stale batches on an item that is out produce no expiry row; a below-standard item is not unavailable');
-  assert.equal(list.summary.missingRows, 2);
+  assert.deepEqual(unavailableRows(carts).map((r) => [r.generic, r.standard, r.present, r.shortage]),
+    [['Adenosine', 6, 0, 6], ['Atropine', 2, 1, 1], ['Dopamine', 3, 0, 3]]);
+  assert.equal(list.rows.length, 0, 'stale batches on an item that is empty produce no expiry row');
+  assert.equal(list.summary.missingRows, 3);
+  assert.equal(list.summary.totalAdd, 10);
 });
 
 test('a cart out of a medicine gets the mark of that medicine, takes no row of its own, and the summary explains the mark', () => {
@@ -111,8 +115,11 @@ test('a cart out of a medicine gets the mark of that medicine, takes no row of i
   const dopamine = list.summary.medicines.find((m) => m.generic === 'Dopamine');
   assert.deepEqual(dopamine.outIn.map((c) => c.cartName), ['Cart A', 'Cart C'], 'Cart C is named in the summary although it has no row');
   const html = sheetHtml(list, '2026-11-01');
-  assert.match(html, /غير متوفر في: Cart A \(3\)، Cart C \(3\)/);
-  assert.equal((html.match(/غير متوفر بالكراش/g) || []).length, 0, 'no per-medicine row for shortages');
+  assert.equal(dopamine.addQty, 6, 'standard 3, none present, in each of two carts');
+  assert.match(html, /<b class="mk">[^<]+<\/b> Dopamine/, 'the mark sits beside the name in the same cell');
+  assert.match(html, /ينضاف 6 في 2 عربة/);
+  assert.doesNotMatch(html, /Cart C/, 'no cart names or details for shortages in the summary');
+  assert.doesNotMatch(html, /غير متوفر بالكراش/, 'no per-medicine row for shortages');
 });
 
 test('the sheet has one merged seal cell per cart and alternating shading by cart', () => {
@@ -123,6 +130,9 @@ test('the sheet has one merged seal cell per cart and alternating shading by car
   ];
   const html = sheetHtml(crashCartExpiryList(carts, 60, daysUntil), '2026-11-01');
   assert.equal((html.match(/class="seal"/g) || []).length, 3, 'one seal cell per cart, not per medicine');
+  assert.equal((html.match(/class="cart"/g) || []).length, 3, 'the cart name is written once per cart');
+  assert.match(html, /dir="ltr"/);
+  assert.match(html, /h1\{[^}]*text-align:center/);
   assert.match(html, /class="seal" rowspan="2"/);
   assert.deepEqual([...html.matchAll(/<tr class="([gw])">/g)].map((m) => m[1]), ['g', 'g', 'w', 'g']);
   assert.match(html, /print-color-adjust:exact/);
@@ -133,7 +143,9 @@ test('a window with only shortages still prints the summary', () => {
   const carts = [{ id: 'a', name: 'Cart A', items: [item('Adenosine', [], { qty: 6, present: 0 })] }];
   const list = crashCartExpiryList(carts, 60, daysUntil);
   assert.equal(list.groups.length, 0);
-  assert.match(sheetHtml(list, '2026-11-01'), /Adenosine/);
+  const html = sheetHtml(list, '2026-11-01');
+  assert.match(html, /Adenosine/);
+  assert.match(html, /<b>6<\/b>/, 'the standard is what must be added');
 });
 
 test('every pharmacy-side role and the Master can use it; departments and others cannot', () => {
@@ -142,4 +154,18 @@ test('every pharmacy-side role and the Master can use it; departments and others
   }
   assert.equal(hasCapability({ role: 'pharmacy_staff' }, 'crashCart.operate'), true);
   for (const role of ['department', 'warehouse', 'controlled_pharmacy']) assert.equal(hasCapability({ role }, 'crashCart.operate'), false, role);
+});
+
+test('the worked example: standard 2, one cart holds 1 -> that cart is marked and 1 is added', () => {
+  const carts = [
+    { id: 'a', name: 'Cart A', items: [item('Atropine', [{ expiry: '2026-11-09', qty: 1 }], { qty: 2, present: 1 })] },
+    { id: 'b', name: 'Cart B', items: [item('Atropine', [{ expiry: '2026-11-12', qty: 1 }], { qty: 2, present: 2 })] },
+  ];
+  const list = crashCartExpiryList(carts, 60, daysUntil);
+  const [atropine] = list.summary.medicines;
+  assert.deepEqual([atropine.addQty, atropine.missingCarts, atropine.qty], [1, 1, 2]);
+  assert.deepEqual(list.groups.map((g) => [g.cartName, g.marks.length]), [['Cart A', 1], ['Cart B', 0]], 'only the short cart carries the mark');
+  const html = sheetHtml(list, '2026-11-01');
+  assert.match(html, /<b>3<\/b>/, '2 near-expiry units + 1 to add');
+  assert.match(html, /ينضاف 1 في 1 عربة/);
 });
