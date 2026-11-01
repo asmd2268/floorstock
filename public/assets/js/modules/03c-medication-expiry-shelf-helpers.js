@@ -1,4 +1,4 @@
-import { medNorm, medIdentity, sameMedicine, medicationRuleFor } from '../core/medication-identity.js?v=79ed79f0a6';
+import { medNorm, medIdentity, sameMedicine, medicationRuleFor } from '../core/medication-identity.js?v=f93d84bfae';
 import { publishLegacy } from '../core/legacy-registry.js?v=003344116e';
 import { orderForNewMed, moveInCategory } from '../core/med-order.js?v=65f045abae';
 

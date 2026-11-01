@@ -126,6 +126,13 @@ export function sameMedicine(a, b) {
   const formA = dosageForm(a);
   const formB = dosageForm(b);
   if (formA && formB && formA !== formB) return false;
+  /* In this application the category IS the form: "Paracetamol 500 mg" filed under
+     Tablets and "Paracetamol 500 mg" filed under Suppositories carry the same name
+     and are two medicines. Two records that both name a category and disagree are
+     not the same medicine, whatever their names say. */
+  const categoryA = medNorm(a.category);
+  const categoryB = medNorm(b.category);
+  if (categoryA && categoryB && categoryA !== categoryB) return false;
   const namesA = [a.name].concat(a.aliases || []);
   const namesB = [b.name].concat(b.aliases || []);
   for (let i = 0; i < namesA.length; i += 1) {

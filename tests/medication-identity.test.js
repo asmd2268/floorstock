@@ -126,3 +126,13 @@ test('the same form still matches, including a form-less name against its tablet
   assert.equal(sameMedicine({ id: 'a', name: 'Paracetamol' }, { id: 'b', name: 'Paracetamol Tablet' }), true, 'one side stating no form is not a conflict');
   assert.equal(sameMedicine({ id: 'a', name: 'Adrenaline 1mg ampoule' }, { id: 'b', name: 'Adrenaline injection' }), true);
 });
+
+test('the same name and strength under two categories are two medicines; under one category, one', () => {
+  const tablets = { id: 'a', name: 'Paracetamol 500 mg', category: 'Tablets' };
+  const suppositories = { id: 'b', name: 'Paracetamol 500 mg', category: 'Suppositories' };
+  assert.equal(sameMedicine(tablets, suppositories), false);
+  assert.equal(sameMedicine(suppositories, tablets), false);
+  assert.equal(sameMedicine(tablets, { id: 'c', name: 'Paracetamol 500 mg', category: 'tablets' }), true, 'case does not matter');
+  assert.equal(sameMedicine(tablets, { id: 'd', name: 'Paracetamol 500 mg' }), true, 'a record with no category is not a conflict');
+  assert.equal(sameMedicine({ id: 'e', name: 'تحاميل باراسيتامول', category: 'التحاميل' }, { id: 'f', name: 'تحاميل باراسيتامول', category: 'الأقراص' }), false);
+});
