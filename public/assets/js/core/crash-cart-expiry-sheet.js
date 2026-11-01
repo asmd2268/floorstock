@@ -14,19 +14,19 @@ const qtyText = (qty) => (qty === null ? '—' : String(qty));
    alternate shading so a cart reads as a unit. A mark after the cart's name says
    it is out of a medicine (see the summary). Left to right throughout. */
 export function listTable(list, { forPrint = false } = {}) {
-  const head = '<thead><tr><th>Crash cart<br>اسم الكراش كارت</th><th>Generic name<br>الاسم العلمي</th>'
-    + '<th>Near-expiry qty<br>الكمية قريبة الانتهاء</th><th>Expiry date<br>تاريخ الانتهاء</th>'
-    + '<th>New seal number<br>رقم القفل الجديد</th></tr></thead>';
-  const cols = '<colgroup><col style="width:20%"><col style="width:30%"><col style="width:12%"><col style="width:16%"><col style="width:22%"></colgroup>';
+  const head = '<thead><tr><th>Crash cart<br>اسم الكراش كارت</th><th>New seal number<br>رقم القفل الجديد</th>'
+    + '<th>Generic name<br>الاسم العلمي</th><th>Near-expiry qty<br>الكمية قريبة الانتهاء</th>'
+    + '<th>Expiry date<br>تاريخ الانتهاء</th></tr></thead>';
+  const cols = '<colgroup><col style="width:20%"><col style="width:20%"><col style="width:30%"><col style="width:14%"><col style="width:16%"></colgroup>';
   const body = list.groups.map((group, index) => group.lines.map((line, lineIndex) => {
     const span = ' rowspan="' + group.lines.length + '"';
     return '<tr class="' + (index % 2 ? 'w' : 'g') + '">'
       + (lineIndex === 0 ? '<td class="cart"' + span + ' dir="auto">' + esc(group.cartName)
         + (group.marks.length ? ' <b class="mk">' + esc(group.marks.join(' ')) + '</b>' : '') + '</td>' : '')
-      + '<td dir="auto">' + esc(medicineLabel(line.generic, line.strength)) + '</td>'
-      + '<td class="c">' + esc(qtyText(line.qty)) + '</td>'
-      + '<td class="c' + (line.expired ? ' x' : '') + '">' + esc(line.expiry) + (line.expired ? ' ⚠' : '') + '</td>'
       + (lineIndex === 0 ? '<td class="seal"' + span + '></td>' : '')
+      + '<td dir="auto">' + esc(medicineLabel(line.generic, line.strength)) + '</td>'
+      + '<td>' + esc(qtyText(line.qty)) + '</td>'
+      + '<td' + (line.expired ? ' class="x"' : '') + '>' + esc(line.expiry) + (line.expired ? ' ⚠' : '') + '</td>'
       + '</tr>';
   }).join('')).join('');
   return '<table dir="ltr" class="' + (forPrint ? 'sheet' : 'list') + '">' + cols + head + '<tbody>' + body + '</tbody></table>';
@@ -57,11 +57,11 @@ export function sheetHtml(list, today) {
     + 'body{font-family:Arial,Tahoma,sans-serif;color:#111;margin:0;font-size:var(--fs,10pt)}'
     + 'h1{font-size:1.2em;margin:0 0 4px;text-align:center}.sub{font-size:.9em;color:#444;margin-bottom:6px;text-align:center}'
     + 'table{border-collapse:collapse;width:100%;margin:0 auto 8px}'
-    + 'th,td{border:1px solid #333;padding:2px 5px;vertical-align:middle}'
-    + 'th{background:#eee;font-size:.9em}td.c{text-align:center}td.x{font-weight:700}'
+    + 'th,td{border:1px solid #333;padding:2px 5px;vertical-align:middle;text-align:center}'
+    + 'th{background:#eee;font-size:.9em}td.x{font-weight:700}'
     + 'table{table-layout:fixed;word-break:break-word}'
     + 'tr.g td{background:#e4e4e4}tr.w td{background:#fff}td.m{color:#8a1f11;font-weight:700}'
-    + 'td.seal{background:#fff!important}table.sum{width:80%}td.cart{font-weight:700}.mk{font-size:1.1em}table.sum tfoot td{font-weight:700;background:#f3f3f3}'
+    + 'table.sum{width:80%}td.cart{font-weight:700}.mk{font-size:1.1em}table.sum tfoot td{font-weight:700;background:#f3f3f3}'
     + '*{-webkit-print-color-adjust:exact;print-color-adjust:exact}'
     + '.note{font-size:.85em;color:#555;font-weight:400}.brand{text-align:center;font-size:.8em;color:#555;margin-top:6px}';
   const rowsPart = list.groups.length || list.missing.length
