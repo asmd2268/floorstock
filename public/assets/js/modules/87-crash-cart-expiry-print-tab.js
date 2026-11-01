@@ -6,7 +6,7 @@
    core/crash-cart-expiry-sheet.js; this file only connects them to the screen. */
 
 import { registerPrintTab } from '../core/print-tabs.js?v=c15bf9cb7b';
-import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=1d8ca3160b';
+import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=2190498d29';
 import { listTable, sheetHtml, summaryTable, fitToOnePage } from '../core/crash-cart-expiry-sheet.js?v=4a46ba1db0';
 import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 
