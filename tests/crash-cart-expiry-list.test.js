@@ -43,6 +43,7 @@ test('the summary reproduces the worked example: four carts, 2+2+2+1 = 7 to repl
   const [calcium] = list.summary.medicines;
   assert.deepEqual([calcium.generic, calcium.carts, calcium.qty], ['Calcium Gluconate', 4, 7]);
   assert.equal(list.summary.totalQty, 7);
+  assert.equal(list.summary.totalAdd, 0);
 });
 
 test('different strengths of one generic are separate summary lines', () => {
@@ -111,8 +112,11 @@ test('a cart out of a medicine gets the mark of that medicine, takes no row of i
   const dopamine = list.summary.medicines.find((m) => m.generic === 'Dopamine');
   assert.deepEqual(dopamine.outIn.map((c) => c.cartName), ['Cart A', 'Cart C'], 'Cart C is named in the summary although it has no row');
   const html = sheetHtml(list, '2026-11-01');
-  assert.match(html, /غير متوفر في: Cart A \(3\)، Cart C \(3\)/);
-  assert.equal((html.match(/غير متوفر بالكراش/g) || []).length, 0, 'no per-medicine row for shortages');
+  assert.equal(dopamine.addQty, 6, 'standard 3 in each of two carts');
+  assert.match(html, /<b class="mk">[^<]+<\/b> Dopamine/, 'the mark sits beside the name in the same cell');
+  assert.match(html, /ينضاف 6 في 2 عربة/);
+  assert.doesNotMatch(html, /Cart C/, 'no cart names or details for shortages in the summary');
+  assert.doesNotMatch(html, /غير متوفر بالكراش/, 'no per-medicine row for shortages');
 });
 
 test('the sheet has one merged seal cell per cart and alternating shading by cart', () => {
@@ -123,6 +127,9 @@ test('the sheet has one merged seal cell per cart and alternating shading by car
   ];
   const html = sheetHtml(crashCartExpiryList(carts, 60, daysUntil), '2026-11-01');
   assert.equal((html.match(/class="seal"/g) || []).length, 3, 'one seal cell per cart, not per medicine');
+  assert.equal((html.match(/class="cart"/g) || []).length, 3, 'the cart name is written once per cart');
+  assert.match(html, /dir="ltr"/);
+  assert.match(html, /h1\{[^}]*text-align:center/);
   assert.match(html, /class="seal" rowspan="2"/);
   assert.deepEqual([...html.matchAll(/<tr class="([gw])">/g)].map((m) => m[1]), ['g', 'g', 'w', 'g']);
   assert.match(html, /print-color-adjust:exact/);
@@ -133,7 +140,9 @@ test('a window with only shortages still prints the summary', () => {
   const carts = [{ id: 'a', name: 'Cart A', items: [item('Adenosine', [], { qty: 6, present: 0 })] }];
   const list = crashCartExpiryList(carts, 60, daysUntil);
   assert.equal(list.groups.length, 0);
-  assert.match(sheetHtml(list, '2026-11-01'), /Adenosine/);
+  const html = sheetHtml(list, '2026-11-01');
+  assert.match(html, /Adenosine/);
+  assert.match(html, /<b>6<\/b>/, 'the standard is what must be added');
 });
 
 test('every pharmacy-side role and the Master can use it; departments and others cannot', () => {

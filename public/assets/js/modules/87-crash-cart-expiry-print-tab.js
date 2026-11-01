@@ -6,8 +6,8 @@
    core/crash-cart-expiry-sheet.js; this file only connects them to the screen. */
 
 import { registerPrintTab } from '../core/print-tabs.js?v=c15bf9cb7b';
-import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=cb4d3d313a';
-import { listTable, sheetHtml, summaryTable, fitToOnePage } from '../core/crash-cart-expiry-sheet.js?v=44e16110ce';
+import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=1d8ca3160b';
+import { listTable, sheetHtml, summaryTable, fitToOnePage } from '../core/crash-cart-expiry-sheet.js?v=4a46ba1db0';
 import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 
 const HOST_ID = 'car-crashexpiry-host';
@@ -68,7 +68,7 @@ function render() {
   if (!host) return;
   if (!host.dataset.ready) {
     host.dataset.ready = '1';
-    host.innerHTML = '<style>#car-crashexpiry-host tr.g td{background:rgba(128,128,128,.2)}#car-crashexpiry-host td.m{color:#c0392b;font-weight:700}</style>'
+    host.innerHTML = '<style>#car-crashexpiry-host table{margin:0 auto 10px}#car-crashexpiry-host td.cart{font-weight:700}#car-crashexpiry-host tr.g td{background:rgba(128,128,128,.2)}#car-crashexpiry-host td.m{color:#c0392b;font-weight:700}</style>'
       + '<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'
       + '<label for="crashexpiry-days">خلال (يوم) / Within (days)</label>'
       + '<input id="crashexpiry-days" type="number" min="1" max="' + MAX_WINDOW_DAYS + '" step="1" value="' + DEFAULT_WINDOW_DAYS + '" style="width:90px">'

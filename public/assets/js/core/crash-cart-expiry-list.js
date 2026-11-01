@@ -140,13 +140,14 @@ export function summarize(rows, missing = []) {
   const list = [...medicines.values()]
     .map((entry) => ({
       generic: entry.generic, strength: entry.strength, carts: entry.carts.size, qty: entry.qty, uncounted: entry.uncounted,
-      missingCarts: entry.out.size, outIn: [...entry.out.values()].sort((a, b) => collator.compare(a.cartName, b.cartName)), mark: '',
+      missingCarts: entry.out.size, addQty: [...entry.out.values()].reduce((sum, c) => sum + c.standard, 0), outIn: [...entry.out.values()].sort((a, b) => collator.compare(a.cartName, b.cartName)), mark: '',
     }))
     .sort((a, b) => b.qty - a.qty || b.missingCarts - a.missingCarts || a.generic.localeCompare(b.generic));
   let next = 0;
   list.forEach((entry) => { if (entry.missingCarts) { entry.mark = MARKS[next % MARKS.length]; next += 1; } });
   const cartIds = new Set([...rows, ...missing].map((row) => row.cartId));
-  return { medicines: list, totalQty: total, totalRows: rows.length, uncountedRows: uncounted, missingRows: missing.length, cartCount: cartIds.size };
+  const totalAdd = list.reduce((sum, entry) => sum + entry.addQty, 0);
+  return { medicines: list, totalQty: total, totalAdd, totalRows: rows.length, uncountedRows: uncounted, missingRows: missing.length, cartCount: cartIds.size };
 }
 
 /* One block per cart that has something expiring, because the new seal is one
