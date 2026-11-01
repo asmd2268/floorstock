@@ -91,9 +91,48 @@ export function medicationRuleFor(map, med, deptId) {
   return null;
 }
 
+/* The dosage form a record is, as far as its name or its category says: tablet,
+   suppository, syrup... or '' when neither says. Names win over categories, since
+   a name states the form of THIS product. Arabic forms are recognised too. */
+const FORMS = [
+  ['suppository', /(^| )(supp|suppository|suppositories)( |$)|تحاميل|تحميلة|لبوس/],
+  ['tablet', /(^| )(tab|tabs|tablet|tablets)( |$)|[أا]قراص|قرص/],
+  ['capsule', /(^| )(cap|caps|capsule|capsules)( |$)|كبسول/],
+  ['syrup', /(^| )(syrup|suspension|susp)( |$)|شراب|معلق/],
+  ['cream', /(^| )(cream|ointment|gel)( |$)|كريم|مرهم|جل/],
+  ['drops', /(^| )(drop|drops)( |$)|قطرة|قطرات/],
+  ['inhaler', /(^| )(inhaler|inhalers)( |$)|بخاخ/],
+];
+
+function formIn(text) {
+  const folded = medNorm(text);
+  if (!folded) return '';
+  const hit = FORMS.find(([, pattern]) => pattern.test(folded));
+  return hit ? hit[0] : '';
+}
+
+export function dosageForm(med) {
+  if (!med) return '';
+  return formIn(med.name) || formIn(med.category);
+}
+
 export function sameMedicine(a, b) {
   if (!a || !b) return false;
   if (String(a.id || '') && String(a.id || '') === String(b.id || '')) return true;
+  /* Paracetamol tablets and paracetamol suppositories are different medicines. A
+     name with no form in it ("Paracetamol") would otherwise be swallowed by the
+     containment rule below and match a suppository — freezing a department that
+     only stocks suppositories because the tablets were frozen. */
+  const formA = dosageForm(a);
+  const formB = dosageForm(b);
+  if (formA && formB && formA !== formB) return false;
+  /* In this application the category IS the form: "Paracetamol 500 mg" filed under
+     Tablets and "Paracetamol 500 mg" filed under Suppositories carry the same name
+     and are two medicines. Two records that both name a category and disagree are
+     not the same medicine, whatever their names say. */
+  const categoryA = medNorm(a.category);
+  const categoryB = medNorm(b.category);
+  if (categoryA && categoryB && categoryA !== categoryB) return false;
   const namesA = [a.name].concat(a.aliases || []);
   const namesB = [b.name].concat(b.aliases || []);
   for (let i = 0; i < namesA.length; i += 1) {

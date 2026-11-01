@@ -107,3 +107,32 @@ test('no map and no medicine mean no rule, never a crash', () => {
   assert.equal(medicationRuleFor({}, null, 'icu'), null);
   assert.equal(medicationRuleFor({}, { name: 'x' }, 'icu'), null);
 });
+
+/* Freezing a medicine writes a rule for the matching record in each department.
+   Matching tablets to suppositories froze a department that only stocks the
+   suppositories. */
+test('different dosage forms of one drug are never the same medicine', () => {
+  const tablet = { id: 'a', name: 'Paracetamol', category: 'Tablets' };
+  const suppository = { id: 'b', name: 'Paracetamol Suppository' };
+  assert.equal(sameMedicine(tablet, suppository), false, 'a form-less name must not swallow a suppository');
+  assert.equal(sameMedicine(suppository, tablet), false);
+  assert.equal(sameMedicine({ id: 'c', name: 'Paracetamol 125mg', category: 'Suppositories' }, tablet), false, 'category states the form when the name does not');
+  assert.equal(sameMedicine({ id: 'd', name: 'باراسيتامول تحاميل' }, { id: 'e', name: 'باراسيتامول أقراص' }), false);
+});
+
+test('the same form still matches, including a form-less name against its tablet', () => {
+  assert.equal(sameMedicine({ id: 'a', name: 'Paracetamol 500mg Tablet' }, { id: 'b', name: 'Paracetamol 500mg Tablet' }), true);
+  assert.equal(sameMedicine({ id: 'a', name: 'Paracetamol Suppository' }, { id: 'b', name: 'Paracetamol Suppository' }), true);
+  assert.equal(sameMedicine({ id: 'a', name: 'Paracetamol' }, { id: 'b', name: 'Paracetamol Tablet' }), true, 'one side stating no form is not a conflict');
+  assert.equal(sameMedicine({ id: 'a', name: 'Adrenaline 1mg ampoule' }, { id: 'b', name: 'Adrenaline injection' }), true);
+});
+
+test('the same name and strength under two categories are two medicines; under one category, one', () => {
+  const tablets = { id: 'a', name: 'Paracetamol 500 mg', category: 'Tablets' };
+  const suppositories = { id: 'b', name: 'Paracetamol 500 mg', category: 'Suppositories' };
+  assert.equal(sameMedicine(tablets, suppositories), false);
+  assert.equal(sameMedicine(suppositories, tablets), false);
+  assert.equal(sameMedicine(tablets, { id: 'c', name: 'Paracetamol 500 mg', category: 'tablets' }), true, 'case does not matter');
+  assert.equal(sameMedicine(tablets, { id: 'd', name: 'Paracetamol 500 mg' }), true, 'a record with no category is not a conflict');
+  assert.equal(sameMedicine({ id: 'e', name: 'تحاميل باراسيتامول', category: 'التحاميل' }, { id: 'f', name: 'تحاميل باراسيتامول', category: 'الأقراص' }), false);
+});
