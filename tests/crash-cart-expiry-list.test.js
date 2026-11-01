@@ -94,18 +94,30 @@ test('a medicine the cart is out of is listed as unavailable with its standard, 
   assert.equal(list.summary.missingRows, 2);
 });
 
-test('rows are grouped per cart: expiring lines by date, then what the cart is out of', () => {
+test('a cart out of a medicine gets the mark of that medicine, takes no row of its own, and the summary explains the mark', () => {
   const carts = [
-    { id: 'b', name: 'Cart B', items: [item('Zinc', [], { qty: 2, present: 0 })] },
-    { id: 'a', name: 'Cart A', items: [item('Atropine', [{ expiry: '2026-11-09', qty: 2 }]), item('Adenosine', [], { qty: 6, present: 0 })] },
+    { id: 'a', name: 'Cart A', items: [item('Atropine', [{ expiry: '2026-11-09', qty: 2 }]), item('Adenosine', [], { qty: 6, present: 0 }), item('Dopamine', [], { qty: 3, present: 0 })] },
+    { id: 'b', name: 'Cart B', items: [item('Atropine', [{ expiry: '2026-11-12', qty: 1 }]), item('Adenosine', [], { qty: 6, present: 0 })] },
+    { id: 'c', name: 'Cart C', items: [item('Dopamine', [], { qty: 3, present: 0 })] },
   ];
-  const { groups } = crashCartExpiryList(carts, 60, daysUntil);
-  assert.deepEqual(groups.map((g) => [g.cartName, g.lines.map((l) => l.kind)]), [['Cart A', ['expiring', 'missing']], ['Cart B', ['missing']]]);
+  const list = crashCartExpiryList(carts, 60, daysUntil);
+  assert.deepEqual(list.groups.map((g) => g.cartName), ['Cart A', 'Cart B'], 'a cart with only a shortage has no row');
+  assert.equal(list.rows.length, 2);
+  const mark = (name) => list.summary.medicines.find((m) => m.generic === name).mark;
+  assert.equal(new Set([mark('Adenosine'), mark('Dopamine')]).size, 2, 'each missing medicine has its own mark');
+  assert.equal(mark('Atropine'), '', 'a medicine nobody is out of has no mark');
+  assert.deepEqual(list.groups[0].marks, [mark('Adenosine'), mark('Dopamine')].sort(), 'two shortages, two marks');
+  assert.deepEqual(list.groups[1].marks, [mark('Adenosine')]);
+  const dopamine = list.summary.medicines.find((m) => m.generic === 'Dopamine');
+  assert.deepEqual(dopamine.outIn.map((c) => c.cartName), ['Cart A', 'Cart C'], 'Cart C is named in the summary although it has no row');
+  const html = sheetHtml(list, '2026-11-01');
+  assert.match(html, /غير متوفر في: Cart A \(3\)، Cart C \(3\)/);
+  assert.equal((html.match(/غير متوفر بالكراش/g) || []).length, 0, 'no per-medicine row for shortages');
 });
 
-test('the sheet has one merged seal cell per cart, alternating shading by cart, an unavailable column with the standard', () => {
+test('the sheet has one merged seal cell per cart and alternating shading by cart', () => {
   const carts = [
-    { id: 'a', name: 'Cart A', items: [item('Atropine', [{ expiry: '2026-11-09', qty: 2 }]), item('Adenosine', [], { qty: 6, present: 0 })] },
+    { id: 'a', name: 'Cart A', items: [item('Atropine', [{ expiry: '2026-11-09', qty: 2 }]), item('Zinc', [{ expiry: '2026-11-10', qty: 1 }])] },
     { id: 'b', name: 'Cart B', items: [item('Zinc', [{ expiry: '2026-11-12', qty: 1 }])] },
     { id: 'c', name: 'Cart C', items: [item('Dopamine', [{ expiry: '2026-11-12', qty: 1 }])] },
   ];
@@ -113,9 +125,15 @@ test('the sheet has one merged seal cell per cart, alternating shading by cart, 
   assert.equal((html.match(/class="seal"/g) || []).length, 3, 'one seal cell per cart, not per medicine');
   assert.match(html, /class="seal" rowspan="2"/);
   assert.deepEqual([...html.matchAll(/<tr class="([gw])">/g)].map((m) => m[1]), ['g', 'g', 'w', 'g']);
-  assert.match(html, /غير متوفر بالكراش كارت Cart A — الستاندرد: 6/);
   assert.match(html, /print-color-adjust:exact/);
   assert.match(html, /name="viewport"/);
+});
+
+test('a window with only shortages still prints the summary', () => {
+  const carts = [{ id: 'a', name: 'Cart A', items: [item('Adenosine', [], { qty: 6, present: 0 })] }];
+  const list = crashCartExpiryList(carts, 60, daysUntil);
+  assert.equal(list.groups.length, 0);
+  assert.match(sheetHtml(list, '2026-11-01'), /Adenosine/);
 });
 
 test('every pharmacy-side role and the Master can use it; departments and others cannot', () => {

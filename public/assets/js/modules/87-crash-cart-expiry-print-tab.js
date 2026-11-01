@@ -6,8 +6,8 @@
    core/crash-cart-expiry-sheet.js; this file only connects them to the screen. */
 
 import { registerPrintTab } from '../core/print-tabs.js?v=c15bf9cb7b';
-import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=8893f73d69';
-import { listTable, sheetHtml, summaryTable, fitToOnePage } from '../core/crash-cart-expiry-sheet.js?v=23697cd633';
+import { DEFAULT_WINDOW_DAYS, MAX_WINDOW_DAYS, crashCartExpiryList, parseWindowDays } from '../core/crash-cart-expiry-list.js?v=cb4d3d313a';
+import { listTable, sheetHtml, summaryTable, fitToOnePage } from '../core/crash-cart-expiry-sheet.js?v=44e16110ce';
 import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 
 const HOST_ID = 'car-crashexpiry-host';
@@ -47,19 +47,19 @@ function paint(host) {
     print.disabled = true;
     return;
   }
-  print.disabled = list.groups.length === 0;
-  if (!list.groups.length) {
+  print.disabled = list.groups.length === 0 && list.missing.length === 0;
+  if (!list.groups.length && !list.missing.length) {
     out.innerHTML = '<div class="empty">لا توجد أدوية تنتهي خلال ' + list.windowDays + ' يوم في العربات المتاحة لك. / Nothing expires inside this window in the carts you can see.</div>';
     return;
   }
   const crowded = list.rows.length + list.missing.length + list.summary.medicines.length > SINGLE_PAGE_ROWS
     ? '<div class="empty">القائمة طويلة وقد يصغر الخط جدًا لتتسع بصفحة واحدة. / Long list: type will shrink to fit one page.</div>' : '';
-  out.innerHTML = crowded + '<div class="tw">' + listTable(list) + '</div><div class="tw">' + summaryTable(list) + '</div>';
+  out.innerHTML = crowded + (list.groups.length ? '<div class="tw">' + listTable(list) + '</div>' : '') + '<div class="tw">' + summaryTable(list) + '</div>';
 }
 
 function printList(host) {
   const list = currentList(host);
-  if (!list || !list.groups.length) return;
+  if (!list || (!list.groups.length && !list.missing.length)) return;
   openBlobPrint(sheetHtml(list, todayLabel()), { prepare: fitToOnePage });
 }
 
