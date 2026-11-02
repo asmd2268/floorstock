@@ -686,7 +686,7 @@ function reconcileCrashCartData(carts){
    (cart.items||[]).forEach(function(original){
      var med=canonical(original),key=normalText(med.generic)+'|'+normalText(med.concentration),it=Object.assign({},original,{name:med.generic,genericName:med.generic,strength:med.concentration,concentration:med.concentration});
      if(it.name!==original.name||it.strength!==original.strength||it.concentration!==original.concentration||it.genericName!==original.genericName)changed=true;
-     it.batches=(original.batches||[]).filter(function(b){return b&&(b.expiry||Number(b.qty)>0||b.lot)}).map(function(b){return {expiry:b.expiry||'',qty:num(b.qty),lot:b.lot||''}});
+     it.batches=(original.batches||[]).filter(function(b){return b&&(b.expiry||Number(b.qty)>0||b.lot)}).map(function(b){return Object.assign({},b,{expiry:b.expiry||'',qty:num(b.qty),lot:b.lot||''})});
      if(!groups[key]){groups[key]=it;order.push(key);return}
      changed=true;var target=groups[key],batchMap={};
      (target.batches||[]).concat(it.batches||[]).forEach(function(b){var bk=String(b.expiry||'')+'|'+String(b.lot||'');if(!batchMap[bk]||num(b.qty)>num(batchMap[bk].qty))batchMap[bk]=b});
