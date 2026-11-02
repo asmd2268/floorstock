@@ -386,7 +386,7 @@ function resetCrashView(){
   var log=E('v13as-opening-log');if(log)log.classList.remove('on');
 }
 var DEFAULTS={
-  'ccx-dept':'','ccx-state':'','ccx-expiry':'','ccx-search':'',
+  'ccx-dept':'','ccx-state':'','ccx-expiry':'','ccx-window-days':'60','ccx-search':'',
   'v13as-log-dept':'all','v13as-log-month':'',
   'isrch':'','icatf':'','iclsf':'','inv-dept-sel':'','adept':'','aperiod':'month',
   'shelf-med-filter':'all','shelf-med-search':'','print-shelf-sel':'all','print-shelf-cls':'all',
