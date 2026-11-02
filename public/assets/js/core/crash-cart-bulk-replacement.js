@@ -503,17 +503,25 @@ function fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled){
   });
   return {carts:carts,reports:reports,bulkId:bulkId,verification:verification,createdReports:createdReports};
 }
-function fsR6CrashVerifyPersisted(result,compiled){
-  var carts=fsR6CrashCarts(),reports=typeof window.crashReports==='function'?(window.crashReports()||[]):[];
+/* Reads back what the write left behind and says what is wrong, or '' when all
+   is well. `committed` is the cart list the write itself returned — what the
+   transaction actually stored — and is preferred over the screen's cache, which
+   a live listener can overwrite with an older copy at any moment. */
+function fsR6CrashVerifyPersisted(result,compiled,committed){
+  var carts=Array.isArray(committed)?committed:fsR6CrashCarts(),reports=typeof window.crashReports==='function'?(window.crashReports()||[]):[];
   for(var i=0;i<compiled.carts.length;i++){
-    var cp=compiled.carts[i],cart=carts.find(function(c){return String(c.id)===String(cp.cartId)});if(!cart||String(cart.seal||'')!==String(cp.newSeal))return false;
+    var cp=compiled.carts[i],cart=carts.find(function(c){return String(c.id)===String(cp.cartId)});
+    if(!cart)return 'cart '+cp.cartId+' is missing after the save';
+    if(String(cart.seal||'')!==String(cp.newSeal))return 'cart "'+(cart.name||cart.id)+'" still has seal '+String(cart.seal||'—')+', expected '+cp.newSeal;
   }
   for(var j=0;j<result.verification.length;j++){
-    var v=result.verification[j],cart2=carts.find(function(c){return String(c.id)===String(v.cartId)}),item=cart2&&(cart2.items||[]).find(function(x){return String(x.id)===String(v.itemId)});if(!item)return false;
-    var added=(item.batches||[]).filter(function(b){return String(b.sourceReportId||'')===String(v.reportId)}),expected=fsR6CrashAllocationTotal(v.allocations),actual=added.reduce(function(s,b){return s+fsNum(b.qty)},0);if(Math.abs(expected-actual)>.0001)return false;
-    if(!reports.some(function(r){return String(r.id)===String(v.reportId)}))return false;
+    var v=result.verification[j],cart2=carts.find(function(c){return String(c.id)===String(v.cartId)}),item=cart2&&(cart2.items||[]).find(function(x){return String(x.id)===String(v.itemId)});
+    if(!item)return 'medicine '+v.itemId+' is missing from "'+(cart2&&(cart2.name||cart2.id)||v.cartId)+'" after the save';
+    var added=(item.batches||[]).filter(function(b){return String(b.sourceReportId||'')===String(v.reportId)}),expected=fsR6CrashAllocationTotal(v.allocations),actual=added.reduce(function(s,b){return s+fsNum(b.qty)},0);
+    if(Math.abs(expected-actual)>.0001)return 'new dates for "'+(item.name||item.id)+'" in "'+(cart2.name||cart2.id)+'" hold '+actual+' of the expected '+expected;
+    if(!reports.some(function(r){return String(r.id)===String(v.reportId)}))return 'the opening record for "'+(cart2.name||cart2.id)+'" was not found';
   }
-  return true;
+  return '';
 }
 function openCrashCartSmartBulkReplacement(){
   if(!fsR6CrashCanBulk())return;
@@ -542,11 +550,13 @@ async function saveCrashCartSmartBulkReplacement(){
   var originalCarts=fsR6CrashClone(fsR6CrashCarts()),originalReports=fsR6CrashClone(typeof window.crashReports==='function'?(window.crashReports()||[]):[]),cartsSaved=false,reportsSaved=false;
   try{
     var result=fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled);
-    if(typeof window.setCrashCarts==='function'){await window.setCrashCarts(result.carts);cartsSaved=true}
+    var committed=null;
+    if(typeof window.setCrashCarts==='function'){committed=await window.setCrashCarts(result.carts);cartsSaved=true}
     /* The bulk flow only ADDS reports, so only the new ones are written — one
        document each — instead of rewriting every report in the collection. */
     if(typeof window.saveCrashReport==='function'){await window.saveCrashReport(result.createdReports||[]);reportsSaved=true}
-    if(!fsR6CrashVerifyPersisted(result,compiled))throw new Error('Read-back verification failed. No completion was accepted.');
+    var problem=fsR6CrashVerifyPersisted(result,compiled,committed);
+    if(problem)throw new Error('Read-back verification failed: '+problem+'. No completion was accepted.');
     await Promise.all((result.createdReports||[]).map(function(r){return uiAudit('crash_cart_open_report',{reportId:r.id,cartId:r.cartId,deptId:r.deptId,oldSeal:r.oldSeal,newSeal:r.newSeal,reason:r.reason,bulk:true,bulkActionId:result.bulkId,openedAt:r.openedAt})}));
     await uiAudit('crash_cart_smart_bulk_complete',{bulkActionId:result.bulkId,carts:compiled.carts.length,medicinePlans:(FS_R6_CRASH_WORKFLOW.plans||[]).filter(function(x){return x.enabled}).length,sourceSelection:FS_R6_CRASH_SELECTED.size,uniqueSeals:compiled.carts.map(function(x){return x.newSeal}),openingLogRecords:(result.createdReports||[]).length});
     FS_R6_CRASH_SELECTED.clear();fsR6CrashCloseModal();if(typeof window.renderCrashCarts==='function')window.renderCrashCarts();uiToast(compiled.carts.length+' Crash Cart(s) replaced, reviewed and resealed ✓ · '+result.bulkId,'succ');
