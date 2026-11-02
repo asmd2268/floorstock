@@ -12,6 +12,7 @@
 
 import { fsE, fsEsc } from './dom-utils.js?v=b2909b7f46';
 import { fsText, fsNum } from './text-normalize.js?v=aa16ae9ac0';
+import { WINDOW_FILTER, WINDOW_INPUT_ID, windowDays, syncWindowInput, batchInWindow, itemInWindow } from './crash-cart-expiry-window.js?v=1836d490fd';
 import { uiToast, uiNow, uiActor, uiAudit, uiCloseModal, uiOpenModal, uiEnsureStyles } from './module-ui-helpers.js?v=3657403ad7';
 
 function fsR6EnsureStyles(){
@@ -101,10 +102,14 @@ function fsR6CrashSort(items){
     return ai-bi||fsR6CrashItemName(a).localeCompare(fsR6CrashItemName(b));
   });
 }
-function fsR6CrashSelectionAllowed(level){return ['expired','urgent','near'].indexOf(level)>=0}
+function fsR6CrashSelectionAllowed(level){return ['expired','urgent','near',WINDOW_FILTER].indexOf(level)>=0}
+/* The "expired or within N days" filter takes every batch in the window; the
+   three fixed levels each take their own band. */
+function fsR6CrashBatchMatches(batch,filter){return filter===WINDOW_FILTER?batchInWindow(batch,windowDays(),fsR6CrashDays):fsR6CrashBatchLevel(batch)===filter}
+function fsR6CrashItemMatches(item,filter){return filter===WINDOW_FILTER?itemInWindow(item,windowDays(),fsR6CrashDays):fsR6CrashItemLevel(item)===filter}
 function fsR6CrashKey(cartId,itemId){return String(cartId)+'::'+String(itemId)}
 function fsR6CrashVisibleItems(cart,level){
-  return fsR6CrashSort((cart.items||[]).filter(function(item){return fsR6CrashItemLevel(item)===level}));
+  return fsR6CrashSort((cart.items||[]).filter(function(item){return fsR6CrashItemMatches(item,level)}));
 }
 function fsR6CrashExactInfo(item,oldDate){
   var present=fsNum(item&&item.present!=null?item.present:item&&item.qty),required=fsNum(item&&item.qty);
@@ -129,7 +134,7 @@ function fsR6CrashSeedTemplates(){
     var item=(cart.items||[]).find(function(x){return String(x.id)===parts.slice(1).join('::')});
     if(!item)return;
     ((item.batches)||[]).forEach(function(batch){
-      if(fsR6CrashBatchLevel(batch)!==filter||!batch.expiry)return;
+      if(!fsR6CrashBatchMatches(batch,filter)||!batch.expiry)return;
       var medKey=fsR6CrashMedicineKey(item),templateKey=medKey+'|'+String(batch.expiry);
       if(!map[templateKey])map[templateKey]={key:templateKey,medicineKey:medKey,name:fsR6CrashItemName(item),strength:item.strength||item.concentration||'',oldDate:String(batch.expiry)};
     });
@@ -163,10 +168,10 @@ function fsR6CrashUpdateButton(){
 }
 function fsR6CrashSelectAllFiltered(){
   var filter=fsR6CrashFilter();
-  if(!fsR6CrashSelectionAllowed(filter))return uiToast('Choose Expired, Urgent, or Near-expiry first.','info');
+  if(!fsR6CrashSelectionAllowed(filter))return uiToast('Choose Expired, Urgent, Near-expiry, or the bulk-replacement filter first.','info');
   fsR6CrashCarts().forEach(function(cart){
     fsR6CrashVisibleItems(cart,filter).forEach(function(item){
-      if((item.batches||[]).some(function(b){return fsR6CrashBatchLevel(b)===filter&&b.expiry}))FS_R6_CRASH_SELECTED.set(fsR6CrashKey(cart.id,item.id),true);
+      if((item.batches||[]).some(function(b){return fsR6CrashBatchMatches(b,filter)&&b.expiry}))FS_R6_CRASH_SELECTED.set(fsR6CrashKey(cart.id,item.id),true);
     });
   });
   window.refreshCrashBulkUi();
@@ -175,7 +180,9 @@ function fsR6CrashClearSelection(){FS_R6_CRASH_SELECTED.clear();window.refreshCr
 window.refreshCrashBulkUi=function(){
   fsR6EnsureStyles();
   var filter=fsR6CrashFilter();
-  if(filter!==FS_R6_CRASH_FILTER){FS_R6_CRASH_SELECTED.clear();FS_R6_CRASH_FILTER=filter}
+  var days=fsE(WINDOW_INPUT_ID);if(days){days.style.display=filter===WINDOW_FILTER?'':'none';syncWindowInput()}
+  var filterKey=filter===WINDOW_FILTER?filter+':'+windowDays():filter;
+  if(filterKey!==FS_R6_CRASH_FILTER){FS_R6_CRASH_SELECTED.clear();FS_R6_CRASH_FILTER=filterKey}
   var toolbar=fsE('ccx-filters')||fsE('v13-crash-filters');
   if(toolbar&&fsR6CrashCanBulk()){
     var actions=fsE('fsr6-crash-actions');
@@ -510,7 +517,7 @@ function fsR6CrashVerifyPersisted(result,compiled){
 }
 function openCrashCartSmartBulkReplacement(){
   if(!fsR6CrashCanBulk())return;
-  var level=fsR6CrashFilter();if(!fsR6CrashSelectionAllowed(level))return uiToast('Choose Expired, Urgent, or Near-expiry filter first.','info');
+  var level=fsR6CrashFilter();if(!fsR6CrashSelectionAllowed(level))return uiToast('Choose Expired, Urgent, Near-expiry, or the bulk-replacement filter first.','info');
   var templates=fsR6CrashSeedTemplates();if(!templates.length)return uiToast('Select one or more medicines with a dated batch.','err');
   var groups=fsR6CrashEligibleGroups(templates);if(!groups.length)return uiToast('No carts have the same selected medicine, strength, and expiry date.','err');
   fsR6CrashCloseModal();FS_R6_CRASH_WORKFLOW=fsR6CrashCreateWorkflow(templates,groups);
@@ -592,7 +599,7 @@ function fsR6InitializeCanonical(){
     },false);
     document.addEventListener('change',function(ev){
       var target=ev.target;
-      if(target&&target.id==='ccx-expiry')setTimeout(function(){window.refreshCrashBulkUi()},0);
+      if(target&&(target.id==='ccx-expiry'||target.id===WINDOW_INPUT_ID))setTimeout(function(){window.refreshCrashBulkUi()},0);
     },false);
   }
   if(!window.__FS_R6_EXIT_CAPTURE__){
