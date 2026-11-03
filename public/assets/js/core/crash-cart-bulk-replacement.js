@@ -127,17 +127,27 @@ function fsR6CrashExactInfo(item,oldDate){
   return {matching:matching,maxQty:Math.max(0,maxQty),present:present,required:required};
 }
 function fsR6CrashSeedTemplates(){
-  var filter=fsR6CrashFilter(),carts=fsR6CrashCarts(),map={};
-  FS_R6_CRASH_SELECTED.forEach(function(value,key){
-    var parts=key.split('::'),cart=carts.find(function(c){return String(c.id)===parts[0]});
-    if(!cart)return;
-    var item=(cart.items||[]).find(function(x){return String(x.id)===parts.slice(1).join('::')});
-    if(!item)return;
+  var filter=fsR6CrashFilter(),carts=fsR6CrashCarts(),map={},picked={};
+  function addBatches(item){
     ((item.batches)||[]).forEach(function(batch){
       if(!fsR6CrashBatchMatches(batch,filter)||!batch.expiry)return;
       var medKey=fsR6CrashMedicineKey(item),templateKey=medKey+'|'+String(batch.expiry);
       if(!map[templateKey])map[templateKey]={key:templateKey,medicineKey:medKey,name:fsR6CrashItemName(item),strength:item.strength||item.concentration||'',oldDate:String(batch.expiry)};
     });
+  }
+  FS_R6_CRASH_SELECTED.forEach(function(value,key){
+    var parts=key.split('::'),cart=carts.find(function(c){return String(c.id)===parts[0]});
+    if(!cart)return;
+    var item=(cart.items||[]).find(function(x){return String(x.id)===parts.slice(1).join('::')});
+    if(!item)return;
+    picked[fsR6CrashMedicineKey(item)]=true;
+    addBatches(item);
+  });
+  /* In the "expired or within N days" filter a medicine is chosen by name, not by
+     the row or date that was ticked: every cart's batch of it inside the window
+     joins, each distinct date as its own plan. */
+  if(filter===WINDOW_FILTER)carts.forEach(function(cart){
+    (cart.items||[]).forEach(function(item){if(picked[fsR6CrashMedicineKey(item)])addBatches(item)});
   });
   return Object.keys(map).map(function(k){return map[k]});
 }
