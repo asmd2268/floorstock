@@ -76,3 +76,18 @@ test('replacing the full quantity asks nothing, and more than removed is refused
   const cart = await page.evaluate(() => window.S.cache.crash_carts[0]);
   expect(cart.items[0].present).toBe(2);
 });
+
+test('quantity 0 removes the expiring units and puts nothing back', async ({ page }) => {
+  await openModal(page);
+  await fill(page, 0);
+  await page.click('#fsr6-save');
+  await expect(page.locator('#fsr6-crash-modal')).toHaveCount(0);
+  const asked = await page.evaluate(() => window.__asked);
+  expect(asked).toHaveLength(1);
+  expect(asked[0]).toContain('standard 2');
+  expect(asked[0]).toContain('will hold 0');
+  const cart = await page.evaluate(() => window.S.cache.crash_carts[0]);
+  expect(cart.seal).toBe('B300001');
+  expect(cart.items[0].present).toBe(0);
+  expect(cart.items[0].batches).toEqual([]);
+});

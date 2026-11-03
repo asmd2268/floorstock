@@ -354,7 +354,7 @@ function fsR6CrashRenderReview(){
   host.innerHTML=data.map(function(entry){
     var cart=entry.cart||{},review=entry.review||{},lines=entry.lines.map(function(line){
       var dates=(line.allocations||[]).map(function(a){return fsEsc(a.expiry||'No date')+' × '+fsNum(a.qty)+(a.lot?' · '+fsEsc(a.lot):'')}).join(' + ');
-      return '<div class="fsr6-review-line"><b>'+fsEsc(line.name)+(line.strength?' · '+fsEsc(line.strength):'')+'</b><br>Remove: '+line.removeQty+' from '+fsEsc(line.oldDate)+' → Replace: '+dates+'</div>';
+      return '<div class="fsr6-review-line"><b>'+fsEsc(line.name)+(line.strength?' · '+fsEsc(line.strength):'')+'</b><br>Remove: '+line.removeQty+' from '+fsEsc(line.oldDate)+' → Replace: '+(dates||'<b>nothing — removed only / حذف فقط</b>')+'</div>';
     }).join('');
     return '<section class="fsr6-review-card '+(review.newSeal?'ready':'pending')+'" data-cart="'+fsEsc(entry.cartId)+'"><div class="fsr6-review-head">'+
       '<span class="chip">Seal review / مراجعة القفل</span>'+
@@ -450,9 +450,10 @@ function fsR6CrashCompileWorkflow(){
     var selected=(plan.carts||[]).filter(function(x){return x.selected});
     if(!selected.length){errors.push(plan.template.name+': select at least one cart.');return}
     selected.forEach(function(cp){
-      var removeQty=fsNum(cp.removeQty),allocations=fsR6CrashActiveAllocations(plan,cp)||[];
+      var removeQty=fsNum(cp.removeQty),allocations=(fsR6CrashActiveAllocations(plan,cp)||[]).filter(function(a){var raw=String(a.qty==null?'':a.qty).trim();return !(raw===''||Number(raw)===0)});
+      /* A date row with quantity 0 (or blank) means "nothing goes back for this one":
+         the expired units are simply taken out. */
       if(!(removeQty>0)||removeQty>fsNum(cp.maxQty))errors.push(plan.template.name+': invalid quantity for a selected cart.');
-      if(!allocations.length)errors.push(plan.template.name+': add at least one replacement date.');
       allocations.forEach(function(a){if(!(fsNum(a.qty)>0))errors.push(plan.template.name+': every replacement date needs a positive quantity.');if(!fsR6CrashFutureDate(a.expiry))errors.push(plan.template.name+': every replacement date must be after today.')});
       /* Fewer new units than were removed is allowed — the pharmacist may have less
          in hand than the cart's standard — but never more, and the save asks first. */
@@ -476,7 +477,7 @@ function fsR6ApplyExactReplacementAllocations(item,oldDate,removeQty,allocations
   if(!(removeQty>0)||removeQty>info.maxQty)throw new Error('Replacement quantity is outside the allowed range.');
   var normalized=fsR6CrashNormalizeAllocations(allocations);
   var added=fsR6CrashAllocationTotal(normalized);
-  if(!(added>0)||added-removeQty>.0001)throw new Error('Replacement allocations must be between zero and the removed quantity.');
+  if(added-removeQty>.0001)throw new Error('Replacement allocations cannot exceed the removed quantity.');
   var remaining=removeQty,next=[],old=[];
   ((item.batches)||[]).forEach(function(batch){
     if(String(batch.expiry||'')!==String(oldDate)){next.push(Object.assign({},batch));return}
