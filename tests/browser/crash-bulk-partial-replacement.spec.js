@@ -91,3 +91,28 @@ test('quantity 0 removes the expiring units and puts nothing back', async ({ pag
   expect(cart.items[0].present).toBe(0);
   expect(cart.items[0].batches).toEqual([]);
 });
+
+test('choosing a medicine in the window filter gathers its other dates from every cart', async ({ page }) => {
+  await prepare(page, { role: 'pharmacy' });
+  await page.evaluate((d) => {
+    const item = (id, name, expiry) => ({ id, name, genericName: name, strength: '2g/20ml', qty: 2, present: 2, batches: [{ batchId: 'b-' + id, expiry, qty: 2 }] });
+    Object.assign(window.S.cache, { crash_cart_reports: [], crash_carts: [
+      { id: 'cart-a', name: 'Cart A', deptId: 'dept-a', seal: 'OLD-A1', items: [item('i1', 'Magnesium Sulfate', d.one), item('i9', 'Atropine', d.one)] },
+      { id: 'cart-b', name: 'Cart B', deptId: 'dept-b', seal: 'OLD-B1', items: [item('i2', 'Magnesium Sulfate', d.two)] },
+      { id: 'cart-c', name: 'Cart C', deptId: 'dept-b', seal: 'OLD-C1', items: [item('i3', 'Magnesium Sulfate', d.late)] }] });
+    window.showPg('pg-crashcart');
+  }, { one: at(10), two: at(40), late: at(300) });
+  await page.waitForSelector('#ccx-expiry');
+  await page.selectOption('#ccx-expiry', 'window');
+  /* Tick only Cart A's Magnesium row. */
+  await page.locator('#ccx-cart-cart-a tbody tr', { hasText: 'Magnesium' }).locator('input[type=checkbox]').click();
+  await page.click('#fsr6-crash-open');
+  await page.waitForSelector('#fsr6-crash-modal');
+  const plans = await page.locator('.fsr6-plan-meta').allTextContents();
+  expect(plans).toHaveLength(2);
+  expect(plans.join(' ')).toContain(at(10));
+  expect(plans.join(' ')).toContain(at(40));
+  expect(plans.join(' ')).not.toContain(at(300));
+  expect(await page.locator('#fsr6-review-host [data-cart]').count()).toBe(2);
+  await expect(page.locator('#fsr6-crash-modal')).not.toContainText('Atropine');
+});
