@@ -454,7 +454,9 @@ function fsR6CrashCompileWorkflow(){
       if(!(removeQty>0)||removeQty>fsNum(cp.maxQty))errors.push(plan.template.name+': invalid quantity for a selected cart.');
       if(!allocations.length)errors.push(plan.template.name+': add at least one replacement date.');
       allocations.forEach(function(a){if(!(fsNum(a.qty)>0))errors.push(plan.template.name+': every replacement date needs a positive quantity.');if(!fsR6CrashFutureDate(a.expiry))errors.push(plan.template.name+': every replacement date must be after today.')});
-      if(Math.abs(fsR6CrashAllocationTotal(allocations)-removeQty)>.0001)errors.push(plan.template.name+': replacement-date quantities must total '+removeQty+'.');
+      /* Fewer new units than were removed is allowed — the pharmacist may have less
+         in hand than the cart's standard — but never more, and the save asks first. */
+      if(fsR6CrashAllocationTotal(allocations)-removeQty>.0001)errors.push(plan.template.name+': replacement-date quantities cannot exceed '+removeQty+'.');
       if(!cartMap[cp.cartId])cartMap[cp.cartId]={cartId:cp.cartId,lines:[]};
       cartMap[cp.cartId].lines.push({planId:plan.id,itemId:cp.itemId,medicineKey:plan.template.medicineKey,name:plan.template.name,strength:plan.template.strength||'',oldDate:plan.template.oldDate,removeQty:removeQty,allocations:fsR6CrashClone(allocations)});
     });
@@ -473,7 +475,8 @@ function fsR6ApplyExactReplacementAllocations(item,oldDate,removeQty,allocations
   var info=fsR6CrashExactInfo(item,oldDate);
   if(!(removeQty>0)||removeQty>info.maxQty)throw new Error('Replacement quantity is outside the allowed range.');
   var normalized=fsR6CrashNormalizeAllocations(allocations);
-  if(Math.abs(fsR6CrashAllocationTotal(normalized)-removeQty)>.0001)throw new Error('Replacement allocations do not equal the removed quantity.');
+  var added=fsR6CrashAllocationTotal(normalized);
+  if(!(added>0)||added-removeQty>.0001)throw new Error('Replacement allocations must be between zero and the removed quantity.');
   var remaining=removeQty,next=[],old=[];
   ((item.batches)||[]).forEach(function(batch){
     if(String(batch.expiry||'')!==String(oldDate)){next.push(Object.assign({},batch));return}
@@ -484,6 +487,13 @@ function fsR6ApplyExactReplacementAllocations(item,oldDate,removeQty,allocations
   if(remaining>.0001)throw new Error('The exact selected expiry quantity could not be matched.');
   normalized.forEach(function(a){var batchId=fsR6CrashUid('ccb');next.push({id:batchId,batchId:batchId,qty:a.qty,expiry:a.expiry,lot:a.lot||'',source:'pharmacy_smart_cross_cart_replacement',sourceReportId:reportId,replacedExpiry:oldDate,updatedAt:stamp,updatedBy:actorUser})});
   next.sort(function(a,b){return String(a.expiry||'').localeCompare(String(b.expiry||''))});item.batches=next;
+  /* Units removed and not replaced leave the cart short of its standard. */
+  var shortBy=removeQty-added;
+  if(shortBy>.0001){
+    var standard=fsNum(item.qty),before=item.present!=null?fsNum(item.present):standard;
+    item.present=Math.max(0,before-shortBy);
+    if(item.stockStatus!==undefined||standard>0)item.stockStatus=item.present<=0?'out_of_stock':(item.present<standard?'partial':'available');
+  }
   return {itemId:item.id||'',name:fsR6CrashItemName(item),strength:item.strength||item.concentration||'',oldExpiry:oldDate,oldBatches:old,removedQty:removeQty,allocations:normalized};
 }
 function fsR6CrashBuildBulkResult(originalCarts,originalReports,compiled){
@@ -523,6 +533,21 @@ function fsR6CrashVerifyPersisted(result,compiled,committed){
   }
   return '';
 }
+/* One line per cart medicine that will end below its standard: what is removed
+   and not replaced. The save is allowed; the person is told first. */
+function fsR6CrashShortfalls(compiled){
+  var carts=fsR6CrashCarts(),out=[];
+  compiled.carts.forEach(function(cp){
+    var cart=carts.find(function(c){return String(c.id)===String(cp.cartId)});if(!cart)return;
+    cp.lines.forEach(function(line){
+      var item=(cart.items||[]).find(function(x){return String(x.id)===String(line.itemId)});if(!item)return;
+      var shortBy=fsNum(line.removeQty)-fsR6CrashAllocationTotal(line.allocations);if(!(shortBy>.0001))return;
+      var standard=fsNum(item.qty),before=item.present!=null?fsNum(item.present):standard,after=Math.max(0,before-shortBy);
+      if(after<standard)out.push('• '+(cart.name||cart.id)+' — '+line.name+(line.strength?' '+line.strength:'')+': standard '+standard+', will hold '+after);
+    });
+  });
+  return out;
+}
 function openCrashCartSmartBulkReplacement(){
   if(!fsR6CrashCanBulk())return;
   var level=fsR6CrashFilter();if(!fsR6CrashSelectionAllowed(level))return uiToast('Choose Expired, Urgent, Near-expiry, or the bulk-replacement filter first.','info');
@@ -546,6 +571,8 @@ function openCrashCartSmartBulkReplacement(){
 async function saveCrashCartSmartBulkReplacement(){
   var save=fsE('fsr6-save'),compiled=fsR6CrashCompileWorkflow();
   if(!compiled.ok)return fsR6CrashStatus(compiled.errors[0]||'The replacement plan is incomplete.','err');
+  var shorts=fsR6CrashShortfalls(compiled);
+  if(shorts.length&&!window.confirm('Some carts will be closed with LESS than the standard quantity:\n\n'+shorts.join('\n')+'\n\nلن تُمنع من الحفظ، لكن العربات ستُقفل بكمية أقل من الستاندرد. Continue? / متابعة؟'))return fsR6CrashStatus('Cancelled — nothing was saved. / أُلغي ولم يُحفظ شيء.','');
   if(save){save.disabled=true;save.textContent='Saving… / جاري الحفظ'}fsR6CrashStatus('Validating exact dates, replacing, resealing and verifying persistence…','');
   var originalCarts=fsR6CrashClone(fsR6CrashCarts()),originalReports=fsR6CrashClone(typeof window.crashReports==='function'?(window.crashReports()||[]):[]),cartsSaved=false,reportsSaved=false;
   try{
