@@ -24,7 +24,7 @@ import { carryOverFailedKeys, carryOverDepartmentKeys, applyStateCache } from '.
 import { createOpeningWave, applySnapshotToCache } from '../core/scoped-listener-rules.js?v=8b519e2b0f';
 import { warmCacheKey, pruneOtherWarmCaches, readWarmCache, saveWarmCache } from '../core/state-warm-cache.js?v=147306da90';
 import { applyStateDocChanges } from '../core/state-doc-changes.js?v=6ecb2c70ee';
-import { selfProfileVerdict } from '../core/self-profile-guard.js?v=76e06b437a';
+import { selfProfileVerdict } from '../core/self-profile-guard.js?v=cc8cd8e782';
 import { canManageUsers, refreshUsersDirectory, resolveUserDirectory } from '../core/users-directory-refresh.js?v=7933e4a7ea';
 import { createIntervalRunner } from '../core/interval-runner.js?v=82d04b813f';
 import { createStateWriter } from '../core/state-write-router.js?v=2dee3df22a';
@@ -959,8 +959,9 @@ globalThis.S = {
     if(!uid||!FB_DB)return;
     S.selfProfileUnsub=FB_DB.collection('users').doc(uid).onSnapshot(function(snapshot){
       if(!window.CU||window.CU.id!==uid)return;
+      var fromCache=!!(snapshot.metadata&&snapshot.metadata.fromCache);
       if(!snapshot.exists){
-        S.forceSignOutForProfileChange('Your account was removed. / تم حذف حسابك، الرجاء التواصل مع الإدارة.');
+        if(selfProfileVerdict(false,null,window.CU,fromCache))S.forceSignOutForProfileChange('Your account was removed. / تم حذف حسابك، الرجاء التواصل مع الإدارة.');
         return;
       }
       var verdict=selfProfileVerdict(true,snapshot.data(),window.CU);
