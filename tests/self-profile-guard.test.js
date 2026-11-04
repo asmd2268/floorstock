@@ -19,6 +19,11 @@ test('a removed document, a deactivation and a permission change each sign out',
   assert.equal(selfProfileVerdict(true, { ...doc, master: true }, me), 'changed');
 });
 
+test('a missing document answered only from the local cache does not sign anyone out', () => {
+  assert.equal(selfProfileVerdict(false, null, me, true), null);
+  assert.equal(selfProfileVerdict(false, null, me, false), 'removed');
+});
+
 test('departmentId is accepted as the department field', () => {
   assert.equal(selfProfileVerdict(true, { active: true, role: 'department', departmentId: 'd1' }, me), null);
 });
