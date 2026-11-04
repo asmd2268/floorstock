@@ -117,24 +117,10 @@ async function ctlSavePendingPdfExpiry(receiptId,rowId,index){
   toast(movementSaved?'تم حفظ تاريخ الانتهاء ✓\nThe expiry date was saved.':'تم حفظ تاريخ الانتهاء، لكن تعذر حفظ سجل الحركة.\nThe expiry date was saved, but the movement log could not be saved.',movementSaved?'succ':'info');renderControlled();return true
 }
 
-async function ctlPromptMed(existing){
-  var e=existing||{},name=await uiPrompt('Medicine name',e.name||'');if(!name)return null;
-  var moh=await uiPrompt('MOH code',e.moh||'')||'',nupco=await uiPrompt('NUPCO code',e.nupco||'')||'';
-  var cls=String(await uiPrompt('Classification: narcotic or psychotropic',e.classification||'narcotic')||'').toLowerCase();
-  if(cls!=='narcotic'&&cls!=='psychotropic'){toast('Classification must be narcotic or psychotropic','err');return null}
-  var highAlert=await uiConfirm('Mark as HIGH ALERT? (Red badge)');
-  var lasa=await uiConfirm('Mark as LASA? (Blue badge)');
-  var refrigerated=await uiConfirm('Does this medicine require refrigerator storage (2–8°C)?');
-  var min=ctlNum(await uiPrompt('Minimum quantity',e.min||0)),max=ctlNum(await uiPrompt('Maximum quantity',e.max||0));
-  return {name:name.trim(),moh:moh.trim(),nupco:nupco.trim(),classification:cls,highAlert:highAlert,lasa:lasa,refrigerated:refrigerated,min:min,max:max};
-}
-async function ctlAddCatalogMedicine(){
+function ctlAddCatalogMedicine(){
   if(!ctlCanAddCatalog())return toast('No add permission','err');
-  var d=await ctlPromptMed();if(!d)return;d.id=ctlKey(d.moh,d.nupco,d.name)+'_'+Date.now().toString(36);
-  var a=ctlCatalog().slice();a.push(d);
-  try{await ctlSetCatalog(a)}catch(e){console.error('Controlled catalogue add failed',e);return toast('Medicine was not added.','err')}
-  var movementSaved=await ctlSaveMovementLog({type:'catalog_add',medId:d.id,note:'Shared catalogue medicine added'},'Controlled catalogue add');
-  renderControlled();toast(movementSaved?'Medicine added to the shared catalogue ✓':'Medicine was added, but the movement log was not saved.',movementSaved?'succ':'info');return true
+  /* One full window (modules/31) instead of a chain of single-field prompts. */
+  return window.ctlEditCatalogMedicine('');
 }
 // ── MASTER NARCOTIC STOCK RESTORE + SEPARATE OUT-OF-STOCK LIST ──
 
