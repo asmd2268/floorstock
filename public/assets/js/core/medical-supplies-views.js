@@ -45,7 +45,7 @@ export function pageHtml(s) {
     ? `<select data-schg="dept">${s.depts.map((d) => opt(d.id, d.name, s.deptId)).join('')}</select>` : '';
   return `<div class="card"><div class="cb">`
     + `<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">`
-    + `<div><div class="stitle">${esc(FEATURE_LABEL)}</div><div class="ssub">${esc(s.deptName)} — <span style="color:${conn[1]}">${conn[0]}</span></div></div>${picker}</div>`
+    + `<div>${btn('to-shelves', `← ${bi('Shelves', 'أرفف')}`)}<div class="stitle">${esc(FEATURE_LABEL)}</div><div class="ssub">${esc(s.deptName)} — <span style="color:${conn[1]}">${conn[0]}</span></div></div>${picker}</div>`
     + `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:12px 0">`
     + btn('add', `+ ${bi('Add item', 'إضافة صنف')}`, 'bp') + btn('groups', bi('Groups', 'المجموعات')) + btn('cabinets', bi('Cabinets', 'الدواليب'))
     + btn('settings', `⚙ ${bi('Required fields', 'الحقول الإلزامية')}`) + btn('export', `⬇ ${bi('Export Excel', 'تصدير إكسل')}`)

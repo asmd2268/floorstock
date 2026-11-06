@@ -10,7 +10,7 @@ import {
   assignCabinet, printSections, applyImport,
 } from '../core/medical-supplies-model.js?v=1697923431';
 import * as store from '../core/medical-supplies-store.js?v=c790ab04f4';
-import * as V from '../core/medical-supplies-views.js?v=2b81c563e2';
+import * as V from '../core/medical-supplies-views.js?v=f12fbedeca';
 import { listHtml, qrSheetHtml, PRINT_CSS } from '../core/medical-supplies-print.js?v=5e9d0c18c6';
 import { buildWorkbook, readWorkbookFile } from '../core/medical-supplies-excel.js?v=e43b5ff0f3';
 
@@ -237,6 +237,8 @@ const bulk = async (fn) => {
 };
 installActions(document.body, {
   close: closeModal,
+  'goto-supplies': () => window.showPg(PAGE),
+  'to-shelves': () => window.showPg('pg-shelves'),
   add: () => openItem(null),
   edit: (b) => { const i = byId(b); if (i) openItem(i); },
   'save-item': saveItem,
@@ -290,24 +292,27 @@ function open() {
   const target = st.deptId || (canUse(own) ? own : (depts()[0] || {}).id || '');
   if (target !== st.deptId || !st.unsub) connect(target); else render();
 }
-function addNavButton() {
-  const nav = el('mnav');
-  if (!nav || nav.querySelector(`[data-pg="${PAGE}"]`)) return;
-  const role = typeof window.fsEffectiveRole === 'function' ? window.fsEffectiveRole() : user().role;
-  if (role !== 'department' && !isMaster()) return;
+/* Medical Supplies is reached from inside the Shelves page (a card at its top),
+   not from a tab of its own, and it keeps the Shelves tab highlighted. */
+function addShelvesLink() {
+  const page = el('pg-shelves');
+  if (!page || el('ms-link')) return;
+  if (!isMaster() && user().role !== 'department') return;
   if (typeof window.plIsHiddenForCurrentRole === 'function' && window.plIsHiddenForCurrentRole(PAGE) && !isMaster()) return;
-  const b = document.createElement('button');
-  b.className = 'nb'; b.dataset.pg = PAGE; b.innerHTML = `↳ ${V.esc(FEATURE_LABEL)}`;
-  /* A sub-item under Shelves, not a top-level icon of its own. */
-  b.style.cssText = 'padding-inline-start:28px;font-size:.92em;opacity:.95';
-  b.onclick = () => window.showPg(PAGE);
-  const shelves = nav.querySelector('[data-pg="pg-shelves"]');
-  if (shelves && shelves.nextSibling) nav.insertBefore(b, shelves.nextSibling); else nav.appendChild(b);
+  const card = document.createElement('div');
+  card.id = 'ms-link'; card.className = 'card'; card.style.marginBottom = '14px';
+  card.innerHTML = `<div class="cb" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><div><b>↳ ${V.esc(FEATURE_LABEL)}</b><div class="ssub">${bi('Your own list of supplies, with groups, cabinets and expiry tracking.', 'قائمة مستلزمات القسم، بمجموعات ودواليب وتتبع الانتهاء.')}</div></div><button type="button" class="btn bp bsm" data-sact="goto-supplies">${bi('Open', 'فتح')}</button></div>`;
+  const head = page.firstElementChild;
+  if (head && head.nextSibling) page.insertBefore(card, head.nextSibling); else page.appendChild(card);
 }
-window.__buildNavAfterExtensions = window.__buildNavAfterExtensions || [];
-window.__buildNavAfterExtensions.push(addNavButton);
+function highlightShelvesTab() {
+  document.querySelectorAll('#mnav .nb').forEach((b) => b.classList.toggle('on', b.dataset.pg === 'pg-shelves'));
+}
 window.__showPgAfterExtensions = window.__showPgAfterExtensions || [];
-window.__showPgAfterExtensions.push((id) => { if (id === PAGE) open(); });
+window.__showPgAfterExtensions.push((id) => {
+  if (id === 'pg-shelves') addShelvesLink();
+  if (id === PAGE) { open(); highlightShelvesTab(); }
+});
 window.__showPgGuards = window.__showPgGuards || [];
 window.__showPgGuards.push((id) => id !== PAGE || isMaster() || user().role === 'department');
 export {};
