@@ -6,7 +6,7 @@
      labels  one QR per batch row — name, code, batch, expiry, and a marker when
              the date is near or past, so the label is readable without scanning. */
 
-import { bi, itemExpiry } from './supplier-inventory-model.js?v=6b35c5abc7';
+import { bi, itemExpiry } from './supplier-inventory-model.js?v=66a68fd8e9';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 

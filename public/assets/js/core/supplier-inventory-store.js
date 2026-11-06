@@ -14,7 +14,7 @@
    Nothing here touches the DOM. The Firestore handle and FieldValue are passed
    in, which keeps the diffing logic testable without a browser. */
 
-import { SCHEMA } from './supplier-inventory-model.js?v=6b35c5abc7';
+import { SCHEMA } from './supplier-inventory-model.js?v=66a68fd8e9';
 
 export const COLLECTION = 'supplier_inventory';
 

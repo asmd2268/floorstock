@@ -16,7 +16,7 @@
 import { normalizeDate, normalizeNumber, westernDigits, headerKey } from './crash-cart-excel.js?v=8136b92558';
 
 /* The feature's name, in one place. Renaming it later means changing this line. */
-export const FEATURE_LABEL = 'Supplier Inventory / مخزون الموردين';
+export const FEATURE_LABEL = 'Medical Supplies / المستلزمات الطبية';
 export const SCHEMA = 1;
 /* One department document carries every item, and a Firestore document stops
    accepting writes at 1 MiB. 1,500 items with a few batches each is well under it;
@@ -348,7 +348,7 @@ export function resolveScan(scan, items) {
 
 /* ------------------------------------------------------------------- Excel */
 
-export const SHEET_NAME = 'Supplier Inventory';
+export const SHEET_NAME = 'Medical Supplies';
 export const INFO_SHEET_NAME = 'Info';
 export const FORMAT = 'floorstock-supplier-inventory-v1';
 

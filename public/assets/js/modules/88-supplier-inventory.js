@@ -8,11 +8,11 @@ import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 import {
   FEATURE_LABEL, MAX_ITEMS, bi, newId, normalizeDoc, validateDraft, alertConfig, daysUntil, filterItems, summarize,
   assignCabinet, printSections, applyImport,
-} from '../core/supplier-inventory-model.js?v=6b35c5abc7';
-import * as store from '../core/supplier-inventory-store.js?v=e7f35ebb97';
-import * as V from '../core/supplier-inventory-views.js?v=ca32bc9c4d';
-import { listHtml, qrSheetHtml, PRINT_CSS } from '../core/supplier-inventory-print.js?v=f650892d36';
-import { buildWorkbook, readWorkbookFile } from '../core/supplier-inventory-excel.js?v=c304cd3727';
+} from '../core/supplier-inventory-model.js?v=66a68fd8e9';
+import * as store from '../core/supplier-inventory-store.js?v=525482128d';
+import * as V from '../core/supplier-inventory-views.js?v=594f5a15e5';
+import { listHtml, qrSheetHtml, PRINT_CSS } from '../core/supplier-inventory-print.js?v=0ff618327c';
+import { buildWorkbook, readWorkbookFile } from '../core/supplier-inventory-excel.js?v=ad968b5477';
 
 const PAGE = 'pg-supplier-inv';
 const BRAND = '<div style="text-align:center;font-size:8.5pt;color:#555;margin-top:14px">By Ali Abudahash</div>';
@@ -168,7 +168,7 @@ async function exportExcel() {
     const built = buildWorkbook(window.XLSX, st.doc.items, {
       deptName: deptName(st.deptId), groupName: nameOf(st.doc.groups), cabinetName: nameOf(st.doc.cabinets), daysUntil: (iso) => daysUntil(iso, new Date()),
     });
-    window.XLSX.writeFile(built.wb, `SupplierInventory_${deptName(st.deptId).replace(/[^\w؀-ۿ]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    window.XLSX.writeFile(built.wb, `MedicalSupplies_${deptName(st.deptId).replace(/[^\w؀-ۿ]+/g, '_')}_${new Date().toISOString().slice(0, 10)}.xlsx`);
     toast(`${built.rows} ${bi('rows exported', 'سطر تم تصديره')}`, 'ok');
   } catch (e) { console.error(e); toast(bi('Export failed', 'فشل التصدير'), 'err'); }
 }
