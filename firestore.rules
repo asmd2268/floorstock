@@ -583,6 +583,47 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    /* Supplier Inventory: one document per department, readable and writable
+       only by that department and the Master. No other role - including the
+       pharmacy director and supervisors - and no collection-wide list except
+       for the Master. Kept in its own match block so it adds nothing to the
+       expression count of the state rules. */
+    match /supplier_inventory/{deptId} {
+      allow get: if tenantId() == '' && (masterUser() || (departmentUser() && deptId == departmentId()));
+      allow list: if tenantId() == '' && masterUser();
+      allow create, update: if legacyTenantWritable()
+        && (masterUser() || (departmentUser() && deptId == departmentId()))
+        && request.resource.data.get('deptId', '') == deptId;
+      allow delete: if tenantId() == '' && masterUser();
+    }
+
+    match /tenants/{tenant}/supplier_inventory/{deptId} {
+      allow get: if sameTenant(tenant) && (masterUser() || (departmentUser() && deptId == departmentId()));
+      allow list: if sameTenant(tenant) && masterUser();
+      allow create, update: if sameTenant(tenant) && tenantWritable(tenant)
+        && (masterUser() || (departmentUser() && deptId == departmentId()))
+        && request.resource.data.get('deptId', '') == deptId;
+      allow delete: if sameTenant(tenant) && masterUser();
+    }
+
+    /* Read-only live copy behind the Supplier Inventory QR (no sign-in), like
+       public_expiry. Only that department and the Master can write it. */
+    match /public_supplier_inv/{docId} {
+      allow get: if true;
+      allow list: if tenantId() == '' && masterUser();
+      allow create, update: if legacyTenantWritable()
+        && (masterUser() || (departmentUser() && docId == departmentId()));
+      allow delete: if tenantId() == '' && masterUser();
+    }
+
+    match /tenants/{tenant}/public_supplier_inv/{docId} {
+      allow get: if true;
+      allow list: if sameTenant(tenant) && masterUser();
+      allow create, update: if sameTenant(tenant) && tenantWritable(tenant)
+        && (masterUser() || (departmentUser() && docId == departmentId()));
+      allow delete: if sameTenant(tenant) && masterUser();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
