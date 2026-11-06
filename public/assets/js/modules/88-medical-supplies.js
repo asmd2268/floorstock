@@ -10,7 +10,7 @@ import {
   assignCabinet, printSections, applyImport,
 } from '../core/medical-supplies-model.js?v=1697923431';
 import * as store from '../core/medical-supplies-store.js?v=c790ab04f4';
-import * as V from '../core/medical-supplies-views.js?v=f12fbedeca';
+import * as V from '../core/medical-supplies-views.js?v=2b81c563e2';
 import { listHtml, qrSheetHtml, PRINT_CSS } from '../core/medical-supplies-print.js?v=5e9d0c18c6';
 import { buildWorkbook, readWorkbookFile } from '../core/medical-supplies-excel.js?v=e43b5ff0f3';
 
@@ -78,12 +78,14 @@ function render() {
   const focus = document.activeElement && document.activeElement.dataset && document.activeElement.dataset.sinp;
   const caret = focus ? document.activeElement.selectionStart : 0;
   const rowCtx = { cfg: c.cfg, today: c.today, settings: c.settings, selected: st.selected, groupName: nameOf(st.doc.groups), cabinetName: nameOf(st.doc.cabinets) };
-  page.innerHTML = V.pageHtml({
+  let body = page.querySelector('#ms-body');
+  if (!body) { body = document.createElement('div'); body.id = 'ms-body'; page.appendChild(body); }
+  body.innerHTML = V.pageHtml({
     filters: st.filters, summary: summarize(st.doc.items, c), conn: st.conn, isMaster: isMaster(), depts: depts(), deptId: st.deptId,
     deptName: deptName(st.deptId), groups: st.doc.groups, cabinets: st.doc.cabinets, selected: st.selected, items, total: st.doc.items.length,
     rows: items.map((i) => V.rowHtml(i, rowCtx)).join(''),
   });
-  if (focus) { const input = page.querySelector('[data-sinp="q"]'); if (input) { input.focus(); input.setSelectionRange(caret, caret); } }
+  if (focus) { const input = body.querySelector('[data-sinp="q"]'); if (input) { input.focus(); input.setSelectionRange(caret, caret); } }
 }
 
 /* ---------------------------------------------------------------- modals */
@@ -237,8 +239,6 @@ const bulk = async (fn) => {
 };
 installActions(document.body, {
   close: closeModal,
-  'goto-supplies': () => window.showPg(PAGE),
-  'to-shelves': () => window.showPg('pg-shelves'),
   add: () => openItem(null),
   edit: (b) => { const i = byId(b); if (i) openItem(i); },
   'save-item': saveItem,
@@ -292,27 +292,31 @@ function open() {
   const target = st.deptId || (canUse(own) ? own : (depts()[0] || {}).id || '');
   if (target !== st.deptId || !st.unsub) connect(target); else render();
 }
-/* Medical Supplies is reached from inside the Shelves page (a card at its top),
-   not from a tab of its own, and it keeps the Shelves tab highlighted. */
-function addShelvesLink() {
-  const page = el('pg-shelves');
-  if (!page || el('ms-link')) return;
-  if (!isMaster() && user().role !== 'department') return;
-  if (typeof window.plIsHiddenForCurrentRole === 'function' && window.plIsHiddenForCurrentRole(PAGE) && !isMaster()) return;
-  const card = document.createElement('div');
-  card.id = 'ms-link'; card.className = 'card'; card.style.marginBottom = '14px';
-  card.innerHTML = `<div class="cb" style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between"><div><b>↳ ${V.esc(FEATURE_LABEL)}</b><div class="ssub">${bi('Your own list of supplies, with groups, cabinets and expiry tracking.', 'قائمة مستلزمات القسم، بمجموعات ودواليب وتتبع الانتهاء.')}</div></div><button type="button" class="btn bp bsm" data-sact="goto-supplies">${bi('Open', 'فتح')}</button></div>`;
-  const head = page.firstElementChild;
-  if (head && head.nextSibling) page.insertBefore(card, head.nextSibling); else page.appendChild(card);
+/* Medical Supplies sits next to Shelves as a sub-button, in the same bar style as
+   New Request / My Requests (dept-doc-tab-bar). The bar is put at the top of both pages. */
+function tabBar(activePage) {
+  const old = el(activePage) && el(activePage).querySelector('.dept-doc-tab-bar');
+  if (old) old.remove();
+  const bar = document.createElement('div');
+  bar.className = 'dept-doc-tab-bar';
+  bar.style.cssText = 'display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap';
+  [['pg-shelves', '📦 Shelves / أرفف'], [PAGE, `🩹 ${FEATURE_LABEL}`]].forEach(([id, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = `btn ${id === activePage ? 'bp' : 'bg'} bsm`;
+    if (id === activePage) { b.disabled = true; b.innerHTML = `<b>${V.esc(label)}</b>`; } else { b.innerHTML = V.esc(label); b.onclick = () => window.showPg(id); }
+    bar.appendChild(b);
+  });
+  el(activePage).insertBefore(bar, el(activePage).firstChild);
 }
-function highlightShelvesTab() {
-  document.querySelectorAll('#mnav .nb').forEach((b) => b.classList.toggle('on', b.dataset.pg === 'pg-shelves'));
+function offerTabs(id) {
+  if (id !== 'pg-shelves' && id !== PAGE) return;
+  const reachable = user().role === 'department' && !(typeof window.plIsHiddenForCurrentRole === 'function' && window.plIsHiddenForCurrentRole(PAGE));
+  if (!isMaster() && !reachable) return;
+  if (id === PAGE) { open(); document.querySelectorAll('#mnav .nb').forEach((b) => b.classList.toggle('on', b.dataset.pg === 'pg-shelves')); }
+  tabBar(id);
 }
 window.__showPgAfterExtensions = window.__showPgAfterExtensions || [];
-window.__showPgAfterExtensions.push((id) => {
-  if (id === 'pg-shelves') addShelvesLink();
-  if (id === PAGE) { open(); highlightShelvesTab(); }
-});
+window.__showPgAfterExtensions.push(offerTabs);
 window.__showPgGuards = window.__showPgGuards || [];
 window.__showPgGuards.push((id) => id !== PAGE || isMaster() || user().role === 'department');
 export {};
