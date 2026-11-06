@@ -3,7 +3,7 @@
    listener per event on document.body turns into a call (no inline handlers —
    the page's CSP forbids them). */
 
-import { bi, itemExpiry, STATUS_LABEL, missingRequired, REQUIRABLE, FEATURE_LABEL } from './supplier-inventory-model.js?v=6b35c5abc7';
+import { bi, itemExpiry, STATUS_LABEL, missingRequired, REQUIRABLE, FEATURE_LABEL } from './supplier-inventory-model.js?v=66a68fd8e9';
 
 export const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const btn = (act, label, cls, extra) => `<button type="button" class="btn ${cls || 'bg'} bsm" data-sact="${act}" ${extra || ''}>${label}</button>`;

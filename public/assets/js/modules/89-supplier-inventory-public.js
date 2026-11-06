@@ -1,8 +1,8 @@
 /* Supplier Inventory — the no-login live page behind a department's QR
    (?view=supplier-public&dept=...&cab=...). Works like the medicine expiry
    monitor: reads public_supplier_inv/<dept> and stays live. */
-import { publicPageHtml } from '../core/supplier-inventory-public-view.js?v=52a5bfae96';
-import { PUBLIC_COLLECTION } from '../core/supplier-inventory-store.js?v=e7f35ebb97';
+import { publicPageHtml } from '../core/supplier-inventory-public-view.js?v=c2bc9a1319';
+import { PUBLIC_COLLECTION } from '../core/supplier-inventory-store.js?v=525482128d';
 
 (async function start() {
   const p = new URLSearchParams(location.search);

@@ -3,7 +3,7 @@
    ever READS the sheet: the caller shows the plan and applies it after the
    person confirms. */
 
-import { COLUMNS, SHEET_NAME, INFO_SHEET_NAME, FORMAT, buildRows, readSheet } from './supplier-inventory-model.js?v=6b35c5abc7';
+import { COLUMNS, SHEET_NAME, INFO_SHEET_NAME, FORMAT, buildRows, readSheet } from './supplier-inventory-model.js?v=66a68fd8e9';
 import { dateToSerial } from './crash-cart-excel.js?v=8136b92558';
 
 export function buildWorkbook(XLSX, items, options) {
