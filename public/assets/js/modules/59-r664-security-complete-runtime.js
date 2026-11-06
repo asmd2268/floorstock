@@ -1,4 +1,4 @@
-import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=70693b2aa5';
+import { normalizeRole, resolvePermissionProfile, canWriteStateKey, canDeleteStateKey } from '../core/role-capabilities.js?v=5596d57ed5';
 import { findSealConflict } from '../core/crash-cart-seal-info.js?v=1d24b15bf6';
 (function(){
 'use strict';

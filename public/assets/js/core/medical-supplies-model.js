@@ -1,4 +1,4 @@
-/* Supplier Inventory — the rules, with no screen and no database in them.
+/* Medical Supplies — the rules, with no screen and no database in them.
 
    A department keeps its own list of supplies (not medicines) with a name and a
    code, optional batch / expiry / quantity rows, groups, and the cabinets the
@@ -291,66 +291,11 @@ export function printSections(items, cabinets, groups, options) {
   return sections.filter((s) => s.items.length && (!o.only || o.only === s.id));
 }
 
-/* One label per batch row, or one for the item when it has no batch yet. */
-export function labelEntries(items) {
-  const out = [];
-  (items || []).forEach((item) => {
-    if (!item.batches.length) out.push({ item, batch: null });
-    else item.batches.forEach((batch) => out.push({ item, batch }));
-  });
-  return out;
-}
-
-/* ---------------------------------------------------------------- QR links */
-
-/* A QR points at the signed-in page, not at a public document: the list is private
-   to the department and the Master, so the person scanning signs in first. The
-   name, code, batch and expiry ride along so the label still identifies the item
-   if the record it points at has since been deleted. */
-export function buildScanUrl(appUrl, p) {
-  const url = new URL(appUrl);
-  url.search = '';
-  url.hash = '';
-  url.searchParams.set('view', 'supplier');
-  const put = (key, value, max) => {
-    const s = text(value);
-    if (s) url.searchParams.set(key, max ? s.slice(0, max) : s);
-  };
-  put('dept', p.deptId);
-  put('cab', p.cabinetId);
-  put('item', p.itemId);
-  put('bid', p.batchId);
-  put('code', p.code, 40);
-  put('name', p.name, 40);
-  put('batch', p.batch, 30);
-  put('exp', p.expiry, 10);
-  put('tenant', p.tenantId);
-  return url.toString();
-}
-
-export function parseScanParams(search) {
-  const p = new URLSearchParams(search || '');
-  if (p.get('view') !== 'supplier') return null;
-  const get = (key) => text(p.get(key));
-  return {
-    deptId: get('dept'), cabinetId: get('cab'), itemId: get('item'), batchId: get('bid'),
-    code: get('code'), name: get('name'), batch: get('batch'), expiry: get('exp'),
-  };
-}
-
-export function resolveScan(scan, items) {
-  const list = items || [];
-  const byId = scan.itemId ? list.find((i) => i.id === scan.itemId) : null;
-  const byCode = !byId && scan.code ? list.find((i) => codeKey(i.code) === codeKey(scan.code)) : null;
-  const item = byId || byCode || null;
-  return { item, batch: item && scan.batchId ? item.batches.find((b) => b.id === scan.batchId) || null : null };
-}
-
 /* ------------------------------------------------------------------- Excel */
 
 export const SHEET_NAME = 'Medical Supplies';
 export const INFO_SHEET_NAME = 'Info';
-export const FORMAT = 'floorstock-supplier-inventory-v1';
+export const FORMAT = 'floorstock-medical-supplies-v1';
 
 /* Only the first three columns are read back. The rest are there to read in Excel
    and are ignored on import, so a re-imported export can never overwrite a

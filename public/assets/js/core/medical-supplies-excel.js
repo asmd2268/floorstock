@@ -1,9 +1,9 @@
-/* Supplier Inventory — Excel in and out, with the XLSX library passed in so the
+/* Medical Supplies — Excel in and out, with the XLSX library passed in so the
    rules stay testable. Export writes expiry as a real date cell. Import only
    ever READS the sheet: the caller shows the plan and applies it after the
    person confirms. */
 
-import { COLUMNS, SHEET_NAME, INFO_SHEET_NAME, FORMAT, buildRows, readSheet } from './supplier-inventory-model.js?v=66a68fd8e9';
+import { COLUMNS, SHEET_NAME, INFO_SHEET_NAME, FORMAT, buildRows, readSheet } from './medical-supplies-model.js?v=1697923431';
 import { dateToSerial } from './crash-cart-excel.js?v=8136b92558';
 
 export function buildWorkbook(XLSX, items, options) {

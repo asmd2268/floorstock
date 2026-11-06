@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import {
   newId, normalizeDoc, normalizeItem, validateDraft, missingRequired, daysUntil, alertConfig, expiryStatus, itemExpiry,
-  filterItems, summarize, assignCabinet, printSections, labelEntries, buildScanUrl, parseScanParams, resolveScan,
+  filterItems, summarize, assignCabinet, printSections,
   buildRows, readSheet, applyImport, COLUMNS, MAX_ITEMS,
-} from '../public/assets/js/core/supplier-inventory-model.js';
+} from '../public/assets/js/core/medical-supplies-model.js';
 
 const TODAY = new Date(2026, 10, 5); // 5 Nov 2026, local
 const none = { required: { expiry: false, batch: false, quantity: false } };
@@ -157,21 +157,6 @@ test('an item in two cabinets is printed under both; only one cabinet can be pri
   const sections = printSections(items, cabinets, [], {});
   assert.deepEqual(sections.map((s) => [s.id, s.items.map((i) => i.id)]), [['c1', ['i1', 'i2']], ['c2', ['i2']], ['__none__', ['i3', 'i4']]]);
   assert.deepEqual(printSections(items, cabinets, [], { only: 'c2' }).map((s) => s.id), ['c2']);
-  assert.equal(labelEntries(items).length, 4, 'one label per batch row, one for an item with none');
-});
-
-test('a QR link opens the signed-in page and still names the item if the record is gone', () => {
-  const url = buildScanUrl('https://floorstock-one.vercel.app/?old=1#x', { deptId: 'icu', itemId: 'i1', batchId: 'b1', code: 'S5', name: 'Syringe 5ml', batch: 'L1', expiry: '2026-11-01' });
-  assert.match(url, /^https:\/\/floorstock-one\.vercel\.app\/\?view=supplier&dept=icu&item=i1&bid=b1&code=S5/);
-  assert.equal(url.includes('old=1'), false);
-  const scan = parseScanParams(new URL(url).search);
-  assert.equal(scan.deptId, 'icu');
-  assert.equal(scan.name, 'Syringe 5ml');
-  assert.equal(resolveScan(scan, sample()).item.id, 'i1');
-  assert.equal(resolveScan(scan, sample()).batch.id, 'b1');
-  assert.equal(resolveScan(Object.assign({}, scan, { itemId: 'deleted' }), sample()).item.id, 'i1', 'falls back to the code');
-  assert.equal(resolveScan({ itemId: 'x', code: 'nope' }, sample()).item, null);
-  assert.equal(parseScanParams('?view=expiry&dept=icu'), null, 'other views are not ours');
 });
 
 const col = (key) => COLUMNS.findIndex((c) => c.key === key);

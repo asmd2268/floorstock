@@ -1,4 +1,4 @@
-/* Supplier Inventory — printed sheets. Pure HTML builders: the caller supplies
+/* Medical Supplies — printed sheets. Pure HTML builders: the caller supplies
    the QR renderer, the header and the page opener, so this file has no DOM and
    no globals. Two sheets:
      list    the department's list, by cabinet or group, with or without expiry
@@ -6,7 +6,7 @@
      labels  one QR per batch row — name, code, batch, expiry, and a marker when
              the date is near or past, so the label is readable without scanning. */
 
-import { bi, itemExpiry } from './supplier-inventory-model.js?v=66a68fd8e9';
+import { bi, itemExpiry } from './medical-supplies-model.js?v=1697923431';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 

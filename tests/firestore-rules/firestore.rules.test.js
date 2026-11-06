@@ -651,65 +651,65 @@ describe('temporary Accountability handover sessions', () => {
     }
   });
 
-  describe('supplier inventory is private to the department and the Master', () => {
+  describe('medical supplies is private to the department and the Master', () => {
     const payload = (deptId) => ({ deptId, schema: 1, items: {}, groups: {}, cabinets: {}, settings: {} });
 
     test('a department reads and writes only its own list', async () => {
       const db = dbFor('department');
-      await assertSucceeds(setDoc(doc(db, 'supplier_inventory', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
-      await assertSucceeds(getDoc(doc(db, 'supplier_inventory', DEPARTMENT_ID)));
-      await assertSucceeds(updateDoc(doc(db, 'supplier_inventory', DEPARTMENT_ID), { 'items.i1': { name: 'A', code: 'a' } }));
-      await assertFails(setDoc(doc(db, 'supplier_inventory', OTHER_DEPARTMENT_ID), payload(OTHER_DEPARTMENT_ID)));
-      await assertFails(getDoc(doc(db, 'supplier_inventory', OTHER_DEPARTMENT_ID)));
-      await assertFails(setDoc(doc(db, 'supplier_inventory', DEPARTMENT_ID), payload('someone-else')));
-      await assertFails(getDocs(collection(db, 'supplier_inventory')));
+      await assertSucceeds(setDoc(doc(db, 'medical_supplies', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
+      await assertSucceeds(getDoc(doc(db, 'medical_supplies', DEPARTMENT_ID)));
+      await assertSucceeds(updateDoc(doc(db, 'medical_supplies', DEPARTMENT_ID), { 'items.i1': { name: 'A', code: 'a' } }));
+      await assertFails(setDoc(doc(db, 'medical_supplies', OTHER_DEPARTMENT_ID), payload(OTHER_DEPARTMENT_ID)));
+      await assertFails(getDoc(doc(db, 'medical_supplies', OTHER_DEPARTMENT_ID)));
+      await assertFails(setDoc(doc(db, 'medical_supplies', DEPARTMENT_ID), payload('someone-else')));
+      await assertFails(getDocs(collection(db, 'medical_supplies')));
     });
 
     test('the Master reads, lists and writes any department', async () => {
       const db = dbFor('master');
-      await assertSucceeds(setDoc(doc(db, 'supplier_inventory', OTHER_DEPARTMENT_ID), payload(OTHER_DEPARTMENT_ID)));
-      await assertSucceeds(getDoc(doc(db, 'supplier_inventory', OTHER_DEPARTMENT_ID)));
-      await assertSucceeds(getDocs(collection(db, 'supplier_inventory')));
+      await assertSucceeds(setDoc(doc(db, 'medical_supplies', OTHER_DEPARTMENT_ID), payload(OTHER_DEPARTMENT_ID)));
+      await assertSucceeds(getDoc(doc(db, 'medical_supplies', OTHER_DEPARTMENT_ID)));
+      await assertSucceeds(getDocs(collection(db, 'medical_supplies')));
     });
 
     test('no other role can see it, the pharmacy director and supervisors included', async () => {
-      await assertSucceeds(setDoc(doc(dbFor('master'), 'supplier_inventory', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
+      await assertSucceeds(setDoc(doc(dbFor('master'), 'medical_supplies', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
       for (const role of ['pharmacy', 'inpatient_supervisor', 'pharmacy_staff', 'outpatient_pharmacy_supervisor', 'controlled_pharmacy', 'warehouse', 'inactive']) {
         const db = dbFor(role);
         // eslint-disable-next-line no-await-in-loop
-        await assertFails(getDoc(doc(db, 'supplier_inventory', DEPARTMENT_ID)));
+        await assertFails(getDoc(doc(db, 'medical_supplies', DEPARTMENT_ID)));
         // eslint-disable-next-line no-await-in-loop
-        await assertFails(setDoc(doc(db, 'supplier_inventory', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
+        await assertFails(setDoc(doc(db, 'medical_supplies', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
         // eslint-disable-next-line no-await-in-loop
-        await assertFails(getDocs(collection(db, 'supplier_inventory')));
+        await assertFails(getDocs(collection(db, 'medical_supplies')));
       }
     });
 
     test('a department cannot delete its list; only the Master can', async () => {
-      await assertSucceeds(setDoc(doc(dbFor('master'), 'supplier_inventory', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
-      await assertFails(deleteDoc(doc(dbFor('department'), 'supplier_inventory', DEPARTMENT_ID)));
-      await assertSucceeds(deleteDoc(doc(dbFor('master'), 'supplier_inventory', DEPARTMENT_ID)));
+      await assertSucceeds(setDoc(doc(dbFor('master'), 'medical_supplies', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
+      await assertFails(deleteDoc(doc(dbFor('department'), 'medical_supplies', DEPARTMENT_ID)));
+      await assertSucceeds(deleteDoc(doc(dbFor('master'), 'medical_supplies', DEPARTMENT_ID)));
     });
 
     test('tenant lists stay inside their tenant', async () => {
-      await assertSucceeds(setDoc(doc(dbFor('tenant_department'), 'tenants', 'tenant-a', 'supplier_inventory', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
-      await assertSucceeds(getDoc(doc(dbFor('tenant_master'), 'tenants', 'tenant-a', 'supplier_inventory', DEPARTMENT_ID)));
-      await assertFails(getDoc(doc(dbFor('tenant_other_master'), 'tenants', 'tenant-a', 'supplier_inventory', DEPARTMENT_ID)));
-      await assertFails(setDoc(doc(dbFor('tenant_expired_master'), 'tenants', 'tenant-expired', 'supplier_inventory', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
-      await assertFails(getDoc(doc(dbFor('department'), 'tenants', 'tenant-a', 'supplier_inventory', DEPARTMENT_ID)));
+      await assertSucceeds(setDoc(doc(dbFor('tenant_department'), 'tenants', 'tenant-a', 'medical_supplies', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
+      await assertSucceeds(getDoc(doc(dbFor('tenant_master'), 'tenants', 'tenant-a', 'medical_supplies', DEPARTMENT_ID)));
+      await assertFails(getDoc(doc(dbFor('tenant_other_master'), 'tenants', 'tenant-a', 'medical_supplies', DEPARTMENT_ID)));
+      await assertFails(setDoc(doc(dbFor('tenant_expired_master'), 'tenants', 'tenant-expired', 'medical_supplies', DEPARTMENT_ID), payload(DEPARTMENT_ID)));
+      await assertFails(getDoc(doc(dbFor('department'), 'tenants', 'tenant-a', 'medical_supplies', DEPARTMENT_ID)));
     });
   });
 
-  describe('supplier inventory public live copy', () => {
+  describe('medical supplies public live copy', () => {
     test('anyone can read it, only that department and the Master can write it', async () => {
       const copy = { deptId: DEPARTMENT_ID, items: [] };
-      await assertSucceeds(setDoc(doc(dbFor('department'), 'public_supplier_inv', DEPARTMENT_ID), copy));
-      await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'public_supplier_inv', DEPARTMENT_ID)));
-      await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(), 'public_supplier_inv')));
-      await assertFails(setDoc(doc(dbFor('department'), 'public_supplier_inv', OTHER_DEPARTMENT_ID), copy));
-      await assertFails(setDoc(doc(dbFor('pharmacy'), 'public_supplier_inv', DEPARTMENT_ID), copy));
-      await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'public_supplier_inv', DEPARTMENT_ID), copy));
-      await assertSucceeds(setDoc(doc(dbFor('master'), 'public_supplier_inv', OTHER_DEPARTMENT_ID), copy));
+      await assertSucceeds(setDoc(doc(dbFor('department'), 'public_medical_supplies', DEPARTMENT_ID), copy));
+      await assertSucceeds(getDoc(doc(env.unauthenticatedContext().firestore(), 'public_medical_supplies', DEPARTMENT_ID)));
+      await assertFails(getDocs(collection(env.unauthenticatedContext().firestore(), 'public_medical_supplies')));
+      await assertFails(setDoc(doc(dbFor('department'), 'public_medical_supplies', OTHER_DEPARTMENT_ID), copy));
+      await assertFails(setDoc(doc(dbFor('pharmacy'), 'public_medical_supplies', DEPARTMENT_ID), copy));
+      await assertFails(setDoc(doc(env.unauthenticatedContext().firestore(), 'public_medical_supplies', DEPARTMENT_ID), copy));
+      await assertSucceeds(setDoc(doc(dbFor('master'), 'public_medical_supplies', OTHER_DEPARTMENT_ID), copy));
     });
   });
 });

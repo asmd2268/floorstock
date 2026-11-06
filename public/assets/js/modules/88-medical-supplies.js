@@ -1,20 +1,20 @@
-/* Supplier Inventory — a department's own list of supplies (not medicines).
+/* Medical Supplies — a department's own list of supplies (not medicines).
    Visible and editable only by that department and the Master; the Firestore
    rules enforce it, this page just does not offer what the rules would refuse.
-   Rules live in core/supplier-inventory-model.js, storage in ...-store.js,
+   Rules live in core/medical-supplies-model.js, storage in ...-store.js,
    markup in ...-views.js, printing in ...-print.js, Excel in ...-excel.js. */
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
 import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 import {
   FEATURE_LABEL, MAX_ITEMS, bi, newId, normalizeDoc, validateDraft, alertConfig, daysUntil, filterItems, summarize,
   assignCabinet, printSections, applyImport,
-} from '../core/supplier-inventory-model.js?v=66a68fd8e9';
-import * as store from '../core/supplier-inventory-store.js?v=525482128d';
-import * as V from '../core/supplier-inventory-views.js?v=594f5a15e5';
-import { listHtml, qrSheetHtml, PRINT_CSS } from '../core/supplier-inventory-print.js?v=0ff618327c';
-import { buildWorkbook, readWorkbookFile } from '../core/supplier-inventory-excel.js?v=ad968b5477';
+} from '../core/medical-supplies-model.js?v=1697923431';
+import * as store from '../core/medical-supplies-store.js?v=c790ab04f4';
+import * as V from '../core/medical-supplies-views.js?v=2b81c563e2';
+import { listHtml, qrSheetHtml, PRINT_CSS } from '../core/medical-supplies-print.js?v=5e9d0c18c6';
+import { buildWorkbook, readWorkbookFile } from '../core/medical-supplies-excel.js?v=e43b5ff0f3';
 
-const PAGE = 'pg-supplier-inv';
+const PAGE = 'pg-medical-supplies';
 const BRAND = '<div style="text-align:center;font-size:8.5pt;color:#555;margin-top:14px">By Ali Abudahash</div>';
 const st = {
   deptId: '', doc: normalizeDoc(null, ''), conn: 'loading', unsub: null, selected: new Set(),
@@ -56,7 +56,7 @@ async function mutate(change) {
     publish(next);
     return true;
   } catch (e) {
-    console.error('Supplier inventory save failed', e);
+    console.error('Medical supplies save failed', e);
     toast(`${bi('Could not save', 'تعذر الحفظ')}: ${e.code || e.message || e}`, 'err');
     return false;
   }
@@ -65,7 +65,7 @@ async function publish(doc) {
   try {
     await store.publicRef(window.FB_DB, user(), st.deptId).set(store.buildPublicSnapshot(doc, { deptName: deptName(st.deptId), cfg: cfg() }));
     return true;
-  } catch (e) { console.warn('Supplier inventory public mirror failed', e); return false; }
+  } catch (e) { console.warn('Medical supplies public mirror failed', e); return false; }
 }
 const stamp = (item) => { item.updatedAt = new Date().toISOString(); item.updatedBy = String(user().name || user().username || ''); };
 
@@ -297,7 +297,9 @@ function addNavButton() {
   if (role !== 'department' && !isMaster()) return;
   if (typeof window.plIsHiddenForCurrentRole === 'function' && window.plIsHiddenForCurrentRole(PAGE) && !isMaster()) return;
   const b = document.createElement('button');
-  b.className = 'nb'; b.dataset.pg = PAGE; b.innerHTML = `📦 ${V.esc(FEATURE_LABEL)}`;
+  b.className = 'nb'; b.dataset.pg = PAGE; b.innerHTML = `↳ ${V.esc(FEATURE_LABEL)}`;
+  /* A sub-item under Shelves, not a top-level icon of its own. */
+  b.style.cssText = 'padding-inline-start:28px;font-size:.92em;opacity:.95';
   b.onclick = () => window.showPg(PAGE);
   const shelves = nav.querySelector('[data-pg="pg-shelves"]');
   if (shelves && shelves.nextSibling) nav.insertBefore(b, shelves.nextSibling); else nav.appendChild(b);
