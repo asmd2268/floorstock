@@ -61,7 +61,7 @@ var PL_PAGES={
   'pg-controlled':{label:'Controlled Custody / عهدة الأدوية المخدرة',roles:['controlled_pharmacy','warehouse','department']},
   'pg-newreq':{label:'New Request / طلب جديد',roles:['department']},
   'pg-myreqs':{label:'My Requests / طلباتي',roles:['department']},
-  'pg-supplier-inv':{label:'Supplier Inventory / مخزون الموردين',roles:['department']},
+  'pg-supplier-inv':{label:'Medical Supplies / المستلزمات الطبية',roles:['department']},
   'pg-shelves':{label:'Shelves & Storage / الأرفف والتخزين',roles:['department']},
   'pg-notes-dept':{label:'Notes (Department) / ملاحظات القسم',roles:['department']},
   'pg-deptprint':{label:'Print Drug List / طباعة قائمة الأدوية',roles:['department']},
