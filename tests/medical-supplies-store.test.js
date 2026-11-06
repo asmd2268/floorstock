@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { buildUpdate, toNewDocument, commit, docRef } from '../public/assets/js/core/supplier-inventory-store.js';
-import { normalizeDoc } from '../public/assets/js/core/supplier-inventory-model.js';
+import { buildUpdate, toNewDocument, commit, docRef } from '../public/assets/js/core/medical-supplies-store.js';
+import { normalizeDoc } from '../public/assets/js/core/medical-supplies-model.js';
 
 const base = () => normalizeDoc({
   settings: { required: { expiry: false, batch: false, quantity: false } },
@@ -35,7 +35,7 @@ test('tenant and legacy deployments use different paths', () => {
   const db = { collection: (n) => ({ doc: (d) => { calls.push(`${n}/${d}`); return { collection: (c) => ({ doc: (x) => { calls.push(`${c}/${x}`); return {}; } }) }; } }) };
   docRef(db, { tenantId: 't1' }, 'icu');
   docRef(db, {}, 'icu');
-  assert.deepEqual(calls, ['tenants/t1', 'supplier_inventory/icu', 'supplier_inventory/icu']);
+  assert.deepEqual(calls, ['tenants/t1', 'medical_supplies/icu', 'medical_supplies/icu']);
 });
 
 test('a first save creates the document when the update finds none', async () => {
@@ -71,7 +71,7 @@ test('other errors are not swallowed as "document missing"', async () => {
   await assert.rejects(commit({ db, profile: {}, deptId: 'icu', fieldValue: { delete: () => 'D' }, prev, next }), /denied/);
 });
 
-import { buildPublicSnapshot, publicUrl } from '../public/assets/js/core/supplier-inventory-store.js';
+import { buildPublicSnapshot, publicUrl } from '../public/assets/js/core/medical-supplies-store.js';
 
 test('the public copy carries what the list shows and the QR link names the department and cabinet', () => {
   const doc = normalizeDoc({ groups: { g1: { name: 'Inj' } }, cabinets: { c1: { name: 'Cab 1' } },
@@ -79,6 +79,6 @@ test('the public copy carries what the list shows and the QR link names the depa
   const snap = buildPublicSnapshot(doc, { deptName: 'ICU', cfg: { d1: 30, d2: 7 }, now: 'T' });
   assert.deepEqual(snap.items[0], { name: 'A', code: 'a', group: 'Inj', cabinetIds: ['c1'], outOfStock: false, batches: [{ batch: 'L', expiry: '2027-01-01', qty: 2 }] });
   assert.equal(JSON.stringify(snap).includes('private'), false, 'notes and who-edited stay private');
-  assert.equal(publicUrl('https://x.app', { deptId: 'icu', cabinetId: 'c1', tenantId: 't' }), 'https://x.app/?view=supplier-public&dept=icu&cab=c1&tenant=t');
-  assert.equal(publicUrl('https://x.app', { deptId: 'icu' }), 'https://x.app/?view=supplier-public&dept=icu');
+  assert.equal(publicUrl('https://x.app', { deptId: 'icu', cabinetId: 'c1', tenantId: 't' }), 'https://x.app/?view=medical-supplies-public&dept=icu&cab=c1&tenant=t');
+  assert.equal(publicUrl('https://x.app', { deptId: 'icu' }), 'https://x.app/?view=medical-supplies-public&dept=icu');
 });

@@ -1,11 +1,11 @@
-/* Supplier Inventory — where a department's list lives.
+/* Medical Supplies — where a department's list lives.
 
    One document per department, in its own collection so the rules can say
    "this department and the Master only" (the shared state collection can be
    listed by other pharmacy roles, so private data cannot live there):
 
-     legacy   supplier_inventory/{deptId}
-     tenant   tenants/{tenantId}/supplier_inventory/{deptId}
+     legacy   medical_supplies/{deptId}
+     tenant   tenants/{tenantId}/medical_supplies/{deptId}
 
    The document holds four maps — items, groups, cabinets, settings. Writes are
    field-path updates (`items.<id>`), so two people editing different items at
@@ -14,9 +14,9 @@
    Nothing here touches the DOM. The Firestore handle and FieldValue are passed
    in, which keeps the diffing logic testable without a browser. */
 
-import { SCHEMA } from './supplier-inventory-model.js?v=66a68fd8e9';
+import { SCHEMA } from './medical-supplies-model.js?v=1697923431';
 
-export const COLLECTION = 'supplier_inventory';
+export const COLLECTION = 'medical_supplies';
 
 export function tenantIdOf(profile) {
   return String((profile && profile.tenantId) || '').trim();
@@ -101,7 +101,7 @@ export function subscribe({ db, profile, deptId, onDoc, onState }) {
    Like public_expiry for medicines: a read-only copy a department publishes so
    its QR can open a live list with no sign-in. Anyone holding the QR (or the
    link) can read it, so it carries only what the printed list shows. */
-export const PUBLIC_COLLECTION = 'public_supplier_inv';
+export const PUBLIC_COLLECTION = 'public_medical_supplies';
 
 export function buildPublicSnapshot(doc, { deptName, cfg, now }) {
   const groupName = new Map(doc.groups.map((g) => [g.id, g.name]));
@@ -122,7 +122,7 @@ export function publicRef(db, profile, deptId) {
 }
 
 export function publicUrl(origin, { deptId, cabinetId, tenantId }) {
-  const q = new URLSearchParams({ view: 'supplier-public', dept: String(deptId) });
+  const q = new URLSearchParams({ view: 'medical-supplies-public', dept: String(deptId) });
   if (cabinetId) q.set('cab', cabinetId);
   if (tenantId) q.set('tenant', tenantId);
   return `${origin}/?${q.toString()}`;

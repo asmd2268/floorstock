@@ -1,6 +1,6 @@
-/* Supplier Inventory — the page a department's QR opens, with no sign-in.
+/* Medical Supplies — the page a department's QR opens, with no sign-in.
    Markup from the published snapshot only; no Firestore, no globals. */
-import { bi, itemExpiry, STATUS_LABEL } from './supplier-inventory-model.js?v=66a68fd8e9';
+import { bi, itemExpiry, STATUS_LABEL } from './medical-supplies-model.js?v=1697923431';
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const COLOR = { expired: '#da3633', urgent: '#da3633', near: '#b26a00', ok: '#1a7f37', none: '#6e7781' };

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { publicPageHtml } from '../public/assets/js/core/supplier-inventory-public-view.js';
+import { publicPageHtml } from '../public/assets/js/core/medical-supplies-public-view.js';
 
 const snap = { deptId: 'icu', departmentName: 'ICU', alerts: { d1: 30, d2: 7 }, cabinets: [{ id: 'c1', name: 'Cab 1' }, { id: 'c2', name: 'Cab 2' }],
   items: [

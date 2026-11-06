@@ -1,12 +1,12 @@
-/* Supplier Inventory — the no-login live page behind a department's QR
-   (?view=supplier-public&dept=...&cab=...). Works like the medicine expiry
-   monitor: reads public_supplier_inv/<dept> and stays live. */
-import { publicPageHtml } from '../core/supplier-inventory-public-view.js?v=c2bc9a1319';
-import { PUBLIC_COLLECTION } from '../core/supplier-inventory-store.js?v=525482128d';
+/* Medical Supplies — the no-login live page behind a department's QR
+   (?view=medical-supplies-public&dept=...&cab=...). Works like the medicine expiry
+   monitor: reads public_medical_supplies/<dept> and stays live. */
+import { publicPageHtml } from '../core/medical-supplies-public-view.js?v=e2803ba7a2';
+import { PUBLIC_COLLECTION } from '../core/medical-supplies-store.js?v=c790ab04f4';
 
 (async function start() {
   const p = new URLSearchParams(location.search);
-  if (p.get('view') !== 'supplier-public' || !p.get('dept')) return;
+  if (p.get('view') !== 'medical-supplies-public' || !p.get('dept')) return;
   const E = (id) => document.getElementById(id);
   if (E('auth')) E('auth').style.display = 'none';
   if (E('app')) E('app').style.display = 'none';

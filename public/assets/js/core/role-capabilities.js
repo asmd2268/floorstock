@@ -141,7 +141,7 @@ export function hasCapability(profile, capability) {
 const PAGE_ROLES = Object.freeze({
   'pg-dash': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
   'pg-inv': Object.freeze(['pharmacy', 'inpatient_supervisor', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
-  'pg-supplier-inv': Object.freeze(['department']),
+  'pg-medical-supplies': Object.freeze(['department']),
   'pg-pharm-inv': Object.freeze(['pharmacy', 'outpatient_pharmacy_supervisor', 'pharmacy_staff']),
   'pg-reqs': CAPABILITIES['requests.manage'],
   'pg-request-blocks': CAPABILITIES['requestBlocks.manage'],
