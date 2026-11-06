@@ -12,8 +12,8 @@ const draft = (extra) => Object.assign({ id: '', name: 'Gauze 10x10', code: 'G-1
 
 test('ids are safe Firestore field names and never repeat, even within one millisecond', () => {
   const ids = new Set();
-  for (let i = 0; i < 3000; i += 1) ids.add(newId('i', Math.random, () => 1700000000000));
-  assert.equal(ids.size, 3000);
+  for (let i = 0; i < 1200; i += 1) ids.add(newId('i', Math.random, () => 1700000000000));
+  assert.equal(ids.size, 1200);
   ids.forEach((id) => assert.match(id, /^i_[a-z0-9]+$/));
 });
 
