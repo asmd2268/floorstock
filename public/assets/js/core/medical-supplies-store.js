@@ -85,16 +85,48 @@ export async function commit({ db, profile, deptId, fieldValue, prev, next, now 
   return diff;
 }
 
-/* Live subscription. `onDoc(rawData|null, meta)` fires for every snapshot;
-   `onState('live'|'cached'|'error', error)` drives the connection indicator,
-   so a person is never shown cached data as if it were current. */
-export function subscribe({ db, profile, deptId, onDoc, onState }) {
+/* What the connection indicator should say, from what the SDK reported.
+     live        the server answered: this is the current list
+     cached      a saved copy exists, the server has not confirmed it yet
+     connecting  nothing saved and the server has not answered: show NO list, because an
+                 empty cache result would otherwise look like "this department has no items"
+     retrying    the listener failed for a reason that can pass (weak or lost signal)
+     denied      the rules refused it: retrying cannot help */
+export function connectionState({ exists, fromCache, errorCode }) {
+  if (errorCode) return errorCode === 'permission-denied' || errorCode === 'unauthenticated' ? 'denied' : 'retrying';
+  if (!fromCache) return 'live';
+  return exists ? 'cached' : 'connecting';
+}
+
+export const RETRY_MS = [2000, 4000, 8000, 15000, 30000];
+
+/* Live subscription that survives a bad connection. `onDoc(raw|null, meta)` fires only when
+   the data can be trusted (never for the "connecting" empty-cache case); `onState(state, code)`
+   drives the indicator. A failed listener is re-attached with a growing delay, and the returned
+   function stops everything, retries included. `reconnect()` retries now (e.g. signal is back). */
+export function subscribe({ db, profile, deptId, onDoc, onState, schedule = setTimeout, unschedule = clearTimeout }) {
   const ref = docRef(db, profile, deptId);
-  return ref.onSnapshot({ includeMetadataChanges: true }, (snap) => {
-    const meta = { fromCache: !!snap.metadata.fromCache, pending: !!snap.metadata.hasPendingWrites };
-    onState(meta.fromCache ? 'cached' : 'live');
-    onDoc(snap.exists ? snap.data() : null, meta);
-  }, (error) => onState('error', error));
+  let stop = null; let timer = null; let attempt = 0; let closed = false;
+  const attach = () => {
+    if (closed) return;
+    if (stop) { stop(); stop = null; }
+    stop = ref.onSnapshot({ includeMetadataChanges: true }, (snap) => {
+      const meta = { fromCache: !!snap.metadata.fromCache, pending: !!snap.metadata.hasPendingWrites };
+      const state = connectionState({ exists: snap.exists, fromCache: meta.fromCache });
+      if (state === 'live') attempt = 0;
+      onState(state, '', meta);
+      if (state !== 'connecting') onDoc(snap.exists ? snap.data() : null, meta);
+    }, (error) => {
+      const code = String((error && error.code) || 'unknown');
+      const state = connectionState({ errorCode: code });
+      onState(state, code, { fromCache: true, pending: false });
+      if (state === 'retrying' && !closed) { timer = schedule(attach, RETRY_MS[Math.min(attempt, RETRY_MS.length - 1)]); attempt += 1; }
+    });
+  };
+  attach();
+  const close = () => { closed = true; if (timer) unschedule(timer); if (stop) stop(); };
+  close.reconnect = () => { if (timer) unschedule(timer); attempt = 0; attach(); };
+  return close;
 }
 
 /* ---- Public live mirror -------------------------------------------------

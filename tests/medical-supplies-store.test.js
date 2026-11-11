@@ -82,3 +82,54 @@ test('the public copy carries what the list shows and the QR link names the depa
   assert.equal(publicUrl('https://x.app', { deptId: 'icu', cabinetId: 'c1', tenantId: 't' }), 'https://x.app/?view=medical-supplies-public&dept=icu&cab=c1&tenant=t');
   assert.equal(publicUrl('https://x.app', { deptId: 'icu' }), 'https://x.app/?view=medical-supplies-public&dept=icu');
 });
+
+import { connectionState, subscribe, RETRY_MS } from '../public/assets/js/core/medical-supplies-store.js';
+
+test('the indicator never calls an empty saved copy "this department has no items"', () => {
+  assert.equal(connectionState({ exists: true, fromCache: false }), 'live');
+  assert.equal(connectionState({ exists: false, fromCache: false }), 'live', 'a server answer of "no list yet" is real');
+  assert.equal(connectionState({ exists: true, fromCache: true }), 'cached');
+  assert.equal(connectionState({ exists: false, fromCache: true }), 'connecting', 'nothing saved and no answer yet: show no list');
+  assert.equal(connectionState({ errorCode: 'unavailable' }), 'retrying');
+  assert.equal(connectionState({ errorCode: 'permission-denied' }), 'denied');
+});
+
+function fakeDb() {
+  const h = { listeners: [], stops: 0 };
+  const ref = { onSnapshot: (_o, ok, fail) => { h.listeners.push({ ok, fail }); return () => { h.stops += 1; }; } };
+  h.db = { collection: () => ({ doc: () => ref }) };
+  return h;
+}
+const snap = (exists, fromCache, data) => ({ exists, data: () => data, metadata: { fromCache, hasPendingWrites: false } });
+
+test('a weak link keeps retrying with growing delays; a refusal does not; closing stops it all', () => {
+  const h = fakeDb(); const states = []; const docs = []; const timers = []; const cleared = [];
+  const close = subscribe({ db: h.db, profile: {}, deptId: 'icu', onDoc: (d) => docs.push(d), onState: (s, c) => states.push([s, c]),
+    schedule: (fn, ms) => { timers.push([fn, ms]); return timers.length; }, unschedule: (id) => cleared.push(id) });
+
+  h.listeners[0].ok(snap(false, true, undefined));
+  assert.deepEqual(states.at(-1), ['connecting', '']);
+  assert.equal(docs.length, 0, 'an empty cache result is not shown as the list');
+
+  h.listeners[0].fail({ code: 'unavailable' });
+  assert.deepEqual(states.at(-1), ['retrying', 'unavailable']);
+  assert.equal(timers[0][1], RETRY_MS[0]);
+  timers[0][0]();
+  assert.equal(h.listeners.length, 2, 'the listener is attached again');
+  h.listeners[1].fail({ code: 'unavailable' });
+  assert.equal(timers[1][1], RETRY_MS[1], 'the delay grows');
+
+  h.listeners[1].ok(snap(true, false, { items: {} }));
+  assert.deepEqual(states.at(-1), ['live', '']);
+  assert.equal(docs.length, 1);
+  h.listeners[1].fail({ code: 'unavailable' });
+  assert.equal(timers[2][1], RETRY_MS[0], 'a good answer resets the delay');
+
+  h.listeners[1].fail({ code: 'permission-denied' });
+  assert.deepEqual(states.at(-1), ['denied', 'permission-denied']);
+  assert.equal(timers.length, 3, 'no retry is scheduled for a refusal');
+
+  close();
+  assert.ok(cleared.length >= 1 && h.stops >= 1);
+  close.reconnect;
+});

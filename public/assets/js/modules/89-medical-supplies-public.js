@@ -2,7 +2,7 @@
    (?view=medical-supplies-public&dept=...&cab=...). Works like the medicine expiry
    monitor: reads public_medical_supplies/<dept> and stays live. */
 import { publicPageHtml } from '../core/medical-supplies-public-view.js?v=e2803ba7a2';
-import { PUBLIC_COLLECTION } from '../core/medical-supplies-store.js?v=c790ab04f4';
+import { PUBLIC_COLLECTION } from '../core/medical-supplies-store.js?v=73d5444fde';
 
 (async function start() {
   const p = new URLSearchParams(location.search);
@@ -20,10 +20,12 @@ import { PUBLIC_COLLECTION } from '../core/medical-supplies-store.js?v=c790ab04f
   const tenant = p.get('tenant') || '';
   const col = tenant ? window.FB_DB.collection('tenants').doc(tenant).collection(PUBLIC_COLLECTION) : window.FB_DB.collection(PUBLIC_COLLECTION);
   const cabinetId = p.get('cab') || '';
-  const unsub = col.doc(p.get('dept')).onSnapshot((snap) => {
+  const unsub = col.doc(p.get('dept')).onSnapshot({ includeMetadataChanges: true }, (snap) => {
+    /* On a weak link the first answer can be an empty saved copy; that is not "no list". */
+    if (!snap.exists && snap.metadata.fromCache) return;
     if (!snap.exists) { root.innerHTML = '<h2>No published list for this department yet. / لا توجد قائمة منشورة لهذا القسم بعد.</h2>'; return; }
     const d = snap.data();
-    root.innerHTML = publicPageHtml(d, { cabinetId, today: new Date(), updatedLabel: d.updatedAt ? new Date(d.updatedAt).toLocaleString('en-GB') : '—' });
+    root.innerHTML = publicPageHtml(d, { cabinetId, today: new Date(), updatedLabel: (d.updatedAt ? new Date(d.updatedAt).toLocaleString('en-GB') : '—') + (snap.metadata.fromCache ? ' (saved copy — weak signal / نسخة محفوظة)' : '') });
   }, () => { root.innerHTML = '<h2>Could not load the list. / تعذر تحميل القائمة.</h2>'; });
   window.addEventListener('pagehide', unsub);
 }());
