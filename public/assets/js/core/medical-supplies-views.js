@@ -15,8 +15,11 @@ export const badge = (status, days) => `<span class="chip" style="color:${COLOR[
 
 const CONN = {
   live: ['● Live / مباشر', '#2e7d32'],
-  cached: ['● Offline or cached — changes will sync / بدون اتصال — ستتزامن التغييرات', '#b26a00'],
-  error: ['● Cannot reach the server / تعذر الاتصال', '#b00020'],
+  cached: ['● Saved copy — updates when connected / نسخة محفوظة — تتحدث عند الاتصال', '#b26a00'],
+  connecting: ['… Connecting (weak or no signal) / جارٍ الاتصال (إشارة ضعيفة)', '#b26a00'],
+  retrying: ['● Reconnecting… / جارٍ إعادة الاتصال', '#b26a00'],
+  denied: ['● No access to this list / لا صلاحية لهذه القائمة', '#b00020'],
+  error: ['● Cannot load this list / تعذر تحميل القائمة', '#b00020'],
   loading: ['… Loading / جارٍ التحميل', 'var(--tx2)'],
 };
 
@@ -45,7 +48,7 @@ export function pageHtml(s) {
     ? `<select data-schg="dept">${s.depts.map((d) => opt(d.id, d.name, s.deptId)).join('')}</select>` : '';
   return `<div class="card"><div class="cb">`
     + `<div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;align-items:center">`
-    + `<div><div class="stitle">${esc(FEATURE_LABEL)}</div><div class="ssub">${esc(s.deptName)} — <span style="color:${conn[1]}">${conn[0]}</span></div></div>${picker}</div>`
+    + `<div><div class="stitle">${esc(FEATURE_LABEL)}</div><div class="ssub">${esc(s.deptName)} — <span style="color:${conn[1]}">${conn[0]}</span>${s.pending ? ` · ⏳ ${bi('waiting to sync', 'بانتظار المزامنة')}` : ''}${s.connCode ? ` <span class="mono">(${esc(s.connCode)})</span>` : ''}${s.canRetry ? ` ${btn('retry', bi('Retry', 'إعادة المحاولة'))}` : ''}</div></div>${picker}</div>`
     + `<div style="display:flex;flex-wrap:wrap;gap:6px;margin:12px 0">`
     + btn('add', `+ ${bi('Add item', 'إضافة صنف')}`, 'bp') + btn('groups', bi('Groups', 'المجموعات')) + btn('cabinets', bi('Cabinets', 'الدواليب'))
     + btn('settings', `⚙ ${bi('Required fields', 'الحقول الإلزامية')}`) + btn('export', `⬇ ${bi('Export Excel', 'تصدير إكسل')}`)

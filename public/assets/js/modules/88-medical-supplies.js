@@ -4,20 +4,21 @@
    Rules live in core/medical-supplies-model.js, storage in ...-store.js,
    markup in ...-views.js, printing in ...-print.js, Excel in ...-excel.js. */
 import { installActions } from '../core/delegated-actions.js?v=078b8d25e6';
+import { waitUpTo } from '../core/timing.js?v=5f574f9ba7';
 import { openBlobPrint } from '../core/print-window.js?v=dafb959d71';
 import {
   FEATURE_LABEL, MAX_ITEMS, bi, newId, normalizeDoc, validateDraft, alertConfig, daysUntil, filterItems, summarize,
   assignCabinet, printSections, applyImport,
 } from '../core/medical-supplies-model.js?v=1697923431';
-import * as store from '../core/medical-supplies-store.js?v=c790ab04f4';
-import * as V from '../core/medical-supplies-views.js?v=2b81c563e2';
+import * as store from '../core/medical-supplies-store.js?v=73d5444fde';
+import * as V from '../core/medical-supplies-views.js?v=8bbefffcd7';
 import { listHtml, qrSheetHtml, PRINT_CSS } from '../core/medical-supplies-print.js?v=5e9d0c18c6';
 import { buildWorkbook, readWorkbookFile } from '../core/medical-supplies-excel.js?v=e43b5ff0f3';
 
 const PAGE = 'pg-medical-supplies';
 const BRAND = '<div style="text-align:center;font-size:8.5pt;color:#555;margin-top:14px">By Ali Abudahash</div>';
 const st = {
-  deptId: '', doc: normalizeDoc(null, ''), conn: 'loading', unsub: null, selected: new Set(),
+  deptId: '', doc: normalizeDoc(null, ''), conn: 'loading', connCode: '', pending: false, unsub: null, token: 0, selected: new Set(),
   filters: { q: '', groupId: '', cabinetId: '', status: 'all' }, plan: null,
 };
 
@@ -34,32 +35,43 @@ const clone = (x) => JSON.parse(JSON.stringify(x));
 const nameOf = (list) => (id) => (list.find((r) => r.id === id) || {}).name || '';
 
 /* ------------------------------------------------------------- data flow */
-function connect(deptId) {
+async function connect(deptId) {
   if (st.unsub) { st.unsub(); st.unsub = null; }
-  st.deptId = deptId; st.selected.clear(); st.conn = 'loading'; st.doc = normalizeDoc(null, deptId);
+  const token = st.token + 1; st.token = token;
+  st.deptId = deptId; st.selected.clear(); st.conn = 'connecting'; st.connCode = ''; st.pending = false; st.doc = normalizeDoc(null, deptId);
   render();
-  if (!canUse(deptId) || !window.FB_DB) { st.conn = 'error'; render(); return; }
+  if (!canUse(deptId)) { st.conn = 'denied'; render(); return; }
+  /* On a weak link Firebase can still be starting; wait for it instead of calling it an error. */
+  try { if (!window.FB_DB && typeof window.waitForFirebase === 'function') await window.waitForFirebase(30000); } catch (e) { /* handled below */ }
+  if (token !== st.token) return;
+  if (!window.FB_DB) { st.conn = 'retrying'; render(); setTimeout(() => { if (token === st.token) connect(deptId); }, 5000); return; }
   st.unsub = store.subscribe({
     db: window.FB_DB, profile: user(), deptId,
-    onDoc: (raw) => { st.doc = normalizeDoc(raw, deptId); render(); },
-    onState: (s) => { st.conn = s; render(); },
+    onDoc: (raw, meta) => { if (token !== st.token) return; st.doc = normalizeDoc(raw, deptId); st.pending = !!(meta && meta.pending); render(); },
+    onState: (state, code, meta) => { if (token !== st.token) return; st.conn = state; st.connCode = code || ''; if (meta) st.pending = !!meta.pending; render(); },
   });
 }
+window.addEventListener('online', () => { if (st.unsub && st.unsub.reconnect && st.conn !== 'live') st.unsub.reconnect(); });
+window.addEventListener('offline', () => { if (st.conn === 'live') { st.conn = 'cached'; render(); } });
 
+const BLOCKED = new Set(['connecting', 'loading', 'denied', 'error']);
+/* A save is accepted as soon as it is on this device. On a weak link the server's answer can take
+   a long time, so we wait a few seconds, then say it is saved locally and keep going; if the server
+   later refuses it, the person is told then. */
 async function mutate(change) {
+  if (BLOCKED.has(st.conn)) { toast(st.conn === 'denied' ? bi('No access to this list.', 'لا صلاحية لهذه القائمة.') : bi('Still connecting — wait until the list appears, then try again.', 'ما زال الاتصال جارياً — انتظر حتى تظهر القائمة ثم أعد المحاولة.'), 'err'); return false; }
   const prev = st.doc;
   const next = clone(prev);
   const error = change(next);
   if (error) { toast(error, 'err'); return false; }
+  const write = store.commit({ db: window.FB_DB, profile: user(), deptId: st.deptId, fieldValue: window.firebase.firestore.FieldValue, prev, next });
+  const done = write.then(() => publish(next));
+  done.catch((e) => { console.error('Medical supplies save failed', e); toast(`${bi('Could not save', 'تعذر الحفظ')}: ${e.code || e.message || e}`, 'err'); });
   try {
-    await store.commit({ db: window.FB_DB, profile: user(), deptId: st.deptId, fieldValue: window.firebase.firestore.FieldValue, prev, next });
-    publish(next);
+    const result = await waitUpTo(write, 3000);
+    if (result === 'slow') toast(bi('Saved on this device — it will sync when the connection returns.', 'تم الحفظ على الجهاز — ستتم المزامنة عند عودة الاتصال.'), 'info');
     return true;
-  } catch (e) {
-    console.error('Medical supplies save failed', e);
-    toast(`${bi('Could not save', 'تعذر الحفظ')}: ${e.code || e.message || e}`, 'err');
-    return false;
-  }
+  } catch (e) { return false; }
 }
 async function publish(doc) {
   try {
@@ -81,7 +93,7 @@ function render() {
   let body = page.querySelector('#ms-body');
   if (!body) { body = document.createElement('div'); body.id = 'ms-body'; page.appendChild(body); }
   body.innerHTML = V.pageHtml({
-    filters: st.filters, summary: summarize(st.doc.items, c), conn: st.conn, isMaster: isMaster(), depts: depts(), deptId: st.deptId,
+    filters: st.filters, summary: summarize(st.doc.items, c), conn: st.conn, isMaster: isMaster() && !actingAsDepartment(), pending: st.pending, connCode: st.connCode, canRetry: st.conn === 'retrying' || st.conn === 'error' || st.conn === 'connecting', depts: depts(), deptId: st.deptId,
     deptName: deptName(st.deptId), groups: st.doc.groups, cabinets: st.doc.cabinets, selected: st.selected, items, total: st.doc.items.length,
     rows: items.map((i) => V.rowHtml(i, rowCtx)).join(''),
   });
@@ -239,6 +251,7 @@ const bulk = async (fn) => {
 };
 installActions(document.body, {
   close: closeModal,
+  retry: () => { if (st.unsub && st.unsub.reconnect) st.unsub.reconnect(); else connect(st.deptId); },
   add: () => openItem(null),
   edit: (b) => { const i = byId(b); if (i) openItem(i); },
   'save-item': saveItem,
@@ -285,11 +298,13 @@ installActions(document.body, {
 installActions(document.body, { q: (i) => { st.filters.q = i.value; render(); } }, { event: 'input', attribute: 'sinp' });
 
 /* ------------------------------------------------------------ nav & page */
+const actingAsDepartment = () => (typeof window.fsEffectiveRole === 'function' ? window.fsEffectiveRole() : user().role) === 'department';
 function open() {
   const page = el(PAGE);
   if (!page) return;
   const own = String(user().deptId || '');
-  const target = st.deptId || (canUse(own) ? own : (depts()[0] || {}).id || '');
+  /* A department always sees its own list; the Master (not previewing a department) keeps the last one chosen. */
+  const target = actingAsDepartment() && own ? own : (st.deptId && canUse(st.deptId) ? st.deptId : (canUse(own) ? own : (depts()[0] || {}).id || ''));
   if (target !== st.deptId || !st.unsub) connect(target); else render();
 }
 /* Medical Supplies sits next to Shelves as a sub-button, in the same bar style as
